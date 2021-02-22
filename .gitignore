@@ -1,0 +1,43 @@
+# Windows thumbnail cache files
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+
+# Folder config file
+Desktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Windows Installer files
+*.cab
+*.msi
+*.msm
+*.msp
+
+# Windows shortcuts
+*.lnk
+
+# Subversion folders
+
+.svn
+
+# Eclipse folders
+
+.settings
+
+# STM32 .ioc files
+
+*.ioc
+
+# Build folder
+
+build
+
+#
+# =========================
+# Operating System Files
+# =========================
+
+.vscode/settings.json
+.vscode/c_cpp_properties.json
