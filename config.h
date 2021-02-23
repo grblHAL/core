@@ -43,7 +43,7 @@
 //  These can be found in in this file and in defaults.h.
 // Set to 10 to also disable new coordinate system offsets (G59.1 - G59.3) and some $# report extensions.
 // NOTE: if switching to a level > 1 please reset non-volatile storage with $RST=* after reflashing!
-#define COMPATIBILITY_LEVEL 0
+#define COMPATIBILITY_LEVEL 2
 
 //#define KINEMATICS_API // Remove comment to add HAL entry points for custom kinematics
 
@@ -450,15 +450,6 @@
 // NOTE: The options below are here only provide a way to disable certain data fields if a unique
 // situation demands it, but be aware GUIs may depend on this data. If disabled, it may not be compatible.
 //#define DEFAULT_REPORT_MACHINE_POSITION  // Default disabled. Uncomment to enable.
-
-#if COMPATIBILITY_LEVEL == 0
-// Number of tools in ATC tool table, comment out to disable
-// #define N_TOOLS 8
-#endif
-
-// Max number of entries in log for PID data reporting, to be used for tuning
-//#define PID_LOG 1000 // Default disabled. Uncomment to enable.
-
 //#define DEFAULT_NO_REPORT_BUFFER_STATE
 //#define DEFAULT_NO_REPORT_LINE_NUMBERS
 //#define DEFAULT_NO_REPORT_CURRENT_FEED_SPEED
@@ -467,6 +458,14 @@
 //#define DEFAULT_NO_REPORT_OVERRIDES
 //#define DEFAULT_REPORT_PARSER_STATE
 //#define DEFAULT_REPORT_ALARM_SUBSTATE
+
+#if COMPATIBILITY_LEVEL == 0
+// Number of tools in ATC tool table, comment out to disable
+// #define N_TOOLS 8
+#endif
+
+// Max number of entries in log for PID data reporting, to be used for tuning
+//#define PID_LOG 1000 // Default disabled. Uncomment to enable.
 
 //#define DEFAULT_X_STEPS_PER_MM 250.0f
 //#define DEFAULT_Y_STEPS_PER_MM 250.0f
