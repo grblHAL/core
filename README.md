@@ -1,0 +1,80 @@
+## grblHAL ##
+
+grblHAL has [many extensions](https://github.com/terjeio/grblHAL/wiki) that may cause issues with some senders. As a workaround for these a [compile time option](https://github.com/terjeio/grblHAL/wiki/Changes-from-grbl-1.1#workaround) has been added that disables extensions selectively. 
+
+__IMPORTANT!__ grblHAL defaults to normally closed \(NC\) switches for inputs, if none are connected when testing it is likely that the controller will start in alarm mode.  
+Temporarily short the Reset, E-Stop and Safety Door<sup>4</sup> inputs to ground or invert the corresponding inputs by setting `$14=73` to avoid that.  
+Please check out [this Wiki page](https://github.com/terjeio/grblHAL/wiki/Changes-from-grbl-1.1) for additional important information.
+
+Windows users may try [ioSender](https://github.com/terjeio/Grbl-GCode-Sender), binary releases can be found [here](https://github.com/terjeio/Grbl-GCode-Sender/releases).
+It has been written to complement grblHAL and has features such as proper keyboard jogging, advanced probing, automatic reconfiguration of DRO display for up to 6 axes, lathe mode including conversational G-Code generation, 3D rendering, macro support etc. etc.
+
+---
+
+Latest build date is 20210223, see the [changelog](https://github.com/terjeio/grblHAL/blob/master/changelog.md) for details.
+
+---
+
+__NOTE:__ Arduino drivers has now been converted to Arduino libraries, [installation and compilation procedure](https://github.com/terjeio/grblHAL/wiki/Compiling-GrblHAL) has been changed!
+
+---
+
+grblHAL is a no-compromise, high performance, low cost alternative to parallel-port-based motion control for CNC milling and is based on the [Arduino version of grbl](https://github.com/gnea/grbl). It is mainly aimed at ARM processors \(or other 32-bit MCUs\) with ample amounts of RAM and flash \(compared to AVR 328p\) and requires a [hardware driver](drivers/ReadMe.md) to be functional.
+Currently drivers are available for 13 different processors/processor families all of which share the same core.
+
+grblHAL has an open architecture allowing [plugins](plugins/README.md) to extend functionality.
+User made plugins can be added to grblHAL without changing a single file in the source<sup>1</sup>, and allows for a wide range extensions to be added.
+New M-codes can be added, space for plugin specific settings can be allocated, events can be subscribed to etc. etc.  
+Adding code to drive an ATC, extra outputs or even adding a UI<sup>2</sup> has never been easier. You can even add your own [driver](templates/arm-driver) if you feel so inclined.
+
+HAL = Hardware Abstraction Layer
+
+The controller is written in highly optimized C utilizing features of the supported processors to achieve precise timing and asynchronous operation.
+It is able to maintain up to 300kHz<sup>3</sup> of stable, jitter free control pulses.
+
+It accepts standards-compliant g-code and has been tested with the output of several CAM tools with no problems. Arcs, circles and helical motion are fully supported, as well as, all other primary g-code commands. Macro functions, variables, and some canned cycles are not supported, but we think GUIs can do a much better job at translating them into straight g-code anyhow.
+
+Grbl includes full acceleration management with look ahead. That means the controller will look up to 16 motions into the future and plan its velocities ahead to deliver smooth acceleration and jerk-free cornering.
+
+This is a port/rewrite of [grbl 1.1f](https://github.com/gnea/grbl) and should be compatible with GCode senders compliant with the specifications for that version. It should be possible to change default compile-time configurations if problems arise, eg. the default serial buffer sizes has been increased in some of the [drivers](drivers/ReadMe.md) provided.
+
+<sup>1</sup> This feature is only to be used for private plugins, if shared then a single call must be added to the driver code of the target processors.   
+<sup>2</sup> I do not usually recommend doing this, and I will not accept pull requests for any. However I may add a link to the github repository for any that might be made.  
+<sup>3</sup> Driver/processor dependent.  
+<sup>4</sup> Not enabled by default if building from source, but may be enabled in prebuilt firmware.
+
+***
+
+```
+List of Supported G-Codes:
+  - Non-Modal Commands: G4, G10L2, G10L20, G28, G30, G28.1, G30.1, G53, G92, G92.1
+  - Additional Non-Modal Commands: G10L1*, G10L10*, G10L11*
+  - Motion Modes: G0, G1, G2, G3, G5, G38.2, G38.3, G38.4, G38.5, G80, G33*
+  - Canned cycles: G73, G81, G82, G83, G85, G86, G89, G98, G99
+  - Repetitive cycles: G76*
+  - Feed Rate Modes: G93, G94, G95*, G96*, G97*
+  - Unit Modes: G20, G21
+  - Scaling: G50, G51
+  - Lathe modes: G7*, G8*
+  - Distance Modes: G90, G91
+  - Arc IJK Distance Modes: G91.1
+  - Plane Select Modes: G17, G18, G19
+  - Tool Length Offset Modes: G43*, G43.1, G43.2*, G49
+  - Cutter Compensation Modes: G40
+  - Coordinate System Modes: G54, G55, G56, G57, G58, G59, G59.1, G59.2, G59.3
+  - Control Modes: G61
+  - Program Flow: M0, M1, M2, M30, M60
+  - Coolant Control: M7, M8, M9
+  - Spindle Control: M3, M4, M5
+  - Tool Change: M6* (Two modes possible: manual** - supports jogging, ATC), M61
+  - Switches: M49, M50, M51, M53
+  - Output control***: M62, M63, M64, M65, M66, M67, M68
+  - Valid Non-Command Words: A*, B*, C*, F, H*, I, J, K, L, N, P, Q*, R, S, T, X, Y, Z
+
+  *  driver/configuration dependent.
+  ** requires compatible GCode sender due to protocol extensions, new state and RT command.
+  *** number of outputs supported dependent on driver implementation.
+```
+
+---
+2021-02-25
