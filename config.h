@@ -43,7 +43,7 @@
 //  These can be found in in this file and in defaults.h.
 // Set to 10 to also disable new coordinate system offsets (G59.1 - G59.3) and some $# report extensions.
 // NOTE: if switching to a level > 1 please reset non-volatile storage with $RST=* after reflashing!
-#define COMPATIBILITY_LEVEL 2
+#define COMPATIBILITY_LEVEL 0
 
 //#define KINEMATICS_API // Remove comment to add HAL entry points for custom kinematics
 
