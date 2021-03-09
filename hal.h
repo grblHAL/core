@@ -191,6 +191,16 @@ typedef struct {
     stepper_output_step_ptr output_step;
 } stepper_ptrs_t;
 
+// Delay callback
+
+typedef void (*delay_callback_ptr)(void);
+
+// Delay struct, currently not used by core - may be used by drivers
+typedef struct {
+   volatile uint32_t ms;
+   delay_callback_ptr callback;
+} delay_t;
+
 // Probe (optional)
 
 typedef probe_state_t (*probe_get_state_ptr)(void);
@@ -251,7 +261,7 @@ typedef struct {
     uint8_t driver_axis_settings;
 
     bool (*driver_setup)(settings_t *settings);
-    void (*delay_ms)(uint32_t ms, void (*callback)(void));
+    void (*delay_ms)(uint32_t ms, delay_callback_ptr callback);
     void (*set_bits_atomic)(volatile uint_fast16_t *value, uint_fast16_t bits);
     uint_fast16_t (*clear_bits_atomic)(volatile uint_fast16_t *value, uint_fast16_t bits);
     uint_fast16_t (*set_value_atomic)(volatile uint_fast16_t *value, uint_fast16_t bits);

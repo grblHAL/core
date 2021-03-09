@@ -43,6 +43,7 @@
 #include "esp_attr.h"
 #define ISR_CODE IRAM_ATTR
 #else
+//#define ISR_CODE __attribute__((long_call, section(".data")))
 // Used to decorate code run in interrupt context.
 // Do not remove or change unless you know what you are doing.
 #define ISR_CODE

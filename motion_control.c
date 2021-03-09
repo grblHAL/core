@@ -901,14 +901,17 @@ gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_f
     } else
         sys.flags.probe_succeeded = On; // Indicate to system the probing cycle completed successfully.
 
-    sys.probing_state = Probing_Off;                // Ensure probe state monitor is disabled.
+    sys.probing_state = Probing_Off;    // Ensure probe state monitor is disabled.
     hal.probe.configure(false, false);  // Re-initialize invert mask.
-    protocol_execute_realtime();                    // Check and execute run-time commands
+    protocol_execute_realtime();        // Check and execute run-time commands
 
     // Reset the stepper and planner buffers to remove the remainder of the probe motion.
     st_reset();             // Reset step segment buffer.
     plan_reset();           // Reset planner buffer. Zero planner positions. Ensure probing motion is cleared.
     plan_sync_position();   // Sync planner position to current machine position.
+#ifdef ENABLE_BACKLASH_COMPENSATION
+    mc_sync_backlash_position();
+#endif
 
     // All done! Output the probe position as message if configured.
     if(settings.status_report.probe_coordinates)

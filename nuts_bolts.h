@@ -113,12 +113,6 @@ typedef enum {
     DelayMode_SysSuspend
 } delaymode_t;
 
- // Delay struct, currently not used by core - may be used by drivers
-typedef struct {
-    volatile uint32_t ms;
-    void (*callback)(void);
-} delay_t;
-
 // Conversions
 #define MM_PER_INCH (25.40f)
 #define INCH_PER_MM (0.0393701f)
