@@ -125,6 +125,7 @@
 //#define CMD_DEBUG_REPORT 0x86 // Only when DEBUG enabled, sends debug report in '{}' braces.
 #define CMD_STATUS_REPORT_ALL 0x87
 #define CMD_OPTIONAL_STOP_TOGGLE 0x88
+#define CMD_SINGLE_BLOCK_TOGGLE 0x89
 #define CMD_OVERRIDE_FEED_RESET 0x90         // Restores feed override value to 100%.
 #define CMD_OVERRIDE_FEED_COARSE_PLUS 0x91
 #define CMD_OVERRIDE_FEED_COARSE_MINUS 0x92

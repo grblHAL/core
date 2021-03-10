@@ -814,6 +814,11 @@ ISR_CODE bool protocol_enqueue_realtime_command (char c)
                 sys.flags.optional_stop_disable = !sys.flags.optional_stop_disable;
             break;
 
+        case CMD_SINGLE_BLOCK_TOGGLE:
+            if(!hal.signals_cap.single_block) // Not available as realtime command if HAL supports physical switch
+                sys.flags.single_block = !sys.flags.single_block;
+            break;
+
         case CMD_PID_REPORT:
             system_set_exec_state_flag(EXEC_PID_REPORT);
             drop = true;

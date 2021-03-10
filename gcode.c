@@ -2665,11 +2665,11 @@ status_code_t gc_execute_block(char *block, char *message)
     // refill and can only be resumed by the cycle start run-time command.
     gc_state.modal.program_flow = gc_block.modal.program_flow;
 
-    if (gc_state.modal.program_flow) {
+    if (gc_state.modal.program_flow || sys.flags.single_block) {
 
         protocol_buffer_synchronize(); // Sync and finish all remaining buffered motions before moving on.
 
-        if (gc_state.modal.program_flow == ProgramFlow_Paused || gc_block.modal.program_flow == ProgramFlow_OptionalStop || gc_block.modal.program_flow == ProgramFlow_CompletedM60) {
+        if (gc_state.modal.program_flow == ProgramFlow_Paused || gc_block.modal.program_flow == ProgramFlow_OptionalStop || gc_block.modal.program_flow == ProgramFlow_CompletedM60 || sys.flags.single_block) {
             if (!check_mode) {
                 if(gc_block.modal.program_flow == ProgramFlow_CompletedM60 && hal.pallet_shuttle)
                     hal.pallet_shuttle();

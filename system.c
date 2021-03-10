@@ -43,6 +43,8 @@ static status_code_t output_settings (sys_state_t state, char *args);
 static status_code_t output_all_settings (sys_state_t state, char *args);
 static status_code_t output_parser_state (sys_state_t state, char *args);
 static status_code_t toggle_block_delete (sys_state_t state, char *args);
+static status_code_t toggle_single_block (sys_state_t state, char *args);
+static status_code_t toggle_optional_stop (sys_state_t state, char *args);
 static status_code_t check_mode (sys_state_t state, char *args);
 static status_code_t disable_lock (sys_state_t state, char *args);
 static status_code_t output_help (sys_state_t state, char *args);
@@ -171,6 +173,8 @@ const sys_command_t sys_commands[] = {
     {"$", false, output_settings},
     {"+", false, output_all_settings},
     {"B", true, toggle_block_delete},
+    {"S", true, toggle_single_block},
+    {"O", true, toggle_optional_stop},
     {"C", true, check_mode},
     {"X", false, disable_lock},
     {"H", false, home},
@@ -396,9 +400,25 @@ static status_code_t output_parser_state (sys_state_t state, char *args)
     return Status_OK;
 }
 
+static status_code_t toggle_single_block (sys_state_t state, char *args)
+{
+    sys.flags.single_block = !sys.flags.single_block;
+    grbl.report.feedback_message(sys.flags.single_block ? Message_Enabled : Message_Disabled);
+
+    return Status_OK;
+}
+
 static status_code_t toggle_block_delete (sys_state_t state, char *args)
 {
     sys.flags.block_delete_enabled = !sys.flags.block_delete_enabled;
+    grbl.report.feedback_message(sys.flags.block_delete_enabled ? Message_Enabled : Message_Disabled);
+
+    return Status_OK;
+}
+
+static status_code_t toggle_optional_stop (sys_state_t state, char *args)
+{
+    sys.flags.optional_stop_disable = !sys.flags.optional_stop_disable;
     grbl.report.feedback_message(sys.flags.block_delete_enabled ? Message_Enabled : Message_Disabled);
 
     return Status_OK;
