@@ -17,6 +17,7 @@ target_sources(grbl INTERFACE
  ${CMAKE_CURRENT_LIST_DIR}/sleep.c
  ${CMAKE_CURRENT_LIST_DIR}/spindle_control.c
  ${CMAKE_CURRENT_LIST_DIR}/state_machine.c
+ ${CMAKE_CURRENT_LIST_DIR}/stream.c
  ${CMAKE_CURRENT_LIST_DIR}/stepper.c
  ${CMAKE_CURRENT_LIST_DIR}/system.c
  ${CMAKE_CURRENT_LIST_DIR}/tool_change.c

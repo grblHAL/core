@@ -199,9 +199,11 @@ bool nvs_buffer_alloc (void)
 
 //
 // Switch over to RAM based copy.
-// Changes to RAM based copy will be written to physical storage when Grbl is in IDLE state.
+// Changes to RAM based copy will be written to physical storage when grblHAL is in IDLE state.
 bool nvs_buffer_init (void)
 {
+    hal.nvs.size = ((hal.nvs.size - 1) | 0x03) + 1; // Ensure NVS area ends on a word boundary
+
     if(nvsbuffer) {
 
         memcpy(&physical_nvs, &hal.nvs, sizeof(nvs_io_t)); // save pointers to physical storage handler functions

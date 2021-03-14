@@ -104,4 +104,7 @@ typedef struct {
     char data[BLOCK_TX_BUFFER_SIZE];
 } stream_block_tx_buffer_t;
 
+bool stream_rx_suspend (stream_rx_buffer_t *rxbuffer, bool suspend);
+void stream_rx_backup (stream_rx_buffer_t *rxbuffer);
+
 #endif
