@@ -32,7 +32,7 @@
 
 // Number of axes supported: minimum 3, maximum 6
 // If more than 3 axes are required a compliant driver must be provided
-//#define N_AXIS 3 // Number of axes
+#define N_AXIS 3 // Number of axes
 
 // Defines compatibility level with the grbl 1.1 protocol.
 // Additional G- and M-codes are not disabled except when level is set to >= 10.
@@ -201,6 +201,7 @@
 // crash due to the lack of available RAM or if the CPU is having trouble keeping up with planning
 // new incoming motions as they are executed.
 // #define BLOCK_BUFFER_SIZE 36 // Uncomment to override default in planner.h.
+#define BLOCK_BUFFER_SIZE 512
 
 // Governs the size of the intermediary step segment buffer between the step execution algorithm
 // and the planner blocks. Each segment is set of steps executed at a constant velocity over a
@@ -369,6 +370,7 @@
 // limit switch for each axis, don't enable this option. By keeping it disabled, you can perform a
 // homing cycle while on the limit switch and not have to move the machine off of it.
 //#define DEFAULT_LIMITS_TWO_SWITCHES_ON_AXES //  Default disabled. Uncomment to enable.
+#define DEFAULT_LIMITS_TWO_SWITCHES_ON_AXES
 
 // By default, Grbl disables feed rate overrides for all G38.x probe cycle commands. Although this
 // may be different than some pro-class machine control, it's arguable that it should be this way.
@@ -465,7 +467,7 @@
 #endif
 
 // Max number of entries in log for PID data reporting, to be used for tuning
-//#define PID_LOG 1000 // Default disabled. Uncomment to enable.
+#define PID_LOG 1000 // Default disabled. Uncomment to enable.
 
 //#define DEFAULT_X_STEPS_PER_MM 250.0f
 //#define DEFAULT_Y_STEPS_PER_MM 250.0f
@@ -579,6 +581,7 @@
 // for professional CNC machines, regardless of where the limit switches are located. Set this
 // define to 1 to force Grbl to always set the machine origin at the homed location despite switch orientation.
 //#define HOMING_FORCE_SET_ORIGIN // Default disabled. Uncomment to enable.
+#define HOMING_FORCE_SET_ORIGIN     1
 
 // To prevent the homing cycle from racking the dual axis, when one limit triggers before the
 // other due to switch failure or noise, the homing cycle will automatically abort if the second

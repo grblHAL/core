@@ -340,7 +340,7 @@ typedef struct {
 
 typedef void (*on_state_change_ptr)(sys_state_t state);
 typedef void (*on_probe_completed_ptr)(void);
-typedef void (*on_program_completed_ptr)(program_flow_t program_flow);
+typedef void (*on_program_completed_ptr)(program_flow_t program_flow, bool check_mode);
 typedef void (*on_execute_realtime_ptr)(sys_state_t state);
 typedef void (*on_unknown_accessory_override_ptr)(uint8_t cmd);
 typedef void (*on_report_options_ptr)(bool newopt);

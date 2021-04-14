@@ -2725,10 +2725,10 @@ status_code_t gc_execute_block(char *block, char *message)
                 hal.coolant.set_state(gc_state.modal.coolant);
                 sys.report.spindle = On; // Set to report change immediately
                 sys.report.coolant = On; // ...
-
-                if(grbl.on_program_completed)
-                    grbl.on_program_completed(gc_state.modal.program_flow);
             }
+
+            if(grbl.on_program_completed)
+                grbl.on_program_completed(gc_state.modal.program_flow, check_mode);
 
             // Clear any pending output commands
             while(output_commands) {
