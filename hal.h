@@ -73,16 +73,18 @@ typedef void (*driver_reset_ptr)(void);
 
 // I/O stream
 
+typedef int16_t (*stream_read_ptr)(void);
 typedef void (*stream_write_ptr)(const char *s);
+typedef bool (*stream_write_char_ptr)(const char c);
 typedef bool (*enqueue_realtime_command_ptr)(char data);
 
 typedef struct {
     stream_type_t type;
     uint16_t (*get_rx_buffer_available)(void);
-//    bool (*stream_write)(char c);
-    stream_write_ptr write;     // write string to current I/O stream only.
-    stream_write_ptr write_all; // write string to all active output streams.
-    int16_t (*read)(void);
+    stream_write_ptr write;             // write string to current I/O stream only.
+    stream_write_ptr write_all;         // write string to all active output streams.
+    stream_write_char_ptr write_char;   // write single character to current I/O stream only.
+    stream_read_ptr read;
     void (*reset_read_buffer)(void);
     void (*cancel_read_buffer)(void);
     bool (*suspend_read)(bool await);
@@ -343,11 +345,12 @@ typedef void (*on_probe_completed_ptr)(void);
 typedef void (*on_program_completed_ptr)(program_flow_t program_flow, bool check_mode);
 typedef void (*on_execute_realtime_ptr)(sys_state_t state);
 typedef void (*on_unknown_accessory_override_ptr)(uint8_t cmd);
+typedef bool (*on_unknown_realtime_cmd_ptr)(char c);
 typedef void (*on_report_options_ptr)(bool newopt);
 typedef void (*on_report_command_help_ptr)(void);
 typedef void (*on_global_settings_restore_ptr)(void);
 typedef setting_details_t *(*on_get_settings_ptr)(void); // NOTE: this must match the signature of the same definition in
-                                                            // the setting_details_t structure in settings.h!
+                                                         // the setting_details_t structure in settings.h!
 typedef void (*on_realtime_report_ptr)(stream_write_ptr stream_write, report_tracking_flags_t report);
 typedef void (*on_unknown_feedback_message_ptr)(stream_write_ptr stream_write);
 typedef bool (*on_laser_ppi_enable_ptr)(uint_fast16_t ppi, uint_fast16_t pulse_length);
@@ -370,6 +373,7 @@ typedef struct {
     on_get_settings_ptr on_get_settings;
     on_realtime_report_ptr on_realtime_report;
     on_unknown_feedback_message_ptr on_unknown_feedback_message;
+    on_unknown_realtime_cmd_ptr on_unknown_realtime_cmd;
     on_unknown_sys_command_ptr on_unknown_sys_command; // return Status_Unhandled if not handled.
     on_get_commands_ptr on_get_commands;
     on_user_command_ptr on_user_command;

@@ -26,7 +26,7 @@
 static stream_rx_buffer_t rxbackup;
 
 // "dummy" version of serialGetC
-static int16_t stream_get_null (void)
+int16_t stream_get_null (void)
 {
     return SERIAL_NO_DATA;
 }

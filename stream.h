@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2019-2020 Terje Io
+  Copyright (c) 2019-2021 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -22,7 +22,10 @@
 #ifndef _STREAM_H_
 #define _STREAM_H_
 
+#define ASCII_SOH  0x01
+#define ASCII_STX  0x02
 #define ASCII_ETX  0x03
+#define ASCII_EOT  0x04
 #define ASCII_ACK  0x06
 #define ASCII_BS   0x08
 #define ASCII_TAB  0x09
@@ -104,7 +107,16 @@ typedef struct {
     char data[BLOCK_TX_BUFFER_SIZE];
 } stream_block_tx_buffer_t;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int16_t stream_get_null (void);
 bool stream_rx_suspend (stream_rx_buffer_t *rxbuffer, bool suspend);
 void stream_rx_backup (stream_rx_buffer_t *rxbuffer);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

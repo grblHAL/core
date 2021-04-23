@@ -855,13 +855,13 @@ ISR_CODE bool protocol_enqueue_realtime_command (char c)
 
         default:
             if(c < ' ' || (c >= 0x7F && c <= 0xBF))
-                drop = true;
+                drop = grbl.on_unknown_realtime_cmd == NULL || grbl.on_unknown_realtime_cmd(c);
             break;
     }
 
     // 2. Process printable ASCII characters and top-bit set characters
     //    If legacy realtime commands are disabled they are returned to the input stream
-    //    when appering in settings ($ commands) or comments
+    //    when appearing in settings ($ commands) or comments
 
     if(!drop) switch ((unsigned char)c) {
 
