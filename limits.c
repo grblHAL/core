@@ -277,8 +277,8 @@ static bool limits_homing_cycle (axes_signals_t cycle, axes_signals_t auto_squar
 
     if(auto_square.mask) {
         float fail_distance = (-settings.homing.dual_axis.fail_length_percent / 100.0f) * settings.axis[dual_motor_axis].max_travel;
-        fail_distance = min(fail_distance, settings.homing.dual_axis.fail_distance_min);
-        fail_distance = max(fail_distance, settings.homing.dual_axis.fail_distance_max);
+        fail_distance = min(fail_distance, settings.homing.dual_axis.fail_distance_max);
+        fail_distance = max(fail_distance, settings.homing.dual_axis.fail_distance_min);
         autosquare_fail_distance = truncf(fail_distance * settings.axis[dual_motor_axis].steps_per_mm);
     }
 

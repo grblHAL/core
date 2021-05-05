@@ -45,9 +45,8 @@ typedef union {
         uint8_t overflow            :1,
                 comment_parentheses :1,
                 comment_semicolon   :1,
-                line_is_comment     :1,
                 block_delete        :1,
-                unassigned          :3;
+                unassigned          :4;
     };
 } line_flags_t;
 
@@ -164,7 +163,7 @@ bool protocol_main_loop (void)
     int16_t c;
     char eol = '\0';
     line_flags_t line_flags = {0};
-    bool nocaps = false;
+    bool nocaps = false, line_is_comment = false;
 
     xcommand[0] = '\0';
     user_message.show = keep_rt_commands = false;
@@ -178,7 +177,7 @@ bool protocol_main_loop (void)
             if(c == ASCII_CAN) {
 
                 eol = xcommand[0] = '\0';
-                keep_rt_commands = nocaps = user_message.show = false;
+                keep_rt_commands = nocaps = line_is_comment = user_message.show = false;
                 char_counter = line_flags.value = 0;
                 gc_state.last_error = Status_OK;
 
@@ -207,7 +206,7 @@ bool protocol_main_loop (void)
                 // Direct and execute one line of formatted input, and report status of execution.
                 if (line_flags.overflow) // Report line overflow error.
                     gc_state.last_error = Status_Overflow;
-                else if ((line[0] == '\0' || char_counter == 0) && !user_message.show && !line_flags.line_is_comment) // Empty or comment line. For syncing purposes.
+                else if ((line[0] == '\0' || char_counter == 0) && !user_message.show && !line_is_comment) // Empty or comment line. For syncing purposes.
                     gc_state.last_error = Status_OK;
                 else if (line[0] == '$') {// Grbl '$' system command
                     if((gc_state.last_error = system_execute_line(line)) == Status_LimitsEngaged) {
@@ -275,7 +274,7 @@ bool protocol_main_loop (void)
 
                     case '(':
                         if(char_counter == 0)
-                            line_flags.line_is_comment = On;
+                            line_is_comment = On;
                         if(!keep_rt_commands) {
                             // Enable comments flag and ignore all characters until ')' or EOL unless it is a message.
                             // NOTE: This doesn't follow the NIST definition exactly, but is good enough for now.
@@ -297,7 +296,7 @@ bool protocol_main_loop (void)
 
                     case ';':
                         if(char_counter == 0)
-                            line_flags.line_is_comment = On;
+                            line_is_comment = On;
                         // NOTE: ';' comment to EOL is a LinuxCNC definition. Not NIST.
                         if(!keep_rt_commands) {
                             if((line_flags.comment_semicolon = !line_flags.comment_parentheses))

@@ -83,6 +83,7 @@ typedef enum {
     Status_MotorFault = 51,
     Status_SettingValueOutOfRange = 52,
     Status_SettingDisabled = 53,
+    Status_GcodeInvalidRetractPosition = 54,
 
 // Some error codes as defined in bdring's ESP32 port
     Status_SDMountError = 60,
@@ -156,6 +157,7 @@ PROGMEM static const status_detail_t status_detail[] = {
     { Status_MotorFault, "Motor fault", "Motor fault." },
     { Status_SettingValueOutOfRange, "Value out of range.", "Setting value is out of range." },
     { Status_SettingDisabled, "Setting disabled", "Setting is not available, possibly due to limited driver support." },
+    { Status_GcodeInvalidRetractPosition, "Invalid gcode ID:54", "Retract position is less than drill depth." },
     { Status_SDMountError, "SD Card", "SD Card mount failed." },
     { Status_SDReadError, "SD Card", "SD Card file open/read failed." },
     { Status_SDFailedOpenDir, "SD Card", "SD Card directory listing failed." },

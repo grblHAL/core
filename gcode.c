@@ -1819,12 +1819,10 @@ status_code_t gc_execute_block(char *block, char *message)
                 else if(gc_block.values.l <= 0)
                     FAIL(Status_NonPositiveValue); // [L <= 0]
 
-                if (value_words.r) {
-                    gc_state.canned.retract_position = gc_block.values.r;
-                    if(gc_state.modal.distance_incremental)
-                        gc_state.canned.retract_position += gc_state.position[plane.axis_linear];
-                    gc_state.canned.retract_position = gc_block.modal.coord_system.xyz[plane.axis_linear] + gc_state.canned.retract_position;
-                }
+                if(value_words.r)
+                    gc_state.canned.retract_position = gc_block.values.r + (gc_block.modal.distance_incremental
+                                                                             ? gc_state.position[plane.axis_linear]
+                                                                             : gc_get_block_offset(&gc_block, plane.axis_linear));
 
                 idx = N_AXIS;
                 do {
@@ -1832,11 +1830,13 @@ status_code_t gc_execute_block(char *block, char *message)
                         gc_state.canned.xyz[idx] = gc_block.values.xyz[idx];
                         if(idx != plane.axis_linear)
                             gc_state.canned.xyz[idx] -= gc_state.position[idx];
+                        else if(gc_block.modal.distance_incremental)
+                            gc_state.canned.xyz[idx] = gc_state.canned.retract_position + (gc_state.canned.xyz[idx] - gc_state.position[idx]);
                     }
                 } while(idx);
 
                 if(gc_state.canned.retract_position < gc_state.canned.xyz[plane.axis_linear])
-                    FAIL(Status_GcodeAxisCommandConflict);
+                    FAIL(Status_GcodeInvalidRetractPosition);
 
                 value_words.r = value_words.l = Off; // Remove single-meaning value words.
 
