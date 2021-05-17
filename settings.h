@@ -226,6 +226,7 @@ typedef enum {
     Settings_IoPort_OD_Enable = 373,
     Settings_ModBus_BaudRate = 374,
     Settings_ModBus_RXTimeout = 375,
+    Settings_Axis_Rotational = 376,
 
     Setting_EncoderSettingsBase = 400, // NOTE: Reserving settings values >= 400 for encoder settings. Up to 449.
     Setting_EncoderSettingsMax = 449,
@@ -441,6 +442,7 @@ typedef struct {
     axes_signals_t dir_invert;
     axes_signals_t enable_invert;
     axes_signals_t deenergize;
+//    axes_signals_t is_rotational; or add to axis_settings_t below as bitmap union? rotational axes are not scaled in imperial mode
     float pulse_microseconds;
     float pulse_delay_microseconds;
     uint16_t idle_lock_time; // If value = 255, steppers do not disable.
@@ -707,6 +709,9 @@ bool settings_write_tool_data (tool_data_t *tool_data);
 
 // Read selected tool data from persistent storage
 bool settings_read_tool_data (uint32_t tool, tool_data_t *tool_data);
+
+// Temporarily override acceleration, if 0 restore to configured setting value
+bool settings_override_acceleration (uint8_t axis, float acceleration);
 
 setting_details_t *settings_get_details (void);
 bool settings_is_group_available (setting_group_t group);

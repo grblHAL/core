@@ -636,11 +636,7 @@ status_code_t gc_execute_block(char *block, char *message)
                         // NOTE: The NIST g-code standard vaguely states that when a tool length offset is changed,
                         // there cannot be any axis motion or coordinate offsets updated. Meaning G43, G43.1, and G49
                         // all are explicit axis commands, regardless if they require axis words or not.
-
-                        if (axis_command)
-                            FAIL(Status_GcodeAxisCommandConflict); // [Axis word/command conflict] }
-
-                        axis_command = AxisCommand_ToolLengthOffset;
+                        // NOTE: cannot find the NIST statement referenced above, changed to match LinuxCNC behaviour in build 20210513.
                         if (int_value == 49) // G49
                             gc_block.modal.tool_offset_mode = ToolLengthOffset_Cancel;
 #ifdef N_TOOLS
@@ -649,9 +645,12 @@ status_code_t gc_execute_block(char *block, char *message)
                         else if (mantissa == 20) // G43.2
                             gc_block.modal.tool_offset_mode = ToolLengthOffset_ApplyAdditional;
 #endif
-                        else if (mantissa == 10) // G43.1
+                        else if (mantissa == 10) { // G43.1
+                            if (axis_command)
+                                FAIL(Status_GcodeAxisCommandConflict); // [Axis word/command conflict] }
+                            axis_command = AxisCommand_ToolLengthOffset;
                             gc_block.modal.tool_offset_mode = ToolLengthOffset_EnableDynamic;
-                        else
+                        } else
                             FAIL(Status_GcodeUnsupportedCommand); // [Unsupported G43.x command]
                         mantissa = 0; // Set to zero to indicate valid non-integer G command.
                         break;
@@ -1316,7 +1315,9 @@ status_code_t gc_execute_block(char *block, char *message)
     // Pre-convert XYZ coordinate values to millimeters, if applicable.
     uint_fast8_t idx = N_AXIS;
     if (gc_block.modal.units_imperial) do { // Axes indices are consistent, so loop may be used.
-        if (bit_istrue(axis_words.mask, bit(--idx)))
+        idx--;
+//        if (bit_istrue(axis_words.mask, bit(idx)) && bit_isfalse(settings.steppers.is_rotational.mask, bit(idx)))
+        if (bit_istrue(axis_words.mask, bit(idx)))
             gc_block.values.xyz[idx] *= MM_PER_INCH;
     } while(idx);
 
@@ -1412,13 +1413,13 @@ status_code_t gc_execute_block(char *block, char *message)
 
     // [14. Tool length compensation ]: G43.1 and G49 are always supported, G43 and G43.2 if N_TOOLS defined.
     // [G43.1 Errors]: Motion command in same line.
-    // [G43.2 Errors]: Motion command in same line. Tool number not in the tool table,
-    //   NOTE: Although not explicitly stated so, G43.1 should be applied to only one valid
-    //   axis that is configured (in config.h). There should be an error if the configured axis
-    //   is absent or if any of the other axis words are present.
-    if (axis_command == AxisCommand_ToolLengthOffset) { // Indicates called in block.
+    // [G43.2 Errors]: Tool number not in the tool table,
+    if (command_words.G8) { // Indicates called in block.
 
 #ifdef TOOL_LENGTH_OFFSET_AXIS
+        // NOTE: Although not explicitly stated so, G43.1 should be applied to only one valid
+        // axis that is configured (in config.h). There should be an error if the configured axis
+        // is absent or if any of the other axis words are present.
         if(gc_block.modal.tool_offset_mode == ToolLengthOffset_EnableDynamic) {
             if (axis_words.mask ^ bit(TOOL_LENGTH_OFFSET_AXIS))
                 FAIL(Status_GcodeG43DynamicAxisError);
@@ -2030,7 +2031,9 @@ status_code_t gc_execute_block(char *block, char *message)
                         if (gc_block.modal.units_imperial) {
                             idx = 3;
                             do { // Axes indices are consistent, so loop may be used to save flash space.
-                                if (ijk_words.mask & bit(--idx))
+                                idx--;
+//                                if (ijk_words.mask & bit(idx) && bit_isfalse(settings.steppers.is_rotational.mask, bit(idx)))
+                                if (ijk_words.mask & bit(idx))
                                     gc_block.values.ijk[idx] *= MM_PER_INCH;
                             } while(idx);
                         }
@@ -2412,7 +2415,7 @@ status_code_t gc_execute_block(char *block, char *message)
     // NOTE: If G43 were supported, its operation wouldn't be any different from G43.1 in terms
     // of execution. The error-checking step would simply load the offset value into the correct
     // axis of the block XYZ value array.
-    if (axis_command == AxisCommand_ToolLengthOffset) { // Indicates a change.
+    if (command_words.G8) { // Indicates a change.
 
         bool tlo_changed = false;
 

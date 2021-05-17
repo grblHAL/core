@@ -32,6 +32,7 @@
 #include "limits.h"
 #include "nvs_buffer.h"
 #include "tool_change.h"
+#include "state_machine.h"
 #ifdef ENABLE_BACKLASH_COMPENSATION
 #include "motion_control.h"
 #endif
@@ -99,6 +100,7 @@ PROGMEM const settings_t defaults = {
     .steppers.dir_invert.mask = DEFAULT_DIRECTION_INVERT_MASK,
     .steppers.enable_invert.mask = INVERT_ST_ENABLE_MASK,
     .steppers.deenergize.mask = ST_DEENERGIZE_MASK,
+//    .steppers.is_rotational.mask = 0,
 #if DEFAULT_HOMING_ENABLE
     .homing.flags.enabled = DEFAULT_HOMING_ENABLE,
     .homing.flags.init_lock = DEFAULT_HOMING_INIT_LOCK,
@@ -446,6 +448,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
     { Setting_DualAxisLengthFailPercent, Group_Limits_DualAxis, "Dual axis length fail", "percent", Format_Decimal, "##0.0", "0", "100", Setting_IsExtended, &settings.homing.dual_axis.fail_length_percent, NULL, NULL },
     { Setting_DualAxisLengthFailMin, Group_Limits_DualAxis, "Dual axis length fail min", "mm/min", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsExtended, &settings.homing.dual_axis.fail_distance_min, NULL, NULL },
     { Setting_DualAxisLengthFailMax, Group_Limits_DualAxis, "Dual axis length fail max", "mm/min", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsExtended, &settings.homing.dual_axis.fail_distance_max, NULL, NULL }
+//    { Settings_Axis_Rotational, Group_Stepper, "Rotational axes", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.steppers.is_rotational.mask, NULL, NULL }
 };
 
 static setting_details_t details = {
@@ -455,6 +458,56 @@ static setting_details_t details = {
     .n_settings = sizeof(setting_detail) / sizeof(setting_detail_t),
     .save = settings_write_global
 };
+
+// Acceleration override
+
+static struct {
+    bool valid;
+    float acceleration[N_AXIS];
+} override_backup = { .valid = false };
+
+static void save_override_backup (void)
+{
+    uint_fast8_t idx = N_AXIS;
+
+    do {
+        idx--;
+        override_backup.acceleration[idx] = settings.axis[idx].acceleration;
+    } while(idx);
+
+    override_backup.valid = true;
+}
+
+static void restore_override_backup (void)
+{
+    uint_fast8_t idx = N_AXIS;
+
+    if(override_backup.valid) do {
+        idx--;
+        settings.axis[idx].acceleration = override_backup.acceleration[idx];
+    } while(idx);
+}
+
+// Temporarily override acceleration, if 0 restore to setting value.
+// Note: only allowed when current state is idle.
+bool settings_override_acceleration (uint8_t axis, float acceleration)
+{
+    if(state_get() != STATE_IDLE)
+        return false;
+
+    if(acceleration <= 0.0f) {
+        if(override_backup.valid)
+            settings.axis[axis].acceleration = override_backup.acceleration[axis];
+    } else {
+        if(!override_backup.valid)
+            save_override_backup();
+        settings.axis[axis].acceleration = acceleration * 60.0f * 60.0f; // Limit max to setting value?
+    }
+
+    return true;
+}
+
+// ---
 
 setting_details_t *settings_get_details (void)
 {
@@ -796,7 +849,7 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
             break;
 
         case Setting_AxisAcceleration:
-            settings.axis[idx].acceleration = value * 60.0f * 60.0f; // Convert to mm/min^2 for grbl internal use.
+            settings.axis[idx].acceleration = override_backup.acceleration[idx] = value * 60.0f * 60.0f; // Convert to mm/min^2 for grbl internal use.
             break;
 
         case Setting_AxisMaxTravel:
@@ -1232,6 +1285,9 @@ bool read_global_settings ()
 // Write Grbl global settings and version number to persistent storage
 void settings_write_global (void)
 {
+    if(override_backup.valid)
+        restore_override_backup();
+
     if(hal.nvs.type != NVS_None) {
         hal.nvs.put_byte(0, SETTINGS_VERSION);
         hal.nvs.memcpy_to_nvs(NVS_ADDR_GLOBAL, (uint8_t *)&settings, sizeof(settings_t), true);
