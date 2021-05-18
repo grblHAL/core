@@ -1821,9 +1821,10 @@ status_code_t gc_execute_block(char *block, char *message)
                     FAIL(Status_NonPositiveValue); // [L <= 0]
 
                 if(value_words.r)
-                    gc_state.canned.retract_position = gc_block.values.r + (gc_block.modal.distance_incremental
-                                                                             ? gc_state.position[plane.axis_linear]
-                                                                             : gc_get_block_offset(&gc_block, plane.axis_linear));
+                    gc_state.canned.retract_position = gc_block.values.r * (gc_block.modal.units_imperial ? MM_PER_INCH : 1.0f) +
+                                                        (gc_block.modal.distance_incremental
+                                                          ? gc_state.position[plane.axis_linear]
+                                                          : gc_get_block_offset(&gc_block, plane.axis_linear));
 
                 idx = N_AXIS;
                 do {
@@ -1871,7 +1872,7 @@ status_code_t gc_execute_block(char *block, char *message)
                         if(value_words.q) {
                             if(gc_block.values.q <= 0.0f)
                                 FAIL(Status_NegativeValue); // [Q <= 0]
-                            gc_state.canned.delta = gc_block.values.q;
+                            gc_state.canned.delta = gc_block.values.q * (gc_block.modal.units_imperial ? MM_PER_INCH : 1.0f);
                             value_words.q = Off; // Remove single-meaning value word.
                         } else if(gc_parser_flags.canned_cycle_change)
                             FAIL(Status_GcodeValueWordMissing);
