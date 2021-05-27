@@ -56,11 +56,11 @@ typedef union {
         uint8_t telnet     :1,
                 websocket  :1,
                 http       :1,
+                ftp        :1,
                 dns        :1,
                 mdns       :1,
                 ssdp       :1,
-                webdav     :1,
-                unassigned :1;
+                webdav     :1;
     };
 } network_services_t;
 
