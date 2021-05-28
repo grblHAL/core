@@ -185,6 +185,8 @@ static uint32_t dir_outmap[sizeof(c_dir_outmap) / sizeof(uint32_t)];
 
 #if (STEP_OUTMODE == GPIO_MAP) || (DIRECTION_OUTMODE == GPIO_MAP)
 
+#define USE_STEPDIR_MAP 1
+
 static void stepdirmap_init (settings_t *settings)
 {
     uint_fast8_t i;
