@@ -27,6 +27,7 @@
 #include "system.h"
 #include "coolant_control.h"
 #include "spindle_control.h"
+#include "crossbar.h"
 #include "stepper.h"
 #include "nvs.h"
 #include "stream.h"
@@ -80,6 +81,7 @@ typedef bool (*enqueue_realtime_command_ptr)(char data);
 
 typedef struct {
     stream_type_t type;
+    bool connected;
     uint16_t (*get_rx_buffer_available)(void);
     stream_write_ptr write;             // write string to current I/O stream only.
     stream_write_ptr write_all;         // write string to all active output streams.
@@ -91,15 +93,30 @@ typedef struct {
     enqueue_realtime_command_ptr enqueue_realtime_command; // NOTE: set by grbl at startup.
 } io_stream_t;
 
+typedef bool (*stream_select_ptr)(const io_stream_t *stream);
+
+// Aux I/O
+
+typedef void (*digital_out_ptr)(uint8_t port, bool on);
+typedef bool (*analog_out_ptr)(uint8_t port, float value);
+typedef int32_t (*wait_on_input_ptr)(bool digital, uint8_t port, wait_mode_t wait_mode, float timeout);
+typedef xbar_t *(*get_pin_info_ptr)(bool digital, uint8_t port);
+
 typedef struct {
     uint8_t num_digital_in;
     uint8_t num_digital_out;
     uint8_t num_analog_in;
     uint8_t num_analog_out;
-    void (*digital_out)(uint8_t port, bool on);
-    bool (*analog_out)(uint8_t port, float value);
-    int32_t (*wait_on_input)(bool digital, uint8_t port, wait_mode_t wait_mode, float timeout);
+    digital_out_ptr digital_out;
+    analog_out_ptr analog_out;
+    wait_on_input_ptr wait_on_input;
+    get_pin_info_ptr get_pin_info;
 } io_port_t;
+
+// Pins
+
+typedef void (*pin_info_ptr)(xbar_t *pin);
+typedef void (*enumerate_pins_ptr)(bool low_level, pin_info_ptr callback);
 
 // Spindle
 
@@ -277,6 +294,7 @@ typedef struct {
     stepper_ptrs_t stepper;
     control_signals_ptrs_t control;
     io_stream_t stream;
+    stream_select_ptr stream_select;
     settings_changed_ptr settings_changed;
 
  //
@@ -298,6 +316,7 @@ typedef struct {
     encoder_ptrs_t encoder;
     nvs_io_t nvs;
     io_port_t port;
+    enumerate_pins_ptr enumerate_pins;
 
     bool (*stream_blocking_callback)(void); // set up by core before driver_init() is called.
 

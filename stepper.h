@@ -90,6 +90,12 @@ typedef struct {
     #ifdef C_AXIS
           , counter_c
     #endif
+    #ifdef C_AXIS
+          , counter_u
+    #endif
+    #ifdef C_AXIS
+          , counter_v
+    #endif
 ;
     bool new_block;                 // Set to true when a new block is started, might be used by driver for advanced functionality
     bool dir_change;                // Set to true on direction changes, might be used by driver for advanced functionality

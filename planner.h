@@ -87,6 +87,7 @@ typedef struct plan_block {
 // Planner data prototype. Must be used when passing new motions to the planner.
 typedef struct {
     float feed_rate;                // Desired feed rate for line motion. Value is ignored, if rapid motion.
+    //  float blending_tolerance;   // Motion blending tolerance
     spindle_t spindle;              // Desired spindle speed through line motion.
     planner_cond_t condition;       // Bitfield variable to indicate planner conditions. See defines above.
     gc_override_flags_t overrides;  // Block bitfield variable for overrides

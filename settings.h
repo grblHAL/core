@@ -591,6 +591,12 @@ typedef enum {
 #ifdef C_AXIS
     Group_CAxis,
 #endif
+#ifdef U_AXIS
+    Group_UAxis,
+#endif
+#ifdef V_AXIS
+    Group_VAxis,
+#endif
     Group_All = Group_Root
 } setting_group_t;
 

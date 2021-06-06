@@ -112,7 +112,11 @@ typedef enum {
 //#define CUTTER_COMP_DISABLE 0 // G40 (Default: Must be zero)
 
 // Modal Group G13: Control mode
-//#define CONTROL_MODE_EXACT_PATH 0 // G61 (Default: Must be zero)
+typedef enum {
+    ControlMode_ExactPath = 0,      // G61 (Default: Must be zero)
+    ControlMode_ExactStop = 1,      // G61.1
+    ControlMode_PathBlending = 2    // G64
+} control_mode_t;
 
 // Modal Group G8: Tool length offset
 typedef enum {
@@ -225,6 +229,10 @@ typedef union {
                  b :1,
                  c :1,
 #endif
+#if N_AXIS > 6
+                 u :1,
+                 v :1,
+#endif
                  d :1;
     };
 } parameter_words_t;
@@ -275,6 +283,12 @@ typedef union {
 #ifdef C_AXIS
         float c;
 #endif
+#ifdef U_AXIS
+        float u;
+#endif
+#ifdef V_AXIS
+        float v;
+#endif
     };
 } coord_data_t;
 
@@ -320,7 +334,7 @@ typedef struct {
     // uint8_t cutter_comp;              // {G40} NOTE: Don't track. Only default supported.
     tool_offset_mode_t tool_offset_mode; // {G43,G43.1,G49}
     coord_system_t coord_system;         // {G54,G55,G56,G57,G58,G59,G59.1,G59.2,G59.3}
-    // uint8_t control;                  // {G61} NOTE: Don't track. Only default supported.
+    // control_mode_t control;           // {G61} NOTE: Don't track. Only default supported.
     program_flow_t program_flow;         // {M0,M1,M2,M30,M60}
     coolant_state_t coolant;             // {M7,M8,M9}
     spindle_state_t spindle;             // {M3,M4,M5}
@@ -412,6 +426,7 @@ typedef struct {
     float feed_rate;                    // Millimeters/min
     float distance_per_rev;             // Millimeters/rev
     float position[N_AXIS];             // Where the interpreter considers the tool to be at this point in the code
+    //  float blending_tolerance;       // Motion blending tolerance
     int32_t line_number;                // Last line number sent
     uint32_t tool_pending;              // Tool to be selected on next M6
     bool file_run;                      // Tracks % command

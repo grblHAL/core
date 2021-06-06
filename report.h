@@ -97,6 +97,9 @@ status_code_t report_current_limit_state (sys_state_t state, char *args);
 // Prints spindle data (encoder pulse and index count, angular position).
 status_code_t report_spindle_data (sys_state_t state, char *args);
 
+// Prints pin assignments
+status_code_t report_pins (sys_state_t state, char *args);
+
 // Prints current PID log.
 void report_pid_log (void);
 

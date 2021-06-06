@@ -27,6 +27,7 @@ typedef uint32_t nvs_address_t;
 
 typedef struct {
     bool is_dirty;
+    bool version;
     bool global_settings;
     bool build_info;
     bool driver_settings;

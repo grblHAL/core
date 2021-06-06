@@ -100,7 +100,9 @@ inline static uint8_t ram_get_byte (uint32_t addr)
 
 inline static void ram_put_byte (uint32_t addr, uint8_t new_value)
 {
-    dirty = dirty || nvsbuffer[addr] != new_value;
+    if(addr == 0)
+        settings_dirty.version = true;
+    dirty = dirty || nvsbuffer[addr] != new_value || addr == 0;
     nvsbuffer[addr] = new_value;
 }
 
@@ -122,7 +124,7 @@ static nvs_transfer_result_t memcpy_to_ram (uint32_t destination, uint8_t *sourc
     if(with_checksum)
         ram_put_byte(dest, checksum);
 
-    if(source == hal.nvs.driver_area.mem_address)
+    if(settings_dirty.version || source == hal.nvs.driver_area.mem_address)
         dirty = true;
 
     if(dirty && physical_nvs.type != NVS_None) {
@@ -280,11 +282,14 @@ void nvs_buffer_sync_physical (void)
 
     if(physical_nvs.memcpy_to_nvs) {
 
-        if(settings_dirty.build_info)
-            settings_dirty.build_info = physical_nvs.memcpy_to_nvs(NVS_ADDR_BUILD_INFO, (uint8_t *)(nvsbuffer + NVS_ADDR_BUILD_INFO), sizeof(stored_line_t) + NVS_CRC_BYTES, false) != NVS_TransferResult_OK;
+        if(settings_dirty.version)
+            settings_dirty.version = physical_nvs.memcpy_to_nvs(0, nvsbuffer, 1, false) != NVS_TransferResult_OK;
 
         if(settings_dirty.global_settings)
             settings_dirty.global_settings = physical_nvs.memcpy_to_nvs(NVS_ADDR_GLOBAL, (uint8_t *)(nvsbuffer + NVS_ADDR_GLOBAL), sizeof(settings_t) + NVS_CRC_BYTES, false) != NVS_TransferResult_OK;
+
+        if(settings_dirty.build_info)
+            settings_dirty.build_info = physical_nvs.memcpy_to_nvs(NVS_ADDR_BUILD_INFO, (uint8_t *)(nvsbuffer + NVS_ADDR_BUILD_INFO), sizeof(stored_line_t) + NVS_CRC_BYTES, false) != NVS_TransferResult_OK;
 
         uint_fast8_t idx = N_STARTUP_LINE, offset;
         if(settings_dirty.startup_lines) do {
@@ -344,7 +349,7 @@ nvs_io_t *nvs_buffer_get_physical (void)
     return hal.nvs.type == NVS_Emulated ? &physical_nvs : &hal.nvs;
 }
 
-#ifndef DEBUGOUT
+#ifdef DEBUGOUT
 
 #include "report.h"
 

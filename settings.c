@@ -242,6 +242,28 @@ PROGMEM const settings_t defaults = {
     .homing.cycle[5].mask = HOMING_CYCLE_5,
 #endif
 
+#ifdef U_AXIS
+    .axis[U_AXIS].steps_per_mm = DEFAULT_U_STEPS_PER_MM,
+    .axis[U_AXIS].acceleration = DEFAULT_U_ACCELERATION,
+    .axis[U_AXIS].max_rate = DEFAULT_U_MAX_RATE,
+    .axis[U_AXIS].max_travel = (-DEFAULT_U_MAX_TRAVEL),
+    .axis[U_AXIS].dual_axis_offset = 0.0f,
+#ifdef ENABLE_BACKLASH_COMPENSATION
+    .axis[U_AXIS].backlash = 0.0f,
+#endif
+#endif
+
+#ifdef V_AXIS
+    .axis[V_AXIS].steps_per_mm = DEFAULT_V_STEPS_PER_MM,
+    .axis[V_AXIS].acceleration = DEFAULT_V_ACCELERATION,
+    .axis[V_AXIS].max_rate = DEFAULT_V_MAX_RATE,
+    .axis[V_AXIS].max_travel = (-DEFAULT_V_MAX_TRAVEL),
+    .axis[V_AXIS].dual_axis_offset = 0.0f,
+#ifdef ENABLE_BACKLASH_COMPENSATION
+    .axis[V_AXIS].backlash = 0.0f,
+#endif
+#endif
+
     .tool_change.mode = (toolchange_mode_t)DEFAULT_TOOLCHANGE_MODE,
     .tool_change.probing_distance = DEFAULT_TOOLCHANGE_PROBING_DISTANCE,
     .tool_change.feed_rate = DEFAULT_TOOLCHANGE_FEED_RATE,
@@ -285,7 +307,13 @@ PROGMEM static const setting_group_detail_t setting_group_detail [] = {
     { Group_Axis, Group_BAxis, "B-axis"},
 #endif
 #ifdef C_AXIS
-    { Group_Axis, Group_CAxis, "C-axis"}
+    { Group_Axis, Group_CAxis, "C-axis"},
+#endif
+#ifdef U_AXIS
+    { Group_Axis, Group_UAxis, "U-axis"},
+#endif
+#ifdef V_AXIS
+    { Group_Axis, Group_VAxis, "V-axis"}
 #endif
 };
 
@@ -1282,16 +1310,14 @@ bool read_global_settings ()
 }
 
 
-// Write Grbl global settings and version number to persistent storage
+// Write Grbl global settings to persistent storage
 void settings_write_global (void)
 {
     if(override_backup.valid)
         restore_override_backup();
 
-    if(hal.nvs.type != NVS_None) {
-        hal.nvs.put_byte(0, SETTINGS_VERSION);
+    if(hal.nvs.type != NVS_None)
         hal.nvs.memcpy_to_nvs(NVS_ADDR_GLOBAL, (uint8_t *)&settings, sizeof(settings_t), true);
-    }
 }
 
 
@@ -1303,6 +1329,8 @@ void settings_restore (settings_restore_t restore)
 
     memset(empty_line, 0xFF, sizeof(stored_line_t));
     *empty_line = '\0';
+
+    hal.nvs.put_byte(0, SETTINGS_VERSION); // Forces write to physical storage
 
     if (restore.defaults) {
         memcpy(&settings, &defaults, sizeof(settings_t));
@@ -1404,6 +1432,12 @@ bool settings_is_group_available (setting_group_t group)
         #endif
         #ifdef C_AXIS
         case Group_CAxis:
+        #endif
+        #ifdef U_AXIS
+        case Group_UAxis:
+        #endif
+        #ifdef V_AXIS
+        case Group_VAxis:
         #endif
             available = true;
             break;

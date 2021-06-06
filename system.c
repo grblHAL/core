@@ -39,6 +39,7 @@ static status_code_t enumerate_errors (sys_state_t state, char *args);
 static status_code_t enumerate_groups (sys_state_t state, char *args);
 static status_code_t enumerate_settings (sys_state_t state, char *args);
 static status_code_t enumerate_all (sys_state_t state, char *args);
+static status_code_t enumerate_pins (sys_state_t state, char *args);
 static status_code_t output_settings (sys_state_t state, char *args);
 static status_code_t output_all_settings (sys_state_t state, char *args);
 static status_code_t output_parser_state (sys_state_t state, char *args);
@@ -205,6 +206,7 @@ const sys_command_t sys_commands[] = {
     {"EG", true, enumerate_groups},
     {"ES", true, enumerate_settings},
     {"E*", true, enumerate_all},
+    {"PINS", true, enumerate_pins},
     {"RST", false, settings_reset},
     {"LEV", true, report_last_signals_event},
     {"LIM", true, report_current_limit_state},
@@ -352,6 +354,11 @@ static status_code_t enumerate_all (sys_state_t state, char *args)
     report_error_details();
     report_setting_group_details(true, NULL);
     return report_settings_details(false, Setting_SettingsAll, Group_All);
+}
+
+static status_code_t enumerate_pins (sys_state_t state, char *args)
+{
+    return report_pins(state, args);
 }
 
 static status_code_t output_settings (sys_state_t state, char *args)
@@ -743,9 +750,12 @@ static status_code_t set_startup_line1 (sys_state_t state, char *args)
 }
 
 #ifdef DEBUGOUT
+
+#include "nvs_buffer.h"
+
 static status_code_t output_memmap (sys_state_t state, char *args)
 {
-    nvs_output_memmap();
+    nvs_memmap();
 
     return Status_OK;
 }

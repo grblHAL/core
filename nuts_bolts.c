@@ -66,6 +66,12 @@ char const *const axis_letter[N_AXIS] = {
 #if N_AXIS > 5
     ,"C"
 #endif
+#if N_AXIS > 6
+    ,"U"
+#endif
+#if N_AXIS > 7
+    ,"V"
+#endif
 };
 
 // Converts an uint32 variable to string.

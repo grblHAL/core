@@ -68,10 +68,17 @@
 #define B_AXIS 4
 #define B_AXIS_BIT bit(B_AXIS)
 #endif
-#if N_AXIS == 6
+#if N_AXIS > 5
 #define C_AXIS 5
 #define C_AXIS_BIT bit(C_AXIS)
-#define AXES_BITMASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT|A_AXIS_BIT|B_AXIS_BIT|C_AXIS_BIT)
+#endif
+#if N_AXIS > 6
+#define U_AXIS 6
+#define U_AXIS_BIT bit(U_AXIS)
+#endif
+#if N_AXIS == 8
+#define V_AXIS 7
+#define V_AXIS_BIT bit(V_AXIS)
 #endif
 
 #if N_AXIS == 3
@@ -80,6 +87,12 @@
 #define AXES_BITMASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT|A_AXIS_BIT)
 #elif N_AXIS == 5
 #define AXES_BITMASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT|A_AXIS_BIT|B_AXIS_BIT)
+#elif N_AXIS == 6
+#define AXES_BITMASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT|A_AXIS_BIT|B_AXIS_BIT|C_AXIS_BIT)
+#elif N_AXIS == 7
+#define AXES_BITMASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT|A_AXIS_BIT|B_AXIS_BIT|C_AXIS_BIT|U_AXIS_BIT)
+#else
+#define AXES_BITMASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT|A_AXIS_BIT|B_AXIS_BIT|C_AXIS_BIT|U_AXIS_BIT|V_AXIS_BIT)
 #endif
 
 extern char const *const axis_letter[];
@@ -93,7 +106,9 @@ typedef union {
                 z :1,
                 a :1,
                 b :1,
-                c :1;
+                c :1,
+                u :1,
+                v :1;
     };
 } axes_signals_t;
 

@@ -41,7 +41,7 @@
 #endif
 
 static plan_block_t block_buffer[BLOCK_BUFFER_SIZE];    // A ring buffer for motion instructions
-static plan_block_t *block_buffer_tail;                 // Pointer to the block to process now
+static plan_block_t *block_buffer_tail = NULL;          // Pointer to the block to process now
 static plan_block_t *block_buffer_head;                 // Pointer to the next block to be pushed
 static plan_block_t *next_buffer_head;                  // Pointer to the next buffer head
 static plan_block_t *block_buffer_planned;              // Pointer to the optimally planned block
@@ -203,9 +203,9 @@ inline static void plan_cleanup (plan_block_t *block)
 }
 
 
-inline static void plan_reset_buffer (bool soft_reset)
+inline static void plan_reset_buffer ()
 {
-    if(soft_reset) {
+    if(block_buffer_tail) {
         // Free memory for any pending messages and output commands after soft reset
         while(block_buffer_tail != block_buffer_head) {
             plan_cleanup(block_buffer_tail);
@@ -221,7 +221,14 @@ inline static void plan_reset_buffer (bool soft_reset)
 
 void plan_reset ()
 {
-    static bool soft_reset = false;
+    if(block_buffer_tail) {
+        // Free memory for any pending messages and output commands after soft reset
+        while(block_buffer_tail != block_buffer_head) {
+            plan_cleanup(block_buffer_tail);
+            block_buffer_tail = block_buffer_tail->next;
+        }
+        block_buffer_tail = NULL;
+    }
 
     memset(&pl, 0, sizeof(planner_t)); // Clear planner struct
 
@@ -232,8 +239,7 @@ void plan_reset ()
         block_buffer[idx].next = &block_buffer[idx == BLOCK_BUFFER_SIZE - 1 ? 0 : idx + 1];
     }
 
-    plan_reset_buffer(soft_reset);
-    soft_reset = true;
+    plan_reset_buffer();
 }
 
 

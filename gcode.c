@@ -127,6 +127,12 @@ static scale_factor_t scale_factor = {
 #ifdef C_AXIS
   , .ijk[C_AXIS] = 1.0f
 #endif
+#ifdef U_AXIS
+  , .ijk[U_AXIS] = 1.0f
+#endif
+#ifdef V_AXIS
+  , .ijk[V_AXIS] = 1.0f
+#endif
 };
 
 // Simple hypotenuse computation function.
@@ -376,11 +382,17 @@ status_code_t gc_execute_block(char *block, char *message)
 #ifdef A_AXIS
       , .a = On
 #endif
-#ifdef A_AXIS
+#ifdef B_AXIS
       , .b = On
 #endif
-#ifdef A_AXIS
+#ifdef C_AXIS
       , .c = On
+#endif
+#ifdef U_AXIS
+      , .u = On
+#endif
+#ifdef V_AXIS
+      , .v = On
 #endif
     };
 
@@ -671,9 +683,20 @@ status_code_t gc_execute_block(char *block, char *message)
                         word_bit.modal_group.G13 = On;
                         if (mantissa != 0) // [G61.1 not supported]
                             FAIL(Status_GcodeUnsupportedCommand);
-                        // gc_block.modal.control = CONTROL_MODE_EXACT_PATH; // G61
+                        break;
+/*
+                    case 61:
+                        word_bit.modal_group.G13 = On;
+                        if (mantissa != 0 || mantissa != 10)
+                            FAIL(Status_GcodeUnsupportedCommand);
+                        gc_block.modal.control = mantissa == 0 ? ControlMode_ExactPath : ControlMode_ExactStop;
                         break;
 
+                    case 64:
+                        word_bit.modal_group.G13 = On;
+                        gc_block.modal.control = ControlMode_PathBlending; // G64
+                        break;
+*/
                     case 96: case 97:
                         if(settings.mode == Mode_Lathe && hal.driver_cap.variable_spindle) {
                             word_bit.modal_group.G14 = On;
@@ -967,7 +990,23 @@ status_code_t gc_execute_block(char *block, char *message)
                         gc_block.values.t = isnan(value) ? 0xFFFFFFFF : int_value;
                         break;
 
-                    case 'X':
+                #ifdef U_AXIS
+                  case 'U':
+                      axis_words.u = On;
+                      word_bit.parameter.u = On;
+                      gc_block.values.xyz[U_AXIS] = value;
+                      break;
+                #endif
+
+                #ifdef V_AXIS
+                  case 'V':
+                      axis_words.v = On;
+                      word_bit.parameter.v = On;
+                      gc_block.values.xyz[V_AXIS] = value;
+                      break;
+                #endif
+
+                  case 'X':
                         axis_words.x = On;
                         word_bit.parameter.x = On;
                         gc_block.values.xyz[X_AXIS] = value;
@@ -1470,6 +1509,14 @@ status_code_t gc_execute_block(char *block, char *message)
     }
 
     // [16. Set path control mode ]: N/A. Only G61. G61.1 and G64 NOT SUPPORTED.
+/*
+    if (command_words.G13) { // Check if called in block
+        if(gc_block.modal.control == ControlMode_PathBlending) {
+            gc_state.blending_tolerance = value_words.p ? gc_block.values.p : 0.0f;
+            value_words.p = Off;
+        }
+    }
+*/
     // [17. Set distance mode ]: N/A. Only G91.1. G90.1 NOT SUPPORTED.
     // [18. Set retract mode ]: N/A.
 

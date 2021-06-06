@@ -11,7 +11,7 @@ It has been written to complement grblHAL and has features such as proper keyboa
 
 ---
 
-Latest build date is 20210223, see the [changelog](https://github.com/terjeio/grblHAL/blob/master/changelog.md) for details.
+Latest build date is 20210604, see the [changelog](changelog.md) for details.
 
 ---
 
@@ -20,7 +20,7 @@ __NOTE:__ Arduino drivers has now been converted to Arduino libraries, [installa
 ---
 
 grblHAL is a no-compromise, high performance, low cost alternative to parallel-port-based motion control for CNC milling and is based on the [Arduino version of grbl](https://github.com/gnea/grbl). It is mainly aimed at ARM processors \(or other 32-bit MCUs\) with ample amounts of RAM and flash \(compared to AVR 328p\) and requires a [hardware driver](https://github.com/grblHAL/drivers) to be functional.
-Currently drivers are available for 13 different processors/processor families all of which share the same core.
+Currently drivers are available for more than 15 different processors/processor families all of which share the same core codebase.
 
 grblHAL has an open architecture allowing [plugins](https://github.com/grblHAL/plugins) to extend functionality.
 User made plugins can be added to grblHAL without changing a single file in the source<sup>1</sup>, and allows for a wide range extensions to be added.
@@ -34,7 +34,7 @@ It is able to maintain up to 300kHz<sup>3</sup> of stable, jitter free control p
 
 It accepts standards-compliant g-code and has been tested with the output of several CAM tools with no problems. Arcs, circles and helical motion are fully supported, as well as, all other primary g-code commands. Macro functions, variables, and some canned cycles are not supported, but we think GUIs can do a much better job at translating them into straight g-code anyhow.
 
-Grbl includes full acceleration management with look ahead. That means the controller will look up to 16 motions into the future and plan its velocities ahead to deliver smooth acceleration and jerk-free cornering.
+Grbl includes full acceleration management with look ahead. That means the controller will look up motions into the future and plan its velocities ahead to deliver smooth acceleration and jerk-free cornering.
 
 This is a port/rewrite of [grbl 1.1f](https://github.com/gnea/grbl) and should be compatible with GCode senders compliant with the specifications for that version. It should be possible to change default compile-time configurations if problems arise, eg. the default serial buffer sizes has been increased in some of the [drivers](https://github.com/grblHAL/drivers) provided.
 
@@ -77,4 +77,4 @@ List of Supported G-Codes:
 ```
 
 ---
-2021-04-05
+2021-06-06

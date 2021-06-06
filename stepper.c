@@ -350,6 +350,12 @@ ISR_CODE void stepper_driver_interrupt_handler (void)
                 #ifdef C_AXIS
                   = st.counter_c
                 #endif
+                #ifdef U_AXIS
+                  = st.counter_u
+                #endif
+                #ifdef V_AXIS
+                  = st.counter_v
+                #endif
                   = st.step_event_count >> 1;
 
               #ifndef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
@@ -371,6 +377,12 @@ ISR_CODE void stepper_driver_interrupt_handler (void)
            #endif
            #ifdef C_AXIS
             st.steps[C_AXIS] = st.exec_block->steps[C_AXIS] >> st.amass_level;
+           #endif
+           #ifdef U_AXIS
+            st.steps[U_AXIS] = st.exec_block->steps[U_AXIS] >> st.amass_level;
+           #endif
+           #ifdef V_AXIS
+            st.steps[V_AXIS] = st.exec_block->steps[V_AXIS] >> st.amass_level;
            #endif
          #endif
 
@@ -472,6 +484,30 @@ ISR_CODE void stepper_driver_interrupt_handler (void)
 #endif
               sys.position[C_AXIS] = sys.position[C_AXIS] + (st.dir_outbits.c ? -1 : 1);
       }
+  #endif
+
+  #ifdef U_AXIS
+    st.counter_u += st.steps[U_AXIS];
+    if (st.counter_u > st.step_event_count) {
+        step_outbits.u = On;
+        st.counter_u -= st.step_event_count;
+#ifdef ENABLE_BACKLASH_COMPENSATION
+      if(!backlash_motion)
+#endif
+            sys.position[U_AXIS] = sys.position[U_AXIS] + (st.dir_outbits.u ? -1 : 1);
+    }
+  #endif
+
+  #ifdef V_AXIS
+    st.counter_v += st.steps[V_AXIS];
+    if (st.counter_v > st.step_event_count) {
+        step_outbits.v = On;
+        st.counter_v -= st.step_event_count;
+#ifdef ENABLE_BACKLASH_COMPENSATION
+      if(!backlash_motion)
+#endif
+            sys.position[V_AXIS] = sys.position[V_AXIS] + (st.dir_outbits.v ? -1 : 1);
+    }
   #endif
 
     st.step_outbits.value = step_outbits.value;

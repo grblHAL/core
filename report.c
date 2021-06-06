@@ -1841,6 +1841,38 @@ status_code_t report_spindle_data (sys_state_t state, char *args)
     return hal.spindle.get_data ? Status_OK : Status_InvalidStatement;
 }
 
+static const char *get_pinname (pin_function_t function)
+{
+    const char *name = NULL;
+    uint_fast8_t idx = sizeof(pin_names) / sizeof(pin_name_t);
+
+    do {
+        if(pin_names[--idx].function == function)
+            name = pin_names[idx].name;
+    } while(idx && !name);
+
+    return name ? name : "N/A";
+}
+
+static void report_pin (xbar_t *pin)
+{
+    hal.stream.write("[PIN:");
+    if(pin->port)
+        hal.stream.write((char *)pin->port);
+    hal.stream.write(uitoa(pin->pin));
+    hal.stream.write(",");
+    hal.stream.write(get_pinname(pin->function));
+    hal.stream.write("]" ASCII_EOL);
+}
+
+status_code_t report_pins (sys_state_t state, char *args)
+{
+    if(hal.enumerate_pins)
+        hal.enumerate_pins(false, report_pin);
+
+    return Status_OK;
+}
+
 void report_pid_log (void)
 {
 #ifdef PID_LOG
