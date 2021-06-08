@@ -1402,17 +1402,21 @@ static void report_bitfield (const char *format, bool bitmap)
         char *element = strtok(s, ",");
 
         while(element) {
-            hal.stream.write(ASCII_EOL);
-            hal.stream.write("    ");
-            hal.stream.write(uitoa(bit++));
-            hal.stream.write(" - ");
-            hal.stream.write(element);
-            if(bitmap) {
-                hal.stream.write(" (");
-                hal.stream.write(uitoa(val));
-                hal.stream.write(")");
-                val <<= 1;
+            if(strcmp(element, "N/A")) {
+                hal.stream.write(ASCII_EOL);
+                hal.stream.write("    ");
+                hal.stream.write(uitoa(bit));
+                hal.stream.write(" - ");
+                if(*element)
+                hal.stream.write(element);
+                if(bitmap) {
+                    hal.stream.write(" (");
+                    hal.stream.write(uitoa(val));
+                    hal.stream.write(")");
+                }
             }
+            bit++;
+            val <<= 1;
             element = strtok(NULL, ",");
         }
 

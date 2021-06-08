@@ -1,5 +1,8 @@
 ## grblHAL changelog
 
+Build 20210608:
+* Fixes for `$70` setting handling, networking services. Only compile time enabled services \(or protocols\) can now be configured.
+
 Build 20210604:
 * Added some HAL entry points and properties, shared file for mapped step and dir output.
 * Added `$pins` system command, for listing current pin assignments. Work in progress, only supported by a couple of drivers.
