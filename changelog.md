@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+Build 20210626:
+* Standardized handling of motors for ABC- and ganged/squared axes, configuration moved to _my_machine.h_.  
+First number of motors required is calculated, then ABC axes are added from bottom up and then ganged/squared axes from top down.  
+E.g if the board map supports six motors then the following allocations will be made:  
+A-axis and auto-squared Y axis: A-axis -> motor 4 and second Y-axis -> motor 5. Motor 6 pins may then be assigned to auxillary I/O.  
+A-axis, B-axis and ganged X-axis: A-axis -> motor 4 and, B-axis -> motor 5 and second X-axis -> motor 6. Motor 6 limit pin\(s\) if available may be assigned to auxillary I/O.  
+Auto-squared X and Y-axis: second X-axis -> motor 4 and second Y-axis -> motor 5. Motor 6 pins may then be assigned to auxillary I/O.  
+etc...  
+__IMPORTANT:__ For those who have used auto-squared/ganged axes with previous builds be sure to check that the motors allocated matches the current wiring.
+Tip: use the `$pins` system command to list the pin allocations when checking. Rewire as neccesary.
+* Added ganged axis/auto-squaring support to some board maps for the [LPC176x](https://github.com/grblHAL/LPC176x) driver.
+* Expanded on HAL entry points for stream communication and added [initial documentation](http://svn.io-engineering.com/grblHAL/html/hal_8h.html) for the HAL and parts of the core.
+* Encapsulated UART/USB CDC code for many drivers, for most only the init function is now available for direct acccess from the outside. Simplified main driver code and plugins using streams.  
+__NOTE:__ For driver developers: `hal.stream.get_rx_buffer_available` has been renamed to `hal.stream.get_rx_buffer_free` as it was ambiguous \(free space vs. available characters\).
+* Added preview version of [Bluetooth plugin](https://github.com/grblHAL/Plugins_Bluetooth/) - allows auto configuration and auto stream switching for drivers/boards that supports it.
+* Added number of auxillary I/O ports available to `$I` command response.
+* Added value read from last `M66` to the first real-time report following the read. The element `|In:<value>` is used for the report. If the value reported is `-1` the read failed.
+
 Build 20210608:
 * Fixes for `$70` setting handling, networking services. Only compile time enabled services \(or protocols\) can now be configured.
 

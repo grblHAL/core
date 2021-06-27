@@ -398,7 +398,7 @@ bool protocol_execute_realtime (void)
 // NOTE: Do not alter this unless you know exactly what you are doing!
 bool protocol_exec_rt_system (void)
 {
-    uint_fast16_t rt_exec;
+    rt_exec_t rt_exec;
     bool killed = false;
 
     if (sys.rt_exec_alarm && (rt_exec = system_clear_exec_alarm())) { // Enter only if any bit flag is true
@@ -758,8 +758,9 @@ ISR_CODE bool protocol_enqueue_realtime_command (char c)
         case CMD_STATUS_REPORT_ALL: // Add all statuses on to report
             {
                 bool tlo = sys.report.tool_offset;
-                sys.report.value = (uint16_t)-1;
+                sys.report.value = (uint32_t)-1;
                 sys.report.tool_offset = tlo;
+                sys.report.m66result = sys.var5933 > -2;
             }
             // no break
 

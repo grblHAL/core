@@ -130,8 +130,8 @@ typedef enum {
 
 typedef enum {
     Setting_EncoderMode = 0,
-    Setting_EncoderCPR = 1, // Count Per Revolution
-    Setting_EncoderCPD = 2, // Count Per Detent
+    Setting_EncoderCPR = 1,     //!< Count Per Revolution.
+    Setting_EncoderCPD = 2,     //!< Count Per Detent.
     Setting_EncoderDblClickWindow = 3 // ms
 } encoder_setting_id_t;
 
@@ -156,16 +156,16 @@ typedef union {
 
 typedef struct {
     encoder_mode_t mode;
-    uint32_t cpr; // count per revolution
-    uint32_t cpd; // count per detent
-    uint32_t dbl_click_window; // ms
+    uint32_t cpr;               //!< Count per revolution.
+    uint32_t cpd;               //!< Count per detent.
+    uint32_t dbl_click_window;  //!< ms.
     encoder_flags_t flags;
 } encoder_settings_t;
 
 typedef struct {
     encoder_mode_t mode;
     uint_fast8_t id;
-    uint_fast8_t axis; // axis index for MPG encoders, 0xFF for others
+    uint_fast8_t axis;          //!< Axis index for MPG encoders, 0xFF for others.
     int32_t position;
     uint32_t velocity;
     encoder_event_t event;

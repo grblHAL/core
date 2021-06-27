@@ -95,6 +95,16 @@
 #define AXES_BITMASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT|A_AXIS_BIT|B_AXIS_BIT|C_AXIS_BIT|U_AXIS_BIT|V_AXIS_BIT)
 #endif
 
+#ifdef C_AXIS
+#define N_ABC_AXIS 3
+#elif defined(B_AXIS)
+#define N_ABC_AXIS 2
+#elif defined(A_AXIS)
+#define N_ABC_AXIS 1
+#else
+#define N_ABC_AXIS 0
+#endif
+
 extern char const *const axis_letter[];
 
 typedef union {
@@ -114,11 +124,12 @@ typedef union {
 
 #pragma pack(push, 1)
 
+//! \brief Limit switches struct, consists of four packed axes_signals_t structs.
 typedef struct {
-    axes_signals_t min;
-    axes_signals_t max;
-    axes_signals_t min2;
-    axes_signals_t max2;
+    axes_signals_t min;     //!< Min limit switches status, required.
+    axes_signals_t max;     //!< Max limit switches status, optional.
+    axes_signals_t min2;    //!< Secondary min limit switch(es) status, required for auto squaring enabled axes.
+    axes_signals_t max2;    //!< Secondary max limit switches status, optional (of no practical use?).
 } limit_signals_t;
 
 #pragma pack(pop)

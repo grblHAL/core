@@ -54,7 +54,7 @@ typedef struct plan_block {
     // NOTE: Used by stepper algorithm to execute the block correctly. Do not alter these values.
     uint32_t steps[N_AXIS];         // Step count along each axis
     uint32_t step_event_count;      // The maximum step axis count and number of steps required to complete this block.
-    axes_signals_t direction_bits;  // The direction bit set for this block (refers to *_DIRECTION_BIT in config.h)
+    axes_signals_t direction_bits;  // The direction bit set for this block (refers to *_DIRECTION_PIN in config.h)
 
     // Block condition data to ensure correct execution depending on states and overrides.
     planner_cond_t condition;       // Block bitfield variable defining block run conditions. Copied from pl_line_data.

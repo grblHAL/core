@@ -23,17 +23,14 @@
 #define _COOLANT_CONTROL_H_
 
 typedef union {
-    uint8_t value;
-    uint8_t mask;
+    uint8_t value;                 //!< Bitmask value
+    uint8_t mask;                  //!< Synonym for bitmask value
     struct {
-        uint8_t flood          :1,
-                mist           :1,
-                shower         :1,
-                trough_spindle :1,
-                reserved4 :1,
-                reserved5 :1,
-                reserved6 :1,
-                reserved7 :1;
+        uint8_t flood          :1, //!< Flood coolant.
+                mist           :1, //!< Mist coolant, optional.
+                shower         :1, //!< Shower coolant, currently unused.
+                trough_spindle :1, //!< Through spindle coolant, currently unused.
+                unused         :4;
     };
 } coolant_state_t;
 

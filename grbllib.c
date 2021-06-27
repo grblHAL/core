@@ -49,8 +49,7 @@
 #include "wall_plotter.h"
 #endif
 
-// Declare system global variable structure
-system_t sys = {0};
+struct system sys = {0}; //!< System global variable structure.
 grbl_t grbl;
 grbl_hal_t hal;
 
@@ -229,6 +228,7 @@ int grbl_enter (void)
         else
             memset(&sys, 0, offsetof(system_t, alarm)); // Clear system variables except state & alarm.
 
+        sys.var5933 = -2;                                        // Clear last M66 result
         sys.override.feed_rate = DEFAULT_FEED_OVERRIDE;          // Set to 100%
         sys.override.rapid_rate = DEFAULT_RAPID_OVERRIDE;        // Set to 100%
         sys.override.spindle_rpm = DEFAULT_SPINDLE_RPM_OVERRIDE; // Set to 100%

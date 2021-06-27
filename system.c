@@ -847,8 +847,10 @@ void system_apply_jog_limits (float *target)
 
 void system_raise_alarm (alarm_code_t alarm)
 {
-    sys.alarm = alarm;
-    state_set(alarm == Alarm_EStop ? STATE_ESTOP : STATE_ALARM);
-    if(sys.driver_started)
-        report_alarm_message(alarm);
+    if(sys.alarm != alarm) {
+        sys.alarm = alarm;
+        state_set(alarm == Alarm_EStop ? STATE_ESTOP : STATE_ALARM);
+        if(sys.driver_started)
+            report_alarm_message(alarm);
+    }
 }

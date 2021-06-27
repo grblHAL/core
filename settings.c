@@ -79,7 +79,7 @@ PROGMEM const settings_t defaults = {
     .flags.sleep_enable = DEFAULT_SLEEP_ENABLE,
 #if DEFAULT_LASER_MODE
     .mode = Mode_Laser,
-    .flags.disable_laser_during_hold = DEFAULT_DISABLE_LASER_DURING_HOLD,
+    .flags.disable_laser_during_hold = DEFAULT_ENABLE_LASER_DURING_HOLD,
 #else
     .flags.disable_laser_during_hold = 0,
   #if DEFAULT_LATHE_MODE
@@ -89,9 +89,9 @@ PROGMEM const settings_t defaults = {
     .flags.restore_after_feed_hold = DEFAULT_RESTORE_AFTER_FEED_HOLD,
     .flags.force_initialization_alarm = DEFAULT_FORCE_INITIALIZATION_ALARM,
 
-    .probe.disable_probe_pullup = DISABLE_PROBE_PIN_PULL_UP,
+    .probe.disable_probe_pullup = DISABLE_PROBE_BIT_PULL_UP,
     .probe.allow_feed_override = ALLOW_FEED_OVERRIDE_DURING_PROBE_CYCLES,
-    .probe.invert_probe_pin = DEFAULT_INVERT_PROBE_PIN,
+    .probe.invert_probe_pin = DEFAULT_INVERT_PROBE_BIT,
 
     .steppers.pulse_microseconds = DEFAULT_STEP_PULSE_MICROSECONDS,
     .steppers.pulse_delay_microseconds = DEFAULT_STEP_PULSE_DELAY,
@@ -141,8 +141,8 @@ PROGMEM const settings_t defaults = {
     .limits.flags.jog_soft_limited = DEFAULT_JOG_LIMIT_ENABLE,
     .limits.flags.check_at_init = DEFAULT_CHECK_LIMITS_AT_INIT,
     .limits.flags.two_switches = DEFAULT_LIMITS_TWO_SWITCHES_ON_AXES,
-    .limits.invert.mask = INVERT_LIMIT_PIN_MASK,
-    .limits.disable_pullup.mask = DISABLE_LIMIT_PINS_PULL_UP_MASK,
+    .limits.invert.mask = INVERT_LIMIT_BIT_MASK,
+    .limits.disable_pullup.mask = DISABLE_LIMIT_BITS_PULL_UP_MASK,
 
     .control_invert.mask = INVERT_CONTROL_PIN_MASK,
     .control_disable_pullup.mask = DISABLE_CONTROL_PINS_PULL_UP_MASK,
@@ -355,8 +355,8 @@ static uint32_t get_int (setting_id_t id);
 static bool is_setting_available (const setting_detail_t *setting);
 
 static char control_signals[] = "Reset,Feed hold,Cycle start,Safety door,Block delete,Optional stop,EStop,Probe connected,Motor fault";
-static char control_signals_map[] = "0,1,2,3,4,5,6,7,8";
 static char spindle_signals[] = "Spindle enable,Spindle direction,PWM";
+static char coolant_signals[] = "Flood,Mist";
 
 PROGMEM static const setting_detail_t setting_detail[] = {
     { Setting_PulseMicroseconds, Group_Stepper, "Step pulse time", "microseconds", Format_Decimal, "#0.0", "2.0", NULL, Setting_IsLegacy, &settings.steppers.pulse_microseconds, NULL, NULL },
@@ -380,10 +380,10 @@ PROGMEM static const setting_detail_t setting_detail[] = {
     { Setting_JunctionDeviation, Group_General, "Junction deviation", "mm", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacy, &settings.junction_deviation, NULL, NULL },
     { Setting_ArcTolerance, Group_General, "Arc tolerance", "mm", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacy, &settings.arc_tolerance, NULL, NULL },
     { Setting_ReportInches, Group_General, "Report in inches", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsLegacyFn, set_report_inches, get_int, NULL },
-    { Setting_ControlInvertMask, Group_ControlSignals, "Invert control pins", NULL, Format_Bitfield, control_signals, control_signals_map, NULL, Setting_IsExpandedFn, set_control_invert, get_int, NULL },
-    { Setting_CoolantInvertMask, Group_Coolant, "Invert coolant pins", NULL, Format_Bitfield, "Flood,Mist", NULL, NULL, Setting_IsExtended, &settings.coolant_invert.mask, NULL, NULL },
+    { Setting_ControlInvertMask, Group_ControlSignals, "Invert control pins", NULL, Format_Bitfield, control_signals, NULL, NULL, Setting_IsExpandedFn, set_control_invert, get_int, NULL },
+    { Setting_CoolantInvertMask, Group_Coolant, "Invert coolant pins", NULL, Format_Bitfield, coolant_signals, NULL, NULL, Setting_IsExtended, &settings.coolant_invert.mask, NULL, NULL },
     { Setting_SpindleInvertMask, Group_Spindle, "Invert spindle signals", NULL, Format_Bitfield, spindle_signals, NULL, NULL, Setting_IsExtendedFn, set_spindle_invert, get_int, NULL },
-    { Setting_ControlPullUpDisableMask, Group_ControlSignals, "Pullup disable control pins", NULL, Format_Bitfield, control_signals, control_signals_map, NULL, Setting_IsExtendedFn, set_control_disable_pullup, get_int, NULL },
+    { Setting_ControlPullUpDisableMask, Group_ControlSignals, "Pullup disable control pins", NULL, Format_Bitfield, control_signals, NULL, NULL, Setting_IsExtendedFn, set_control_disable_pullup, get_int, NULL },
     { Setting_LimitPullUpDisableMask, Group_Limits, "Pullup disable limit pins", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.limits.disable_pullup.mask, NULL, NULL },
     { Setting_ProbePullUpDisable, Group_Probing, "Pullup disable probe pin", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_probe_disable_pullup, get_int, NULL },
     { Setting_SoftLimitsEnable, Group_Limits, "Soft limits enable", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsLegacyFn, set_soft_limits_enable, get_int, NULL },
@@ -547,7 +547,7 @@ setting_details_t *settings_get_details (void)
 #if COMPATIBILITY_LEVEL > 1
 static status_code_t set_limits_invert_mask (setting_id_t id, uint_fast16_t int_value)
 {
-    settings.limits.invert.mask = (int_value ? ~(INVERT_LIMIT_PIN_MASK) : INVERT_LIMIT_PIN_MASK) & AXES_BITMASK;
+    settings.limits.invert.mask = (int_value ? ~(INVERT_LIMIT_BIT_MASK) : INVERT_LIMIT_BIT_MASK) & AXES_BITMASK;
 
     return Status_OK;
 }
@@ -700,7 +700,7 @@ static status_code_t set_mode (setting_id_t id, uint_fast16_t int_value)
             if(!hal.driver_cap.variable_spindle)
                 return Status_SettingDisabledLaser;
             if(settings.mode != Mode_Laser)
-                settings.flags.disable_laser_during_hold = DEFAULT_DISABLE_LASER_DURING_HOLD;
+                settings.flags.disable_laser_during_hold = DEFAULT_ENABLE_LASER_DURING_HOLD;
             gc_state.modal.diameter_mode = false;
             break;
 
@@ -967,7 +967,7 @@ static uint32_t get_int (setting_id_t id)
 
 #if COMPATIBILITY_LEVEL > 1
         case Setting_LimitPinsInvertMask:
-            value = settings.limits.invert.mask == INVERT_LIMIT_PIN_MASK ? 0 : 1;
+            value = settings.limits.invert.mask == INVERT_LIMIT_BIT_MASK ? 0 : 1;
             break;
 #endif
 
@@ -992,7 +992,7 @@ static uint32_t get_int (setting_id_t id)
             break;
 
         case Setting_ControlInvertMask:
-            value = settings.control_invert.mask;
+            value = settings.control_invert.mask & hal.signals_cap.mask;
             break;
 
         case Setting_SpindleInvertMask:
@@ -1000,7 +1000,7 @@ static uint32_t get_int (setting_id_t id)
             break;
 
         case Setting_ControlPullUpDisableMask:
-            value = settings.control_disable_pullup.mask;
+            value = settings.control_disable_pullup.mask & hal.signals_cap.mask;
             break;
 
         case Setting_ProbePullUpDisable:
@@ -1630,20 +1630,18 @@ bool setting_is_list (const setting_detail_t *setting)
 
 static char *remove_element (char *s, uint_fast8_t entry)
 {
-    if(entry) {
-        while(*s && entry) {
-            if(*s == ',' && --entry == 0)
-                *s = '\0';
-            else
-                s++;
-        }
+    while(entry && *s) {
+        if(*s == ',')
+            entry--;
+        s++;
     }
 
     if(entry == 0) {
-        char *s2 = s + 1;
-        if(*s2 == ',')
-            s2++;
-        else while(*s2 && *s2 != ',')
+        *s++ = 'N';
+        *s++ = '/';
+        *s++ = 'A';
+        char *s2 = s;
+        while(*s2 && *s2 != ',')
             s2++;
         while(*s2)
             *s++ = *s2++;
@@ -1657,10 +1655,28 @@ static void setting_remove_element (setting_id_t id, uint_fast8_t pos)
 {
     const setting_detail_t *setting = setting_get_details(id, NULL);
 
-    if(setting && setting_is_list(setting)) {
+    if(setting && setting_is_list(setting))
         remove_element((char *)setting->format, pos);
-        if(setting->min_value)
-            remove_element((char *)setting->min_value, pos);
+}
+
+// Flag setting elements for bitfields as N/A according to a mask
+// Note: setting format string has to reside in RAM.
+void setting_remove_elements (setting_id_t id, uint32_t mask)
+{
+    char *format = (char *)setting_get_details(id, NULL)->format, *s;
+    uint_fast8_t idx, entries = strnumentries(format, ',');
+
+    for(idx = 0; idx < entries; idx++ ) {
+        if(!(mask & 0x1))
+            setting_remove_element(id, idx);
+        mask >>= 1;
+    }
+
+    // Strip trailing N/A's
+    while((s = strrchr(format, ','))) {
+        if(strncmp(s, ",N/A", 4))
+            break;
+        *s = '\0';
     }
 }
 
@@ -1673,22 +1689,7 @@ inline static bool setting_is_core (setting_type_t  type)
 {
     return !(type == Setting_NonCore || type == Setting_NonCoreFn);
 }
-/*
-static uint32_t get_mask (const char *bits)
-{
-    uint32_t mask = 0;
-    uint_fast8_t set_idx = 0;
-    float value;
 
-    while(read_float((char *)bits, &set_idx, &value)) {
-        mask |= (1 << (uint8_t)value);
-        if(bits[set_idx] == ',')
-            set_idx++;
-    }
-
-    return mask;
-}
-*/
 status_code_t setting_validate_me (const setting_detail_t *setting, float value, char *svalue)
 {
     status_code_t status = Status_OK;
@@ -1702,9 +1703,7 @@ status_code_t setting_validate_me (const setting_detail_t *setting, float value,
 
         case Format_Bitfield:
         case Format_XBitfield:;
-            if(!(isintf(value) && /* (setting->min_value
-                                   ? (((uint32_t)value & ~get_mask(setting->min_value)) == 0)
-                                   : */ ((uint32_t)value < (1UL << strnumentries(setting->format, ','))))) //)
+            if(!(isintf(value) && ((uint32_t)value < (1UL << strnumentries(setting->format, ','))))) //)
                 status = Status_SettingValueOutOfRange;
             break;
 
@@ -1887,27 +1886,17 @@ void settings_init (void)
             hal.probe.configure(false, false);
     }
 
-    if(!hal.driver_cap.spindle_pwm_invert)
-        setting_remove_element(Setting_SpindleInvertMask, 2);
+    spindle_state_t spindle_cap = {
+        .on = On,
+        .ccw = hal.driver_cap.spindle_dir,
+        .pwm = hal.driver_cap.spindle_pwm_invert
+    };
 
-    if(!hal.signals_cap.motor_fault)
-        setting_remove_element(Setting_ControlInvertMask, 8);
-/* TODO
-    if(!hal.signals_cap.probe_disconnected)
-        setting_remove_element(Setting_ControlInvertMask, 7);
+    setting_remove_elements(Setting_SpindleInvertMask, spindle_cap.mask);
+    setting_remove_elements(Setting_ControlInvertMask, hal.signals_cap.mask);
 
-    if(!hal.signals_cap.e_stop)
-        setting_remove_element(Setting_ControlInvertMask, 6);
-
-    if(!hal.signals_cap.stop_disable)
-        setting_remove_element(Setting_ControlInvertMask, 5);
-
-    if(!hal.signals_cap.block_delete)
-        setting_remove_element(Setting_ControlInvertMask, 4);
-
-    if(!hal.signals_cap.safety_door_ajar)
-        setting_remove_element(Setting_ControlInvertMask, 3);
-*/
+    if(!hal.driver_cap.mist_control)
+        setting_remove_element(Setting_CoolantInvertMask, 1);
 
     setting_details_t *details = settings_get_details();
 

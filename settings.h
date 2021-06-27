@@ -227,6 +227,7 @@ typedef enum {
     Settings_ModBus_BaudRate = 374,
     Settings_ModBus_RXTimeout = 375,
     Settings_Axis_Rotational = 376,
+    Setting_BlueToothInitOK = 377,
 
     Setting_EncoderSettingsBase = 400, // NOTE: Reserving settings values >= 400 for encoder settings. Up to 449.
     Setting_EncoderSettingsMax = 449,
@@ -661,7 +662,11 @@ typedef float (*setting_get_float_ptr)(setting_id_t id);
 typedef char *(*setting_get_string_ptr)(setting_id_t id);
 typedef bool (*setting_output_ptr)(const setting_detail_t *setting, uint_fast16_t offset, void *data);
 
+/*! \brief Pointer to callback function to be called when settings are loaded or changed.
+\param pointer to \a settings_t struct containing the settings.
+*/
 typedef void (*settings_changed_ptr)(settings_t *settings);
+
 typedef void (*driver_settings_load_ptr)(void);
 typedef void (*driver_settings_save_ptr)(void);
 typedef void (*driver_settings_restore_ptr)(void);
@@ -728,5 +733,6 @@ setting_group_t settings_normalize_group (setting_group_t group);
 char *setting_get_value (const setting_detail_t *setting, uint_fast16_t offset);
 setting_id_t settings_get_axis_base (setting_id_t id, uint_fast8_t *idx);
 bool setting_is_list (const setting_detail_t *setting);
+void setting_remove_elements (setting_id_t id, uint32_t mask);
 
 #endif

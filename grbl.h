@@ -34,7 +34,7 @@
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_VERSION_BUILD "20210608"
+#define GRBL_VERSION_BUILD "20210626"
 
 // The following symbols are set here if not already set by the compiler or in config.h
 // Do NOT change here!
@@ -43,10 +43,10 @@
 #include "esp_attr.h"
 #define ISR_CODE IRAM_ATTR
 #else
-//#define ISR_CODE __attribute__((long_call, section(".data")))
+// #define ISR_CODE __attribute__((long_call, section(".data")))
 // Used to decorate code run in interrupt context.
 // Do not remove or change unless you know what you are doing.
-#define ISR_CODE
+#define ISR_CODE //!< Used by some drivers to force a function to always stay in RAM to improve performance.
 #endif
 
 #ifdef ARDUINO
@@ -55,14 +55,6 @@
 
 #ifndef PROGMEM
 #define PROGMEM
-#endif
-
-#ifndef N_AXIS
-#define N_AXIS 3 // Number of axes
-#endif
-
-#ifndef COMPATIBILITY_LEVEL
-#define COMPATIBILITY_LEVEL 0
 #endif
 
 #if (defined(COREXY) || defined(WALL_PLOTTER) || defined(MASLOW_ROUTER)) && !defined(KINEMATICS_API)

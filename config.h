@@ -30,20 +30,29 @@
 
 // Compile time only default configuration
 
-// Number of axes supported: minimum 3, maximum 6
-// If more than 3 axes are required a compliant driver must be provided
-//#define N_AXIS 3 // Number of axes
+#ifndef N_AXIS
+/*! Defines number of axes supported - minimum 3, maximum 6
 
-// Defines compatibility level with the grbl 1.1 protocol.
-// Additional G- and M-codes are not disabled except when level is set to >= 10.
-//  This does not apply to G- and M-codes dependent on driver and/or configuration settings disabled by stting level > 1.
-// Set to 0 for reporting itself as "GrblHAL" with protocol extensions enabled.
-// Set to 1 to disable some extensions, and for reporting itself as "Grbl".
-// Set to 2 to disable new settings as well, use #define parameters for setting default values.
-//  These can be found in in this file and in defaults.h.
-// Set to 10 to also disable new coordinate system offsets (G59.1 - G59.3) and some $# report extensions.
-// NOTE: if switching to a level > 1 please reset non-volatile storage with $RST=* after reflashing!
+If more than 3 axes are configured a compliant driver and map file is needed.
+*/
+#define N_AXIS 3 // Number of axes
+#endif
+
+#ifndef COMPATIBILITY_LEVEL
+/*! Define compatibility level with the grbl 1.1 protocol.
+
+Additional G- and M-codes are not disabled except when level is set to >= 10.
+This does not apply to G- and M-codes dependent on driver and/or configuration settings disabled by setting level > 1.
+<br>Set to 0 for reporting itself as "GrblHAL" with protocol extensions enabled.
+<br>Set to 1 to disable some extensions, and for reporting itself as "Grbl".
+<br>Set to 2 to disable new settings as well, use #define parameters for setting default values.
+<br>These can be found in in this file and in defaults.h.
+<br>Set to 10 to also disable new coordinate system offsets (G59.1 - G59.3) and some $# report extensions.
+
+__NOTE:__ if switching to a level > 1 please reset non-volatile storage with \a $RST=* after reflashing!
+*/
 #define COMPATIBILITY_LEVEL 0
+#endif
 
 //#define KINEMATICS_API // Remove comment to add HAL entry points for custom kinematics
 
@@ -81,8 +90,11 @@
 //#define SAFETY_DOOR_SPINDLE_DELAY 4.0f // Float (seconds)
 //#define SAFETY_DOOR_COOLANT_DELAY 1.0f // Float (seconds)
 
-// Control signals bit definitions and mask.
-// NOTE: these definitions are only referenced in this file. Do NOT change!
+/*! @name Control signals bit definitions and mask.
+
+__NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
+*/
+///@{
 #define SIGNALS_RESET_BIT (1<<0)
 #define SIGNALS_FEEDHOLD_BIT (1<<1)
 #define SIGNALS_CYCLESTART_BIT (1<<2)
@@ -93,7 +105,7 @@
 #define SIGNALS_PROBE_CONNECTED_BIT (1<<7)
 #define SIGNALS_MOTOR_FAULT_BIT (1<<8)
 #define SIGNALS_BITMASK (SIGNALS_RESET_BIT|SIGNALS_FEEDHOLD_BIT|SIGNALS_CYCLESTART_BIT|SIGNALS_SAFETYDOOR_BIT|SIGNALS_BLOCKDELETE_BIT|SIGNALS_STOPDISABLE_BIT|SIGNALS_ESTOP_BIT|SIGNALS_PROBE_CONNECTED_BIT|SIGNALS_MOTOR_FAULT_BIT)
-/**/
+///@}
 
 // ---------------------------------------------------------------------------------------
 // ADVANCED CONFIGURATION OPTIONS:
@@ -294,7 +306,7 @@
 // override immediately after coming to a stop. However, this also means that the laser still may
 // be reenabled by disabling the spindle stop override, if needed. This is purely a safety feature
 // to ensure the laser doesn't inadvertently remain powered while at a stop and cause a fire.
-//#define DEFAULT_DISABLE_LASER_DURING_HOLD // Default enabled. Uncomment to disable.
+//#define DEFAULT_ENABLE_LASER_DURING_HOLD // Default enabled. Uncomment to disable.
 
 // This option is for what should happen on resume from feed hold.
 // Default action is to restore spindle and coolant status (if overridden), this contradicts the
@@ -356,11 +368,11 @@
 // instead of ground.
 // WARNING: When the pull-ups are disabled, this might require additional wiring with pull-down resistors!
 //          Please check driver code and/or documentation.
-// #define DISABLE_LIMIT_PINS_PULL_UP_MASK AXES_BITMASK
-// #define DISABLE_LIMIT_PINS_PULL_UP_MASK (X_AXIS_BIT|Y_AXIS_BIT)
+// #define DISABLE_LIMIT_BITS_PULL_UP_MASK AXES_BITMASK
+// #define DISABLE_LIMIT_BITS_PULL_UP_MASK (X_AXIS_BIT|Y_AXIS_BIT)
 // #define DISABLE_CONTROL_PINS_PULL_UP_MASK SIGNALS_BITMASK
 // #define DISABLE_CONTROL_PINS_PULL_UP_MASK (SIGNALS_SAFETYDOOR_BIT|SIGNALS_RESET_BIT)
-// #define DISABLE_PROBE_PIN_PULL_UP
+// #define DISABLE_PROBE_BIT_PULL_UP
 
 // If your machine has two limits switches wired in parallel to one axis, you will need to enable
 // this feature. Since the two switches are sharing a single pin, there is no way for Grbl to tell
@@ -394,9 +406,9 @@
 // inverting only a few pins. See the start of this file for other signal definitions.
 // #define INVERT_CONTROL_PIN_MASK SIGNALS_BITMASK // Default disabled. Uncomment to enable.
 // #define INVERT_CONTROL_PIN_MASK (SIGNALS_SAFETYDOOR_BIT|SIGNALS_RESET_BIT) // Default disabled. Uncomment to enable.
-// #define INVERT_LIMIT_PIN_MASK AXES_BITMASK // Default disabled. Uncomment to enable. Uncomment to enable.
-// #define INVERT_LIMIT_PIN_MASK (X_AXIS_BIT|Y_AXIS_BIT) // Default disabled. Uncomment to enable.
-// For inverting the probe pin use DEFAULT_INVERT_PROBE_PIN in defaults.h
+// #define INVERT_LIMIT_BIT_MASK AXES_BITMASK // Default disabled. Uncomment to enable. Uncomment to enable.
+// #define INVERT_LIMIT_BIT_MASK (X_AXIS_BIT|Y_AXIS_BIT) // Default disabled. Uncomment to enable.
+// For inverting the probe pin use DEFAULT_INVERT_PROBE_BIT in defaults.h
 
 // Inverts the spindle enable pin from low-disabled/high-enabled to low-enabled/high-disabled. Useful
 // for some pre-built electronic boards.
@@ -496,11 +508,11 @@
 //#define DEFAULT_JUNCTION_DEVIATION 0.01f // mm
 //#define DEFAULT_ARC_TOLERANCE 0.002f // mm
 //#define DEFAULT_REPORT_INCHES
-//#define DEFAULT_INVERT_LIMIT_PINS
+//#define DEFAULT_INVERT_LIMIT_BITS
 //#define DEFAULT_SOFT_LIMIT_ENABLE
 //#define DEFAULT_JOG_LIMIT_ENABLE
 //#define DEFAULT_HARD_LIMIT_ENABLE
-//#define DEFAULT_INVERT_PROBE_PIN
+//#define DEFAULT_INVERT_PROBE_BIT
 //#define DEFAULT_LASER_MODE
 //#define DEFAULT_LATHE_MODE
 //#define DEFAULT_HOMING_ENABLE

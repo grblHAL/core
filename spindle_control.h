@@ -73,9 +73,9 @@ typedef struct {
 } spindle_data_t;
 
 typedef enum {
-    SpindleData_Counters,
-    SpindleData_RPM,
-    SpindleData_AngularPosition
+    SpindleData_Counters,       //!< 0
+    SpindleData_RPM,            //!< 1
+    SpindleData_AngularPosition //!< 2
 } spindle_data_request_t;
 
 void spindle_set_override (uint_fast8_t speed_override);
@@ -100,10 +100,21 @@ bool spindle_restore (spindle_state_t state, float rpm);
 // The following functions are not called by the core, may be called by driver code.
 //
 
-// Precompute PWM values for faster conversion.
+/*! \brief Precompute PWM values for faster conversion.
+\param pwm_data pointer t a \a spindle_pwm_t structure.
+\param clock_hz timer clock frequency used for PWM generation.
+\returns true if successful, false if no PWM range possible - driver should revert to simple on/off spindle control if so.
+*/
 bool spindle_precompute_pwm_values (spindle_pwm_t *pwm_data, uint32_t clock_hz);
 
-// Spindle speed to PWM conversion.
+/*! \brief Spindle RPM to PWM conversion.
+\param pwm_data pointer t a \a spindle_pwm_t structure.
+\param rpm spindle RPM.
+\param pid_limit boolean, true if PID based spindle sync is used, false otherwise.
+
+__NOTE:__ \a spindle_precompute_pwm_values() must be called to precompute values before this function is called.
+Typically this is done in the \a hal.driver_setup handler.
+ */
 uint_fast16_t spindle_compute_pwm_value (spindle_pwm_t *pwm_data, float rpm, bool pid_limit);
 
 #endif

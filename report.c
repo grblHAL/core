@@ -1079,6 +1079,18 @@ void report_build_info (char *line, bool extended)
         hal.stream.write("]" ASCII_EOL);
 #endif
 
+        if(hal.port.num_digital_in + hal.port.num_digital_out + hal.port.num_analog_in + hal.port.num_analog_out > 0) {
+            hal.stream.write("[AUX IO:");
+            hal.stream.write(uitoa(hal.port.num_digital_in));
+            hal.stream.write(",");
+            hal.stream.write(uitoa(hal.port.num_digital_out));
+            hal.stream.write(",");
+            hal.stream.write(uitoa(hal.port.num_analog_in));
+            hal.stream.write(",");
+            hal.stream.write(uitoa(hal.port.num_analog_out));
+            hal.stream.write("]" ASCII_EOL);
+        }
+
         grbl.on_report_options(false);
     }
 }
@@ -1197,7 +1209,7 @@ void report_realtime_status (void)
         hal.stream.write_all("|Bf:");
         hal.stream.write_all(uitoa((uint32_t)plan_get_block_buffer_available()));
         hal.stream.write_all(",");
-        hal.stream.write_all(uitoa(hal.stream.get_rx_buffer_available()));
+        hal.stream.write_all(uitoa(hal.stream.get_rx_buffer_free()));
     }
 
     if(settings.status_report.line_numbers) {
@@ -1346,6 +1358,13 @@ void report_realtime_status (void)
 
         if(sys.report.tlo_reference)
             hal.stream.write_all(appendbuf(2, "|TLR:", uitoa(sys.tlo_reference_set.mask != 0)));
+
+        if(sys.report.m66result && sys.var5933 > -2) { // M66 result
+            if(sys.var5933 >= 0)
+                hal.stream.write_all(appendbuf(2, "|In:", uitoa(sys.var5933)));
+            else
+                hal.stream.write_all("|In:-1");
+        }
     }
 
     if(grbl.on_realtime_report)

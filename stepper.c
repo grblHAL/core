@@ -31,6 +31,8 @@
 
 //#include "debug.h"
 
+//! \cond
+
 #ifndef ACCELERATION_TICKS_PER_SECOND
 #define ACCELERATION_TICKS_PER_SECOND 100
 #endif
@@ -38,6 +40,7 @@
 // Some useful constants.
 #define DT_SEGMENT (1.0f/(ACCELERATION_TICKS_PER_SECOND*60.0f)) // min/segment
 #define REQ_MM_INCREMENT_SCALAR 1.25f
+
 
 typedef enum {
     Ramp_Accel,
@@ -128,6 +131,8 @@ typedef struct {
     float inv_feedrate;     // Used by PWM laser mode to speed up segment calculations.
     float current_spindle_rpm;
 } st_prep_t;
+
+//! \endcond
 
 static st_prep_t prep;
 
@@ -274,6 +279,9 @@ ISR_CODE void st_go_idle ()
    ISR is 5usec typical and 25usec maximum, well below requirement.
    NOTE: This ISR expects at least one step to be executed per segment.
 */
+
+//! \cond
+
 ISR_CODE void stepper_driver_interrupt_handler (void)
 {
 #ifdef ENABLE_BACKLASH_COMPENSATION
@@ -521,6 +529,8 @@ ISR_CODE void stepper_driver_interrupt_handler (void)
         segment_buffer_tail = segment_buffer_tail->next;
     }
 }
+
+//! \endcond
 
 // Reset and clear stepper subsystem variables
 void st_reset ()

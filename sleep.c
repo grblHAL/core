@@ -38,11 +38,11 @@ static void sleep_execute()
     hal.delay_ms((uint32_t)(SLEEP_DURATION * 1000.0f * 60.0f), fall_asleep);
 
     // Fetch current number of buffered characters in input stream buffer.
-    uint16_t rx_initial = hal.stream.get_rx_buffer_available();
+    uint16_t rx_initial = hal.stream.get_rx_buffer_free();
 
     do {
         // Monitor for any new input stream data or external events (queries, buttons, alarms) to exit.
-        if ((hal.stream.get_rx_buffer_available() != rx_initial) || sys.rt_exec_state || sys.rt_exec_alarm ) {
+        if ((hal.stream.get_rx_buffer_free() != rx_initial) || sys.rt_exec_state || sys.rt_exec_alarm ) {
             // Disable sleep timeout and return to normal operation.
             hal.delay_ms(0, NULL);
             return;

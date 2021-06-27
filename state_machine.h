@@ -25,8 +25,8 @@
 #define _STATE_MACHINE_H_
 
 sys_state_t state_get (void);
-void state_set (uint_fast16_t state);
-void state_update (uint_fast16_t rt_exec);
+void state_set (sys_state_t state);
+void state_update (rt_exec_t rt_exec);
 bool state_door_reopened (void);
 void state_suspend_manager (void);
 

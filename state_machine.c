@@ -126,7 +126,7 @@ bool state_door_reopened (void)
     return settings.parking.flags.enabled && park.restart_retract;
 }
 
-void state_update (uint_fast16_t rt_exec)
+void state_update (rt_exec_t rt_exec)
 {
     if((rt_exec & EXEC_SAFETY_DOOR) && sys_state != STATE_SAFETY_DOOR)
         state_set(STATE_SAFETY_DOOR);
@@ -139,7 +139,7 @@ sys_state_t state_get (void)
     return sys_state;
 }
 
-void state_set (uint_fast16_t new_state)
+void state_set (sys_state_t new_state)
 {
     if(new_state != sys_state) {
 

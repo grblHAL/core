@@ -19,6 +19,10 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*! \file
+Helper functions for saving away and restoring a stream input buffer. _Not referenced by the core._
+*/
+
 #ifndef _STREAM_H_
 #define _STREAM_H_
 
@@ -111,8 +115,21 @@ typedef struct {
 extern "C" {
 #endif
 
+/*! \brief Dummy function for reading data from a virtual empty input buffer.
+\returns always -1 as there is no data available.
+*/
 int16_t stream_get_null (void);
+
+/*! \brief Function for blocking reads from or restoring an input buffer.
+\param rxbuffer pointer to a stream_rx_buffer_t.
+\param suspend when true _hal.stream.read_ is changed to stream_get_null(), if false it is restored if already saved.
+\returns true if there is data in the buffer, false otherwise.
+*/
 bool stream_rx_suspend (stream_rx_buffer_t *rxbuffer, bool suspend);
+
+/*! \brief Function for saving away an input buffer.
+\param rxbuffer pointer to a stream_rx_buffer_t.
+*/
 void stream_rx_backup (stream_rx_buffer_t *rxbuffer);
 
 #ifdef __cplusplus

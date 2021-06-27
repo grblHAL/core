@@ -236,11 +236,15 @@ typedef enum {
     PinGroup_AuxInput   = (1<<15),
 } pin_group_t;
 
+//! Pin interrupt modes, may be or'ed when reporting pin capability.
 typedef enum {
-    IRQ_Mode_None    = 0b00,
-    IRQ_Mode_Change  = 0b01,
-    IRQ_Mode_Rising  = 0b10,
-    IRQ_Mode_Falling = 0b11
+    IRQ_Mode_None    = 0b0000, //!< 0b0000 (0x00)
+    IRQ_Mode_Rising  = 0b0001, //!< 0b0001 (0x01)
+    IRQ_Mode_Falling = 0b0010, //!< 0b0010 (0x02)
+    IRQ_Mode_Change  = 0b0011, //!< 0b0011 (0x03)
+    IRQ_Mode_High    = 0b0100, //!< 0b0100 (0x04)
+    IRQ_Mode_Low     = 0b1000, //!< 0b1000 (0x08)
+    IRQ_Mode_All     = 0b1111  //!< 0b1111 (0x0F) - only used to report port capability.
 } pin_irq_mode_t;
 
 typedef enum {
@@ -265,7 +269,7 @@ typedef union {
                  output     :1,
                  open_drain :1,
                  pull_mode  :2,
-                 irq_mode   :2,
+                 irq_mode   :4,
                  pwm        :1,
                  analog     :1,
                  peripheral :1,

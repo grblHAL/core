@@ -25,17 +25,17 @@
 // Values that define the probing state machine.
 
 typedef enum {
-    Probing_Off = 0,
-    Probing_Active
+    Probing_Off = 0, //!< 0
+    Probing_Active   //!< 0
 } probing_state_t;
 
 typedef union {
     uint8_t value;
     struct {
-        uint8_t triggered   :1,
-                connected   :1,
-                inverted    :1, // For driver use
-                is_probing  :1, // For driver use
+        uint8_t triggered   :1, //<! Set to true when probe is triggered.
+                connected   :1, //<! Set to true when probe is connected. Always set to true if the driver does not have a probe connected input.
+                inverted    :1, //<! For driver use
+                is_probing  :1, //<! For driver use
                 unassigned  :4;
     };
 } probe_state_t;
