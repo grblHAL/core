@@ -34,7 +34,7 @@
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_VERSION_BUILD "20210626"
+#define GRBL_VERSION_BUILD "20210629"
 
 // The following symbols are set here if not already set by the compiler or in config.h
 // Do NOT change here!
@@ -118,6 +118,7 @@
 #define CMD_STATUS_REPORT_ALL 0x87
 #define CMD_OPTIONAL_STOP_TOGGLE 0x88
 #define CMD_SINGLE_BLOCK_TOGGLE 0x89
+#define CMD_OVERRIDE_FAN0_TOGGLE 0x8A        // Toggle Fan 0 on/off, not implemented by the core.
 #define CMD_OVERRIDE_FEED_RESET 0x90         // Restores feed override value to 100%.
 #define CMD_OVERRIDE_FEED_COARSE_PLUS 0x91
 #define CMD_OVERRIDE_FEED_COARSE_MINUS 0x92

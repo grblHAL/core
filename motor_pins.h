@@ -494,6 +494,16 @@
 #endif
 #endif
 
+#ifndef X_STEP_BIT
+#define X_STEP_BIT (1<<X_STEP_PIN)
+#endif
+#ifndef Y_STEP_BIT
+#define Y_STEP_BIT (1<<Y_STEP_PIN)
+#endif
+#ifndef Z_STEP_BIT
+#define Z_STEP_BIT (1<<Z_STEP_PIN)
+#endif
+
 #ifdef DIRECTION_PORT
 #ifndef X_DIRECTION_PORT
 #define X_DIRECTION_PORT DIRECTION_PORT
@@ -515,6 +525,16 @@
 #endif
 #endif
 
+#ifndef X_DIRECTION_BIT
+#define X_DIRECTION_BIT (1<<X_DIRECTION_PIN)
+#endif
+#ifndef Y_DIRECTION_BIT
+#define Y_DIRECTION_BIT (1<<Y_DIRECTION_PIN)
+#endif
+#ifndef Z_DIRECTION_BIT
+#define Z_DIRECTION_BIT (1<<Z_DIRECTION_PIN)
+#endif
+
 #ifdef LIMIT_PORT
 #ifndef X_LIMIT_PORT
 #define X_LIMIT_PORT LIMIT_PORT
@@ -534,6 +554,26 @@
 #if defined(C_AXIS) && !defined(C_LIMIT_PORT)
 #define C_LIMIT_PORT LIMIT_PORT
 #endif
+#endif
+
+#ifndef X_LIMIT_BIT
+#define X_LIMIT_BIT (1<<X_LIMIT_PIN)
+#endif
+#ifndef Y_LIMIT_BIT
+#define Y_LIMIT_BIT (1<<Y_LIMIT_PIN)
+#endif
+#ifndef Z_LIMIT_BIT
+#define Z_LIMIT_BIT (1<<Z_LIMIT_PIN)
+#endif
+
+#if !defined(X_ENABLE_BIT) && defined(X_ENABLE_BIT)
+#define X_ENABLE_BIT (1<<X_ENABLE_PIN)
+#endif
+#if !defined(Y_ENABLE_BIT) && defined(Y_ENABLE_PIN)
+#define Y_ENABLE_BIT (1<<Y_ENABLE_PIN)
+#endif
+#if !defined(Z_ENABLE_BIT) && defined(Z_ENABLE_PIN)
+#define Z_ENABLE_BIT (1<<Z_ENABLE_PIN)
 #endif
 
 #ifndef STEP_MASK

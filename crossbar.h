@@ -66,6 +66,8 @@ typedef enum {
     Input_Aux5,
     Input_Aux6,
     Input_Aux7,
+    Input_MotorWarning,
+    Input_MotorFault,
     Outputs,
     Output_StepX = Outputs,
     Output_StepY,
@@ -83,6 +85,7 @@ typedef enum {
     Output_DirC,
     Output_DirU,
     Output_DirV,
+    Output_StepperPower,
     Output_StepperEnable,
     Output_StepperEnableX,
     Output_StepperEnableY,
@@ -160,6 +163,8 @@ PROGMEM static const pin_name_t pin_names[] = {
    { .function = Input_QEI_Select,       .name = "QEI select" },
    { .function = Input_QEI_Index,        .name = "QEI index" },
    { .function = Input_SpindleIndex,     .name = "Spindle index" },
+   { .function = Input_MotorWarning,     .name = "Motor warning" },
+   { .function = Input_MotorFault,       .name = "Motor fault" },
    { .function = Input_Aux0,             .name = "Aux input 0" },
    { .function = Input_Aux1,             .name = "Aux input 1" },
    { .function = Input_Aux2,             .name = "Aux input 2" },
@@ -180,6 +185,7 @@ PROGMEM static const pin_name_t pin_names[] = {
    { .function = Output_DirA,            .name = "A dir" },
    { .function = Output_DirB,            .name = "B dir" },
    { .function = Output_DirC,            .name = "C dir" },
+   { .function = Output_StepperPower,    .name = "Stepper power" },
    { .function = Output_StepperEnable,   .name = "Steppers enable" },
    { .function = Output_StepperEnableX,  .name = "X enable" },
    { .function = Output_StepperEnableY,  .name = "Y enable" },
@@ -215,6 +221,7 @@ typedef enum {
     PinGroup_Coolant,
     PinGroup_SpindlePulse,
     PinGroup_SpindleIndex,
+    PinGroup_StepperPower,
     PinGroup_StepperEnable,
     PinGroup_StepperStep,
     PinGroup_StepperDir,
@@ -226,25 +233,28 @@ typedef enum {
     PinGroup_UART2,
     PinGroup_USB,
 // Interrupt capable pins that may have debounce processing enabled
-    PinGroup_Control    = (1<<8),
-    PinGroup_Limit      = (1<<9),
-    PinGroup_Probe      = (1<<10),
-    PinGroup_Keypad     = (1<<11),
-    PinGroup_MPG        = (1<<12),
-    PinGroup_QEI        = (1<<13),
-    PinGroup_QEI_Select = (1<<14),
-    PinGroup_AuxInput   = (1<<15),
+    PinGroup_Control       = (1<<8),
+    PinGroup_Limit         = (1<<9),
+    PinGroup_Probe         = (1<<10),
+    PinGroup_Keypad        = (1<<11),
+    PinGroup_MPG           = (1<<12),
+    PinGroup_QEI           = (1<<13),
+    PinGroup_QEI_Select    = (1<<14),
+    PinGroup_QEI_Index     = (1<<15),
+    PinGroup_Motor_Warning = (1<<16),
+    PinGroup_Motor_Fault   = (1<<17),
+    PinGroup_AuxInput      = (1<<18)
 } pin_group_t;
 
 //! Pin interrupt modes, may be or'ed when reporting pin capability.
 typedef enum {
-    IRQ_Mode_None    = 0b0000, //!< 0b0000 (0x00)
-    IRQ_Mode_Rising  = 0b0001, //!< 0b0001 (0x01)
-    IRQ_Mode_Falling = 0b0010, //!< 0b0010 (0x02)
-    IRQ_Mode_Change  = 0b0011, //!< 0b0011 (0x03)
-    IRQ_Mode_High    = 0b0100, //!< 0b0100 (0x04)
-    IRQ_Mode_Low     = 0b1000, //!< 0b1000 (0x08)
-    IRQ_Mode_All     = 0b1111  //!< 0b1111 (0x0F) - only used to report port capability.
+    IRQ_Mode_None    = 0b00000, //!< 0b00000 (0x00)
+    IRQ_Mode_Rising  = 0b00001, //!< 0b00001 (0x01)
+    IRQ_Mode_Falling = 0b00010, //!< 0b00010 (0x02)
+    IRQ_Mode_Change  = 0b00100, //!< 0b00100 (0x04)
+    IRQ_Mode_High    = 0b01000, //!< 0b01000 (0x08)
+    IRQ_Mode_Low     = 0b10000, //!< 0b10000 (0x10)
+    IRQ_Mode_All     = 0b11111  //!< 0b11111 (0x1F) - only used to report port capability.
 } pin_irq_mode_t;
 
 typedef enum {
@@ -269,10 +279,11 @@ typedef union {
                  output     :1,
                  open_drain :1,
                  pull_mode  :2,
-                 irq_mode   :4,
+                 irq_mode   :5,
                  pwm        :1,
                  analog     :1,
                  peripheral :1,
+                 reserved   :2,
                  can_remap  :1;
     };
 } pin_mode_t;
@@ -286,6 +297,7 @@ typedef struct {
     pin_function_t function;
     pin_group_t group;
     void *port;
+    const char *description;
     uint_fast8_t pin;
     uint32_t bit;
     pin_mode_t mode;

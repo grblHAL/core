@@ -273,5 +273,7 @@ int grbl_enter (void)
         sys.cold_start = false;
     }
 
+    nvs_buffer_free();
+
     return 0;
 }

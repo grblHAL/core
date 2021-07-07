@@ -199,6 +199,13 @@ bool nvs_buffer_alloc (void)
     return nvsbuffer != NULL;
 }
 
+void nvs_buffer_free (void)
+{
+    if(nvsbuffer) {
+        nvs_buffer_sync_physical();
+        free(nvsbuffer);
+    }
+}
 //
 // Switch over to RAM based copy.
 // Changes to RAM based copy will be written to physical storage when grblHAL is in IDLE state.

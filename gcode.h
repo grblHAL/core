@@ -200,21 +200,19 @@ __NOTE:__ Not used by the core, may be used by private user code, drivers or plu
 typedef enum {
     UserMCode_Ignore = 0,               //!< 0  - Default, must be zero
     OpenPNP_SetPinState = 42,           //!< 42 - M42
-    UserMCode_Generic0 = 100,           //!< 100 - For private use only
     UserMCode_Generic1 = 101,           //!< 101 - For private use only
     UserMCode_Generic2 = 102,           //!< 102 - For private use only
     UserMCode_Generic3 = 103,           //!< 103 - For private use only
     UserMCode_Generic4 = 104,           //!< 104 - For private use only
     OpenPNP_GetADCReading = 105,        //!< 105 - M105
-//    Fan_SetSpeed = 106,                 //!< 106 - M106
-//    Fan_Off = 107,                      //!< 107 - M107
-    LaserPPI_Enable = 112,              //!< 112 - M112
-    LaserPPI_Rate = 113,                //!< 113 - M113
-    LaserPPI_PulseLength = 114,         //!< 114 - M114
-    Laser_Coolant = 115,                //!< 115 - M115
+    Fan_On = 106,                       //!< 106 - M106
+    Fan_Off = 107,                      //!< 107 - M107
     OpenPNP_GetCurrentPosition = 114,   //!< 114 - M114
     OpenPNP_FirmwareInfo = 115,         //!< 115 - M115
     Trinamic_DebugReport = 122,         //!< 122 - M122, Marlin format
+    LaserPPI_Enable = 126,              //!< 126 - M126
+    LaserPPI_Rate = 127,                //!< 127 - M127
+    LaserPPI_PulseLength = 128,         //!< 128 - M128
     OpenPNP_SetAcceleration = 204,      //!< 204 - M204
     OpenPNP_FinishMoves = 400,          //!< 400 - M400
     OpenPNP_SettingsReset = 502,        //!< 502 - M502

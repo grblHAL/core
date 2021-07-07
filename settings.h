@@ -228,6 +228,12 @@ typedef enum {
     Settings_ModBus_RXTimeout = 375,
     Settings_Axis_Rotational = 376,
     Setting_BlueToothInitOK = 377,
+    Setting_CoolantOnDelay = 378,
+    Setting_CoolantOffDelay = 379,
+    Setting_CoolantMinTemp = 380,
+    Setting_CoolantMaxTemp = 381,
+    Setting_CoolantOffset = 382,
+    Setting_CoolantGain = 383,
 
     Setting_EncoderSettingsBase = 400, // NOTE: Reserving settings values >= 400 for encoder settings. Up to 449.
     Setting_EncoderSettingsMax = 449,

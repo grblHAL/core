@@ -197,7 +197,8 @@ typedef union {
                  motor         :1, //!< Add motor information (optional: to be added by driver).
                  encoder       :1, //!< Add encoder information (optional: to be added by driver).
                  tlo_reference :1, //!< Tool length offset reference changed
-                 unassigned   :15, //
+                 fan           :1, //!< Fan on/off changed
+                 unassigned   :14, //
                  all           :1; //!< Set when CMD_STATUS_REPORT_ALL is requested, may be used by user code
     };
 } report_tracking_flags_t;

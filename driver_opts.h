@@ -129,6 +129,9 @@
 #ifndef OPENPNP_ENABLE
 #define OPENPNP_ENABLE      0
 #endif
+#ifndef FANS_ENABLE
+#define FANS_ENABLE         0
+#endif
 #ifndef LIMITS_OVERRIDE_ENABLE
 #define LIMITS_OVERRIDE_ENABLE  0
 #endif

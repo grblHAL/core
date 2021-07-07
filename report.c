@@ -1885,6 +1885,10 @@ static void report_pin (xbar_t *pin)
     hal.stream.write(uitoa(pin->pin));
     hal.stream.write(",");
     hal.stream.write(get_pinname(pin->function));
+    if(pin->description) {
+        hal.stream.write(",");
+        hal.stream.write(pin->description);
+    }
     hal.stream.write("]" ASCII_EOL);
 }
 

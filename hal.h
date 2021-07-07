@@ -20,26 +20,22 @@
 */
 
 /*! \file
-    \brief HAL and core function pointer and data structures definitions.
+    \brief HAL function pointers and data structures definitions.
 */
-
 
 #ifndef _HAL_H_
 #define _HAL_H_
 
 #include "grbl.h"
+#include "core_handlers.h"
 #include "gcode.h"
-#include "system.h"
 #include "coolant_control.h"
 #include "spindle_control.h"
 #include "crossbar.h"
 #include "stepper.h"
 #include "nvs.h"
-#include "stream.h"
 #include "probe.h"
 #include "plugins.h"
-#include "settings.h"
-#include "report.h"
 
 #define HAL_VERSION 8
 
@@ -79,117 +75,6 @@ typedef union {
 /*! \brief Pointer to function to be called when a soft reset occurs. */
 typedef void (*driver_reset_ptr)(void);
 
-/****************
- *  I/O stream  *
- ****************/
-
-/*! \brief Pointer to function for getting number of characters available or free in a stream buffer.
-\returns number of characters available or free.
-*/
-typedef uint16_t (*get_stream_buffer_count_ptr)(void);
-
-/*! \brief Pointer to function for reading a single character from a input stream.
-\returns character or -1 if none available.
-*/
-typedef int16_t (*stream_read_ptr)(void);
-
-/*! \brief Pointer to function for writing a null terminated string to the output stream.
-\param s pointer to null terminated string.
-
-__NOTE:__ output might be buffered until an #ASCII_LF is output, this is usually done by USB or network driver code to improve throughput.
-*/
-typedef void (*stream_write_ptr)(const char *s);
-
-/*! \brief Pointer to function for writing a \a n character long string to the output stream.
-\param s pointer to string.
-\param c number of characters to write.
-*/
-typedef void (*stream_write_n_ptr)(const char *s, uint16_t len);
-
-
-/*! \brief Pointer to function for writing a single character to the output stream.
-\param \a n characters to write.
-*/
-typedef bool (*stream_write_char_ptr)(const char c);
-
-/*! \brief Pointer to function for extracting real-time commands from the input stream and enqueue them for processing.
-This should be called by driver code prior to inserting a character into the input buffer.
-\param c character to check.
-\returns true if extracted, driver code should not insert the character into the input buffer if so.
-
-__NOTE:__ This is set up by the core at startup and may be changed at runtime by the core and/or plugin code.
-*/
-typedef bool (*enqueue_realtime_command_ptr)(char data);
-
-/*! \brief Pointer to function for setting the stream baud rate.
-\param baud_rate
-\returns true if successful.
-*/
-typedef bool (*set_baud_rate_ptr)(uint32_t baud_rate);
-
-/*! \brief Pointer to function for flushing a stream buffer. */
-typedef void (*flush_stream_buffer_ptr)(void);
-
-/*! \brief Pointer to function for flushing the input buffer and inserting an #ASCII_CAN character.
-
-This function is typically called by the _enqueue_realtime_command_ handler when CMD_STOP or CMD_JOG_CANCEL character is processed.
-The #ASCII_CAN character might be checked for and used by upstream code to flush any buffers it may have.
-*/
-typedef void (*cancel_read_buffer_ptr)(void);
-
-/*! \brief Pointer to function for blocking reads from and restoring a input buffer.
-
-This function is called with the _await_ parameter true on executing a tool change command (M6),
- this shall block further reading from the input buffer.
-The core function stream_rx_suspend() can be called with the _await_ parameter to do this,
-it will replace the _hal.stream.read_ handler with a pointer to the dummy function stream_get_null().
-
-Reading from the input is blocked until a tool change aknowledge character #CMD_TOOL_ACK is received,
- when the driver receives this the input buffer is to be saved away and reading from the input resumed by
- restoring the _hal.stream.read_ handler with its own read character function.
-Driver code can do this by calling the core function stream_rx_backup().
-
-When the tool change is complete or a soft reset is executed the core will call this function with the _await_ parameter false,
- if the driver code called stream_rx_suspend() to block input it shall then call it again with the _await_ parameter as input to restore it.
-
-\param await bool
-\returns \a true if there is data in the buffer, \a false otherwise.
-*/
-typedef bool (*suspend_read_ptr)(bool await);
-
-/*! \brief Pointer to function for disabling/enabling stream input.
-
-Typically used to disable receive interrupts so that real-time command processing for the stream is blocked.
-Usually it is desirable to block processing when another stream provides the input, but sometimes not.
-E.g. when input is from a SD card real-time commands from the stream that initiated SD card streaming is needed
-for handing feed-holds, overrides, soft resets etc.
-
-\param disable \a true to disable stream, \a false to enable,
-*/
-
-typedef bool (*disable_stream_ptr)(bool disable);
-
-//! Properties and handlers for stream I/O
-typedef struct {
-    stream_type_t type;                                     //!< Type of stream.
-    bool connected;                                         //!< Set to true by the driver if stream is connected. _Optional._ Under consideration.
-    get_stream_buffer_count_ptr get_rx_buffer_free;         //!< Handler for getting number of free characters in the input buffer.
-    stream_write_ptr write;                                 //!< Handler for writing string to current output stream only.
-    stream_write_ptr write_all;                             //!< Handler for writing string to all active output streams.
-    stream_write_char_ptr write_char;                       //!< Handler for writing a single character to current stream only.
-    stream_read_ptr read;                                   //!< Handler for reading a single character from the input stream.
-    flush_stream_buffer_ptr reset_read_buffer;              //!< Handler for flushing the input buffer.
-    cancel_read_buffer_ptr cancel_read_buffer;              //!< Handler for flushing the input buffer and inserting an #ASCII_CAN character.
-    suspend_read_ptr suspend_read;                          //!< Optional handler for saving away and restoring the current input buffer.
-    stream_write_n_ptr write_n;                             //!< Optional handler for writing n characters to current output stream only. Required for Modbus support.
-    disable_stream_ptr disable;                             //!< Optional handler for disabling/enabling a stream. Recommended?
-    get_stream_buffer_count_ptr get_rx_buffer_count;        //!< Optional handler for getting number of characters in the input buffer.
-    get_stream_buffer_count_ptr get_tx_buffer_count;        //!< Optional handler for getting number of characters in the output buffer(s). Count shall include any unsent characters in any transmit FIFO and/or transmit register. Required for Modbus support.
-    flush_stream_buffer_ptr reset_write_buffer;             //!< Optional handler for flushing the output buffer. Any transmit FIFO shall be flushed as well. Required for Modbus support.
-    set_baud_rate_ptr set_baud_rate;                        //!< Optional handler for setting the stream baud rate. Required for Modbus support, recommended for Bluetooth support.
-    enqueue_realtime_command_ptr enqueue_realtime_command;  //!< Handler for extracting real-time commands from the input stream. _Set by the core at startup._
-} io_stream_t;
-
 /*! \brief Optional pointer to function for switching between I/O streams.
 \param stream pointer to io_stream_t
 \returns true if switch was successful
@@ -228,6 +113,14 @@ __NOTE:__ The latest value read is stored in \ref #sys  \ref #sys#var5933.
 */
 typedef int32_t (*wait_on_input_ptr)(bool digital, uint8_t port, wait_mode_t wait_mode, float timeout);
 
+/*! \brief Pointer to function for setting pin description for a digital or analog port.
+\param digital true if port is digital, false if analog.
+\param output true if port is an output, false if an input.
+\param port port number.
+\param s pointer to null terminated description string.
+*/
+typedef void (*set_pin_description_ptr)(bool digital, bool output, uint8_t port, const char *s);
+
 /*! \brief Pointer to function for getting information about a digital or analog port.
 \param digital true if port is digital, false if analog.
 \param output true if port is an output, false if an input.
@@ -252,14 +145,15 @@ typedef bool (*ioport_register_interrupt_handler_ptr)(uint8_t port, pin_irq_mode
 
 //! Properties and handlers for auxillary digital and analog I/O.
 typedef struct {
-    uint8_t num_digital_in;             //!< Number of digital inputs available.
-    uint8_t num_digital_out;            //!< Number of digital outputs available.
-    uint8_t num_analog_in;              //!< Number of analog inputs available.
-    uint8_t num_analog_out;             //!< Number of analog outputs available.
-    digital_out_ptr digital_out;        //!< Optional handler for setting a digital output.
-    analog_out_ptr analog_out;          //!< Optional handler for setting an analog output.
-    wait_on_input_ptr wait_on_input;    //!< Optional handler for reading a digital or analog input.
-    get_pin_info_ptr get_pin_info;      //!< Optional handler for getting information about an auxillary pin.
+    uint8_t num_digital_in;                         //!< Number of digital inputs available.
+    uint8_t num_digital_out;                        //!< Number of digital outputs available.
+    uint8_t num_analog_in;                          //!< Number of analog inputs available.
+    uint8_t num_analog_out;                         //!< Number of analog outputs available.
+    digital_out_ptr digital_out;                    //!< Optional handler for setting a digital output.
+    analog_out_ptr analog_out;                      //!< Optional handler for setting an analog output.
+    wait_on_input_ptr wait_on_input;                //!< Optional handler for reading a digital or analog input.
+    set_pin_description_ptr set_pin_description;    //!< Optional handler for setting a description of an auxillary pin.
+    get_pin_info_ptr get_pin_info;                  //!< Optional handler for getting information about an auxillary pin.
     ioport_register_interrupt_handler_ptr register_interrupt_handler;
 } io_port_t;
 
@@ -787,82 +681,6 @@ typedef struct {
 
 } grbl_hal_t;
 
-// TODO: move the following structs to grbl.h?
-
-/* TODO: add to grbl pointers so that a different formatting (xml, json etc) of reports may be implemented by driver?
-typedef struct {
-    status_code_t (*report_status_message)(status_code_t status_code);
-    alarm_code_t (*report_alarm_message)(alarm_code_t alarm_code);
-    message_code_t (*report_feedback_message)(message_code_t message_code);
-    void (*report_init_message)(void);
-    void (*report_grbl_help)(void);
-    void (*report_echo_line_received)(char *line);
-    void (*report_realtime_status)(void);
-    void (*report_probe_parameters)(void);
-    void (*report_ngc_parameters)(void);
-    void (*report_gcode_modes)(void);
-    void (*report_startup_line)(uint8_t n, char *line);
-    void (*report_execute_startup_message)(char *line, status_code_t status_code);
-} grbl_report_t;
-*/
-
-// Report entry points set by core at reset.
-
-typedef status_code_t (*status_message_ptr)(status_code_t status_code);
-typedef message_code_t (*feedback_message_ptr)(message_code_t message_code);
-
-typedef struct {
-    setting_output_ptr setting;
-    status_message_ptr status_message;
-    feedback_message_ptr feedback_message;
-} report_t;
-
-// Core event handler and other entry points.
-// Most of the event handlers defaults to NULL, a few is set up to call a dummy handler for simpler code.
-
-typedef void (*on_state_change_ptr)(sys_state_t state);
-typedef void (*on_probe_completed_ptr)(void);
-typedef void (*on_program_completed_ptr)(program_flow_t program_flow, bool check_mode);
-typedef void (*on_execute_realtime_ptr)(sys_state_t state);
-typedef void (*on_unknown_accessory_override_ptr)(uint8_t cmd);
-typedef bool (*on_unknown_realtime_cmd_ptr)(char c);
-typedef void (*on_report_options_ptr)(bool newopt);
-typedef void (*on_report_command_help_ptr)(void);
-typedef void (*on_global_settings_restore_ptr)(void);
-typedef setting_details_t *(*on_get_settings_ptr)(void); // NOTE: this must match the signature of the same definition in
-                                                         // the setting_details_t structure in settings.h!
-typedef void (*on_realtime_report_ptr)(stream_write_ptr stream_write, report_tracking_flags_t report);
-typedef void (*on_unknown_feedback_message_ptr)(stream_write_ptr stream_write);
-typedef bool (*on_laser_ppi_enable_ptr)(uint_fast16_t ppi, uint_fast16_t pulse_length);
-typedef status_code_t (*on_unknown_sys_command_ptr)(sys_state_t state, char *line); // return Status_Unhandled.
-typedef status_code_t (*on_user_command_ptr)(char *line);
-typedef sys_commands_t *(*on_get_commands_ptr)(void);
-
-typedef struct {
-    // report entry points set by core at reset.
-    report_t report;
-    // grbl core events - may be subscribed to by drivers or by the core.
-    on_state_change_ptr on_state_change;
-    on_probe_completed_ptr on_probe_completed;
-    on_program_completed_ptr on_program_completed;
-    on_execute_realtime_ptr on_execute_realtime;
-    on_unknown_accessory_override_ptr on_unknown_accessory_override;
-    on_report_options_ptr on_report_options;
-    on_report_command_help_ptr on_report_command_help;
-    on_global_settings_restore_ptr on_global_settings_restore;
-    on_get_settings_ptr on_get_settings;
-    on_realtime_report_ptr on_realtime_report;
-    on_unknown_feedback_message_ptr on_unknown_feedback_message;
-    on_unknown_realtime_cmd_ptr on_unknown_realtime_cmd;
-    on_unknown_sys_command_ptr on_unknown_sys_command; // return Status_Unhandled if not handled.
-    on_get_commands_ptr on_get_commands;
-    on_user_command_ptr on_user_command;
-    on_laser_ppi_enable_ptr on_laser_ppi_enable;
-    // core entry points - set up by core before driver_init() is called.
-    bool (*protocol_enqueue_gcode)(char *data);
-} grbl_t;
-
-extern grbl_t grbl;
 extern grbl_hal_t hal; //!< Global HAL struct.
 
 /*! \brief Driver main entry point.

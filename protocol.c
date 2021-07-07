@@ -844,6 +844,7 @@ ISR_CODE bool protocol_enqueue_realtime_command (char c)
         case CMD_OVERRIDE_SPINDLE_STOP:
         case CMD_OVERRIDE_COOLANT_FLOOD_TOGGLE:
         case CMD_OVERRIDE_COOLANT_MIST_TOGGLE:
+        case CMD_OVERRIDE_FAN0_TOGGLE:
             drop = true;
             enqueue_accessory_override((uint8_t)c);
             break;

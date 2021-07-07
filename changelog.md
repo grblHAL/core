@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+Build 20210707:
+
+Core:
+* Added realtime command `0x8A` for toggling fan 0 on/off. Requires the Fans plugin.
+* Moved a bit of code to aid documentation structure.
+* Added option for plugins to add pin description for claimed pins to `$pins` report.
+* Simplified API for user added M-codes, backwards compatibility retained for now.
+
+Drivers:
+* Updated a number of drivers for new style pin handling (allows `$pins` report and simpler pin mapping files).
+* Updated and verified driver for RP2040, mainly to support the PicoCNC board.
+* Added/improved interrupt support for auxillary inputs for both plugin code (via API) and for `M66`.
+* Bug fixes.
+
 Build 20210626:
 * Standardized handling of motors for ABC- and ganged/squared axes, configuration moved to _my_machine.h_.  
 First number of motors required is calculated, then ABC axes are added from bottom up and then ganged/squared axes from top down.  
