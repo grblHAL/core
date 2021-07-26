@@ -865,8 +865,16 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
         case Setting_AxisStepsPerMM:
             if (hal.max_step_rate && value * settings.axis[idx].max_rate > (float)hal.max_step_rate * 60.0f)
                 status = Status_MaxStepRateExceeded;
-            else
+            else {
+                if(settings.axis[idx].steps_per_mm > 0.0f && settings.axis[idx].steps_per_mm != value) {
+                    float comp = value / settings.axis[idx].steps_per_mm;
+                    sys.position[idx] *= comp;
+                    sys.probe_position[idx] *= comp;
+                    sys.tlo_reference[idx] *= comp;
+                    sync_position();
+                }
                 settings.axis[idx].steps_per_mm = value;
+            }
             break;
 
         case Setting_AxisMaxRate:

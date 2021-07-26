@@ -1,5 +1,20 @@
 ## grblHAL changelog
 
+Build 20210726:
+
+Core:
+* Added encapsulation in stream handlers for realtime processing. This allows more flexible use of additional streams.
+* Added optional debug stream to the HAL. Currently only used by the iMXRT1062 driver.
+* Position will now be recalulated on steps/mm setting changes.
+* Limited final `$TPW` retract on tool changes to Z home to avoid triggering Z-limit.
+* Moved some common driver code snippets to the core to avoid duplication.
+
+Drivers & plugins:
+* Updated all for new stream encapsulation.
+* Added option to use UART input for I2C keypad plugin. Added fan toggle support.
+* Fixed some bugs and regressions.
+* Added support for ganged/autosquared axes to RP2040 driver.
+
 Build 20210707:
 
 Core:
@@ -23,7 +38,7 @@ A-axis, B-axis and ganged X-axis: A-axis -> motor 4 and, B-axis -> motor 5 and s
 Auto-squared X and Y-axis: second X-axis -> motor 4 and second Y-axis -> motor 5. Motor 6 pins may then be assigned to auxillary I/O.  
 etc...  
 __IMPORTANT:__ For those who have used auto-squared/ganged axes with previous builds be sure to check that the motors allocated matches the current wiring.
-Tip: use the `$pins` system command to list the pin allocations when checking. Rewire as neccesary.
+Tip: use the `$pins` system command to list the pin allocations when checking. Rewire as neccesary. 
 * Added ganged axis/auto-squaring support to some board maps for the [LPC176x](https://github.com/grblHAL/LPC176x) driver.
 * Expanded on HAL entry points for stream communication and added [initial documentation](http://svn.io-engineering.com/grblHAL/html/hal_8h.html) for the HAL and parts of the core.
 * Encapsulated UART/USB CDC code for many drivers, for most only the init function is now available for direct acccess from the outside. Simplified main driver code and plugins using streams.  
@@ -37,7 +52,7 @@ Build 20210608:
 
 Build 20210604:
 * Added some HAL entry points and properties, shared file for mapped step and dir output.
-* Added `$pins` system command, for listing current pin assignments. Work in progress, only supported by a couple of drivers.
+* Added `$pins` system command, for listing current pin assignments. Work in progress, only supported by a couple of drivers. For now only plain GPIO pins are listed.
 * Some minor bugs fixed. 
 
 Build 20210515:

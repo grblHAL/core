@@ -665,6 +665,7 @@ typedef struct {
 
 #ifdef DEBUGOUT
     void (*debug_out)(bool on);
+    io_stream_t debug;                     //!< Handlers for debug stream I/O.
 #endif
 
     /*! \brief Check for a soft reset or abort in blocking calls.

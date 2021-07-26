@@ -26,6 +26,7 @@
 #include "gcode.h"
 #include "probe.h"
 #include "alarms.h"
+#include "messages.h"
 
 /*! @name System executor bit map.
 \anchor rt_exec
@@ -78,28 +79,6 @@ __NOTE:__ flags are mutually exclusive, bit map allows testing for multiple stat
 #define STATE_ESTOP         bit(8) //!< EStop mode, reports and is mainly handled similar to alarm state
 #define STATE_TOOL_CHANGE   bit(9) //!< Manual tool change, similar to #STATE_HOLD - but stops spindle and allows jogging.
 ///@}
-
-// Define feedback message codes. Valid values (0-255).
-typedef enum {
-    Message_None = 0,                       //!< 0 - reserved, do not change value.
-    Message_CriticalEvent = 1,              //!< 1
-    Message_AlarmLock = 2,                  //!< 2
-    Message_AlarmUnlock = 3,                //!< 3
-    Message_Enabled = 4,                    //!< 4
-    Message_Disabled = 5,                   //!< 5
-    Message_SafetyDoorAjar = 6,             //!< 6
-    Message_CheckLimits = 7,                //!< 7
-    Message_ProgramEnd = 8,                 //!< 8
-    Message_RestoreDefaults = 9,            //!< 9
-    Message_SpindleRestore = 10,            //!< 10
-    Message_SleepMode = 11,                 //!< 11
-    Message_EStop = 12,                     //!< 12
-    Message_HomingCycleRequired = 13,       //!< 13
-    Message_CycleStartToRerun = 14,         //!< 14
-    Message_ReferenceTLOEstablished = 15,   //!< 15
-    Message_MotorFault = 16,                //!< 16
-    Message_NextMessage                     //!< 17 - next unassigned message number.
-} message_code_t;
 
 typedef enum {
     Parking_DoorClosed = 0, //!< 0

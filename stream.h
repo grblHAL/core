@@ -69,6 +69,7 @@ Helper functions for saving away and restoring a stream input buffer. _Not refer
 #define SERIAL_NO_DATA -1
 #endif
 
+#define BUFNEXT(ptr, buffer) ((ptr + 1) & (sizeof(buffer.data) - 1))
 #define BUFCOUNT(head, tail, size) ((head >= tail) ? (head - tail) : (size - tail + head))
 
 #include <stddef.h>
@@ -120,10 +121,18 @@ typedef bool (*stream_write_char_ptr)(const char c);
 This should be called by driver code prior to inserting a character into the input buffer.
 \param c character to check.
 \returns true if extracted, driver code should not insert the character into the input buffer if so.
-
-__NOTE:__ This is set up by the core at startup and may be changed at runtime by the core and/or plugin code.
 */
-typedef bool (*enqueue_realtime_command_ptr)(char data);
+typedef bool (*enqueue_realtime_command_ptr)(char c);
+
+/*! \brief Pointer to function for setting the enqueue realtime commands handler.
+\param enqueue_realtime_command_ptr pointer to the new handler function.
+\returns \a enqueue_realtime_command_ptr pointer to the replaced function.
+
+__NOTE:__ Stream implementation should hold a pointer to the handler in a local variable and typically
+set it to protocol_enqueue_realtime_command() on initialization.
+*/
+typedef enqueue_realtime_command_ptr (*set_enqueue_rt_handler_ptr)(enqueue_realtime_command_ptr);
+
 
 /*! \brief Pointer to function for setting the stream baud rate.
 \param baud_rate
@@ -184,6 +193,7 @@ typedef struct {
     stream_read_ptr read;                                   //!< Handler for reading a single character from the input stream.
     flush_stream_buffer_ptr reset_read_buffer;              //!< Handler for flushing the input buffer.
     cancel_read_buffer_ptr cancel_read_buffer;              //!< Handler for flushing the input buffer and inserting an #ASCII_CAN character.
+    set_enqueue_rt_handler_ptr set_enqueue_rt_handler;      //!< Handler for setting the enqueue realtime commands handler.
     suspend_read_ptr suspend_read;                          //!< Optional handler for saving away and restoring the current input buffer.
     stream_write_n_ptr write_n;                             //!< Optional handler for writing n characters to current output stream only. Required for Modbus support.
     disable_stream_ptr disable;                             //!< Optional handler for disabling/enabling a stream. Recommended?
@@ -191,10 +201,6 @@ typedef struct {
     get_stream_buffer_count_ptr get_tx_buffer_count;        //!< Optional handler for getting number of characters in the output buffer(s). Count shall include any unsent characters in any transmit FIFO and/or transmit register. Required for Modbus support.
     flush_stream_buffer_ptr reset_write_buffer;             //!< Optional handler for flushing the output buffer. Any transmit FIFO shall be flushed as well. Required for Modbus support.
     set_baud_rate_ptr set_baud_rate;                        //!< Optional handler for setting the stream baud rate. Required for Modbus support, recommended for Bluetooth support.
-//@}
-//!  @name The following variable is not changed on a soft reset, do NOT move.
-//@{
-    enqueue_realtime_command_ptr enqueue_realtime_command;  //!< Handler for extracting real-time commands from the input stream. _Set by the core at startup._
 } io_stream_t;
 
 
@@ -240,17 +246,18 @@ int16_t stream_get_null (void);
 */
 bool stream_rx_suspend (stream_rx_buffer_t *rxbuffer, bool suspend);
 
-/*! \brief Function for saving away an input buffer.
-\param rxbuffer pointer to a stream_rx_buffer_t.
-*/
-void stream_rx_backup (stream_rx_buffer_t *rxbuffer);
-
 /*! \brief Function for enabling/disabling input from a secondary input stream.
 \param mpg_stream pointer to a io_stream_t.
 \param mpg_mode \a true if switching input to mpg stream, \a false when restoring original input.
 \returns \a true when succsessful, \a false otherwise.
 */
 bool stream_enable_mpg (const io_stream_t *mpg_stream, bool mpg_mode);
+
+bool stream_buffer_all (char c);
+
+#ifdef DEBUGOUT
+void debug_stream_init (io_stream_t *stream);
+#endif
 
 #ifdef __cplusplus
 }

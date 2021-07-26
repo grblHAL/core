@@ -11,7 +11,7 @@ It has been written to complement grblHAL and has features such as proper keyboa
 
 ---
 
-Latest build date is 20210608, see the [changelog](changelog.md) for details.
+Latest build date is 20210726, see the [changelog](changelog.md) for details.
 
 ---
 
@@ -77,4 +77,4 @@ List of Supported G-Codes:
 ```
 
 ---
-2021-06-08
+2021-07-26

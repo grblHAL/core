@@ -317,88 +317,22 @@ void report_message (const char *msg, message_type_t type)
 // messages such as setup warnings, switch toggling, and how to exit alarms.
 // NOTE: For interfaces, messages are always placed within brackets. And if silent mode
 // is installed, the message number codes are less than zero.
-message_code_t report_feedback_message (message_code_t message_code)
+message_code_t report_feedback_message (message_code_t id)
 {
+    const char *msg = NULL;
+    uint_fast16_t idx = 0;
+
     hal.stream.write_all("[MSG:");
 
-    switch(message_code) {
+    do {
+        if(messages[idx].id == id)
+            msg = messages[idx].msg;
+    } while(msg == NULL && ++idx < Message_NextMessage);
 
-        case Message_None:
-            break;
-
-        case Message_CriticalEvent:
-            hal.stream.write_all("Reset to continue");
-            break;
-
-        case Message_AlarmLock:
-            hal.stream.write_all("'$H'|'$X' to unlock");
-            break;
-
-        case Message_AlarmUnlock:
-            hal.stream.write_all("Caution: Unlocked");
-            break;
-
-        case Message_Enabled:
-            hal.stream.write_all("Enabled");
-            break;
-
-        case Message_Disabled:
-            hal.stream.write_all("Disabled");
-            break;
-
-        case Message_SafetyDoorAjar:
-            hal.stream.write_all("Check Door");
-            break;
-
-        case Message_CheckLimits:
-            hal.stream.write_all("Check Limits");
-            break;
-
-        case Message_ProgramEnd:
-            hal.stream.write_all("Pgm End");
-            break;
-
-        case Message_RestoreDefaults:
-            hal.stream.write_all("Restoring defaults");
-            break;
-
-        case Message_SpindleRestore:
-            hal.stream.write_all("Restoring spindle");
-            break;
-
-        case Message_SleepMode:
-            hal.stream.write_all("Sleeping");
-            break;
-
-        case Message_EStop:
-            hal.stream.write_all("Emergency stop");
-            break;
-
-        case Message_HomingCycleRequired:
-            hal.stream.write_all("Homing cycle required");
-            break;
-
-        case Message_CycleStartToRerun:
-            hal.stream.write_all("Press cycle start to rerun job");
-            break;
-
-        case Message_ReferenceTLOEstablished:
-            hal.stream.write_all("Reference tool length offset established");
-            break;
-
-        case Message_MotorFault:
-            hal.stream.write_all("Motor fault");
-            break;
-
-        default:
-            if(grbl.on_unknown_feedback_message)
-                grbl.on_unknown_feedback_message(hal.stream.write_all);
-            break;
-    }
-
+    hal.stream.write_all(msg ? msg : "");
     hal.stream.write_all("]" ASCII_EOL);
 
-    return message_code;
+    return id;
 }
 
 

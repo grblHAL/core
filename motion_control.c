@@ -779,7 +779,7 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
 
         state_set(STATE_HOMING);                                // Set homing system state.
 #if COMPATIBILITY_LEVEL == 0
-        hal.stream.enqueue_realtime_command(CMD_STATUS_REPORT); // Force a status report and
+        protocol_enqueue_realtime_command(CMD_STATUS_REPORT);            // Force a status report and
         delay_sec(0.1f, DelayMode_Dwell);                       // delay a bit to get it sent (or perhaps wait a bit for a request?)
 #endif
         hal.limits.enable(false, true); // Disable hard limits pin change register for cycle duration

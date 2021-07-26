@@ -167,7 +167,7 @@ status_code_t read_int (char *s, int32_t *value)
     return Status_OK;
 }
 
-const sys_command_t sys_commands[] = {
+PROGMEM static const sys_command_t sys_commands[] = {
     {"G", true, output_parser_state},
     {"J", false, jog},
     {"#", true, output_ngc_parameters},

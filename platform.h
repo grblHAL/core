@@ -27,6 +27,8 @@
 
 #if defined(STM32_PLATFORM) || defined(__LPC17XX__) ||  defined(__IMXRT1062__)
 #define UINT32FMT "%lu"
+#define UINT32SFMT "lu"
 #else
 #define UINT32FMT "%u"
+#define UINT32SFMT "u"
 #endif

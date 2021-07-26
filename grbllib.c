@@ -122,7 +122,6 @@ int grbl_enter (void)
     hal.irq_enable = dummy_handler;
     hal.irq_disable = dummy_handler;
     hal.nvs.size = GRBL_NVS_SIZE;
-    hal.stream.enqueue_realtime_command = protocol_enqueue_realtime_command;
     hal.limits.interrupt_callback = limit_interrupt_handler;
     hal.control.interrupt_callback = control_interrupt_handler;
     hal.stepper.interrupt_callback = stepper_driver_interrupt_handler;
@@ -264,7 +263,7 @@ int grbl_enter (void)
             state_set(STATE_ALARM);
 
         if(hal.driver_cap.mpg_mode)
-            hal.stream.enqueue_realtime_command(sys.mpg_mode ? CMD_STATUS_REPORT_ALL : CMD_STATUS_REPORT);
+            protocol_enqueue_realtime_command(sys.mpg_mode ? CMD_STATUS_REPORT_ALL : CMD_STATUS_REPORT);
 
         // Start Grbl main loop. Processes program inputs and executes them.
         if(!(looping = protocol_main_loop()))

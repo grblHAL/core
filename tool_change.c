@@ -65,7 +65,7 @@ static void change_completed (void)
     if(enqueue_realtime_command) {
         while(spin_lock);
         hal.irq_disable();
-        hal.stream.enqueue_realtime_command = enqueue_realtime_command;
+        hal.stream.set_enqueue_rt_handler(enqueue_realtime_command);
         enqueue_realtime_command = NULL;
         hal.irq_enable();
     }
@@ -312,8 +312,7 @@ static status_code_t tool_change (parser_state_t *parser_state)
 
     // Trap cycle start command and control signal.
     block_cycle_start = settings.tool_change.mode != ToolChange_SemiAutomatic;
-    enqueue_realtime_command = hal.stream.enqueue_realtime_command;
-    hal.stream.enqueue_realtime_command = trap_stream_cycle_start;
+    enqueue_realtime_command = hal.stream.set_enqueue_rt_handler(trap_stream_cycle_start);
     control_interrupt_callback = hal.control.interrupt_callback;
     hal.control.interrupt_callback = trap_control_cycle_start;
 
@@ -339,7 +338,7 @@ static status_code_t tool_change (parser_state_t *parser_state)
     //    tool_change_position = ?
     //else
 
-    tool_change_position = sys.home_position[plane.axis_linear] - settings.homing.flags.force_set_origin ? LINEAR_AXIS_HOME_OFFSET : 0.0f;
+    tool_change_position = sys.home_position[plane.axis_linear]; // - settings.homing.flags.force_set_origin ? LINEAR_AXIS_HOME_OFFSET : 0.0f;
 
     // Rapid to home position of linear axis.
     memcpy(&target, &previous, sizeof(coord_data_t));
@@ -459,6 +458,8 @@ status_code_t tc_probe_workpiece (void)
                 system_convert_array_steps_to_mpos(target.values, sys.probe_position);
                 plan_data.feed_rate = settings.tool_change.seek_rate;
                 target.values[plane.axis_linear] += TOOL_CHANGE_PROBE_RETRACT_DISTANCE * 2.0f;
+                if(target.values[plane.axis_linear] > tool_change_position)
+                    target.values[plane.axis_linear] = tool_change_position;
                 ok = mc_line(target.values, &plan_data);
             }
         }
