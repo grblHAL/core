@@ -102,6 +102,11 @@
 #ifndef TRINAMIC_I2C
 #define TRINAMIC_I2C        0
 #endif
+#if TRINAMIC_ENABLE && TRINAMIC_I2C
+#define TRINAMIC_MOTOR_ENABLE 1
+#else
+#define TRINAMIC_MOTOR_ENABLE 0
+#endif
 #ifndef TRINAMIC_DEV
 #define TRINAMIC_DEV        0
 #endif

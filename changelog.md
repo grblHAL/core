@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+Build 20210803:
+
+Core:
+* Added optional HAL entry point for stepper motor enumeration (axis vs. motor id). Used by motors plugin.
+* Improved optional driver support files.
+
+Drivers & plugins:
+* Added F103RC support and a board map for the BTT SKR MINI E3 V2.0 to the STMF1xx driver.
+* Added tentative plasma plugin support to the SAM3X8E \(Arduino Due\) driver.
+* Updated motors plugin to match updated [Trinamic library](https://github.com/terjeio/Trinamic-library), added support for TMC2209++.
+* Some minor bug fixes and improvements.
+
 Build 20210726:
 
 Core:

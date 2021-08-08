@@ -41,7 +41,7 @@ int16_t stream_get_null (void)
     return SERIAL_NO_DATA;
 }
 
-static bool await_toolchange_ack (char c)
+ISR_CODE static bool await_toolchange_ack (char c)
 {
     if(c == CMD_TOOL_ACK && !stream.rxbuffer->backup) {
         memcpy(&rxbackup, stream.rxbuffer, sizeof(stream_rx_buffer_t));

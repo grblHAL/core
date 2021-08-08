@@ -21,7 +21,7 @@
 
 #pragma once
 
-#if defined(STM32F103xB) || defined(STM32F401xC) ||  defined(STM32F407xx) || defined(STM32F411xE) || defined(STM32F446xx) || defined(STM32F756xx)
+#if defined(STM32F103xB) || defined(STM32F103xE) || defined(STM32F401xC) ||  defined(STM32F407xx) || defined(STM32F411xE) || defined(STM32F446xx) || defined(STM32F756xx)
 #define STM32_PLATFORM
 #endif
 

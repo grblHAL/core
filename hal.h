@@ -323,9 +323,34 @@ typedef struct {
     control_signals_callback_ptr interrupt_callback;    //!< Callback for informing about control switches events. _Set by the core at startup.
 } control_signals_ptrs_t;
 
+
 /**************
  *  Steppers  *
  **************/
+
+/*! \brief Motor vs. axis mapping
+__NOTE:__ id and axis values are equal for primary motors, unequal for secondary (ganged) motors.
+*/
+typedef union {
+    uint32_t value;
+    struct {
+        uint32_t id   : 8,
+                 axis : 8;
+    };
+} motor_map_t;
+
+/*! \brief Signature of the callback function to receive motor vs. axis mappings.
+\param motor a motor_map_t struct.
+*/
+typedef void (*motor_iterator_callback_ptr)(motor_map_t motor);
+
+
+/*! \brief Pointer to function for iterating over stepper motor vs. axis mappings.
+
+\param callback pointer to a #motor_iterator_callback_ptr function to be called for each motor.
+*/
+typedef void (*motor_iterator_ptr)(motor_iterator_callback_ptr callback);
+
 
 /*! \brief Pointer to function for enabling all stepper motors and the main stepper interrupt.
 
@@ -418,6 +443,7 @@ typedef struct {
     stepper_interrupt_callback_ptr interrupt_callback;  //!< Callback for informing about the next step pulse to output. _Set by the core at startup._
     stepper_get_auto_squared_ptr get_auto_squared;      //!< Optional handler getting which axes are configured for auto squaring.
     stepper_output_step_ptr output_step;                //!< Optional handler for outputting a single step pulse. _Experimental._
+    motor_iterator_ptr motor_iterator;                  //!< Optional handler iteration over motor vs. axis mappings. Required for the motors plugin (Trinamic drivers).
 } stepper_ptrs_t;
 
 

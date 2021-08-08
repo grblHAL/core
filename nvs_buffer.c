@@ -194,7 +194,8 @@ bool nvs_buffer_alloc (void)
 {
     assert(NVS_SIZE >= GRBL_NVS_SIZE);
 
-    nvsbuffer = malloc(NVS_SIZE);
+    if((nvsbuffer = malloc(NVS_SIZE)))
+        memset(nvsbuffer, 0, NVS_SIZE);
 
     return nvsbuffer != NULL;
 }

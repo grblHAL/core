@@ -373,13 +373,13 @@
 #endif // Z_DOUBLED
 
 #ifdef X_DOUBLED
-#undef X_DOUBLED
+#define X2_MOTOR (N_AXIS + X_DOUBLED - 1)
 #endif
 #ifdef Y_DOUBLED
-#undef Y_DOUBLED
+#define Y2_MOTOR (N_AXIS + Y_DOUBLED - 1)
 #endif
 #ifdef Z_DOUBLED
-#undef Z_DOUBLED
+#define Z2_MOTOR (N_AXIS + Z_DOUBLED - 1)
 #endif
 
 #endif // N_GANGED
@@ -609,9 +609,21 @@
 #endif
 
 #ifndef STEPPERS_ENABLE_MASK
+
 #ifdef STEPPERS_ENABLE_BIT
 #define STEPPERS_ENABLE_MASK STEPPERS_ENABLE_BIT
 #else
+
+#if N_AXIS >=4 && !defined(A_ENABLE_BIT)
+#define A_ENABLE_BIT 0
+#endif
+#if N_AXIS >=5 && !defined(B_ENABLE_BIT)
+#define B_ENABLE_BIT 0
+#endif
+#if N_AXIS >= 6 && !defined(C_ENABLE_BIT)
+#define C_ENABLE_BIT 0
+#endif
+
 #if N_AXIS == 3
 #define STEPPERS_ENABLE_MASK (X_ENABLE_BIT|Y_ENABLE_BIT|Z_ENABLE_BIT)
 #elif N_AXIS == 4
@@ -626,9 +638,33 @@
 #define STEPPERS_ENABLE_MASK (X_ENABLE_BIT|Y_ENABLE_BIT|Z_ENABLE_BIT|A_ENABLE_BIT|B_ENABLE_BIT|C_ENABLE_BIT|U_ENABLE_BIT|V_ENABLE_BIT)
 #endif
 #endif
-#endif
+
+#endif //  STEPPERS_ENABLE_MASK
 
 #ifndef LIMIT_MASK
+
+#if N_AXIS >=4 && !defined(A_LIMIT_BIT)
+#ifdef A_LIMIT_PIN
+#define A_LIMIT_BIT (1<<A_LIMIT_PIN)
+#else
+#define A_LIMIT_BIT 0
+#endif
+#endif
+#if N_AXIS >=5 && !defined(B_LIMIT_BIT)
+#ifdef B_LIMIT_PIN
+#define B_LIMIT_BIT (1<<B_LIMIT_PIN)
+#else
+#define B_LIMIT_BIT 0
+#endif
+#endif
+#if N_AXIS >= 6 && !defined(C_LIMIT_BIT)
+#ifdef A_LIMIT_PIN
+#define C_LIMIT_BIT (1<<A_LIMIT_PIN)
+#else
+#define C_LIMIT_BIT 0
+#endif
+#endif
+
 #if N_AXIS == 3
 #define LIMIT_MASK (X_LIMIT_BIT|Y_LIMIT_BIT|Z_LIMIT_BIT)
 #elif N_AXIS == 4
@@ -642,6 +678,40 @@
 #else
 #define LIMIT_MASK (X_LIMIT_BIT|Y_LIMIT_BIT|Z_LIMIT_BIT|A_LIMIT_BIT|B_LIMIT_BIT|C_LIMIT_BIT|U_LIMIT_BIT|V_LIMIT_BIT)
 #endif
+
+#endif // LIMIT_MASK
+
+#ifndef N_GANGED
+#define N_GANGED 0
 #endif
+
+static void motor_iterator (motor_iterator_callback_ptr callback)
+{
+    motor_map_t motor;
+
+    for(motor.id = 0; motor.id < N_AXIS + N_GANGED; motor.id++)
+    {
+        if(motor.id < N_AXIS)
+            motor.axis = motor.id;
+        else switch (motor.id) {
+#ifdef X2_MOTOR
+            case X2_MOTOR:
+                motor.axis = X_AXIS;
+                break;
+#endif
+#ifdef Y2_MOTOR
+            case Y2_MOTOR:
+                motor.axis = Y_AXIS;
+                break;
+#endif
+#ifdef Z2_MOTOR
+            case Z2_MOTOR:
+                motor.axis = Z_AXIS;
+                break;
+#endif
+        }
+        callback(motor);
+    }
+}
 
 /*EOF*/
