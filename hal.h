@@ -72,6 +72,9 @@ typedef union {
 } driver_cap_t;
 
 
+/*! \brief Pointer to function called to set up driver peripherals after settings are loaded. */
+typedef bool (*driver_setup_ptr)(settings_t *settings);
+
 /*! \brief Pointer to function to be called when a soft reset occurs. */
 typedef void (*driver_reset_ptr)(void);
 
@@ -87,6 +90,16 @@ typedef bool (*stream_select_ptr)(const io_stream_t *stream);
 /*************
  *  Aux I/O  *
  *************/
+
+typedef enum {
+    Port_Analog = 0,
+    Port_Digital = 1
+} io_port_type_t;
+
+typedef enum {
+    Port_Input = 0,
+    Port_Output = 1
+} io_port_direction_t;
 
 /*! \brief Pointer to function for setting a digital output.
 \param port port number
@@ -622,7 +635,7 @@ typedef struct {
     \param settings pointer to settings_t structure.
     \returns true if completed sucessfully and the driver supports the _settings->version_ number, false otherwise.
     */
-    bool (*driver_setup)(settings_t *settings);
+    driver_setup_ptr driver_setup;
 
     /*! \brief Millisecond delay.
 
