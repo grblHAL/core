@@ -141,6 +141,12 @@
 #define LIMITS_OVERRIDE_ENABLE  0
 #endif
 
+#ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
+#define SAFETY_DOOR_ENABLE 1
+#else
+#define SAFETY_DOOR_ENABLE 0
+#endif
+
 #ifndef ESTOP_ENABLE
   #if COMPATIBILITY_LEVEL <= 1
     #define ESTOP_ENABLE    1

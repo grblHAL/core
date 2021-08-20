@@ -34,6 +34,7 @@
 #include "report.h"
 #include "state_machine.h"
 #include "nvs_buffer.h"
+#include "stream.h"
 #ifdef ENABLE_BACKLASH_COMPENSATION
 #include "motion_control.h"
 #endif
@@ -53,16 +54,6 @@ struct system sys = {0}; //!< System global variable structure.
 grbl_t grbl;
 grbl_hal_t hal;
 
-// called from stream drivers while tx is blocking, return false to terminate
-
-static bool stream_tx_blocking (void)
-{
-    // TODO: Restructure st_prep_buffer() calls to be executed here during a long print.
-
-    grbl.on_execute_realtime(state_get());
-
-    return !(sys.rt_exec_state & EXEC_RESET);
-}
 
 #ifdef KINEMATICS_API
 

@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+Build 20210819:
+
+Core:
+* Added `$376` setting for designating ABC-axes individually as rotational.  
+__NOTE:__ This setting is only available when N_AXIS is > 3 and will force a settings reset on an upgrade for such configurations. Backup and restore settings when upgrading!  
+Scaling from inches to mm is disabled for axes designated as rotational, no other processing takes place.
+* Added `$ESG` and `$ESH` system commands for outputting current setting definitions in [Grbl csv-format](https://github.com/gnea/grbl/tree/master/doc/csv) and grblHAL tab-format respectively.
+Only settings valid in the active configuration will be outputted, driver and plugin specific settings will be added as well - even from well behaved third party code.
+* Added setting descriptions to most core/driver/plugin settings. Third party drivers and plugins may also add descriptions to any settings implementented.  
+NOTE: Drivers for processors with limited flash may not have the descriptions compiled in.
+* Added `$SED=<n>`  for outputting a description for setting `<n>` (if available), e.g. issue `$SED=14` to get a description for `$14`. The description is formatted for sender use.
+
+Drivers & plugins:
+* Cleaned up/simplified many pin mapping files, mostly by moving pin to bit transforms to a common preprocessor file.
+* Some general driver and plugin improvements, e.g. more flexible spindle PWM to pin mappings for STM32F4xx and STM32F7xx drivers.
+
 Build 20210803:
 
 Core:

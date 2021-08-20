@@ -35,6 +35,16 @@ typedef struct {
 
 static stream_state_t stream = {0};
 
+// called from stream drivers while tx is blocking, returns false to terminate
+bool stream_tx_blocking (void)
+{
+    // TODO: Restructure st_prep_buffer() calls to be executed here during a long print.
+
+    grbl.on_execute_realtime(state_get());
+
+    return !(sys.rt_exec_state & EXEC_RESET);
+}
+
 // "dummy" version of serialGetC
 int16_t stream_get_null (void)
 {

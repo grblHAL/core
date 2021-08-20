@@ -30,7 +30,11 @@
 
 // Version of the persistent storage data. Will be used to migrate existing data from older versions of Grbl
 // when firmware is upgraded. Always stored in byte 0 of non-volatile storage
+#if N_AXIS > 3 // TODO: remove on next version update
+#define SETTINGS_VERSION 20  // NOTE: Check settings_reset() when moving to next version.
+#else
 #define SETTINGS_VERSION 19  // NOTE: Check settings_reset() when moving to next version.
+#endif
 
 // Define axis settings numbering scheme. Starts at Setting_AxisSettingsBase, every INCREMENT, over N_SETTINGS.
 #define AXIS_SETTINGS_INCREMENT  10 // Must be greater than the number of axis settings.
@@ -449,7 +453,9 @@ typedef struct {
     axes_signals_t dir_invert;
     axes_signals_t enable_invert;
     axes_signals_t deenergize;
-//    axes_signals_t is_rotational; or add to axis_settings_t below as bitmap union? rotational axes are not scaled in imperial mode
+#if N_AXIS > 3
+    axes_signals_t is_rotational; // rotational axes are not scaled in imperial mode
+#endif
     float pulse_microseconds;
     float pulse_delay_microseconds;
     uint16_t idle_lock_time; // If value = 255, steppers do not disable.
@@ -660,6 +666,11 @@ typedef struct setting_detail {
     bool (*is_available)(const struct setting_detail *setting);
 } setting_detail_t;
 
+typedef struct {
+    setting_id_t id;
+    const char *description;
+} setting_descr_t;
+
 typedef status_code_t (*setting_set_int_ptr)(setting_id_t id, uint_fast16_t value);
 typedef status_code_t (*setting_set_float_ptr)(setting_id_t id, float value);
 typedef status_code_t (*setting_set_string_ptr)(setting_id_t id, char *value);
@@ -682,6 +693,10 @@ typedef struct setting_details {
     const setting_group_detail_t *groups;
     const uint16_t n_settings;
     const setting_detail_t *settings;
+#ifndef NO_SETTINGS_DESCRIPTIONS
+    const uint16_t n_descriptions;
+    const setting_descr_t *descriptions;
+#endif
     struct setting_details *(*on_get_settings)(void);
     settings_changed_ptr on_changed;
     driver_settings_save_ptr save;

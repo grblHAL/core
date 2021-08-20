@@ -566,7 +566,7 @@
 #define Z_LIMIT_BIT (1<<Z_LIMIT_PIN)
 #endif
 
-#if !defined(X_ENABLE_BIT) && defined(X_ENABLE_BIT)
+#if !defined(X_ENABLE_BIT) && defined(X_ENABLE_PIN)
 #define X_ENABLE_BIT (1<<X_ENABLE_PIN)
 #endif
 #if !defined(Y_ENABLE_BIT) && defined(Y_ENABLE_PIN)
@@ -606,6 +606,10 @@
 #else
 #define DIRECTION_MASK (X_DIRECTION_BIT|Y_DIRECTION_BIT|Z_DIRECTION_BIT|A_DIRECTION_BIT|B_DIRECTION_BIT|C_DIRECTION_BIT|U_DIRECTION_BIT|V_DIRECTION_BIT)
 #endif
+#endif
+
+#if defined(STEPPERS_ENABLE_PIN) && !defined(STEPPERS_ENABLE_BIT)
+#define STEPPERS_ENABLE_BIT (1<<STEPPERS_ENABLE_PIN)
 #endif
 
 #ifndef STEPPERS_ENABLE_MASK
@@ -658,8 +662,8 @@
 #endif
 #endif
 #if N_AXIS >= 6 && !defined(C_LIMIT_BIT)
-#ifdef A_LIMIT_PIN
-#define C_LIMIT_BIT (1<<A_LIMIT_PIN)
+#ifdef C_LIMIT_PIN
+#define C_LIMIT_BIT (1<<C_LIMIT_PIN)
 #else
 #define C_LIMIT_BIT 0
 #endif

@@ -400,6 +400,12 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 //#define DEFAULT_STEPPING_INVERT_MASK 0
 //#define DEFAULT_DIRECTION_INVERT_MASK 0
 
+// Designate ABC axes as rotational. This will disable scaling (to mm) in inches mode.
+// Set steps/mm for the axes to the value that represent the desired movement per unit.
+// For the controller the distance is unitless and and can be in degrees, radians, rotations, ...
+// NOTE: $376 can be used to configure rotational axes at run-time.
+//#define ST_ROTATIONAL_MASK (A_AXIS_BIT|B_AXIS_BIT|C_AXIS_BIT) // Default disabled. Uncomment and possibly remove axis bit(s) as needed to enable.
+
 // Inverts logic of the input signals based on a mask. This essentially means you are using
 // normally-open (NO) switches on the specified pins, rather than the default normally-closed (NC) switches.
 // NOTE: The first option will invert all control pins. The second option is an example of

@@ -255,6 +255,8 @@ bool stream_enable_mpg (const io_stream_t *mpg_stream, bool mpg_mode);
 
 bool stream_buffer_all (char c);
 
+bool stream_tx_blocking (void);
+
 #ifdef DEBUGOUT
 void debug_stream_init (io_stream_t *stream);
 #endif

@@ -32,6 +32,13 @@ typedef enum {
     Message_Warning
 } message_type_t;
 
+typedef enum {
+    SettingsFormat_MachineReadable = 0,
+    SettingsFormat_HumanReadable,
+    SettingsFormat_Grbl,
+    SettingsFormat_grblHAL
+} settings_format_t;
+
 // Initialize reporting subsystem
 void report_init (void);
 void report_init_fns (void);
@@ -89,7 +96,10 @@ void report_build_info (char *line, bool extended);
 status_code_t report_alarm_details (void);
 status_code_t report_error_details (void);
 status_code_t report_setting_group_details (bool by_id, char *prefix);
-status_code_t report_settings_details (bool human_readable, setting_id_t setting, setting_group_t group);
+status_code_t report_settings_details (settings_format_t format, setting_id_t setting, setting_group_t group);
+#ifndef NO_SETTINGS_DESCRIPTIONS
+status_code_t report_setting_description (settings_format_t format, setting_id_t id);
+#endif
 
 status_code_t report_last_signals_event (sys_state_t state, char *args);
 status_code_t report_current_limit_state (sys_state_t state, char *args);

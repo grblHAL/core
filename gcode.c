@@ -1362,8 +1362,11 @@ status_code_t gc_execute_block(char *block, char *message)
     uint_fast8_t idx = N_AXIS;
     if (gc_block.modal.units_imperial) do { // Axes indices are consistent, so loop may be used.
         idx--;
-//        if (bit_istrue(axis_words.mask, bit(idx)) && bit_isfalse(settings.steppers.is_rotational.mask, bit(idx)))
+#if N_AXIS > 3
+        if (bit_istrue(axis_words.mask, bit(idx)) && bit_isfalse(settings.steppers.is_rotational.mask, bit(idx)))
+#else
         if (bit_istrue(axis_words.mask, bit(idx)))
+#endif
             gc_block.values.xyz[idx] *= MM_PER_INCH;
     } while(idx);
 
@@ -2087,7 +2090,6 @@ status_code_t gc_execute_block(char *block, char *message)
                             idx = 3;
                             do { // Axes indices are consistent, so loop may be used to save flash space.
                                 idx--;
-//                                if (ijk_words.mask & bit(idx) && bit_isfalse(settings.steppers.is_rotational.mask, bit(idx)))
                                 if (ijk_words.mask & bit(idx))
                                     gc_block.values.ijk[idx] *= MM_PER_INCH;
                             } while(idx);

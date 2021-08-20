@@ -39,9 +39,14 @@ static status_code_t enumerate_errors (sys_state_t state, char *args);
 static status_code_t enumerate_groups (sys_state_t state, char *args);
 static status_code_t enumerate_settings (sys_state_t state, char *args);
 static status_code_t enumerate_all (sys_state_t state, char *args);
+static status_code_t enumerate_settings_grblformatted (sys_state_t state, char *args);
+static status_code_t enumerate_settings_halformatted (sys_state_t state, char *args);
 static status_code_t enumerate_pins (sys_state_t state, char *args);
 static status_code_t output_settings (sys_state_t state, char *args);
 static status_code_t output_all_settings (sys_state_t state, char *args);
+#ifndef NO_SETTINGS_DESCRIPTIONS
+static status_code_t output_setting_description (sys_state_t state, char *args);
+#endif
 static status_code_t output_parser_state (sys_state_t state, char *args);
 static status_code_t toggle_block_delete (sys_state_t state, char *args);
 static status_code_t toggle_single_block (sys_state_t state, char *args);
@@ -168,52 +173,57 @@ status_code_t read_int (char *s, int32_t *value)
 }
 
 PROGMEM static const sys_command_t sys_commands[] = {
-    {"G", true, output_parser_state},
-    {"J", false, jog},
-    {"#", true, output_ngc_parameters},
-    {"$", false, output_settings},
-    {"+", false, output_all_settings},
-    {"B", true, toggle_block_delete},
-    {"S", true, toggle_single_block},
-    {"O", true, toggle_optional_stop},
-    {"C", true, check_mode},
-    {"X", false, disable_lock},
-    {"H", false, home},
-    {"HX", false, home_x},
-    {"HY", false, home_y},
-    {"HZ", false, home_z},
+    { "G", true, output_parser_state },
+    { "J", false, jog },
+    { "#", true, output_ngc_parameters },
+    { "$", false, output_settings },
+    { "+", false, output_all_settings },
+#ifndef NO_SETTINGS_DESCRIPTIONS
+    { "SED", false, output_setting_description },
+#endif
+    { "B", true, toggle_block_delete },
+    { "S", true, toggle_single_block },
+    { "O", true, toggle_optional_stop },
+    { "C", true, check_mode },
+    { "X", false, disable_lock },
+    { "H", false, home },
+    { "HX", false, home_x },
+    { "HY", false, home_y },
+    { "HZ", false, home_z },
 #ifdef A_AXIS
-    {"HA", false, home_a},
+    { "HA", false, home_a },
 #endif
 #ifdef B_AXIS
-    {"HB", false, home_b},
+    { "HB", false, home_b },
 #endif
 #ifdef C_AXIS
-    {"HC", false, home_c},
+    { "HC", false, home_c },
 #endif
-    {"HELP", false, output_help},
-    {"SLP", true, enter_sleep},
-    {"TLR", true, set_tool_reference},
-    {"TPW", true, tool_probe_workpiece},
-    {"I", false, build_info},
-    {"I+", true, output_all_build_info},
-    {"RST", false, settings_reset},
-    {"N", true, output_startup_lines},
-    {"N0", false, set_startup_line0},
-    {"N1", false, set_startup_line1},
-    {"EA", true, enumerate_alarms},
-    {"EE", true, enumerate_errors},
-    {"EG", true, enumerate_groups},
-    {"ES", true, enumerate_settings},
-    {"E*", true, enumerate_all},
-    {"PINS", true, enumerate_pins},
-    {"RST", false, settings_reset},
-    {"LEV", true, report_last_signals_event},
-    {"LIM", true, report_current_limit_state},
-    {"SD", false, report_spindle_data},
-    {"SR", false, spindle_reset_data},
+    { "HELP", false, output_help },
+    { "SLP", true, enter_sleep },
+    { "TLR", true, set_tool_reference },
+    { "TPW", true, tool_probe_workpiece },
+    { "I", false, build_info },
+    { "I+", true, output_all_build_info },
+    { "RST", false, settings_reset },
+    { "N", true, output_startup_lines },
+    { "N0", false, set_startup_line0 },
+    { "N1", false, set_startup_line1 },
+    { "EA", true, enumerate_alarms },
+    { "EE", true, enumerate_errors },
+    { "EG", true, enumerate_groups },
+    { "ES", true, enumerate_settings },
+    { "ESG", true, enumerate_settings_grblformatted },
+    { "ESH", true, enumerate_settings_halformatted },
+    { "E*", true, enumerate_all },
+    { "PINS", true, enumerate_pins },
+    { "RST", false, settings_reset },
+    { "LEV", true, report_last_signals_event },
+    { "LIM", true, report_current_limit_state },
+    { "SD", false, report_spindle_data },
+    { "SR", false, spindle_reset_data },
 #ifdef DEBUGOUT
-    {"Q", true, output_memmap},
+    { "Q", true, output_memmap },
 #endif
 };
 
@@ -345,7 +355,17 @@ static status_code_t enumerate_groups (sys_state_t state, char *args)
 
 static status_code_t enumerate_settings (sys_state_t state, char *args)
 {
-    return report_settings_details(false, Setting_SettingsAll, Group_All);
+    return report_settings_details(SettingsFormat_MachineReadable, Setting_SettingsAll, Group_All);
+}
+
+static status_code_t enumerate_settings_grblformatted (sys_state_t state, char *args)
+{
+    return report_settings_details(SettingsFormat_Grbl, Setting_SettingsAll, Group_All);
+}
+
+static status_code_t enumerate_settings_halformatted (sys_state_t state, char *args)
+{
+    return report_settings_details(SettingsFormat_grblHAL, Setting_SettingsAll, Group_All);
 }
 
 static status_code_t enumerate_all (sys_state_t state, char *args)
@@ -353,7 +373,7 @@ static status_code_t enumerate_all (sys_state_t state, char *args)
     report_alarm_details();
     report_error_details();
     report_setting_group_details(true, NULL);
-    return report_settings_details(false, Setting_SettingsAll, Group_All);
+    return report_settings_details(SettingsFormat_MachineReadable, Setting_SettingsAll, Group_All);
 }
 
 static status_code_t enumerate_pins (sys_state_t state, char *args)
@@ -369,7 +389,7 @@ static status_code_t output_settings (sys_state_t state, char *args)
         int32_t id;
         retval = read_int(args, &id);
         if(retval == Status_OK && id >= 0)
-            retval = report_settings_details(true, (setting_id_t)id, Group_All);
+            retval = report_settings_details(SettingsFormat_HumanReadable, (setting_id_t)id, Group_All);
     } else if (state & (STATE_CYCLE|STATE_HOLD))
         retval = Status_IdleError; // Block during cycle. Takes too long to print.
     else
@@ -382,6 +402,24 @@ static status_code_t output_settings (sys_state_t state, char *args)
     return retval;
 }
 
+#ifndef NO_SETTINGS_DESCRIPTIONS
+
+static status_code_t output_setting_description (sys_state_t state, char *args)
+{
+    status_code_t retval = Status_BadNumberFormat;
+
+    if(args) {
+        int32_t id;
+        retval = read_int(args, &id);
+        if(retval == Status_OK && id >= 0)
+            retval = report_setting_description(SettingsFormat_MachineReadable, (setting_id_t)id);
+    }
+
+    return retval;
+}
+
+#endif
+
 static status_code_t output_all_settings (sys_state_t state, char *args)
 {
     status_code_t retval = Status_OK;
@@ -390,7 +428,7 @@ static status_code_t output_all_settings (sys_state_t state, char *args)
         int32_t id;
         retval = read_int(args, &id);
         if(retval == Status_OK && id >= 0)
-            retval = report_settings_details(true, (setting_id_t)id, Group_All);
+            retval = report_settings_details(SettingsFormat_HumanReadable, (setting_id_t)id, Group_All);
     } else if (state & (STATE_CYCLE|STATE_HOLD))
         retval = Status_IdleError; // Block during cycle. Takes too long to print.
     else

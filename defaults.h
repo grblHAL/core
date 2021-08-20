@@ -557,6 +557,10 @@
 #define ST_DEENERGIZE_MASK 0
 #endif
 
+#ifndef ST_ROTATIONAL_MASK
+#define ST_ROTATIONAL_MASK 0
+#endif
+
 #ifndef INVERT_ST_ENABLE_MASK
 #define INVERT_ST_ENABLE_MASK 0
 #endif
