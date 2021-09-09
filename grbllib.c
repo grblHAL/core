@@ -103,7 +103,8 @@ int grbl_enter (void)
     // Clear all and set some core function pointers
     memset(&grbl, 0, sizeof(grbl_t));
     grbl.on_execute_realtime = protocol_execute_noop;
-    grbl.protocol_enqueue_gcode = protocol_enqueue_gcode;
+    grbl.enqueue_gcode = protocol_enqueue_gcode;
+    grbl.enqueue_realtime_command = stream_enqueue_realtime_command;
     grbl.on_report_options = dummy_bool_handler;
 
     // Clear all and set some HAL function pointers
@@ -181,7 +182,7 @@ int grbl_enter (void)
 #endif
 
 #ifdef SPINDLE_PWM_DIRECT
-    driver_ok = driver_ok && hal.spindle.get_pwm != NULL && hal.spindle.update_pwm != NULL;
+    driver_ok = driver_ok && (!hal.driver_cap.variable_spindle || (hal.spindle.get_pwm != NULL && hal.spindle.update_pwm != NULL));
 #endif
 
     if(!driver_ok) {

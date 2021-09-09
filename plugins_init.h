@@ -48,6 +48,11 @@
     openpnp_init();
 #endif
 
+#if WEBUI_ENABLE
+    extern void webui_init (void);
+    webui_init();
+#endif
+
     my_plugin_init();
 
 #if ODOMETER_ENABLE

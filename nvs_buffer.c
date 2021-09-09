@@ -68,7 +68,7 @@ static const emap_t target[] = {
     {TOOL_ADDR(5), NVS_GROUP_TOOLS, 5},
     {TOOL_ADDR(6), NVS_GROUP_TOOLS, 6},
     {TOOL_ADDR(7), NVS_GROUP_TOOLS, 7},
-#if N_TOOL > 8
+#if N_TOOLS > 8
 #error Increase number of tool entries!
 #endif
 #endif
@@ -372,6 +372,14 @@ void nvs_memmap (void)
     strcat(buf, " ");
     strcat(buf, uitoa(sizeof(settings_t) + NVS_CRC_BYTES));
     report_message(buf, Message_Plain);
+
+#ifdef N_TOOLS
+    strcpy(buf, "Tool table: ");
+    strcat(buf, uitoa(NVS_ADDR_TOOL_TABLE));
+    strcat(buf, " ");
+    strcat(buf, uitoa(N_TOOLS * (sizeof(tool_data_t) + NVS_CRC_BYTES)));
+    report_message(buf, Message_Plain);
+#endif
 
     strcpy(buf, "Parameters: ");
     strcat(buf, uitoa(NVS_ADDR_PARAMETERS));

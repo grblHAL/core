@@ -35,7 +35,9 @@
 
 static status_code_t jog (sys_state_t state, char *args);
 static status_code_t enumerate_alarms (sys_state_t state, char *args);
+static status_code_t enumerate_alarms_grblformatted (sys_state_t state, char *args);
 static status_code_t enumerate_errors (sys_state_t state, char *args);
+static status_code_t enumerate_errors_grblformatted (sys_state_t state, char *args);
 static status_code_t enumerate_groups (sys_state_t state, char *args);
 static status_code_t enumerate_settings (sys_state_t state, char *args);
 static status_code_t enumerate_all (sys_state_t state, char *args);
@@ -210,7 +212,9 @@ PROGMEM static const sys_command_t sys_commands[] = {
     { "N0", false, set_startup_line0 },
     { "N1", false, set_startup_line1 },
     { "EA", true, enumerate_alarms },
+    { "EAG", true, enumerate_alarms_grblformatted },
     { "EE", true, enumerate_errors },
+    { "EEG", true, enumerate_errors_grblformatted },
     { "EG", true, enumerate_groups },
     { "ES", true, enumerate_settings },
     { "ESG", true, enumerate_settings_grblformatted },
@@ -340,12 +344,22 @@ static status_code_t jog (sys_state_t state, char *args)
 
 static status_code_t enumerate_alarms (sys_state_t state, char *args)
 {
-    return report_alarm_details();
+    return report_alarm_details(false);
+}
+
+static status_code_t enumerate_alarms_grblformatted (sys_state_t state, char *args)
+{
+    return report_alarm_details(true);
 }
 
 static status_code_t enumerate_errors (sys_state_t state, char *args)
 {
-    return report_error_details();
+    return report_error_details(false);
+}
+
+static status_code_t enumerate_errors_grblformatted (sys_state_t state, char *args)
+{
+    return report_error_details(true);
 }
 
 static status_code_t enumerate_groups (sys_state_t state, char *args)
@@ -370,8 +384,8 @@ static status_code_t enumerate_settings_halformatted (sys_state_t state, char *a
 
 static status_code_t enumerate_all (sys_state_t state, char *args)
 {
-    report_alarm_details();
-    report_error_details();
+    report_alarm_details(false);
+    report_error_details(false);
     report_setting_group_details(true, NULL);
     return report_settings_details(SettingsFormat_MachineReadable, Setting_SettingsAll, Group_All);
 }

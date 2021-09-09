@@ -91,6 +91,11 @@ ISR_CODE bool stream_buffer_all (char c)
     return false;
 }
 
+ISR_CODE bool stream_enqueue_realtime_command (char c)
+{
+    return hal.stream.enqueue_rt_command ? hal.stream.enqueue_rt_command(c) : protocol_enqueue_realtime_command(c);
+}
+
 ISR_CODE bool stream_enable_mpg (const io_stream_t *mpg_stream, bool mpg_mode)
 {
     static io_stream_t org_stream = {
@@ -138,12 +143,14 @@ ISR_CODE bool stream_enable_mpg (const io_stream_t *mpg_stream, bool mpg_mode)
 
 #ifdef DEBUGOUT
 
-static stream_write_ptr dbg_write;
+static stream_write_ptr dbg_write = NULL;
 
-static void debug_write (const char *s)
+void debug_write (const char *s)
 {
-    dbg_write(s);
-    while(hal.debug.get_tx_buffer_count()); // Wait until message is delivered
+    if(dbg_write) {
+        dbg_write(s);
+        while(hal.debug.get_tx_buffer_count()); // Wait until message is delivered
+    }
 }
 
 void debug_stream_init (io_stream_t *stream)

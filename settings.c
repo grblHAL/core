@@ -1465,17 +1465,21 @@ bool settings_read_tool_data (uint32_t tool, tool_data_t *tool_data)
 #endif
 }
 
-// Read Grbl global settings from persistent storage.
+// Read global settings from persistent storage.
 // Checks version-byte of non-volatile storage and global settings copy.
 bool read_global_settings ()
 {
     bool ok = hal.nvs.type != NVS_None && SETTINGS_VERSION == hal.nvs.get_byte(0) && hal.nvs.memcpy_from_nvs((uint8_t *)&settings, NVS_ADDR_GLOBAL, sizeof(settings_t), true) == NVS_TransferResult_OK;
 
+    // Sanity check of settings, board map could have been changed...
+    if(settings.mode == Mode_Laser && !hal.driver_cap.variable_spindle)
+        settings.mode = Mode_Standard;
+
     return ok && settings.version == SETTINGS_VERSION;
 }
 
 
-// Write Grbl global settings to persistent storage
+// Write global settings to persistent storage
 void settings_write_global (void)
 {
     if(override_backup.valid)
@@ -1486,7 +1490,7 @@ void settings_write_global (void)
 }
 
 
-// Restore Grbl global settings to defaults and write to persistent storage
+// Restore global settings to defaults and write to persistent storage
 void settings_restore (settings_restore_t restore)
 {
     uint_fast8_t idx;
@@ -1726,6 +1730,32 @@ const setting_detail_t *setting_get_details (setting_id_t id, setting_details_t 
     } while(details);
 
     return NULL;
+}
+
+const char *setting_get_description (setting_id_t id)
+{
+    const char *description = NULL;
+
+#ifndef NO_SETTINGS_DESCRIPTIONS
+
+    uint_fast16_t idx;
+    setting_details_t *settings = settings_get_details();
+    const setting_detail_t *setting = setting_get_details(id, NULL);
+
+    if(setting) do {
+        if(settings->descriptions) {
+            idx = settings->n_descriptions;
+            do {
+                if(settings->descriptions[--idx].id == setting->id)
+                    description = settings->descriptions[idx].description;
+            } while(idx && description == NULL);
+        }
+        settings = settings->on_get_settings ? settings->on_get_settings() : NULL;
+    } while(settings && description == NULL);
+
+#endif
+
+    return description;
 }
 
 static status_code_t validate_value (const setting_detail_t *setting, float value)

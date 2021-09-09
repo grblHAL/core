@@ -550,15 +550,16 @@ void st_reset ()
     // NOTE: buffer indices starts from 1 for simpler driver coding!
 
     // Set up stepper block ringbuffer as circular linked list and add id
-    uint_fast8_t idx;
-    for(idx = 0 ; idx <= SEGMENT_BUFFER_SIZE - 2 ; idx++) {
-        st_block_buffer[idx].next = &st_block_buffer[idx == SEGMENT_BUFFER_SIZE - 2 ? 0 : idx + 1];
+    uint_fast8_t idx, idx_max = (sizeof(st_block_buffer) / sizeof(st_block_t)) - 1;
+    for(idx = 0 ; idx <= idx_max ; idx++) {
+        st_block_buffer[idx].next = &st_block_buffer[idx == idx_max ? 0 : idx + 1];
         st_block_buffer[idx].id = idx + 1;
     }
 
     // Set up segments ringbuffer as circular linked list, add id and clear AMASS level
-    for(idx = 0 ; idx <= SEGMENT_BUFFER_SIZE - 1 ; idx++) {
-        segment_buffer[idx].next = &segment_buffer[idx == SEGMENT_BUFFER_SIZE - 1 ? 0 : idx + 1];
+    idx_max = (sizeof(segment_buffer) / sizeof(segment_t)) - 1;
+    for(idx = 0 ; idx <= idx_max ; idx++) {
+        segment_buffer[idx].next = &segment_buffer[idx == idx_max ? 0 : idx + 1];
         segment_buffer[idx].id = idx + 1;
         segment_buffer[idx].amass_level = 0;
     }

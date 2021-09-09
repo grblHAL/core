@@ -43,7 +43,8 @@ typedef enum {
     Alarm_Spindle = 14,
     Alarm_HomingFailAutoSquaringApproach = 15,
     Alarm_SelftestFailed = 16,
-    Alarm_MotorFault = 17
+    Alarm_MotorFault = 17,
+    Alarm_AlarmMax = Alarm_MotorFault
 } alarm_code_t;
 
 typedef struct {
@@ -52,25 +53,16 @@ typedef struct {
     const char *description;
 } alarm_detail_t;
 
-PROGMEM static const alarm_detail_t alarm_detail[] = {
-    { Alarm_HardLimit, "Hard limit", "Hard limit has been triggered. Machine position is likely lost due to sudden halt. Re-homing is highly recommended." },
-    { Alarm_SoftLimit, "Soft limit", "Soft limit alarm. G-code motion target exceeds machine travel. Machine position retained. Alarm may be safely unlocked." },
-    { Alarm_AbortCycle, "Abort during cycle", "Reset while in motion. Machine position is likely lost due to sudden halt. Re-homing is highly recommended." },
-    { Alarm_ProbeFailInitial, "Probe fail", "Probe fail. Probe is not in the expected initial state before starting probe cycle when G38.2 and G38.3 is not triggered and G38.4 and G38.5 is triggered." },
-    { Alarm_ProbeFailContact, "Probe fail", "Probe fail. Probe did not contact the workpiece within the programmed travel for G38.2 and G38.4." },
-    { Alarm_HomingFailReset, "Homing fail", "Homing fail. The active homing cycle was reset." },
-    { Alarm_HomingFailDoor, "Homing fail", "Homing fail. Safety door was opened during homing cycle." },
-    { Alarm_FailPulloff, "Homing fail", "Homing fail. Pull off travel failed to clear limit switch. Try increasing pull-off setting or check wiring." },
-    { Alarm_HomingFailApproach, "Homing fail", "Homing fail. Could not find limit switch within search distances. Try increasing max travel, decreasing pull-off distance, or check wiring." },
-    { Alarm_EStop, "EStop", "EStop asserted. Clear and reset" },
-    { Alarm_HomingRequried, "Homing required", "Homing required. Execute homing command ($H) to continue." },
-    { Alarm_LimitsEngaged, "Limit switch engaged", "Limit switch engaged. Clear before continuing." },
-    { Alarm_ProbeProtect, "Probe protection triggered", "Probe protection triggered. Clear before continuing." },
-    { Alarm_Spindle, "Spindle at speed timeout", "Spindle at speed timeout. Clear before continuing." },
-    { Alarm_HomingFailAutoSquaringApproach, "Homing fail", "Homing fail. Could not find second limit switch for auto squared axis within search distances. Try increasing max travel, decreasing pull-off distance, or check wiring." },
-    { Alarm_SelftestFailed, "Selftest failed", "Power on selftest (POS) failed." },
-    { Alarm_MotorFault, "Motor fault", "Motor fault." }
-};
+typedef struct alarm_details {
+    const uint16_t n_alarms;
+    const alarm_detail_t *alarms;
+    struct alarm_details *(*on_get_alarms)(void);
+} alarm_details_t;
+
+// NOTE: this must match the signature of on_get_alarms in the alarm_details_t struct above!
+typedef alarm_details_t *(*on_get_alarms_ptr)(void);
+
+alarm_details_t *alarms_get_details (void);
 
 #endif
 

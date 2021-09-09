@@ -1381,6 +1381,15 @@ static void report_bitfield (const char *format, bool bitmap)
     }
 }
 
+static void write_quoted (const char *s, const char *sep)
+{
+    hal.stream.write("\"");
+    hal.stream.write(s); // TODO: escape double quoutes
+    hal.stream.write("\"");
+    if(sep)
+        hal.stream.write(sep);
+}
+
 static void report_settings_detail (settings_format_t format, const setting_detail_t *setting, uint_fast8_t offset)
 {
     switch(format)
@@ -1474,126 +1483,130 @@ static void report_settings_detail (settings_format_t format, const setting_deta
             break;
 
         case SettingsFormat_Grbl:
-            hal.stream.write("\"");
-            hal.stream.write(uitoa(setting->id + offset));
-            hal.stream.write("\",\"");
-            if(setting->group == Group_Axis0)
-                hal.stream.write(axis_letter[offset]);
-            hal.stream.write(setting->name[0] == '?' ? &setting->name[1] : setting->name); // temporary hack for ? prefix...
-            if(setting->unit) {
-                hal.stream.write("\",\"");
-                hal.stream.write(setting->unit);
-            } else // TODO: output sensible unit from datatype
-                hal.stream.write("\",\"");
-#ifndef NO_SETTINGS_DESCRIPTIONS
-            hal.stream.write("\",\"");
-            report_setting_description(format, (setting_id_t)(setting->id + offset));
-            hal.stream.write("\"");
-#else
-            hal.stream.write("\",\"\"");
-#endif
+            {
+                write_quoted(uitoa(setting->id + offset), ",");
+                hal.stream.write("\"");
+                if(setting->group == Group_Axis0)
+                    hal.stream.write(axis_letter[offset]);
+                hal.stream.write(setting->name[0] == '?' ? &setting->name[1] : setting->name); // temporary hack for ? prefix...
+                hal.stream.write("\",");
+                if(setting->unit) {
+                    write_quoted(setting->unit, ",");
+                } else // TODO: output sensible unit from datatype
+                    write_quoted("", ",");
+
+    #ifndef NO_SETTINGS_DESCRIPTIONS
+                const char *description = setting_get_description((setting_id_t)(setting->id + offset));
+                write_quoted(description ? description : "", ",");
+    #else
+                write_quoted("", NULL);
+    #endif
+            }
             break;
 
         case SettingsFormat_grblHAL:
-            hal.stream.write(uitoa(setting->id + offset));
+            {
+                hal.stream.write(uitoa(setting->id + offset));
 
-            hal.stream.write("\t");
+                hal.stream.write("\t");
 
-            if(setting->group == Group_Axis0)
-                hal.stream.write(axis_letter[offset]);
-            hal.stream.write(setting->name[0] == '?' ? &setting->name[1] : setting->name); // temporary hack for ? prefix...
+                if(setting->group == Group_Axis0)
+                    hal.stream.write(axis_letter[offset]);
+                hal.stream.write(setting->name[0] == '?' ? &setting->name[1] : setting->name); // temporary hack for ? prefix...
 
-            hal.stream.write("\t");
+                hal.stream.write("\t");
 
-            if(setting->unit)
-                hal.stream.write(setting->unit);
-            else if(setting->datatype == Format_AxisMask || setting->datatype == Format_Bitfield || setting->datatype == Format_XBitfield)
-                hal.stream.write("mask");
-            else if(setting->datatype == Format_Bool)
-                hal.stream.write("boolean");
-            else if(setting->datatype == Format_RadioButtons)
-                hal.stream.write("integer");
-
-            hal.stream.write("\t");
-/*
-            Format_Bool = 0,
-            Format_Bitfield,
-            Format_XBitfield,
-            Format_RadioButtons,
-            Format_AxisMask,
-            Format_Integer, // 32 bit
-            ,
-            Format_String,
-            Format_Password,
-            Format_IPv4,
-            // For internal use only
-            Format_Int8,
-            Format_Int16,
-*/
-            switch(setting_datatype_to_external(setting->datatype)) {
-
-                case Format_Integer:
+                if(setting->unit)
+                    hal.stream.write(setting->unit);
+                else if(setting->datatype == Format_AxisMask || setting->datatype == Format_Bitfield || setting->datatype == Format_XBitfield)
+                    hal.stream.write("mask");
+                else if(setting->datatype == Format_Bool)
+                    hal.stream.write("boolean");
+                else if(setting->datatype == Format_RadioButtons)
                     hal.stream.write("integer");
-                    break;
 
-                case Format_Decimal:
-                    hal.stream.write("float");
-                    break;
+                hal.stream.write("\t");
+    /*
+                Format_Bool = 0,
+                Format_Bitfield,
+                Format_XBitfield,
+                Format_RadioButtons,
+                Format_AxisMask,
+                Format_Integer, // 32 bit
+                ,
+                Format_String,
+                Format_Password,
+                Format_IPv4,
+                // For internal use only
+                Format_Int8,
+                Format_Int16,
+    */
+                switch(setting_datatype_to_external(setting->datatype)) {
 
-                case Format_Bool:
-                    hal.stream.write("bool");
-                    break;
+                    case Format_Integer:
+                        hal.stream.write("integer");
+                        break;
 
-                case Format_AxisMask:
-                case Format_Bitfield:
-                    hal.stream.write("bitfield");
-                    break;
+                    case Format_Decimal:
+                        hal.stream.write("float");
+                        break;
 
-                case Format_XBitfield:
-                    hal.stream.write("xbitfield");
-                    break;
+                    case Format_Bool:
+                        hal.stream.write("bool");
+                        break;
 
-                case Format_RadioButtons:
-                    hal.stream.write("radiobuttons");
-                    break;
+                    case Format_AxisMask:
+                    case Format_Bitfield:
+                        hal.stream.write("bitfield");
+                        break;
 
-                case Format_IPv4:
-                    hal.stream.write("ipv4");
-                    break;
+                    case Format_XBitfield:
+                        hal.stream.write("xbitfield");
+                        break;
 
-                case Format_String:
-                    hal.stream.write("string");
-                    break;
+                    case Format_RadioButtons:
+                        hal.stream.write("radiobuttons");
+                        break;
 
-                case Format_Password:
-                    hal.stream.write("password");
-                    break;
+                    case Format_IPv4:
+                        hal.stream.write("ipv4");
+                        break;
 
-                default:
-                    break;
+                    case Format_String:
+                        hal.stream.write("string");
+                        break;
+
+                    case Format_Password:
+                        hal.stream.write("password");
+                        break;
+
+                    default:
+                        break;
+                }
+
+                hal.stream.write("\t");
+
+                if(setting->format)
+                    hal.stream.write(setting->format);
+                else if (setting->datatype == Format_AxisMask)
+                    hal.stream.write("axes");
+
+                hal.stream.write("\t");
+
+    #ifndef NO_SETTINGS_DESCRIPTIONS
+                const char *description = setting_get_description((setting_id_t)(setting->id + offset));
+                hal.stream.write(description ? description : "");
+    #endif
+                hal.stream.write("\t");
+
+                if(setting->min_value)
+                    hal.stream.write(setting->min_value);
+
+                hal.stream.write("\t");
+
+                if(setting->max_value)
+                    hal.stream.write(setting->max_value);
             }
-
-            hal.stream.write("\t");
-
-            if(setting->format)
-                hal.stream.write(setting->format);
-            else if (setting->datatype == Format_AxisMask)
-                hal.stream.write("axes");
-
-            hal.stream.write("\t");
-
-#ifndef NO_SETTINGS_DESCRIPTIONS
-            report_setting_description(format, (setting_id_t)(setting->id + offset));
-#endif
-            hal.stream.write("\t");
-
-            if(setting->min_value)
-                hal.stream.write(setting->min_value);
-
-            hal.stream.write("\t");
-
-            if(setting->max_value)
-                hal.stream.write(setting->max_value);
             break;
     }
 
@@ -1746,21 +1759,7 @@ status_code_t report_settings_details (settings_format_t format, setting_id_t id
 
 status_code_t report_setting_description (settings_format_t format, setting_id_t id)
 {
-    uint_fast16_t idx;
-    const char *description = NULL;
-    setting_details_t *settings = settings_get_details();
-    const setting_detail_t *setting = setting_get_details(id, NULL);
-
-    if(setting) do {
-        if(settings->descriptions) {
-            idx = settings->n_descriptions;
-            do {
-                if(settings->descriptions[--idx].id == setting->id)
-                    description = settings->descriptions[idx].description;
-            } while(idx && description == NULL);
-        }
-        settings = settings->on_get_settings ? settings->on_get_settings() : NULL;
-    } while(settings && description == NULL);
+    const char *description = setting_get_description(id);
 
     if(format == SettingsFormat_MachineReadable) {
         hal.stream.write("[SETTINGDESCR:");
@@ -1778,42 +1777,74 @@ status_code_t report_setting_description (settings_format_t format, setting_id_t
 
 #endif
 
-status_code_t report_alarm_details (void)
+status_code_t report_alarm_details (bool grbl_format)
 {
-    uint_fast16_t idx, n_alarms = sizeof(alarm_detail) / sizeof(alarm_detail_t);
+    uint_fast16_t idx;
+    alarm_details_t *list = alarms_get_details();
 
-    for(idx = 0; idx < n_alarms; idx++) {
+    if(grbl_format)
+        hal.stream.write("\"Alarm Code in v1.1+\",\" Alarm Message in v1.0-\",\" Alarm Description\"" ASCII_EOL);
 
-        hal.stream.write("[ALARMCODE:");
+    do { // TODO: add sorting?
 
-        hal.stream.write(uitoa(alarm_detail[idx].id));
-        hal.stream.write(vbar);
-        hal.stream.write(alarm_detail[idx].name);
-        hal.stream.write(vbar);
-        if(alarm_detail[idx].description)
-            hal.stream.write(alarm_detail[idx].description);
-        hal.stream.write("]" ASCII_EOL);
-    }
+        for(idx = 0; idx < list->n_alarms; idx++) {
+
+            if(grbl_format) {
+                write_quoted(uitoa(list->alarms[idx].id), ",");
+                write_quoted(list->alarms[idx].name, ",");
+                write_quoted(list->alarms[idx].description ? list->alarms[idx].description : "", NULL);
+                hal.stream.write(ASCII_EOL);
+            } else {
+                hal.stream.write("[ALARMCODE:");
+                hal.stream.write(uitoa(list->alarms[idx].id));
+                hal.stream.write(vbar);
+                hal.stream.write(list->alarms[idx].name);
+                hal.stream.write(vbar);
+                if(list->alarms[idx].description)
+                    hal.stream.write(list->alarms[idx].description);
+                hal.stream.write("]" ASCII_EOL);
+            }
+        }
+
+        list = list->on_get_alarms ? list->on_get_alarms() : NULL;
+
+    } while(list);
 
     return Status_OK;
 }
 
-status_code_t report_error_details (void)
+status_code_t report_error_details (bool grbl_format)
 {
-    uint_fast16_t idx, n_alarms = sizeof(status_detail) / sizeof(status_detail_t);
+    uint_fast16_t idx;
+    error_details_t *list = errors_get_details();
 
-    for(idx = 0; idx < n_alarms; idx++) {
+    if(grbl_format)
+        hal.stream.write("\"Error Code in v1.1+\",\"Error Message in v1.0-\",\"Error Description\"" ASCII_EOL);
 
-        hal.stream.write("[ERRORCODE:");
+    do { // TODO: add sorting?
 
-        hal.stream.write(uitoa(status_detail[idx].id));
-        hal.stream.write(vbar);
-        hal.stream.write(status_detail[idx].name);
-        hal.stream.write(vbar);
-        if(status_detail[idx].description)
-            hal.stream.write(status_detail[idx].description);
-        hal.stream.write("]" ASCII_EOL);
-    }
+        for(idx = 0; idx < list->n_errors; idx++) {
+
+            if(grbl_format) {
+                write_quoted(uitoa(list->errors[idx].id), ",");
+                write_quoted(list->errors[idx].name, ",");
+                write_quoted(list->errors[idx].description ? list->errors[idx].description : "", NULL);
+                hal.stream.write(ASCII_EOL);
+            } else {
+                hal.stream.write("[ERRORCODE:");
+                hal.stream.write(uitoa(list->errors[idx].id));
+                hal.stream.write(vbar);
+                hal.stream.write(list->errors[idx].name);
+                hal.stream.write(vbar);
+                if(list->errors[idx].description)
+                    hal.stream.write(list->errors[idx].description);
+                hal.stream.write("]" ASCII_EOL);
+            }
+        }
+
+        list = list->on_get_errors ? list->on_get_errors() : NULL;
+
+    } while(list);
 
     return Status_OK;
 }
@@ -1942,7 +1973,6 @@ status_code_t report_current_limit_state (sys_state_t state, char *args)
 
     return Status_OK;
 }
-
 
 // Prints spindle data (encoder pulse and index count, angular position).
 status_code_t report_spindle_data (sys_state_t state, char *args)

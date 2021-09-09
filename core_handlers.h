@@ -27,6 +27,8 @@
 
 #include "system.h"
 #include "stream.h"
+#include "alarms.h"
+#include "errors.h"
 #include "settings.h"
 #include "report.h"
 
@@ -61,6 +63,9 @@ typedef struct {
 // Core event handler and other entry points.
 // Most of the event handlers defaults to NULL, a few is set up to call a dummy handler for simpler code.
 
+typedef bool (*enqueue_gcode_ptr)(char *data);
+typedef bool (*protocol_enqueue_realtime_command_ptr)(char c);
+
 typedef void (*on_state_change_ptr)(sys_state_t state);
 typedef void (*on_probe_completed_ptr)(void);
 typedef void (*on_program_completed_ptr)(program_flow_t program_flow, bool check_mode);
@@ -70,10 +75,9 @@ typedef bool (*on_unknown_realtime_cmd_ptr)(char c);
 typedef void (*on_report_options_ptr)(bool newopt);
 typedef void (*on_report_command_help_ptr)(void);
 typedef void (*on_global_settings_restore_ptr)(void);
-typedef setting_details_t *(*on_get_settings_ptr)(void); // NOTE: this must match the signature of the same definition in
-                                                         // the setting_details_t structure in settings.h!
 typedef void (*on_realtime_report_ptr)(stream_write_ptr stream_write, report_tracking_flags_t report);
 typedef void (*on_unknown_feedback_message_ptr)(stream_write_ptr stream_write);
+typedef void (*on_stream_changed_ptr)(stream_type_t type);
 typedef bool (*on_laser_ppi_enable_ptr)(uint_fast16_t ppi, uint_fast16_t pulse_length);
 typedef status_code_t (*on_unknown_sys_command_ptr)(sys_state_t state, char *line); // return Status_Unhandled.
 typedef status_code_t (*on_user_command_ptr)(char *line);
@@ -91,6 +95,8 @@ typedef struct {
     on_report_options_ptr on_report_options;
     on_report_command_help_ptr on_report_command_help;
     on_global_settings_restore_ptr on_global_settings_restore;
+    on_get_alarms_ptr on_get_alarms;
+    on_get_errors_ptr on_get_errors;
     on_get_settings_ptr on_get_settings;
     on_realtime_report_ptr on_realtime_report;
     on_unknown_feedback_message_ptr on_unknown_feedback_message;
@@ -98,9 +104,11 @@ typedef struct {
     on_unknown_sys_command_ptr on_unknown_sys_command; // return Status_Unhandled if not handled.
     on_get_commands_ptr on_get_commands;
     on_user_command_ptr on_user_command;
+    on_stream_changed_ptr on_stream_changed;
     on_laser_ppi_enable_ptr on_laser_ppi_enable;
     // core entry points - set up by core before driver_init() is called.
-    bool (*protocol_enqueue_gcode)(char *data);
+    enqueue_gcode_ptr enqueue_gcode;
+    enqueue_realtime_command_ptr enqueue_realtime_command;
 } grbl_t;
 
 extern grbl_t grbl;

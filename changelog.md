@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+Build 20210907:
+
+Core:
+* Improved HAL/core stream handling for plugin issued [realtime commands](http://svn.io-engineering.com/grblHAL/html/structgrbl__t.html#a2ff011529d0a7809a44c8609490e0306).
+* Some minor bug fixes and added rudimentary settings validations relevant when switching board map files.
+
+Drivers & plugins:
+* Fixed regression in encoder plugin.
+* Updated all drivers and relevant plugins for HAL/core API changes.
+* Added PWM inversion option to [iMXRT1062 driver](https://github.com/grblHAL/iMXRT1062).
+* Significantly improved [STM32F7xx driver](https://github.com/grblHAL/STM32F7xx), still work in progress.
+
 Build 20210819:
 
 Core:

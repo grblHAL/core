@@ -416,19 +416,14 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 // #define INVERT_LIMIT_BIT_MASK (X_AXIS_BIT|Y_AXIS_BIT) // Default disabled. Uncomment to enable.
 // For inverting the probe pin use DEFAULT_INVERT_PROBE_BIT in defaults.h
 
-// Inverts the spindle enable pin from low-disabled/high-enabled to low-enabled/high-disabled. Useful
-// for some pre-built electronic boards.
-// NOTE: If VARIABLE_SPINDLE is enabled(default), this option has no effect as the PWM output and
-// spindle enable are combined to one pin. If you need both this option and spindle speed PWM,
-// uncomment the config option USE_SPINDLE_DIR_AS_ENABLE_PIN below.
+// Inverts the selected spindle output signals from active high to active low. Useful for some pre-built electronic boards.
 // #define INVERT_SPINDLE_ENABLE_PIN 1 // Default disabled. Uncomment to enable.
 // #define INVERT_SPINDLE_CCW_PIN 1    // Default disabled. Uncomment to enable. NOTE: not supported by all drivers.
 // #define INVERT_SPINDLE_PWM_PIN 1    // Default disabled. Uncomment to enable. NOTE: not supported by all drivers.
 
-// Inverts the selected coolant pin from low-disabled/high-enabled to low-enabled/high-disabled. Useful
-// for some pre-built electronic boards.
+// Inverts the selected coolant signals from active high to active low. Useful for some pre-built electronic boards.
 // #define INVERT_COOLANT_FLOOD_PIN 1 // Default disabled. Uncomment to enable.
-// #define INVERT_COOLANT_MIST_PIN 1  // Default disabled. Note: Enable M7 mist coolant in config.h
+// #define INVERT_COOLANT_MIST_PIN 1  // Default disabled. Note: not supported by all drivers.
 
 
 // Used by variable spindle output only. This forces the PWM output to a minimum duty cycle when enabled.

@@ -11,7 +11,7 @@ It has been written to complement grblHAL and has features such as proper keyboa
 
 ---
 
-Latest build date is 20210819, see the [changelog](changelog.md) for details.  
+Latest build date is 20210907, see the [changelog](changelog.md) for details.  
 __NOTE:__ Drivers built with more than three axes configured \(`N_AXIS` > `3`\) will force a settings reset when upgraded. Backup and restore of settings is recommended for these.
 
 ---
@@ -77,5 +77,7 @@ List of Supported G-Codes:
   *** number of outputs supported dependent on driver implementation.
 ```
 
+Some [plugins](https://github.com/grblHAL/plugins) implements additional M-codes.
+
 ---
-2021-07-26
+2021-09-08

@@ -56,7 +56,7 @@ Helper functions for saving away and restoring a stream input buffer. _Not refer
 #endif
 
 #ifndef BLOCK_TX_BUFFER_SIZE
-#define BLOCK_TX_BUFFER_SIZE 256
+#define BLOCK_TX_BUFFER_SIZE 1024
 #endif
 
 // Serial baud rate
@@ -124,11 +124,23 @@ This should be called by driver code prior to inserting a character into the inp
 */
 typedef bool (*enqueue_realtime_command_ptr)(char c);
 
+
+/*! \brief Optional, but recommended, pointer to function for enqueueing realtime command characters.
+\param c character to enqueue.
+\returns \a true if sucessfully enqueued, \a false otherwise.
+
+__NOTE:__ Stream implementations should pass the character over the current handler registered by the set_enqueue_rt_handler().
+
+User or plugin code should __not__ enqueue realtime command characters via this handler, it should call \a grbl.enqueue_realtime_command() instead.
+*/
+typedef bool (*enqueue_realtime_command2_ptr)(char c);
+
+
 /*! \brief Pointer to function for setting the enqueue realtime commands handler.
 \param enqueue_realtime_command_ptr pointer to the new handler function.
 \returns \a enqueue_realtime_command_ptr pointer to the replaced function.
 
-__NOTE:__ Stream implementation should hold a pointer to the handler in a local variable and typically
+__NOTE:__ Stream implementations should hold a pointer to the handler in a local variable and typically
 set it to protocol_enqueue_realtime_command() on initialization.
 */
 typedef enqueue_realtime_command_ptr (*set_enqueue_rt_handler_ptr)(enqueue_realtime_command_ptr);
@@ -179,7 +191,6 @@ for handing feed-holds, overrides, soft resets etc.
 
 \param disable \a true to disable stream, \a false to enable,
 */
-
 typedef bool (*disable_stream_ptr)(bool disable);
 
 //! Properties and handlers for stream I/O
@@ -190,10 +201,11 @@ typedef struct {
     stream_write_ptr write;                                 //!< Handler for writing string to current output stream only.
     stream_write_ptr write_all;                             //!< Handler for writing string to all active output streams.
     stream_write_char_ptr write_char;                       //!< Handler for writing a single character to current stream only.
+    enqueue_realtime_command2_ptr enqueue_rt_command;       //!< (Optional) handler for enqueueing a realtime command character.
     stream_read_ptr read;                                   //!< Handler for reading a single character from the input stream.
     flush_stream_buffer_ptr reset_read_buffer;              //!< Handler for flushing the input buffer.
     cancel_read_buffer_ptr cancel_read_buffer;              //!< Handler for flushing the input buffer and inserting an #ASCII_CAN character.
-    set_enqueue_rt_handler_ptr set_enqueue_rt_handler;      //!< Handler for setting the enqueue realtime commands handler.
+    set_enqueue_rt_handler_ptr set_enqueue_rt_handler;      //!< Handler for setting the enqueue realtime command character handler.
     suspend_read_ptr suspend_read;                          //!< Optional handler for saving away and restoring the current input buffer.
     stream_write_n_ptr write_n;                             //!< Optional handler for writing n characters to current output stream only. Required for Modbus support.
     disable_stream_ptr disable;                             //!< Optional handler for disabling/enabling a stream. Recommended?
@@ -257,7 +269,10 @@ bool stream_buffer_all (char c);
 
 bool stream_tx_blocking (void);
 
+bool stream_enqueue_realtime_command (char c);
+
 #ifdef DEBUGOUT
+void debug_write (const char *s);
 void debug_stream_init (io_stream_t *stream);
 #endif
 

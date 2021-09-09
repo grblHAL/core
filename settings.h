@@ -704,6 +704,9 @@ typedef struct setting_details {
     driver_settings_restore_ptr restore;
 } setting_details_t;
 
+// NOTE: this must match the signature of on_get_settings in the setting_details_t structure above!
+typedef setting_details_t *(*on_get_settings_ptr)(void);
+
 extern settings_t settings;
 
 // Initialize the configuration subsystem (load settings from persistent storage)
@@ -749,6 +752,7 @@ setting_details_t *settings_get_details (void);
 bool settings_is_group_available (setting_group_t group);
 bool settings_iterator (const setting_detail_t *setting, setting_output_ptr callback, void *data);
 const setting_detail_t *setting_get_details (setting_id_t id, setting_details_t **set);
+const char *setting_get_description (setting_id_t id);
 setting_datatype_t setting_datatype_to_external (setting_datatype_t datatype);
 setting_group_t settings_normalize_group (setting_group_t group);
 char *setting_get_value (const setting_detail_t *setting, uint_fast16_t offset);

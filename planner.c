@@ -315,7 +315,7 @@ inline static float plan_compute_profile_parameters (plan_block_t *block, float 
 }
 
 // Re-calculates buffered motions profile parameters upon a motion-based override change.
-void plan_update_velocity_profile_parameters ()
+static void plan_update_velocity_profile_parameters ()
 {
     plan_block_t *block = block_buffer_tail;
     float prev_nominal_speed = SOME_LARGE_VALUE; // Set high for first block nominal speed calculation.

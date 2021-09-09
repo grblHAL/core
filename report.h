@@ -93,8 +93,8 @@ void report_execute_startup_message (char *line, status_code_t status_code);
 // Prints build info and user info.
 void report_build_info (char *line, bool extended);
 
-status_code_t report_alarm_details (void);
-status_code_t report_error_details (void);
+status_code_t report_alarm_details (bool grbl_format);
+status_code_t report_error_details (bool grbl_format);
 status_code_t report_setting_group_details (bool by_id, char *prefix);
 status_code_t report_settings_details (settings_format_t format, setting_id_t setting, setting_group_t group);
 #ifndef NO_SETTINGS_DESCRIPTIONS

@@ -21,6 +21,8 @@ target_sources(grbl INTERFACE
  ${CMAKE_CURRENT_LIST_DIR}/stepper.c
  ${CMAKE_CURRENT_LIST_DIR}/system.c
  ${CMAKE_CURRENT_LIST_DIR}/tool_change.c
+ ${CMAKE_CURRENT_LIST_DIR}/alarms.c
+ ${CMAKE_CURRENT_LIST_DIR}/errors.c
 )
 
 target_include_directories(grbl INTERFACE ${CMAKE_CURRENT_LIST_DIR})

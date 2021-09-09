@@ -132,9 +132,6 @@ float plan_get_exec_block_exit_speed_sqr();
 // Called by main program during planner calculations and step segment buffer during initialization.
 float plan_compute_profile_nominal_speed(plan_block_t *block);
 
-// Re-calculates buffered motions profile parameters upon a motion-based override change.
-void plan_update_velocity_profile_parameters();
-
 // Reset the planner position vector (in steps)
 void plan_sync_position();
 
@@ -147,7 +144,6 @@ uint_fast16_t plan_get_block_buffer_available();
 // Returns the status of the block ring buffer. True, if buffer is full.
 bool plan_check_full_buffer();
 
-void plan_get_planner_mpos(float *target);
 void plan_feed_override (uint_fast8_t feed_override, uint_fast8_t rapid_override);
 
 #endif
