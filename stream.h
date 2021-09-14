@@ -56,7 +56,7 @@ Helper functions for saving away and restoring a stream input buffer. _Not refer
 #endif
 
 #ifndef BLOCK_TX_BUFFER_SIZE
-#define BLOCK_TX_BUFFER_SIZE 1024
+#define BLOCK_TX_BUFFER_SIZE 256
 #endif
 
 // Serial baud rate
