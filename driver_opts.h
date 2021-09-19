@@ -81,9 +81,6 @@
 #ifndef USB_SERIAL_WAIT
 #define USB_SERIAL_WAIT     0
 #endif
-#ifndef SDCARD_ENABLE
-#define SDCARD_ENABLE       0
-#endif
 #ifndef KEYPAD_ENABLE
 #define KEYPAD_ENABLE       0
 #endif
@@ -157,11 +154,46 @@
   #warning "Enabling ESTOP may not work with all senders!"
 #endif
 
+#ifndef WEBUI_ENABLE
+#define WEBUI_ENABLE        0
+#endif
+
+#ifndef WEBUI_AUTH_ENABLE
+#define WEBUI_AUTH_ENABLE   0
+#endif
+
+#if WEBUI_ENABLE && !defined(ESP_PLATFORM)
+
+#ifdef ETHERNET_ENABLE
+#undef ETHERNET_ENABLE
+#endif
+#define ETHERNET_ENABLE     1
+#ifdef HTTP_ENABLE
+#undef HTTP_ENABLE
+#endif
+#define HTTP_ENABLE         1
+#ifdef WEBSOCKET_ENABLE
+#undef WEBSOCKET_ENABLE
+#endif
+#define WEBSOCKET_ENABLE    1
+#ifdef SDCARD_ENABLE
+#undef SDCARD_ENABLE
+#endif
+#define SDCARD_ENABLE       1
+#endif
+
+#ifndef SDCARD_ENABLE
+#define SDCARD_ENABLE       0
+#endif
+
 #ifndef ETHERNET_ENABLE
 #define ETHERNET_ENABLE     0
 #endif
 #ifndef TELNET_ENABLE
 #define TELNET_ENABLE       0
+#endif
+#ifndef HTTP_ENABLE
+#define HTTP_ENABLE         0
 #endif
 #ifndef WEBSOCKET_ENABLE
 #define WEBSOCKET_ENABLE    0
@@ -189,17 +221,27 @@
 #ifndef NETWORK_MASK
 #define NETWORK_MASK            "255.255.255.0"
 #endif
+#ifndef NETWORK_FTP_PORT
+#define NETWORK_FTP_PORT        21
+#endif
 #ifndef NETWORK_TELNET_PORT
 #define NETWORK_TELNET_PORT     23
-#endif
-#ifndef NETWORK_WEBSOCKET_PORT
-#define NETWORK_WEBSOCKET_PORT  80
 #endif
 #ifndef NETWORK_HTTP_PORT
 #define NETWORK_HTTP_PORT       80
 #endif
+#ifndef NETWORK_WEBSOCKET_PORT
+#if HTTP_ENABLE
+#define NETWORK_WEBSOCKET_PORT  81
+#else
+#define NETWORK_WEBSOCKET_PORT  80
+#endif
+#endif
 #if NETWORK_IPMODE < 0 || NETWORK_IPMODE > 2
 #error "Invalid IP mode selected!"
+#endif
+#if NETWORK_WEBSOCKET_PORT == NETWORK_HTTP_PORT
+#warning "HTTP and WebSocket protocols cannot share the same port!"
 #endif
 #endif
 

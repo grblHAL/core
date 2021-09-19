@@ -30,6 +30,9 @@
 
 // Version of the persistent storage data. Will be used to migrate existing data from older versions of Grbl
 // when firmware is upgraded. Always stored in byte 0 of non-volatile storage
+
+// TODO: add ftp port to network settings
+
 #if N_AXIS > 3 // TODO: remove on next version update
 #define SETTINGS_VERSION 20  // NOTE: Check settings_reset() when moving to next version.
 #else
