@@ -39,13 +39,17 @@
 #define M_PI 3.14159265358979323846f
 #endif
 
+#define TOLERANCE_EQUAL 0.0001f
+
 #define TAN_30 0.57735f         // Used for threading calculations (60 degree inserts)
 #define RADDEG 0.0174532925f    // Radians per degree
+#define DEGRAD 57.29577951f     // Degrees per radians
 
 #define ABORTED (sys.abort || sys.cancel)
 
 // Convert character to uppercase
-#define CAPS(c) ((c >= 'a' && c <= 'z') ? c & 0x5F : c)
+#define CAPS(c) ((c >= 'a' && c <= 'z') ? (c & 0x5F) : c)
+#define LCAPS(c) ((c >= 'A' && c <= 'Z') ? (c | 0x20) : c)
 
 #ifndef STM32F103xB
 #ifndef UNUSED

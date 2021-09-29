@@ -11,7 +11,7 @@ It has been written to complement grblHAL and has features such as proper keyboa
 
 ---
 
-Latest build date is 20210907, see the [changelog](changelog.md) for details.  
+Latest build date is 20210928, see the [changelog](changelog.md) for details.  
 __NOTE:__ Drivers built with more than three axes configured \(`N_AXIS` > `3`\) will force a settings reset when upgraded. Backup and restore of settings is recommended for these.
 
 ---
@@ -68,7 +68,7 @@ List of Supported G-Codes:
   - Coolant Control: M7, M8, M9
   - Spindle Control: M3, M4, M5
   - Tool Change: M6* (Two modes possible: manual** - supports jogging, ATC), M61
-  - Switches: M49, M50, M51, M53
+  - Switches: M48, M49, M50, M51, M53
   - Output control***: M62, M63, M64, M65, M66, M67, M68
   - Valid Non-Command Words: A*, B*, C*, F, H*, I, J, K, L, N, P, Q*, R, S, T, X, Y, Z
 
@@ -80,4 +80,4 @@ List of Supported G-Codes:
 Some [plugins](https://github.com/grblHAL/plugins) implements additional M-codes.
 
 ---
-2021-09-08
+2021-09-28

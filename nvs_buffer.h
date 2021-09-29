@@ -34,7 +34,11 @@ typedef struct {
     uint8_t startup_lines;
     uint16_t coord_data;
 #ifdef N_TOOLS
+#if N_TOOLS > 16
+    uint32_t tool_data;
+#else
     uint16_t tool_data;
+#endif
 #endif
 } settings_dirty_t;
 

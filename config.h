@@ -83,7 +83,7 @@ __NOTE:__ if switching to a level > 1 please reset non-volatile storage with \a 
 // immediately forces a feed hold and then safely de-energizes the machine. Resuming is blocked until
 // the safety door is re-engaged. When it is, Grbl will re-energize the machine and then resume on the
 // previous tool path, as if nothing happened.
-// #define ENABLE_SAFETY_DOOR_INPUT_PIN // Default disabled. Uncomment to enable.
+//#define ENABLE_SAFETY_DOOR_INPUT_PIN // Default disabled. Uncomment to enable.
 
 // After the safety door switch has been toggled and restored, this setting sets the power-up delay
 // between restoring the spindle and coolant and resuming the cycle.
@@ -472,9 +472,24 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 //#define DEFAULT_REPORT_PARSER_STATE
 //#define DEFAULT_REPORT_ALARM_SUBSTATE
 
+// G92 offsets is by default stored to non-volatile storage (NVS) on changes and restored on startup
+// if COMPATIBILITY_LEVEL is <= 1. If COMPATIBILITY_LEVEL is <= 1 then setting $384 can be used to change this at run-time.
+// To allow store/restore of the G92 offset when COMPATIBILITY_LEVEL > 1 uncomment the line below and reset settings with $RST=*.
+//#define DISABLE_G92_PERSISTENCE 0
+
 #if COMPATIBILITY_LEVEL == 0
-// Number of tools in ATC tool table, comment out to disable
-// #define N_TOOLS 8
+// Number of tools in tool table, uncomment and edit if neccesary to enable (max. 16 allowed)
+//#define N_TOOLS 8
+#endif
+
+// Sanity checks - N_TOOLS may have been defined on the compiler command line.
+#if defined(N_TOOLS) && N_TOOLS == 0
+#undef N_TOOLS
+#endif
+
+#if defined(N_TOOLS) && N_TOOLS > 16
+#undef N_TOOLS
+#define N_TOOLS 16
 #endif
 
 // Max number of entries in log for PID data reporting, to be used for tuning
@@ -623,5 +638,8 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 // End default values for run time configurable settings
 
 #endif // DEFAULT_HOMING_ENABLE
+
+// Uncomment to enable experimental support for parameters and expressions
+//#define NGC_EXPRESSIONS_ENABLE 1
 
 #endif

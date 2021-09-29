@@ -81,7 +81,15 @@ PROGMEM static const status_detail_t status_detail[] = {
     { Status_MotorFault, "Motor fault", "Motor fault." },
     { Status_SettingValueOutOfRange, "Value out of range.", "Setting value is out of range." },
     { Status_SettingDisabled, "Setting disabled", "Setting is not available, possibly due to limited driver support." },
-    { Status_GcodeInvalidRetractPosition, "Invalid gcode ID:54", "Retract position is less than drill depth." }
+    { Status_GcodeInvalidRetractPosition, "Invalid gcode ID:54", "Retract position is less than drill depth." },
+#if NGC_EXPRESSIONS_ENABLE
+    { Status_ExpressionUknownOp, "Unknown operation found in expression", "Unknown operation found in expression." },
+    { Status_ExpressionDivideByZero, "Divide by zero in expression", "Divide by zero in expression attempted." },
+    { Status_ExpressionArgumentOutOfRange, "Expression argument out of range", "Too large or too small argrument provided." },
+    { Status_ExpressionInvalidArgument, "Invalid expression argument", "Argument is not valid for the operation" },
+    { Status_ExpressionSyntaxError, "Syntax error in expression", "Expression is not valid." },
+    { Status_ExpressionInvalidResult, "Invalid result returned from expression", "Either NAN (not a number) or infinity was returned from expression." }
+#endif
  };
 
 static error_details_t details = {

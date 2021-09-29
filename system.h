@@ -53,6 +53,7 @@ know when there is a realtime command to execute.
 #define EXEC_GCODE_REPORT   bit(11)
 #define EXEC_TLO_REPORT     bit(12)
 #define EXEC_RT_COMMAND     bit(13)
+#define EXEC_DOOR_CLOSED    bit(14)
 ///@}
 
 //! \def sys_state
@@ -294,6 +295,9 @@ void system_apply_jog_limits (float *target);
 
 //! Raise and report alarm state
 void system_raise_alarm (alarm_code_t alarm);
+
+//! Provide system command help
+void system_command_help (void);
 
 // Special handlers for setting and clearing Grbl's real-time execution flags.
 #define system_set_exec_state_flag(mask) hal.set_bits_atomic(&sys.rt_exec_state, (mask))

@@ -32,6 +32,9 @@
 #include "hal.h"
 #include "nvs_buffer.h"
 #include "protocol.h"
+#include "settings.h"
+#include "gcode.h"
+#include "nvs.h"
 
 static uint8_t *nvsbuffer = NULL;
 static nvs_io_t physical_nvs;
@@ -51,6 +54,7 @@ typedef struct {
 #define NVS_GROUP_STARTUP 3
 #define NVS_GROUP_BUILD 4
 
+
 #define PARAMETER_ADDR(n) (NVS_ADDR_PARAMETERS + n * (sizeof(coord_data_t) + NVS_CRC_BYTES))
 #define STARTLINE_ADDR(n) (NVS_ADDR_STARTUP_BLOCK + n * (sizeof(stored_line_t) + NVS_CRC_BYTES))
 #ifdef N_TOOLS
@@ -59,19 +63,7 @@ typedef struct {
 
 static const emap_t target[] = {
     {NVS_ADDR_GLOBAL, NVS_GROUP_GLOBAL, 0},
-#ifdef N_TOOLS
-    {TOOL_ADDR(0), NVS_GROUP_TOOLS, 0},
-    {TOOL_ADDR(1), NVS_GROUP_TOOLS, 1},
-    {TOOL_ADDR(2), NVS_GROUP_TOOLS, 2},
-    {TOOL_ADDR(3), NVS_GROUP_TOOLS, 3},
-    {TOOL_ADDR(4), NVS_GROUP_TOOLS, 4},
-    {TOOL_ADDR(5), NVS_GROUP_TOOLS, 5},
-    {TOOL_ADDR(6), NVS_GROUP_TOOLS, 6},
-    {TOOL_ADDR(7), NVS_GROUP_TOOLS, 7},
-#if N_TOOLS > 8
-#error Increase number of tool entries!
-#endif
-#endif
+
     {PARAMETER_ADDR(0), NVS_GROUP_PARAMETERS, 0},
     {PARAMETER_ADDR(1), NVS_GROUP_PARAMETERS, 1},
     {PARAMETER_ADDR(2), NVS_GROUP_PARAMETERS, 2},
@@ -90,6 +82,29 @@ static const emap_t target[] = {
 #error Increase number of startup line entries!
 #endif
     {NVS_ADDR_BUILD_INFO, NVS_GROUP_BUILD, 0},
+#ifdef N_TOOLS
+    {TOOL_ADDR(0), NVS_GROUP_TOOLS, 0},
+    {TOOL_ADDR(1), NVS_GROUP_TOOLS, 1},
+    {TOOL_ADDR(2), NVS_GROUP_TOOLS, 2},
+    {TOOL_ADDR(3), NVS_GROUP_TOOLS, 3},
+    {TOOL_ADDR(4), NVS_GROUP_TOOLS, 4},
+    {TOOL_ADDR(5), NVS_GROUP_TOOLS, 5},
+    {TOOL_ADDR(6), NVS_GROUP_TOOLS, 6},
+    {TOOL_ADDR(7), NVS_GROUP_TOOLS, 7},
+#if N_TOOLS > 8
+    {TOOL_ADDR(8), NVS_GROUP_TOOLS, 8},
+    {TOOL_ADDR(9), NVS_GROUP_TOOLS,  9},
+    {TOOL_ADDR(10), NVS_GROUP_TOOLS, 10},
+    {TOOL_ADDR(11), NVS_GROUP_TOOLS, 11},
+    {TOOL_ADDR(12), NVS_GROUP_TOOLS, 12},
+    {TOOL_ADDR(13), NVS_GROUP_TOOLS, 13},
+    {TOOL_ADDR(14), NVS_GROUP_TOOLS, 14},
+    {TOOL_ADDR(15), NVS_GROUP_TOOLS, 15},
+#endif
+#if N_TOOLS > 16
+#error Increase number of tool entries!
+#endif
+#endif
     {0, 0, 0} // list termination - do not remove
 };
 
@@ -105,8 +120,6 @@ inline static void ram_put_byte (uint32_t addr, uint8_t new_value)
     dirty = dirty || nvsbuffer[addr] != new_value || addr == 0;
     nvsbuffer[addr] = new_value;
 }
-
-// Extensions added as part of Grbl
 
 static nvs_transfer_result_t memcpy_to_ram (uint32_t destination, uint8_t *source, uint32_t size, bool with_checksum)
 {
@@ -373,14 +386,6 @@ void nvs_memmap (void)
     strcat(buf, uitoa(sizeof(settings_t) + NVS_CRC_BYTES));
     report_message(buf, Message_Plain);
 
-#ifdef N_TOOLS
-    strcpy(buf, "Tool table: ");
-    strcat(buf, uitoa(NVS_ADDR_TOOL_TABLE));
-    strcat(buf, " ");
-    strcat(buf, uitoa(N_TOOLS * (sizeof(tool_data_t) + NVS_CRC_BYTES)));
-    report_message(buf, Message_Plain);
-#endif
-
     strcpy(buf, "Parameters: ");
     strcat(buf, uitoa(NVS_ADDR_PARAMETERS));
     strcat(buf, " ");
@@ -398,6 +403,14 @@ void nvs_memmap (void)
     strcat(buf, " ");
     strcat(buf, uitoa(sizeof(stored_line_t) + NVS_CRC_BYTES));
     report_message(buf, Message_Plain);
+
+#ifdef N_TOOLS
+    strcpy(buf, "Tool table: ");
+    strcat(buf, uitoa(NVS_ADDR_TOOL_TABLE));
+    strcat(buf, " ");
+    strcat(buf, uitoa(N_TOOLS * (sizeof(tool_data_t) + NVS_CRC_BYTES)));
+    report_message(buf, Message_Plain);
+#endif
 
     strcpy(buf, "Driver: ");
     strcat(buf, uitoa(hal.nvs.driver_area.address));

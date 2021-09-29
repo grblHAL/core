@@ -30,6 +30,11 @@
 #include "protocol.h"
 #include "state_machine.h"
 
+#if NGC_EXPRESSIONS_ENABLE
+#include "ngc_expr.h"
+#include "ngc_params.h"
+#endif
+
 // NOTE: Max line number is defined by the g-code standard to be 99999. It seems to be an
 // arbitrary value, and some GUIs may require more. So we increased it based on a max safe
 // value when converting a float (7.2 digit precision)s to an integer.
@@ -307,10 +312,8 @@ void gc_init (void)
     if (!settings_read_coord_data(gc_state.modal.coord_system.id, &gc_state.modal.coord_system.xyz))
         grbl.report.status_message(Status_SettingReadFail);
 
-#if COMPATIBILITY_LEVEL <= 1
-    if (sys.cold_start && !settings_read_coord_data(CoordinateSystem_G92, &gc_state.g92_coord_offset))
+    if (sys.cold_start && !settings.flags.g92_is_volatile && !settings_read_coord_data(CoordinateSystem_G92, &gc_state.g92_coord_offset))
         grbl.report.status_message(Status_SettingReadFail);
-#endif
 
 //    if(settings.flags.lathe_mode)
 //        gc_state.modal.plane_select = PlaneSelect_ZX;
@@ -373,12 +376,126 @@ static status_code_t init_sync_motion (plan_line_data_t *pl_data, float pitch)
     return Status_OK;
 }
 
-// Executes one block (line) of 0-terminated G-Code. The block is assumed to contain only uppercase
-// characters and signed floating point values (no whitespace). Comments and block delete
-// characters have been removed. In this function, all units and positions are converted and
-// exported to grbl's internal functions in terms of (mm, mm/min) and absolute machine
-// coordinates, respectively.
-status_code_t gc_execute_block(char *block, char *message)
+// Remove whitespace, control characters, comments and if block delete is active block delete lines
+// else the block delete character. Remaining characters are converted to upper case.
+// If the driver handles message comments then the first is extracted and returned in a dynamically
+// allocated memory block, the caller must free this after the message has been processed.
+
+char *gc_normalize_block (char *block, char **message)
+{
+    char c, *s1, *s2, *comment = NULL;
+
+    // Remove leading whitespace & control characters
+    while(*block && *block <= ' ')
+        block++;
+
+    if(*block == ';' || (*block == '/' && sys.flags.block_delete_enabled)) {
+        *block = '\0';
+        return block;
+    }
+
+    if(*block == '/')
+        block++;
+
+    s1 = s2 = block;
+
+    while((c = *s1) != '\0') {
+
+        if(c > ' ') switch(c) {
+
+            case ';':
+                if(!comment) {
+                    *s1 = '\0';
+                    continue;
+                }
+                break;
+
+            case '(':
+                // TODO: generate error if a left paranthesis is found inside a comment...
+                comment = s1;
+                break;
+
+            case ')':
+                if(comment && !hal.driver_cap.no_gcode_message_handling) {
+                    size_t len = s1 - comment - 4;
+                    if(message && *message == NULL && !strncmp(comment, "(MSG,", 5) && (*message = malloc(len))) {
+                        *s1 = '\0';
+                        memcpy(*message, comment + 5, len);
+                    }
+                }
+                comment = NULL;
+                break;
+
+            default:
+                if(comment == NULL)
+                    *s2++ = CAPS(c);
+                break;
+        }
+
+        if(comment && s1 - comment < 5)
+            *s1 = CAPS(c);
+
+        s1++;
+    }
+
+    *s2 = '\0';
+
+    return block;
+}
+
+#if NGC_EXPRESSIONS_ENABLE
+
+#define NGC_N_ASSIGN_PARAMETERS_PER_BLOCK 10
+
+static ngc_param_t ngc_params[NGC_N_ASSIGN_PARAMETERS_PER_BLOCK];
+
+static status_code_t read_parameter (char *line, uint_fast8_t *char_counter, float *value)
+{
+    char c = *(line + *char_counter);
+    status_code_t status = Status_OK;
+
+    if(c == '#') {
+
+        (*char_counter)++;
+
+        if(*(line + *char_counter) == '<') {
+
+            (*char_counter)++;
+            char *pos = line + *char_counter;
+
+            while(*line && *line != '>')
+                line++;
+
+            *char_counter += line - pos + 1;
+
+            if(*line == '>') {
+                *line = '\0';
+                if(!ngc_named_param_get(pos, value))
+                    status = Status_BadNumberFormat;
+            } else
+                status = Status_BadNumberFormat;
+
+        } else if (read_float(line, char_counter, value)) {
+            if(!ngc_param_get((ngc_param_id_t)*value, value))
+                status = Status_BadNumberFormat;
+        } else
+            status = Status_BadNumberFormat;
+
+    } else if(c == '[')
+        status = ngc_eval_expression(line, char_counter, value);
+    else if(!read_float(line, char_counter, value))
+        *value = NAN;
+
+    return status;
+}
+
+#endif
+
+// Parses and executes one block (line) of 0-terminated G-Code.
+// In this function, all units and positions are converted and exported to internal functions
+// in terms of (mm, mm/min) and absolute machine coordinates, respectively.
+
+status_code_t gc_execute_block(char *block)
 {
     static const parameter_words_t axis_words_mask = {
         .x = On,
@@ -428,6 +545,22 @@ status_code_t gc_execute_block(char *block, char *message)
 
     static parser_block_t gc_block;
 
+#if NGC_EXPRESSIONS_ENABLE
+    uint_fast8_t ngc_param_count = 0;
+#endif
+
+    char *message = NULL;
+
+    block = gc_normalize_block(block, &message);
+
+    if(block[0] == '\0') {
+        if(message) {
+            report_message(message, Message_Plain);
+            free(message);
+        }
+        return Status_OK;
+    }
+
     // Determine if the line is a program start/end marker.
     // Old comment from protocol.c:
     // NOTE: This maybe installed to tell Grbl when a program is running vs manual input,
@@ -436,6 +569,10 @@ status_code_t gc_execute_block(char *block, char *message)
     // functions that empty the planner buffer to execute its task on-time.
     if (block[0] == CMD_PROGRAM_DEMARCATION && block[1] == '\0') {
         gc_state.file_run = !gc_state.file_run;
+        if(message) {
+            report_message(message, Message_Plain);
+            free(message);
+        }
         return Status_OK;
     }
 
@@ -490,6 +627,64 @@ status_code_t gc_execute_block(char *block, char *message)
     while ((letter = block[char_counter++]) != '\0') { // Loop until no more g-code words in block.
 
         // Import the next g-code word, expecting a letter followed by a value. Otherwise, error out.
+
+#if NGC_EXPRESSIONS_ENABLE
+
+        status_code_t status;
+
+        if(letter == '#') {
+
+            if(block[char_counter] == '<') {
+
+                char *s = &block[++char_counter];
+
+                while(*s && *s != '>')
+                    s++;
+
+                if(*s && *(s + 1) == '=') {
+                    char *name = &block[char_counter];
+                    *s++ = '\0';
+                    s++;
+                    char_counter += s - name;
+                    if((status = read_parameter(block, &char_counter, &value)) != Status_OK)
+                        FAIL(status);   // [Expected parameter value]
+                    if(!ngc_named_param_set(name, value))
+                        FAIL(Status_BadNumberFormat);   // [Expected equal sign]
+                }
+
+            } else {
+
+                float param;
+                if (!read_float(block, &char_counter, &param))
+                    FAIL(Status_BadNumberFormat);   // [Expected parameter number]
+
+                if (block[char_counter++] != '=')
+                    FAIL(Status_BadNumberFormat);   // [Expected equal sign]
+
+                if((status = read_parameter(block, &char_counter, &value)) != Status_OK)
+                    FAIL(status);   // [Expected parameter value]
+
+                if(ngc_param_count < NGC_N_ASSIGN_PARAMETERS_PER_BLOCK && ngc_param_is_rw((ngc_param_id_t)param)) {
+                    ngc_params[ngc_param_count].id = (ngc_param_id_t)param;
+                    ngc_params[ngc_param_count++].value = value;
+                } else
+                    FAIL(Status_BadNumberFormat);   // [Expected parameter value]
+            }
+
+            continue;
+        }
+
+        if((letter < 'A') || (letter > 'Z'))
+            FAIL(Status_ExpectedCommandLetter); // [Expected word letter]
+
+        if((status = read_parameter(block, &char_counter, &value)) != Status_OK)
+            return status;
+
+        if(!is_user_mcode && isnanf(value))
+            FAIL(Status_BadNumberFormat);   // [Expected word value]
+
+#else
+
         if((letter < 'A') || (letter > 'Z'))
             FAIL(Status_ExpectedCommandLetter); // [Expected word letter]
 
@@ -499,6 +694,8 @@ status_code_t gc_execute_block(char *block, char *message)
             else
                 FAIL(Status_BadNumberFormat);   // [Expected word value]
         }
+
+#endif
 
         // Convert values to smaller uint8 significand and mantissa values for parsing this word.
         // NOTE: Mantissa is multiplied by 100 to catch non-integer command values. This is more
@@ -805,7 +1002,7 @@ status_code_t gc_execute_block(char *block, char *message)
                         if(!settings.parking.flags.enable_override_control) // TODO: check if enabled?
                             FAIL(Status_GcodeUnsupportedCommand); // [Unsupported M command]
                         // no break;
-                    case 49: case 50: case 51: case 53:
+                    case 48: case 49: case 50: case 51: case 53:
                         word_bit.modal_group.M9 = On;
                         gc_block.override_command = (override_mode_t)int_value;
                         break;
@@ -1309,9 +1506,14 @@ status_code_t gc_execute_block(char *block, char *message)
         }
         switch(gc_block.override_command) {
 
-            case Override_FeedSpeed:
-                gc_block.modal.override_ctrl.feed_rate_disable = gc_block.values.p == 0.0f;
-                gc_block.modal.override_ctrl.spindle_rpm_disable = gc_block.values.p == 0.0f;
+            case Override_FeedSpeedEnable:
+                gc_block.modal.override_ctrl.feed_rate_disable = Off;
+                gc_block.modal.override_ctrl.spindle_rpm_disable = Off;
+                break;
+
+            case Override_FeedSpeedDisable:
+                gc_block.modal.override_ctrl.feed_rate_disable = On;
+                gc_block.modal.override_ctrl.spindle_rpm_disable = On;
                 break;
 
             case Override_FeedRate:
@@ -2571,25 +2773,29 @@ status_code_t gc_execute_block(char *block, char *message)
             break;
 
         case NonModal_SetCoordinateOffset: // G92
+            gc_state.g92_coord_offset_applied = true; // TODO: check for all zero?
             memcpy(gc_state.g92_coord_offset, gc_block.values.xyz, sizeof(gc_state.g92_coord_offset));
-#if COMPATIBILITY_LEVEL <= 1
-            settings_write_coord_data(CoordinateSystem_G92, &gc_state.g92_coord_offset); // Save G92 offsets to non-volatile storage
-#endif
+            if(!settings.flags.g92_is_volatile)
+                settings_write_coord_data(CoordinateSystem_G92, &gc_state.g92_coord_offset); // Save G92 offsets to non-volatile storage
             system_flag_wco_change();
             break;
 
         case NonModal_ResetCoordinateOffset: // G92.1
+            gc_state.g92_coord_offset_applied = false;
             clear_vector(gc_state.g92_coord_offset); // Disable G92 offsets by zeroing offset vector.
-            settings_write_coord_data(CoordinateSystem_G92, &gc_state.g92_coord_offset); // Save G92 offsets to non-volatile storage
+            if(!settings.flags.g92_is_volatile)
+                settings_write_coord_data(CoordinateSystem_G92, &gc_state.g92_coord_offset); // Save G92 offsets to non-volatile storage
             system_flag_wco_change();
             break;
 
         case NonModal_ClearCoordinateOffset: // G92.2
+            gc_state.g92_coord_offset_applied = false;
             clear_vector(gc_state.g92_coord_offset); // Disable G92 offsets by zeroing offset vector.
             system_flag_wco_change();
             break;
 
         case NonModal_RestoreCoordinateOffset: // G92.3
+            gc_state.g92_coord_offset_applied = true; // TODO: check for all zero?
             settings_read_coord_data(CoordinateSystem_G92, &gc_state.g92_coord_offset); // Restore G92 offsets from non-volatile storage
             system_flag_wco_change();
             break;
@@ -2803,6 +3009,13 @@ status_code_t gc_execute_block(char *block, char *message)
         }
         gc_state.modal.program_flow = ProgramFlow_Running; // Reset program flow.
     }
+
+#if NGC_EXPRESSIONS_ENABLE
+    if(ngc_param_count) do {
+        ngc_param_count--;
+        ngc_param_set(ngc_params[ngc_param_count].id, ngc_params[ngc_param_count].value);
+    } while(ngc_param_count);
+#endif
 
     // TODO: % to denote start of program.
 

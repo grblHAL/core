@@ -54,7 +54,6 @@ struct system sys = {0}; //!< System global variable structure.
 grbl_t grbl;
 grbl_hal_t hal;
 
-
 #ifdef KINEMATICS_API
 
 kinematics_t kinematics;
@@ -90,11 +89,6 @@ void dummy_bool_handler (bool arg)
 
 int grbl_enter (void)
 {
-#ifdef N_TOOLS
-    assert(NVS_ADDR_GLOBAL + sizeof(settings_t) + NVS_CRC_BYTES < NVS_ADDR_TOOL_TABLE);
-#else
-    assert(NVS_ADDR_GLOBAL + sizeof(settings_t) + NVS_CRC_BYTES < NVS_ADDR_PARAMETERS);
-#endif
     assert(NVS_ADDR_PARAMETERS + N_CoordinateSystems * (sizeof(coord_data_t) + NVS_CRC_BYTES) < NVS_ADDR_STARTUP_BLOCK);
     assert(NVS_ADDR_STARTUP_BLOCK + N_STARTUP_LINE * (sizeof(stored_line_t) + NVS_CRC_BYTES) < NVS_ADDR_BUILD_INFO);
 
@@ -106,6 +100,7 @@ int grbl_enter (void)
     grbl.enqueue_gcode = protocol_enqueue_gcode;
     grbl.enqueue_realtime_command = stream_enqueue_realtime_command;
     grbl.on_report_options = dummy_bool_handler;
+    grbl.on_report_command_help = system_command_help;
 
     // Clear all and set some HAL function pointers
     memset(&hal, 0, sizeof(grbl_hal_t));

@@ -167,8 +167,8 @@ typedef enum {
 Do not alter values!
 */
 typedef enum {
-    SpindleSpeedMode_RPM = 0,  //!< 0 - G96 - Default, must be zero
-    SpindleSpeedMode_CSS = 1   //!< 1 - G97
+    SpindleSpeedMode_RPM = 0,  //!< 0 - G97 - Default, must be zero
+    SpindleSpeedMode_CSS = 1   //!< 1 - G96
 } spindle_rpm_mode_t;
 
 /*! Modal Group M4: Program flow
@@ -186,7 +186,8 @@ typedef enum {
 
 // Modal Group M9: Override control
 typedef enum {
-    Override_FeedSpeed = 49,        //!< 49 - M49
+    Override_FeedSpeedEnable = 48,  //!< 48 - M48
+    Override_FeedSpeedDisable = 49, //!< 49 - M49
     Override_FeedRate = 50,         //!< 50 - M50
     Override_SpindleSpeed = 51,     //!< 51 - M51
     Override_FeedHold = 53,         //!< 53 - M53
@@ -397,7 +398,7 @@ typedef union {
 // NOTE: When this struct is zeroed, the above defines set the defaults for the system.
 typedef struct {
     motion_mode_t motion;                //!< {G0,G1,G2,G3,G38.2,G80}
-    feed_mode_t feed_mode;               //!< {G93,G94}
+    feed_mode_t feed_mode;               //!< {G93,G94,G95}
     bool units_imperial;                 //!< {G20,G21}
     bool distance_incremental;           //!< {G90,G91}
     bool diameter_mode;                  //!< {G7,G8} Lathe diameter mode.
@@ -496,6 +497,7 @@ typedef struct {
     bool tool_change;
     status_code_t last_error;           //!< last return value from parser
     //!< The following variables are not cleared upon warm restart when COMPATIBILITY_LEVEL <= 1
+    bool g92_coord_offset_applied;      //!< true when G92 offset applied
     float g92_coord_offset[N_AXIS];     //!< Retains the G92 coordinate offset (work coordinates) relative to
                                         //!< machine zero in mm. Persistent and loaded from non-volatile storage
                                         //!< on boot when COMPATIBILITY_LEVEL <= 1
@@ -534,8 +536,10 @@ typedef struct {
 // Initialize the parser
 void gc_init (void);
 
+char *gc_normalize_block (char *block, char **message);
+
 // Execute one block of rs275/ngc/g-code
-status_code_t gc_execute_block (char *block, char *message);
+status_code_t gc_execute_block (char *block);
 
 // Sets g-code parser position in mm. Input in steps. Called by the system abort and hard
 // limit pull-off routines.

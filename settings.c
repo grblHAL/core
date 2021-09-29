@@ -77,6 +77,11 @@ PROGMEM const settings_t defaults = {
     .flags.legacy_rt_commands = DEFAULT_LEGACY_RTCOMMANDS,
     .flags.report_inches = DEFAULT_REPORT_INCHES,
     .flags.sleep_enable = DEFAULT_SLEEP_ENABLE,
+#if DISABLE_G92_PERSISTENCE
+    .flags.g92_is_volatile = 1,
+#else
+    .flags.g92_is_volatile = 0,
+#endif
 #if DEFAULT_LASER_MODE
     .mode = Mode_Laser,
     .flags.disable_laser_during_hold = DEFAULT_ENABLE_LASER_DURING_HOLD,
@@ -355,9 +360,13 @@ static status_code_t set_rotational_axes (setting_id_t id, uint_fast16_t int_val
 static status_code_t set_limits_invert_mask (setting_id_t id, uint_fast16_t int_value);
 #endif
 static status_code_t set_axis_setting (setting_id_t setting, float value);
+#if COMPATIBILITY_LEVEL <= 1
+static status_code_t set_g92_disable_persistence (setting_id_t id, uint_fast16_t int_value);
+#endif
 static float get_float (setting_id_t setting);
 static uint32_t get_int (setting_id_t id);
 static bool is_setting_available (const setting_detail_t *setting);
+
 
 static char control_signals[] = "Reset,Feed hold,Cycle start,Safety door,Block delete,Optional stop,EStop,Probe connected,Motor fault";
 static char spindle_signals[] = "Spindle enable,Spindle direction,PWM";
@@ -481,6 +490,9 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_DualAxisLengthFailPercent, Group_Limits_DualAxis, "Dual axis length fail", "percent", Format_Decimal, "##0.0", "0", "100", Setting_IsExtended, &settings.homing.dual_axis.fail_length_percent, NULL, NULL },
      { Setting_DualAxisLengthFailMin, Group_Limits_DualAxis, "Dual axis length fail min", "mm", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsExtended, &settings.homing.dual_axis.fail_distance_min, NULL, NULL },
      { Setting_DualAxisLengthFailMax, Group_Limits_DualAxis, "Dual axis length fail max", "mm", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsExtended, &settings.homing.dual_axis.fail_distance_max, NULL, NULL },
+#if COMPATIBILITY_LEVEL <= 1
+     { Setting_DisableG92Persistence, Group_General, "Disable G92 persistence", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_g92_disable_persistence, get_int, NULL },
+#endif
 #if N_AXIS == 4
      { Settings_Axis_Rotational, Group_Stepper, "Rotational axes", NULL, Format_Bitfield, "A-Axis", NULL, NULL, Setting_IsExtendedFn, set_rotational_axes, get_int, NULL }
 #elif N_AXIS == 5
@@ -612,7 +624,10 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_ToolChangePulloffRate, "Pull-off rate for the retract move before the slower locating phase." },
     { Setting_DualAxisLengthFailPercent, "Dual axis length fail in percent of axis max travel." },
     { Setting_DualAxisLengthFailMin, "Dual axis length fail minimum distance." },
-    { Setting_DualAxisLengthFailMax, "Dual axis length fail minimum distance." }
+    { Setting_DualAxisLengthFailMax, "Dual axis length fail minimum distance." },
+#if COMPATIBILITY_LEVEL <= 1
+    { Setting_DisableG92Persistence, "Disables save/restore of G92 offset to non-volatile storage (NVS)." },
+#endif
 };
 
 #endif
@@ -899,6 +914,15 @@ static status_code_t set_hold_actions (setting_id_t id, uint_fast16_t int_value)
 
     return Status_OK;
 }
+
+#if COMPATIBILITY_LEVEL <= 1
+static status_code_t set_g92_disable_persistence (setting_id_t id, uint_fast16_t int_value)
+{
+    settings.flags.g92_is_volatile = int_value != 0;
+
+    return Status_OK;
+}
+#endif
 
 static status_code_t set_force_initialization_alarm (setting_id_t id, uint_fast16_t int_value)
 {
@@ -1231,6 +1255,10 @@ static uint32_t get_int (setting_id_t id)
             value = settings.tool_change.mode;
             break;
 
+        case Setting_DisableG92Persistence:
+            value = settings.flags.g92_is_volatile;
+            break;
+
 #if N_AXIS > 3
         case Settings_Axis_Rotational:
             value = (settings.steppers.is_rotational.mask & AXES_BITMASK) >> 3;
@@ -1474,6 +1502,10 @@ bool read_global_settings ()
     // Sanity check of settings, board map could have been changed...
     if(settings.mode == Mode_Laser && !hal.driver_cap.variable_spindle)
         settings.mode = Mode_Standard;
+
+#if COMPATIBILITY_LEVEL > 1 && DISABLE_G92_PERSISTENCE
+    settings.flags.g92_is_volatile = On;
+#endif
 
     return ok && settings.version == SETTINGS_VERSION;
 }

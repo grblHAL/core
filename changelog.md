@@ -1,5 +1,26 @@
 ## grblHAL changelog
 
+Build 20210928:
+
+Core:
+* Changed safety door/parking handling to be compliant with legacy Grbl - now a cycle start command has to be issued to resume after the door is closed.
+* Added `$384` setting for controlling G92 offset persistence, set to `1` to disable persistence across a reboot, `0` to enable. Only available if [compatibility level](https://github.com/grblHAL/core/wiki/Compatibility-level) is < 2, default value is `0`.
+* Improved `$help` command output and handling, added description to `$$=<n>` output.
+* Moved the optional tool table in non-volatile storage \(typically EEPROM\) to above the core area. This allows a larger number of tools \(max. 16\) to be defined.  
+__NOTE:__ If you have tool table support enabled before upgrading the current table will be lost and possibly also all other settings. Backup and restore!
+* Added gcode parameter support. All [NIST RS274NGC version 3](https://www.nist.gov/publications/nist-rs274ngc-interpreter-version-3) parameters (see section 3.2.1) and most [LinuxCNC](http://www.linuxcnc.org/docs/html/gcode/overview.html#_parameters) parameters are supported.  
+  The `$#=<n>` or `$#=<name>` commands can be used to output a parameter value. Replace `<n>` with a parameter number, `<name>` with a parameter name.  
+__NOTE 1:__ Named parameters and parameters in the range 1 to 5160 are volatile and will not persist across a reboot.  
+__NOTE 2:__ Space for the volatile parameters is allocated at run-time, available memory \(heap\) sets a limit to how many can be set.  
+__NOTE 3:__ Maximum name length is 20 characters, maximum number of parameters that can be set in a block \(line\) is 10.
+* Added gcode [expression](http://www.linuxcnc.org/docs/html/gcode/overview.html#gcode:expressions) support. This has to be enabled in [grbl/config.h](./config.h) by uncommenting `//#define NGC_EXPRESSIONS_ENABLE 1`. _Experimental_.  
+__NOTE:__ Processors with limited memory may not compile with this enabled.
+
+Drivers & plugins:
+
+* Added [WebUI plugin](https://github.com/grblHAL/Plugin_WebUI) support for some networking capable boards.
+* Updated some drivers for internal API changes. Some minor bug fixes.
+
 Build 20210907:
 
 Core:

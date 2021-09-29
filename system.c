@@ -145,7 +145,7 @@ void system_execute_startup (void)
             if (!settings_read_startup_line(n, line))
                 report_execute_startup_message(line, Status_SettingReadFail);
             else if (*line != '\0')
-                report_execute_startup_message(line, gc_execute_block(line, NULL));
+                report_execute_startup_message(line, gc_execute_block(line));
         }
     }
 }
@@ -177,7 +177,7 @@ status_code_t read_int (char *s, int32_t *value)
 PROGMEM static const sys_command_t sys_commands[] = {
     { "G", true, output_parser_state },
     { "J", false, jog },
-    { "#", true, output_ngc_parameters },
+    { "#", false, output_ngc_parameters },
     { "$", false, output_settings },
     { "+", false, output_all_settings },
 #ifndef NO_SETTINGS_DESCRIPTIONS
@@ -231,6 +231,57 @@ PROGMEM static const sys_command_t sys_commands[] = {
 #endif
 };
 
+void system_command_help (void)
+{
+    hal.stream.write("$I - output system information" ASCII_EOL);
+    hal.stream.write("$<n> - output setting <n> value" ASCII_EOL);
+    hal.stream.write("$<n>=<value> - assign <value> to settings <n>" ASCII_EOL);
+    hal.stream.write("$I - output system information" ASCII_EOL);
+    hal.stream.write("$I+ - output extended system information" ASCII_EOL);
+    hal.stream.write("$$ - output all setting values" ASCII_EOL);
+    hal.stream.write("$+ - output all setting values" ASCII_EOL);
+    hal.stream.write("$$=<n> - output setting details for setting <n>" ASCII_EOL);
+    hal.stream.write("$# - output offsets, tool table, probing and home position" ASCII_EOL);
+    hal.stream.write("$#=<n> - output value for parameter <n>" ASCII_EOL);
+    hal.stream.write("$G - output parser state" ASCII_EOL);
+    hal.stream.write("$N - output startup lines" ASCII_EOL);
+    if(settings.homing.flags.enabled)
+        hal.stream.write("$H - home configured axes" ASCII_EOL);
+    if(settings.homing.flags.single_axis_commands)
+        hal.stream.write("$H<axisletter> - home single axis" ASCII_EOL);
+    hal.stream.write("$X - unlock machine" ASCII_EOL);
+    hal.stream.write("$SLP - enter sleep mode" ASCII_EOL);
+    hal.stream.write("$HELP - output help topics" ASCII_EOL);
+    hal.stream.write("$HELP <topic> - output help for <topic>" ASCII_EOL);
+    hal.stream.write("$RST=* - restore/reset all" ASCII_EOL);
+    hal.stream.write("$RST=$ - restore default settings" ASCII_EOL);
+    if(settings_get_details()->on_get_settings)
+        hal.stream.write("$RST=& - restore driver and plugin default settings" ASCII_EOL);
+#ifdef N_TOOLS
+    hal.stream.write("$RST=# - reset offsets and tool data" ASCII_EOL);
+#else
+    hal.stream.write("$RST=# - reset offsets" ASCII_EOL);
+#endif
+    hal.stream.write("$TLR - set tool offset reference" ASCII_EOL);
+    hal.stream.write("$TPW - probe tool plate" ASCII_EOL);
+    hal.stream.write("$EA - enumerate alarms" ASCII_EOL);
+    hal.stream.write("$EAG - enumerate alarms, Grbl formatted" ASCII_EOL);
+    hal.stream.write("$EE - enumerate status codes" ASCII_EOL);
+    hal.stream.write("$EEG - enumerate status codes, Grbl formatted" ASCII_EOL);
+    hal.stream.write("$ES - enumerate settings" ASCII_EOL);
+    hal.stream.write("$ESG - enumerate settings, Grbl formatted" ASCII_EOL);
+    hal.stream.write("$ESH- enumerate settings, grblHAL formatted" ASCII_EOL);
+    hal.stream.write("$ESG - enumerate alarms" ASCII_EOL);
+    hal.stream.write("$E* - enumerate alarms, status codes and settings" ASCII_EOL);
+    if(hal.enumerate_pins)
+        hal.stream.write("$PINS - enumerate pin bindings" ASCII_EOL);
+    hal.stream.write("$LEV - output last control signal events" ASCII_EOL);
+    hal.stream.write("$LIM - output current limit pins state" ASCII_EOL);
+#ifndef NO_SETTINGS_DESCRIPTIONS
+    hal.stream.write("$SED=<n> - output settings description for setting <n>" ASCII_EOL);
+#endif
+}
+
 // Directs and executes one line of formatted input from protocol_process. While mostly
 // incoming streaming g-code blocks, this also executes Grbl internal commands, such as
 // settings, initiating the homing cycle, and toggling switch states. This differs from
@@ -248,9 +299,6 @@ status_code_t system_execute_line (char *line)
         return Status_OK;
     }
 
-    if(strlen(line) >= ((LINE_BUFFER_SIZE / 2) - 1))
-        return Status_Overflow;
-
     sys_commands_t base = {
         .n_commands = sizeof(sys_commands) / sizeof(sys_command_t),
         .commands = sys_commands,
@@ -258,37 +306,38 @@ status_code_t system_execute_line (char *line)
     };
 
     status_code_t retval = Status_Unhandled;
-    char c, *org = line, *ucline = line, *lcline = line + (LINE_BUFFER_SIZE / 2);
 
-    // Uppercase original and copy original out in the buffer
-    // TODO: create a common function for stripping down uppercase version?
-    do {
-        c = *org++;
-        if(c != ' ') // Remove spaces from uppercase version
-            *ucline++ = CAPS(c);
-        *lcline++ = c;
-    } while(c);
+    char c, *s1, *s2;
 
-    lcline = line + (LINE_BUFFER_SIZE / 2);
+    s1 = s2 = ++line;
 
-    if(!strncmp(&line[1], "HELP", 4))
-        return report_help(&line[5], &lcline[5]);
-
-    char *args = strchr(line, '='), *lcargs = strchr(lcline, '=');
-
-    if(args) {
-        *args++ = '\0';
-        *lcargs++ = '\0';
+    c = *s1;
+    while(c && c != '=') {
+        if(c != ' ')
+            *s2++ = CAPS(c);
+        c = *++s1;
     }
+
+    while((c = *s1++))
+        *s2++ = c;
+
+    *s2 = '\0';
+
+    if(!strncmp(line, "HELP", 4))
+        return report_help(&line[4]);
+
+    char *args = strchr(line, '=');
+
+    if(args)
+        *args++ = '\0';
 
     uint_fast8_t idx;
     sys_commands_t *cmd = &base;
-
     do {
         for(idx = 0; idx < cmd->n_commands; idx++) {
-            if(!strcmp(&line[1], cmd->commands[idx].command)) {
-                if(!cmd->commands[idx].noargs || lcargs == NULL) {
-                    if((retval = cmd->commands[idx].execute(state_get(), lcargs)) != Status_Unhandled)
+            if(!strcmp(line, cmd->commands[idx].command)) {
+                if(!cmd->commands[idx].noargs || args == NULL) {
+                    if((retval = cmd->commands[idx].execute(state_get(), args)) != Status_Unhandled)
                         break;
                 }
             }
@@ -298,26 +347,26 @@ status_code_t system_execute_line (char *line)
 
     // Let user code have a peek at system commands before check for global setting
     if(retval == Status_Unhandled && grbl.on_unknown_sys_command) {
-        if(lcargs)
-            *(--lcargs) = '=';
+        if(args)
+            *(--args) = '=';
 
-        retval = grbl.on_unknown_sys_command(state_get(), lcline);
+        retval = grbl.on_unknown_sys_command(state_get(), line);
 
-        if(lcargs)
-            *lcargs++ = '\0';
+        if(args)
+            *args++ = '\0';
     }
 
     if (retval == Status_Unhandled) {
         // Check for global setting, store if so
         if(state_get() == STATE_IDLE || (state_get() & (STATE_ALARM|STATE_ESTOP|STATE_CHECK_MODE))) {
-            uint_fast8_t counter = 1;
+            uint_fast8_t counter = 0;
             float parameter;
             if(!read_float(line, &counter, &parameter))
                 retval = Status_BadNumberFormat;
             else if(!isintf(parameter))
                 retval = Status_InvalidStatement;
             else if(args)
-                retval = settings_store_setting((setting_id_t)parameter, lcargs);
+                retval = settings_store_setting((setting_id_t)parameter, args);
             else
                 retval = report_grbl_setting((setting_id_t)parameter, NULL);
         } else
@@ -339,7 +388,7 @@ static status_code_t jog (sys_state_t state, char *args)
         args -= 2;
     }
 
-    return args == NULL ? Status_InvalidStatement : gc_execute_block(strcaps(args), NULL); // NOTE: $J= is ignored inside g-code parser and used to detect jog motions.
+    return args == NULL ? Status_InvalidStatement : gc_execute_block(args); // NOTE: $J= is ignored inside g-code parser and used to detect jog motions.
 }
 
 static status_code_t enumerate_alarms (sys_state_t state, char *args)
@@ -536,7 +585,7 @@ static status_code_t disable_lock (sys_state_t state, char *args)
 
 static status_code_t output_help (sys_state_t state, char *args)
 {
-    return report_help(args, args);
+    return report_help(args);
 }
 
 static status_code_t go_home (sys_state_t state, axes_signals_t axes)
@@ -667,9 +716,19 @@ static status_code_t tool_probe_workpiece (sys_state_t state, char *args)
 
 static status_code_t output_ngc_parameters (sys_state_t state, char *args)
 {
-    report_ngc_parameters();
+    status_code_t retval = Status_OK;
 
-    return Status_OK;
+    if(args) {
+        int32_t id;
+        retval = read_int(args, &id);
+        if(retval == Status_OK && id >= 0)
+            retval = report_ngc_parameter((ngc_param_id_t)id);
+        else
+            retval = report_named_ngc_parameter(args);
+    } else
+        report_ngc_parameters();
+
+    return retval;
 }
 
 static status_code_t build_info (sys_state_t state, char *args)
@@ -781,11 +840,11 @@ static status_code_t set_startup_line (sys_state_t state, char *args, uint_fast8
 
     status_code_t retval = Status_OK;
 
-    strcaps(args);
+    args = gc_normalize_block(args, NULL);
 
     if(strlen(args) >= (sizeof(stored_line_t) - 1))
         retval = Status_Overflow;
-    else if ((retval = gc_execute_block(args, NULL)) == Status_OK) // Execute gcode block to ensure block is valid.
+    else if ((retval = gc_execute_block(args)) == Status_OK) // Execute gcode block to ensure block is valid.
         settings_write_startup_line(lnr, args);
 
     return retval;

@@ -93,6 +93,15 @@ typedef enum {
     Status_SDFileEmpty = 64,
 
     Status_BTInitError = 70,
+
+//
+    Status_ExpressionUknownOp = 71,
+    Status_ExpressionDivideByZero = 72,
+    Status_ExpressionArgumentOutOfRange = 73,
+    Status_ExpressionInvalidArgument = 74,
+    Status_ExpressionSyntaxError = 75,
+    Status_ExpressionInvalidResult = 76,
+
     Status_Unhandled, // For internal use only
     Status_StatusMax = Status_Unhandled
 } status_code_t;

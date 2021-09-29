@@ -38,6 +38,7 @@
 #include "nvs_buffer.h"
 #include "limits.h"
 #include "state_machine.h"
+#include "regex.h"
 
 #ifdef ENABLE_SPINDLE_LINEARIZATION
 #include <stdio.h>
@@ -353,88 +354,82 @@ void report_grbl_help (void)
     hal.stream.write("[HLP:$$ $# $G $I $N $x=val $Nx=line $J=line $SLP $C $X $H $B ~ ! ? ctrl-x]" ASCII_EOL);
 }
 
-#define CAPS(c) ((c >= 'a' && c <= 'z') ? c & 0x5F : c)
-
-static void report_group_settings (const setting_group_detail_t *groups, const uint_fast8_t n_groups, char *lcargs)
+static bool report_group_settings (const setting_group_detail_t *groups, const uint_fast8_t n_groups, char *args)
 {
+    bool found = false;
     uint_fast8_t idx;
-    uint_fast8_t len = strlen(lcargs);
+    char c, *s, group[25];
 
     for(idx = 0; idx < n_groups; idx++) {
-        if(strlen(groups[idx].name) == len) {
-            char *s1 = lcargs, *s2 = (char *)groups[idx].name;
-            while(*s1 && CAPS(*s1) == CAPS(*s2)) {
-                s1++;
-                s2++;
-            }
-            if(*s1 == '\0') {
-                report_settings_details(SettingsFormat_HumanReadable, Setting_SettingsAll, groups[idx].id);
-                break;
-            }
+
+        s = group;
+        strncpy(group, groups[idx].name, sizeof(group));
+
+        // Uppercase group name
+        while((c = *s))
+            *s++ = CAPS(c);
+
+        if((found = matchhere(args, group))) {
+            hal.stream.write(ASCII_EOL "---- ");
+            hal.stream.write(groups[idx].name);
+            hal.stream.write(":" ASCII_EOL);
+            report_settings_details(SettingsFormat_HumanReadable, Setting_SettingsAll, groups[idx].id);
+            break;
         }
     }
+
+    return found;
 }
 
-status_code_t report_help (char *args, char *lcargs)
+status_code_t report_help (char *args)
 {
-    setting_details_t *settings_info = settings_get_details();
-
     // Strip leading spaces
     while(*args == ' ')
         args++;
 
     if(*args == '\0') {
 
-        hal.stream.write("Help arguments:" ASCII_EOL);
+        hal.stream.write("Help topics:" ASCII_EOL);
         hal.stream.write(" Commands" ASCII_EOL);
         hal.stream.write(" Settings" ASCII_EOL);
         report_setting_group_details(false, " ");
+
     } else {
-        if(!strncmp(args, "COMMANDS", 8)) {
-            hal.stream.write("$I - list system information" ASCII_EOL);
-            hal.stream.write("$$ - list settings" ASCII_EOL);
-            hal.stream.write("$# - list offsets, tool table, probing and home position" ASCII_EOL);
-            hal.stream.write("$G - list parser state" ASCII_EOL);
-            hal.stream.write("$N - list startup lines" ASCII_EOL);
-            if(settings.homing.flags.enabled)
-                hal.stream.write("$H - home configured axes" ASCII_EOL);
-            if(settings.homing.flags.single_axis_commands)
-                hal.stream.write("$H<axisletter> - home single axis" ASCII_EOL);
-            hal.stream.write("$X - unlock machine" ASCII_EOL);
-            hal.stream.write("$SLP - enter sleep mode" ASCII_EOL);
-            hal.stream.write("$HELP <arg> - help" ASCII_EOL);
-            hal.stream.write("$RST=* - restore/reset all" ASCII_EOL);
-            hal.stream.write("$RST=$ - restore default settings" ASCII_EOL);
-            if(settings_info->on_get_settings)
-                hal.stream.write("$RST=& - restore driver and plugin default settings" ASCII_EOL);
-#ifdef N_TOOLS
-            hal.stream.write("$RST=# - reset offsets and tool data" ASCII_EOL);
-#else
-            hal.stream.write("$RST=# - reset offsets" ASCII_EOL);
-#endif
+
+        char c, *s = args;
+
+        // Upper case argument
+        while((c = *s))
+            *s++ = CAPS(c);
+
+        if(matchhere(args, "COMMANDS")) {
             if(grbl.on_report_command_help)
                 grbl.on_report_command_help();
-        } else if(!strncmp(args, "SETTINGS", 8))
+
+        } else if(matchhere(args, "SETTINGS"))
             report_settings_details(SettingsFormat_HumanReadable, Setting_SettingsAll, Group_All);
+
         else {
 
-            // Strip leading spaces from lowercase version
-            while(*lcargs == ' ')
-                lcargs++;
+            bool found = false;
+            setting_details_t *settings_info = settings_get_details();
 
-            report_group_settings(settings_info->groups, settings_info->n_groups, lcargs);
+            found = report_group_settings(settings_info->groups, settings_info->n_groups, args);
 
-            if(grbl.on_get_settings) {
+            if(!found && grbl.on_get_settings) {
 
                 on_get_settings_ptr on_get_settings = grbl.on_get_settings;
 
                 while(on_get_settings) {
                     settings_info = on_get_settings();
-                    if(settings_info->groups)
-                        report_group_settings(settings_info->groups, settings_info->n_groups, lcargs);
+                    if(settings_info->groups && (found = report_group_settings(settings_info->groups, settings_info->n_groups, args)))
+                        break;
                     on_get_settings = settings_info->on_get_settings;
                 }
             }
+
+            if(!found)
+                hal.stream.write( ASCII_EOL "N/A" ASCII_EOL);
         }
     }
 
@@ -578,6 +573,41 @@ void report_tool_offsets (void)
 #endif
     hal.stream.write("]" ASCII_EOL);
 }
+
+// Prints NIST/LinuxCNC NGC parameter value
+status_code_t report_ngc_parameter (ngc_param_id_t id)
+{
+    float value;
+
+    hal.stream.write("[PARAM:");
+    hal.stream.write(uitoa(id));
+    if(ngc_param_get(id, &value)) {
+        hal.stream.write("=");
+        hal.stream.write(ftoa(value, 3));
+    } else
+        hal.stream.write("=N/A");
+    hal.stream.write("]" ASCII_EOL);
+
+    return Status_OK;
+}
+
+// Prints named LinuxCNC NGC parameter value
+status_code_t report_named_ngc_parameter (char *arg)
+{
+    float value;
+
+    hal.stream.write("[PARAM:");
+    hal.stream.write(arg);
+    if(ngc_named_param_get(arg, &value)) {
+        hal.stream.write("=");
+        hal.stream.write(ftoa(value, 3));
+    } else
+        hal.stream.write("=N/A");
+    hal.stream.write("]" ASCII_EOL);
+
+    return Status_OK;
+}
+
 
 // Prints Grbl NGC parameters (coordinate offsets, probing, tool table)
 void report_ngc_parameters (void)
@@ -941,6 +971,10 @@ void report_build_info (char *line, bool extended)
 
         if(settings.mode == Mode_Lathe)
             strcat(buf, "LATHE,");
+
+    #if NGC_EXPRESSIONS_ENABLE
+        strcat(buf, "EXPR,");
+    #endif
 
     #ifdef N_TOOLS
         if(hal.driver_cap.atc && hal.tool.change)
@@ -1395,7 +1429,7 @@ static void report_settings_detail (settings_format_t format, const setting_deta
     switch(format)
     {
         case SettingsFormat_HumanReadable:
-            hal.stream.write("$");
+            hal.stream.write(ASCII_EOL "$");
             hal.stream.write(uitoa(setting->id + offset));
             hal.stream.write(": ");
             if(setting->group == Group_Axis0)
@@ -1454,6 +1488,26 @@ static void report_settings_detail (settings_format_t format, const setting_deta
                     hal.stream.write(setting->max_value);
                 }
             }
+#ifndef NO_SETTINGS_DESCRIPTIONS
+            // Add description if driver is capable of outputting it...
+            if(hal.stream.write_n) {
+                const char *description = setting_get_description(setting->id);
+                if(description && *description != '\0') {
+                    char *lf;
+                    hal.stream.write(ASCII_EOL);
+                    if((lf = strstr(description, "\\n"))) while(lf) {
+                        hal.stream.write(ASCII_EOL);
+                        hal.stream.write_n(description, lf - description);
+                        description = lf + 2;
+                        lf = strstr(description, "\\n");
+                    }
+                    if(*description != '\0') {
+                        hal.stream.write(ASCII_EOL);
+                        hal.stream.write(description);
+                    }
+                }
+            }
+#endif
             break;
 
         case SettingsFormat_MachineReadable:

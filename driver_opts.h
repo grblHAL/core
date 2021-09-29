@@ -240,7 +240,7 @@
 #if NETWORK_IPMODE < 0 || NETWORK_IPMODE > 2
 #error "Invalid IP mode selected!"
 #endif
-#if NETWORK_WEBSOCKET_PORT == NETWORK_HTTP_PORT
+#if HTTP_ENABLE && NETWORK_WEBSOCKET_PORT == NETWORK_HTTP_PORT
 #warning "HTTP and WebSocket protocols cannot share the same port!"
 #endif
 #endif

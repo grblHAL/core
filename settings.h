@@ -31,7 +31,7 @@
 // Version of the persistent storage data. Will be used to migrate existing data from older versions of Grbl
 // when firmware is upgraded. Always stored in byte 0 of non-volatile storage
 
-// TODO: add ftp port to network settings
+// TODO: add ftp port to network settings, enable safety_door settings
 
 #if N_AXIS > 3 // TODO: remove on next version update
 #define SETTINGS_VERSION 20  // NOTE: Check settings_reset() when moving to next version.
@@ -241,6 +241,7 @@ typedef enum {
     Setting_CoolantMaxTemp = 381,
     Setting_CoolantOffset = 382,
     Setting_CoolantGain = 383,
+    Setting_DisableG92Persistence = 384,
 
     Setting_EncoderSettingsBase = 400, // NOTE: Reserving settings values >= 400 for encoder settings. Up to 449.
     Setting_EncoderSettingsMax = 449,
@@ -318,7 +319,8 @@ typedef union {
                  legacy_rt_commands              :1,
                  restore_after_feed_hold         :1,
                  keep_coolant_state_on_door_open :1,
-                 unassigned                      :7;
+                 g92_is_volatile               :1,
+                 unassigned                      :6;
     };
 } settingflags_t;
 
@@ -353,6 +355,21 @@ typedef union {
                  unassigned         :4;
     };
 } reportmask_t;
+
+typedef union {
+    uint8_t value;
+    struct {
+        uint8_t ignore_when_idle :1,
+                keep_coolant_on  :1,
+                unassigned       :6;
+    };
+} safety_door_setting_flags_t;
+
+typedef union {
+    safety_door_setting_flags_t flags;
+    float spindle_on_delay;
+    float coolant_on_delay;
+} safety_door_settings_t;
 
 typedef union {
     uint8_t value;
@@ -558,6 +575,7 @@ typedef struct {
     homing_settings_t homing;
     limit_settings_t limits;
     parking_settings_t parking;
+//    safety_door_settings_t safety_door;
     position_pid_t position;    // Used for synchronized motion
     ioport_signals_t ioport;
 } settings_t;

@@ -37,6 +37,14 @@
 // Note: DEFAULT_ACCELERATION is only referenced in this file
 #define DEFAULT_ACCELERATION (10.0f * 60.0f * 60.0f) // 10*60*60 mm/min^2 = 10 mm/sec^2
 
+#ifndef DISABLE_G92_PERSISTENCE
+#if COMPATIBILITY_LEVEL <= 1
+#define DISABLE_G92_PERSISTENCE 0
+#else
+#define DISABLE_G92_PERSISTENCE 1
+#endif
+#endif
+
 #ifdef DEFAULT_REPORT_MACHINE_POSITION
 #undef DEFAULT_REPORT_MACHINE_POSITION
 #define DEFAULT_REPORT_MACHINE_POSITION 1
@@ -607,6 +615,12 @@
 
 #ifndef INVERT_COOLANT_MIST_PIN
 #define INVERT_COOLANT_MIST_PIN 0
+#endif
+
+#ifndef NGC_EXPRESSIONS_ENABLE
+#define NGC_EXPRESSIONS_ENABLE 0
+#else
+#define NGC_N_ASSIGN_PARAMETERS_PER_BLOCK 10
 #endif
 
 // ---------------------------------------------------------------------------------------

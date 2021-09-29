@@ -23,6 +23,9 @@ target_sources(grbl INTERFACE
  ${CMAKE_CURRENT_LIST_DIR}/tool_change.c
  ${CMAKE_CURRENT_LIST_DIR}/alarms.c
  ${CMAKE_CURRENT_LIST_DIR}/errors.c
+ ${CMAKE_CURRENT_LIST_DIR}/ngc_params.c
+ ${CMAKE_CURRENT_LIST_DIR}/ngc_expr.c
+ ${CMAKE_CURRENT_LIST_DIR}/regex.c
 )
 
 target_include_directories(grbl INTERFACE ${CMAKE_CURRENT_LIST_DIR})

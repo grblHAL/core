@@ -45,17 +45,9 @@ typedef union {
         uint8_t overflow            :1,
                 comment_parentheses :1,
                 comment_semicolon   :1,
-                block_delete        :1,
-                unassigned          :4;
+                unassigned          :5;
     };
 } line_flags_t;
-
-typedef struct {
-    char *message;
-    uint_fast8_t idx;
-    uint_fast8_t tracker;
-    bool show;
-} user_message_t;
 
 typedef struct {
     volatile uint_fast8_t head;
@@ -67,8 +59,6 @@ static uint_fast16_t char_counter = 0;
 static char line[LINE_BUFFER_SIZE]; // Line to be executed. Zero-terminated.
 static char xcommand[LINE_BUFFER_SIZE];
 static bool keep_rt_commands = false;
-static user_message_t user_message = {NULL, 0, 0, false};
-static const char *msg = "(MSG,";
 static realtime_queue_t realtime_queue = {0};
 
 static void protocol_exec_rt_suspend ();
@@ -163,10 +153,9 @@ bool protocol_main_loop (void)
     int16_t c;
     char eol = '\0';
     line_flags_t line_flags = {0};
-    bool nocaps = false, line_is_comment = false;
 
     xcommand[0] = '\0';
-    user_message.show = keep_rt_commands = false;
+    keep_rt_commands = false;
 
     while(true) {
 
@@ -177,7 +166,7 @@ bool protocol_main_loop (void)
             if(c == ASCII_CAN) {
 
                 eol = xcommand[0] = '\0';
-                keep_rt_commands = nocaps = line_is_comment = user_message.show = false;
+                keep_rt_commands = false;
                 char_counter = line_flags.value = 0;
                 gc_state.last_error = Status_OK;
 
@@ -206,7 +195,7 @@ bool protocol_main_loop (void)
                 // Direct and execute one line of formatted input, and report status of execution.
                 if (line_flags.overflow) // Report line overflow error.
                     gc_state.last_error = Status_Overflow;
-                else if ((line[0] == '\0' || char_counter == 0) && !user_message.show && !line_is_comment) // Empty or comment line. For syncing purposes.
+                else if(line[0] == '\0') // Empty line. For syncing purposes.
                     gc_state.last_error = Status_OK;
                 else if (line[0] == '$') {// Grbl '$' system command
                     if((gc_state.last_error = system_execute_line(line)) == Status_LimitsEngaged) {
@@ -223,7 +212,7 @@ bool protocol_main_loop (void)
                 else { // Parse and execute g-code block.
 
 #endif
-                    gc_state.last_error = gc_execute_block(line, user_message.show ? user_message.message : NULL);
+                    gc_state.last_error = gc_execute_block(line);
                 }
 
                 // Add a short delay for each block processed in Check Mode to
@@ -238,74 +227,39 @@ bool protocol_main_loop (void)
                 grbl.report.status_message(gc_state.last_error);
 
                 // Reset tracking data for next line.
-                keep_rt_commands = nocaps = user_message.show = false;
+                keep_rt_commands = false;
                 char_counter = line_flags.value = 0;
 
-            } else if (c <= (nocaps ? ' ' - 1 : ' ') || line_flags.value) {
-                // Throw away all whitepace, control characters, comment characters and overflow characters.
-                if(c >= ' ' && line_flags.comment_parentheses) {
-                    if(user_message.tracker == 5)
-                        user_message.message[user_message.idx++] = c == ')' ? '\0' : c;
-                    else if(user_message.tracker > 0 && CAPS(c) == msg[user_message.tracker])
-                        user_message.tracker++;
-                    else
-                        user_message.tracker = 0;
-                    if (c == ')') {
-                        // End of '()' comment. Resume line.
-                        line_flags.comment_parentheses = Off;
-                        keep_rt_commands = false;
-                        user_message.show = user_message.show || user_message.tracker == 5;
-                    }
-                }
-            } else {
+            } else if (c <= (char_counter > 0 ? ' ' - 1 : ' '))
+                continue; // Strip control characters and leading whitespace.
+            else {
                 switch(c) {
-
-                    case '/':
-                        if(char_counter == 0)
-                            line_flags.block_delete = sys.flags.block_delete_enabled;
-                        break;
 
                     case '$':
                     case '[':
-                        // Do not uppercase system or user commands - will destroy passwords etc...
                         if(char_counter == 0)
-                            nocaps = keep_rt_commands = true;
+                            keep_rt_commands = true;
                         break;
 
                     case '(':
-                        if(char_counter == 0)
-                            line_is_comment = On;
-                        if(!keep_rt_commands) {
-                            // Enable comments flag and ignore all characters until ')' or EOL unless it is a message.
-                            // NOTE: This doesn't follow the NIST definition exactly, but is good enough for now.
-                            // In the future, we could simply remove the items within the comments, but retain the
-                            // comment control characters, so that the g-code parser can error-check it.
-                            if((line_flags.comment_parentheses = !line_flags.comment_semicolon)) {
-                                if(!hal.driver_cap.no_gcode_message_handling) {
-                                    if(user_message.message == NULL)
-                                        user_message.message = malloc(LINE_BUFFER_SIZE);
-                                    if(user_message.message) {
-                                        user_message.idx = 0;
-                                        user_message.tracker = 1;
-                                    }
-                                }
-                                keep_rt_commands = true;
-                            }
-                        }
+                        if(!keep_rt_commands && (line_flags.comment_parentheses = !line_flags.comment_semicolon))
+                            keep_rt_commands = !hal.driver_cap.no_gcode_message_handling; // Suspend real-time processing of printable command characters.
+                        break;
+
+                    case ')':
+                        if(!line_flags.comment_semicolon)
+                            line_flags.comment_parentheses = keep_rt_commands = false;
                         break;
 
                     case ';':
-                        if(char_counter == 0)
-                            line_is_comment = On;
-                        // NOTE: ';' comment to EOL is a LinuxCNC definition. Not NIST.
-                        if(!keep_rt_commands) {
-                            if((line_flags.comment_semicolon = !line_flags.comment_parentheses))
-                                keep_rt_commands = true;
+                        if(!line_flags.comment_parentheses) {
+                            keep_rt_commands = false;
+                            line_flags.comment_semicolon = On;
                         }
                         break;
                 }
-                if (line_flags.value == 0 && !(line_flags.overflow = char_counter >= (LINE_BUFFER_SIZE - 1)))
-                    line[char_counter++] = nocaps ? c : CAPS(c);
+                if(!(line_flags.overflow = char_counter >= (LINE_BUFFER_SIZE - 1)))
+                    line[char_counter++] = c;
             }
         }
 
@@ -317,7 +271,7 @@ bool protocol_main_loop (void)
             else if (state_get() & (STATE_ALARM|STATE_ESTOP|STATE_JOG)) // Everything else is gcode. Block if in alarm, eStop or jog state.
                 grbl.report.status_message(Status_SystemGClock);
             else // Parse and execute g-code block.
-                gc_execute_block(xcommand, NULL);
+                gc_execute_block(xcommand);
 
             xcommand[0] = '\0';
         }
@@ -518,7 +472,7 @@ bool protocol_exec_rt_system (void)
             sync_position();
             flush_override_buffers();
             if(!((state_get() == STATE_ALARM) && (sys.alarm == Alarm_LimitsEngaged || sys.alarm == Alarm_HomingRequried)))
-                state_set(STATE_IDLE);
+                state_set(hal.control.get_state().safety_door_ajar ? STATE_SAFETY_DOOR : STATE_IDLE);
         }
 
         // Execute and print status to output stream
@@ -700,9 +654,9 @@ static void protocol_exec_rt_suspend (void)
         // Handle spindle overrides during suspend
         state_suspend_manager();
 
-        // If door closed keep issuing cycle start requests until resumed
+        // If door closed keep issuing door closed requests until resumed
         if(state_get() == STATE_SAFETY_DOOR && !hal.control.get_state().safety_door_ajar)
-            system_set_exec_state_flag(EXEC_CYCLE_START);
+            system_set_exec_state_flag(EXEC_DOOR_CLOSED);
 
         // Check for sleep conditions and execute auto-park, if timeout duration elapses.
         // Sleep is valid for both hold and door states, if the spindle or coolant are on or
@@ -783,7 +737,7 @@ ISR_CODE bool protocol_enqueue_realtime_command (char c)
             break;
 
         case CMD_SAFETY_DOOR:
-            if(!hal.signals_cap.safety_door_ajar) {
+            if(state_get() != STATE_SAFETY_DOOR) {
                 system_set_exec_state_flag(EXEC_SAFETY_DOOR);
                 drop = true;
             }
@@ -933,4 +887,3 @@ void protocol_execute_noop (sys_state_t state)
 {
     (void)state;
 }
-
