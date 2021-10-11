@@ -24,6 +24,8 @@
 // performance tuning or adjusting to non-typical machines.
 
 // IMPORTANT: Any changes here requires a full re-compiling of the source code to propagate them.
+//            A reset of non-volatile storage with $RST=* after reflashing is also required as
+//            most are just default values for settings.
 
 #ifndef _GRBL_CONFIG_H_
 #define _GRBL_CONFIG_H_
@@ -640,6 +642,6 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 #endif // DEFAULT_HOMING_ENABLE
 
 // Uncomment to enable experimental support for parameters and expressions
-//#define NGC_EXPRESSIONS_ENABLE 1
+#define NGC_EXPRESSIONS_ENABLE 1
 
 #endif

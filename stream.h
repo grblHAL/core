@@ -242,6 +242,16 @@ typedef struct {
     char data[BLOCK_TX_BUFFER_SIZE];
 } stream_block_tx_buffer_t;
 
+// double buffered tx stream
+typedef struct {
+    uint_fast16_t length;
+    uint_fast16_t max_length;
+    char *s;
+    bool use_tx2data;
+    char data[BLOCK_TX_BUFFER_SIZE];
+    char data2[BLOCK_TX_BUFFER_SIZE];
+} stream_block_tx_buffer2_t;
+
 #ifdef __cplusplus
 extern "C" {
 #endif

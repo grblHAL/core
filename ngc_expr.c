@@ -511,9 +511,9 @@ static status_code_t read_operation_unary (char *line, uint_fast8_t *pos, ngc_un
             if(!strncmp(line + *pos, "XP", 2)) {
                 *operation = NGCUnaryOp_EXP;
                 *pos += 2;
-/*            }  else if(!strncmp(line + *pos, "XISTS", 5)) {
+            }  else if(!strncmp(line + *pos, "XISTS", 5)) {
                 *operation = NGCUnaryOp_Exists;
-                *pos += 5; */
+                *pos += 5;
             } else
                 status = Status_ExpressionUknownOp;
             break;
@@ -672,15 +672,26 @@ static status_code_t read_unary (char *line, uint_fast8_t *pos, float *value)
 
         if(line[*pos] != '[')
             status = Status_ExpressionSyntaxError; // Left bracket missing after unary operation name
+
         else {
 
-            /*
             if (operation == NGCUnaryOp_Exists) {
-                CHP(read_bracketed_parameter(line, pos, value, true));
-                return Status_OK;
-            }
-        */
-            if((status = ngc_eval_expression(line, pos, value)) == Status_OK) {
+
+                char *arg = &line[++(*pos)], *s;
+
+                s = arg;
+                while(*s && *s != ']')
+                    s++;
+
+                if(*s == ']') {
+                    *s = '\0';
+                    *value = ngc_named_param_exists(arg) ? 1.0f : 0.0f;
+                    *s = ']';
+                    *pos = *pos + s - arg + 1;
+                } else
+                    status = Status_ExpressionSyntaxError;
+
+            } else if((status = ngc_eval_expression(line, pos, value)) == Status_OK) {
                 if(operation == NGCUnaryOp_ATAN)
                     status = read_atan(line, pos, value);
                 else

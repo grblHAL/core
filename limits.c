@@ -315,6 +315,9 @@ static bool limits_homing_cycle (axes_signals_t cycle, axes_signals_t auto_squar
         homing_rate *= sqrtf(n_active_axis); // [sqrt(N_AXIS)] Adjust so individual axes all move at homing rate.
         sys.homing_axis_lock.mask = axislock.mask;
 
+        if(grbl.on_homing_rate_set)
+            grbl.on_homing_rate_set(cycle, homing_rate);
+
         // Perform homing cycle. Planner buffer should be empty, as required to initiate the homing cycle.
         plan_data.feed_rate = homing_rate;      // Set current homing rate.
         plan_buffer_line(target, &plan_data);   // Bypass mc_line(). Directly plan homing motion.

@@ -1,5 +1,26 @@
 ## grblHAL changelog
 
+Build 2021010:
+
+Core:
+* Added enum and associated get function for system defined named parameters.
+* Added events (function pointers) for tool change mode 2 and 3 events (can be used to switch between probes) and for publishing active homing feedrate.
+
+Drivers:
+* Improved stream support in many drivers by adding support for _write_n_ characters. This is mainly used for outputting human readable settings descriptions.
+* Added TMC2209 UART support to the STM32F407 based BTT SKR 2.0 board. By @fitch22.
+
+Plugins:
+* Added support for reading files from flash based storage to http daemon support code.  
+  If a file is not found in the SD-card _www_ folder an attempt will be made to locate in in flash.  
+  Added `WEBUI_INFLASH` option to _my_machine.h_ for storing WebUI files \(_index.html.gz_ and _favicon.ico_\) in flash.  
+  Note that if these files are found in the SD card _www_ folder they will be used instead.
+* Improved Trinamic driver support both generally and for the TMC2209 silent stepstick.  
+  The default feedrate for switching to SpreadCycle mode has been changed to 0 \(never switch\), use [M913](https://github.com/grblHAL/Plugins_motor) to set it or set the default value in [trinamic.h](https://github.com/grblHAL/Plugins_motor/blob/master/trinamic.h) by changing the `PWM_THRESHOLD_VELOCITY` symbol.  
+  This is still work in progress, sensorless homing is most problematic and is likely to require tuning of several parameters. E.g. the slow approach feed rate should not be too slow - the default 25 mm/min certainly seems to be.
+
+---
+
 Build 20210928:
 
 Core:
@@ -21,6 +42,8 @@ Drivers & plugins:
 * Added [WebUI plugin](https://github.com/grblHAL/Plugin_WebUI) support for some networking capable boards.
 * Updated some drivers for internal API changes. Some minor bug fixes.
 
+---
+
 Build 20210907:
 
 Core:
@@ -32,6 +55,8 @@ Drivers & plugins:
 * Updated all drivers and relevant plugins for HAL/core API changes.
 * Added PWM inversion option to [iMXRT1062 driver](https://github.com/grblHAL/iMXRT1062).
 * Significantly improved [STM32F7xx driver](https://github.com/grblHAL/STM32F7xx), still work in progress.
+
+---
 
 Build 20210819:
 
@@ -49,6 +74,8 @@ Drivers & plugins:
 * Cleaned up/simplified many pin mapping files, mostly by moving pin to bit transforms to a common preprocessor file.
 * Some general driver and plugin improvements, e.g. more flexible spindle PWM to pin mappings for STM32F4xx and STM32F7xx drivers.
 
+---
+
 Build 20210803:
 
 Core:
@@ -60,6 +87,8 @@ Drivers & plugins:
 * Added tentative plasma plugin support to the SAM3X8E \(Arduino Due\) driver.
 * Updated motors plugin to match updated [Trinamic library](https://github.com/terjeio/Trinamic-library), added support for TMC2209++.
 * Some minor bug fixes and improvements.
+
+---
 
 Build 20210726:
 
@@ -75,6 +104,8 @@ Drivers & plugins:
 * Added option to use UART input for I2C keypad plugin. Added fan toggle support.
 * Fixed some bugs and regressions.
 * Added support for ganged/autosquared axes to RP2040 driver.
+
+---
 
 Build 20210707:
 
@@ -108,18 +139,26 @@ __NOTE:__ For driver developers: `hal.stream.get_rx_buffer_available` has been r
 * Added number of auxillary I/O ports available to `$I` command response.
 * Added value read from last `M66` to the first real-time report following the read. The element `|In:<value>` is used for the report. If the value reported is `-1` the read failed.
 
+---
+
 Build 20210608:
 * Fixes for `$70` setting handling, networking services. Only compile time enabled services \(or protocols\) can now be configured.
+
+---
 
 Build 20210604:
 * Added some HAL entry points and properties, shared file for mapped step and dir output.
 * Added `$pins` system command, for listing current pin assignments. Work in progress, only supported by a couple of drivers. For now only plain GPIO pins are listed.
 * Some minor bugs fixed. 
 
+---
+
 Build 20210515:
 
 * Fixed G43 "bug" by changing to LinuxCNC specification. NIST specification is ambiguous.
 * Added acceleration override handling, to be used by OpenPNP plugin M-code.
+
+---
 
 Build 20210505:
 
@@ -127,11 +166,15 @@ Build 20210505:
 * Check mode changes to allow use with SD card streaming.
 * Internal buffer changes for reducing RAM footprint. Some HAL extensions.
 
+---
+
 Build 20210314:
 
 * Added support for tool change protocol to networking protocols using shared stream buffer.
 * Added `$S` system command for toggling single step mode, when enabled cycle start has to be issued after each block.
 * Some bug fixes.
+
+---
 
 Build 20210207:
 
@@ -231,6 +274,8 @@ __NOTE:__ Not extensively tested. Use with care!
 * Improved auto squaring. If a limit switch is engaged when homing starts the axis will be moved pull-off distance * 5 away from them. If still engaged homing will fail.  
 __NOTE:__ Auto squaring is currently only tested with a simulator. Use with care!
 
+---
+
 Build 20201103:
 
 * Added data structures for spindle encoder/spindle sync to the core. Used by drivers supporting spindle sync.
@@ -239,6 +284,8 @@ __NOTE:__ Spindle sync support is still in alpha stage! The current code has onl
 * Fixed bug that could lead to settings storage area fail to reinitialize properly when corrupted.
 * Moved some symbols in preparation for adding $-settings for them.
 * Improved rewind capability (on `M2`) of SD card plugin. Added `$` command for dumping SD card file contents to output stream.
+
+---
 
 Build 20201020:
 
@@ -264,6 +311,8 @@ Ten setting codes are reserved for user defined plugins.
 * HAL pointers refactored for code readability, many moved to separate structures for each subsystem. Added typedefs.
 * Some minor bug fixes and other code readability improvements. Prepared for switch to 16-bit CRC for settings data validation.
 
+---
+
 Build 20200923:
 
 * Added support for STM32F411 based Blackpill boards to STM32F4xx driver.
@@ -274,6 +323,8 @@ An empy message will now be sent when tool change is complete, this to clear any
 * Added call to [weak](https://en.wikipedia.org/wiki/Weak_symbol) `my_plugin_init()` function at startup, name your [plugin](https://github.com/terjeio/grblHAL/tree/master/plugins) init function `void my_plugin_init (void)` and there is no need to change any grblHAL source files to bring it alive.  
 Use this feature for your private plugin only, multiple public plugins using this name cannot coexist!
 * Some changes to improve code readability and added strict check for `G59.x` gcodes.
+
+---
 
 Build 20200911:
 

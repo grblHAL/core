@@ -28,6 +28,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "system.h"
 #include "settings.h"
@@ -52,6 +53,7 @@ typedef struct ngc_rw_param {
 
 typedef struct {
     const char *name;
+    ncg_name_param_id_t id;
     ngc_named_param_get_ptr get;
 } ngc_named_ro_param_t;
 
@@ -66,9 +68,14 @@ ngc_named_rw_param_t *rw_global_params = NULL;
 
 static float _relative_pos (uint_fast8_t axis)
 {
-    float value = sys.position[axis] / settings.axis[axis].steps_per_mm - gc_get_offset(axis);
-    if(settings.flags.report_inches)
-        value *= 25.4f;
+    float value;
+
+    if(axis < N_AXIS) {
+        value = sys.position[axis] / settings.axis[axis].steps_per_mm - gc_get_offset(axis);
+        if(settings.flags.report_inches)
+            value *= 25.4f;
+    } else
+        value = 0.0f;
 
     return value;
 }
@@ -284,263 +291,240 @@ bool ngc_param_set (ngc_param_id_t id, float value)
 
     return ok;
 }
+PROGMEM static const ngc_named_ro_param_t ngc_named_ro_param[] = {
+    { .name = "_vmajor",              .id = NGCParam_vmajor },
+    { .name = "_vminor",              .id = NGCParam_vminor },
+    { .name = "_line",                .id = NGCParam_line },
+    { .name = "_motion_mode",         .id = NGCParam_motion_mode },
+    { .name = "_plane",               .id = NGCParam_plane },
+    { .name = "_ccomp",               .id = NGCParam_ccomp },
+    { .name = "_metric",              .id = NGCParam_metric },
+    { .name = "_imperial",            .id = NGCParam_imperial },
+    { .name = "_absolute",            .id = NGCParam_absolute },
+    { .name = "_incremental",         .id = NGCParam_incremental },
+    { .name = "_inverse_time",        .id = NGCParam_inverse_time },
+    { .name = "_units_per_minute",    .id = NGCParam_units_per_minute },
+    { .name = "_units_per_rev",       .id = NGCParam_units_per_rev },
+    { .name = "_coord_system",        .id = NGCParam_coord_system },
+    { .name = "_tool_offset",         .id = NGCParam_tool_offset },
+    { .name = "_retract_r_plane",     .id = NGCParam_retract_r_plane },
+    { .name = "_retract_old_z",       .id = NGCParam_retract_old_z },
+    { .name = "_spindle_rpm_mode",    .id = NGCParam_spindle_rpm_mode },
+    { .name = "_spindle_css_mode",    .id = NGCParam_spindle_css_mode },
+    { .name = "_ijk_absolute_mode",   .id = NGCParam_ijk_absolute_mode },
+    { .name = "_lathe_diameter_mode", .id = NGCParam_lathe_diameter_mode },
+    { .name = "_lathe_radius_mode",   .id = NGCParam_lathe_radius_mode },
+    { .name = "_spindle_on",          .id = NGCParam_spindle_on },
+    { .name = "_spindle_cw",          .id = NGCParam_spindle_cw },
+    { .name = "_mist",                .id = NGCParam_mist },
+    { .name = "_flood",               .id = NGCParam_flood },
+    { .name = "_speed_override",      .id = NGCParam_speed_override },
+    { .name = "_feed_override",       .id = NGCParam_feed_override },
+    { .name = "_adaptive_feed",       .id = NGCParam_adaptive_feed },
+    { .name = "_feed_hold",           .id = NGCParam_feed_hold },
+    { .name = "_feed",                .id = NGCParam_feed },
+    { .name = "_rpm",                 .id = NGCParam_rpm },
+    { .name = "_x",                   .id = NGCParam_x },
+    { .name = "_y",                   .id = NGCParam_y },
+    { .name = "_z",                   .id = NGCParam_z },
+    { .name = "_a",                   .id = NGCParam_a },
+    { .name = "_b",                   .id = NGCParam_b },
+    { .name = "_c",                   .id = NGCParam_c },
+    { .name = "_u",                   .id = NGCParam_u },
+    { .name = "_v",                   .id = NGCParam_v },
+    { .name = "_w",                   .id = NGCParam_w },
+    { .name = "_current_tool",        .id = NGCParam_current_tool },
+    { .name = "_current_pocket",      .id = NGCParam_current_pocket },
+    { .name = "_selected_tool",       .id = NGCParam_selected_tool },
+    { .name = "_selected_pocket",     .id = NGCParam_selected_pocket },
+};
+
 
 // Named parameters
 
-static float _line (void)
+float ngc_named_param_get_by_id (ncg_name_param_id_t id)
 {
-    return (float)gc_state.line_number;
+    float value;
+
+    switch(id) {
+
+        case NGCParam_vmajor:
+            value = 1.1f;
+            break;
+
+        case NGCParam_vminor:
+            value = 0.0f; // TODO: derive from version letter?
+            break;
+
+        case NGCParam_line:
+            value = (float)gc_state.line_number;
+            break;
+
+        case NGCParam_motion_mode:
+            value = (float)(gc_state.modal.motion * 10); // TODO: Fix G38.x
+            break;
+
+        case NGCParam_plane:
+            value = (float)(170 + gc_state.modal.plane_select * 10);
+            break;
+
+        case NGCParam_ccomp:
+            value = 400.0f;
+            break;
+
+        case NGCParam_metric:
+            value = gc_state.modal.units_imperial ? 0.0f : 1.0f;
+            break;
+
+        case NGCParam_imperial:
+            value = gc_state.modal.units_imperial ? 1.0f : 0.0f;
+            break;
+
+        case NGCParam_absolute:
+            value = gc_state.modal.distance_incremental ? 0.0f : 1.0f;
+            break;
+
+        case NGCParam_incremental:
+            value = gc_state.modal.distance_incremental ? 1.0f : 0.0f;
+            break;
+
+        case NGCParam_inverse_time:
+            value = gc_state.modal.feed_mode == FeedMode_InverseTime ? 1.0f : 0.0f;
+            break;
+
+        case NGCParam_units_per_minute:
+            value = gc_state.modal.feed_mode == FeedMode_UnitsPerMin ? 1.0f : 0.0f;
+            break;
+
+        case NGCParam_units_per_rev:
+            value = gc_state.modal.feed_mode == FeedMode_UnitsPerRev ? 1.0f : 0.0f;
+            break;
+
+        case NGCParam_coord_system:
+            {
+                uint_fast16_t id = gc_state.modal.coord_system.id * 10;
+
+                if(id > (CoordinateSystem_G59 * 10))
+                    id = (CoordinateSystem_G59 * 10) + gc_state.modal.coord_system.id - CoordinateSystem_G59;
+
+                value = (float)(540 + id);
+            }
+            break;
+
+        case NGCParam_tool_offset:
+            value = gc_state.modal.tool_offset_mode >= ToolLengthOffset_Enable ? 1.0f : 0.0f;
+            break;
+
+        case NGCParam_retract_r_plane:
+            value = gc_state.modal.retract_mode == CCRetractMode_Previous ? 1.0f : 0.0f;
+            break;
+
+        case NGCParam_retract_old_z:
+            value = gc_state.modal.retract_mode == CCRetractMode_RPos ? 1.0f : 0.0f;
+            break;
+
+        case NGCParam_spindle_rpm_mode:
+            value = gc_state.modal.spindle_rpm_mode == SpindleSpeedMode_RPM ? 1.0f : 0.0f;
+            break;
+
+        case NGCParam_spindle_css_mode:
+            value = gc_state.modal.spindle_rpm_mode == SpindleSpeedMode_CSS ? 1.0f : 0.0f;
+            break;
+
+        case NGCParam_ijk_absolute_mode:
+            value = 0.0f;
+            break;
+
+        case NGCParam_lathe_diameter_mode:
+            value = gc_state.modal.diameter_mode ? 1.0f : 0.0f;
+            break;
+
+        case NGCParam_lathe_radius_mode:
+            value = gc_state.modal.diameter_mode ? 0.0f : 1.0f;
+            break;
+
+        case NGCParam_spindle_on:
+            value = gc_state.modal.spindle.on ? 1.0f : 0.0f;
+            break;
+
+        case NGCParam_spindle_cw:
+            value = gc_state.modal.spindle.ccw ? 1.0f : 0.0f;
+            break;
+
+        case NGCParam_mist:
+            value = gc_state.modal.coolant.mist ? 1.0f : 0.0f;
+            break;
+
+        case NGCParam_flood:
+            value = gc_state.modal.coolant.flood ? 1.0f : 0.0f;
+            break;
+
+        case NGCParam_speed_override:
+            value = gc_state.modal.override_ctrl.spindle_rpm_disable ? 0.0f : 1.0f;
+            break;
+
+        case NGCParam_feed_override:
+            value = gc_state.modal.override_ctrl.feed_rate_disable ? 0.0f : 1.0f;
+            break;
+
+        case NGCParam_adaptive_feed:
+            value = 0.0f;
+            break;
+
+        case NGCParam_feed_hold:
+            value = gc_state.modal.override_ctrl.feed_hold_disable ? 0.0f : 1.0f;
+            break;
+
+        case NGCParam_feed:
+            value = gc_state.feed_rate;
+            break;
+
+        case NGCParam_rpm:
+            value = gc_state.spindle.rpm;
+            break;
+
+        case NGCParam_x:
+            //no break
+        case NGCParam_y:
+            //no break
+        case NGCParam_z:
+            //no break
+        case NGCParam_a:
+            //no break
+        case NGCParam_b:
+            //no break
+        case NGCParam_c:
+            //no break
+        case NGCParam_u:
+            //no break
+        case NGCParam_v:
+            //no break
+        case NGCParam_w:
+            value = _relative_pos(id - NGCParam_x);
+            break;
+
+        case NGCParam_current_tool:
+            value = (float)gc_state.tool->tool;
+            break;
+
+        case NGCParam_current_pocket:
+            value = 0.0f;
+            break;
+
+        case NGCParam_selected_tool:
+            value = gc_state.tool_change ? (float)gc_state.tool_pending : -1.0f;
+            break;
+
+        case NGCParam_selected_pocket:
+            value = 0.0f;
+            break;
+
+        default:
+            value = NAN;
+    }
+
+    return value;
 }
-
-static float _motion_mode (void)
-{
-    return (float)(gc_state.modal.motion * 10); // TODO: Fix G38.x
-}
-
-static float _plane (void)
-{
-    return (float)(170 + gc_state.modal.plane_select * 10);
-}
-
-static float _ccomp (void)
-{
-    return 400.0f;
-}
-
-static float _metric (void)
-{
-    return gc_state.modal.units_imperial ? 0.0f : 1.0f;
-}
-
-static float _imperial (void)
-{
-    return gc_state.modal.units_imperial ? 1.0f : 0.0f;
-}
-
-static float _absolute (void)
-{
-    return gc_state.modal.distance_incremental ? 0.0f : 1.0f;
-}
-
-static float _incremental (void)
-{
-    return gc_state.modal.distance_incremental ? 1.0f : 0.0f;
-}
-
-static float _inverse_time (void)
-{
-    return gc_state.modal.feed_mode == FeedMode_InverseTime ? 1.0f : 0.0f;
-}
-
-static float _units_per_minute (void)
-{
-    return gc_state.modal.feed_mode == FeedMode_UnitsPerMin ? 1.0f : 0.0f;
-}
-
-static float _units_per_rev (void)
-{
-    return gc_state.modal.feed_mode == FeedMode_UnitsPerRev ? 1.0f : 0.0f;
-}
-
-static float _coord_system (void)
-{
-    uint_fast16_t id = gc_state.modal.coord_system.id * 10;
-
-    if(id > (CoordinateSystem_G59 * 10))
-        id = (CoordinateSystem_G59 * 10) + gc_state.modal.coord_system.id - CoordinateSystem_G59;
-
-    return (float)(540 + id);
-}
-
-static float _tool_offset (void)
-{
-    return gc_state.modal.tool_offset_mode >= ToolLengthOffset_Enable ? 1.0f : 0.0f;
-}
-
-static float _retract_r_plane (void)
-{
-    return gc_state.modal.retract_mode == CCRetractMode_Previous ? 1.0f : 0.0f;
-}
-
-static float _retract_old_z (void)
-{
-    return gc_state.modal.retract_mode == CCRetractMode_RPos ? 1.0f : 0.0f;
-}
-
-static float _spindle_rpm_mode (void)
-{
-    return gc_state.modal.spindle_rpm_mode == SpindleSpeedMode_RPM ? 1.0f : 0.0f;
-}
-
-static float _spindle_css_mode (void)
-{
-    return gc_state.modal.spindle_rpm_mode == SpindleSpeedMode_CSS ? 1.0f : 0.0f;
-}
-
-static float _lathe_diameter_mode (void)
-{
-    return gc_state.modal.diameter_mode ? 1.0f : 0.0f;
-}
-
-static float _lathe_radius_mode (void)
-{
-    return gc_state.modal.diameter_mode ? 0.0f : 1.0f;
-}
-
-static float _spindle_on (void)
-{
-    return gc_state.modal.spindle.on ? 1.0f : 0.0f;
-}
-
-static float _spindle_cw (void)
-{
-    return gc_state.modal.spindle.ccw ? 1.0f : 0.0f;
-}
-
-static float _mist (void)
-{
-    return gc_state.modal.coolant.mist ? 1.0f : 0.0f;
-}
-
-static float _flood (void)
-{
-    return gc_state.modal.coolant.flood ? 1.0f : 0.0f;
-}
-
-static float _speed_override (void)
-{
-    return gc_state.modal.override_ctrl.spindle_rpm_disable ? 0.0f : 1.0f;
-}
-
-static float _feed_override (void)
-{
-    return gc_state.modal.override_ctrl.feed_rate_disable ? 0.0f : 1.0f;
-}
-
-static float _feed_hold (void)
-{
-    return gc_state.modal.override_ctrl.feed_hold_disable ? 0.0f : 1.0f;
-}
-
-static float _feed (void)
-{
-    return gc_state.feed_rate;
-}
-
-static float _rpm (void)
-{
-    return gc_state.spindle.rpm;
-}
-
-static float _x (void)
-{
-    return _relative_pos(X_AXIS);
-}
-
-static float _y (void)
-{
-    return _relative_pos(Y_AXIS);
-}
-
-static float _z (void)
-{
-    return _relative_pos(Z_AXIS);
-}
-
-static float _a (void)
-{
-#ifdef A_AXIS
-    return _relative_pos(A_AXIS);
-#else
-    return 0.0f;
-#endif
-}
-
-static float _b (void)
-{
-#ifdef B_AXIS
-    return _relative_pos(B_AXIS);
-#else
-    return 0.0f;
-#endif
-}
-
-static float _c (void)
-{
-#ifdef C_AXIS
-    return _relative_pos(C_AXIS);
-#else
-    return 0.0f;
-#endif
-}
-
-static float _current_tool (void)
-{
-    return (float)gc_state.tool->tool;
-}
-
-static float _selected_tool (void)
-{
-    return gc_state.tool_change ? (float)gc_state.tool_pending : -1.0f;
-}
-
-static float _false (void)
-{
-    return 0.0f;
-}
-
-static float _true (void)
-{
-    return 1.0f;
-}
-
-PROGMEM static const ngc_named_ro_param_t ngc_named_ro_param[] = {
-    { .name = "_vmajor",              .get = _true },
-    { .name = "_vminor",              .get = _true },
-    { .name = "_line",                .get = _line },
-    { .name = "_motion_mode",         .get = _motion_mode },
-    { .name = "_plane",               .get = _plane },
-    { .name = "_ccomp",               .get = _ccomp },
-    { .name = "_metric",              .get = _metric },
-    { .name = "_imperial",            .get = _imperial },
-    { .name = "_absolute",            .get = _absolute },
-    { .name = "_incremental",         .get = _incremental },
-    { .name = "_inverse_time",        .get = _inverse_time },
-    { .name = "_units_per_minute",    .get = _units_per_minute },
-    { .name = "_units_per_rev",       .get = _units_per_rev },
-    { .name = "_coord_system",        .get = _coord_system },
-    { .name = "_tool_offset",         .get = _tool_offset },
-    { .name = "_retract_r_plane",     .get = _retract_r_plane },
-    { .name = "_retract_old_z",       .get = _retract_old_z },
-    { .name = "_spindle_rpm_mode",    .get = _spindle_rpm_mode },
-    { .name = "_spindle_css_mode",    .get = _spindle_css_mode },
-    { .name = "_ijk_absolute_mode",   .get = _false },
-    { .name = "_lathe_diameter_mode", .get = _lathe_diameter_mode },
-    { .name = "_lathe_radius_mode",   .get = _lathe_radius_mode },
-    { .name = "_spindle_on",          .get = _spindle_on },
-    { .name = "_spindle_cw",          .get = _spindle_cw },
-    { .name = "_mist",                .get = _mist },
-    { .name = "_flood",               .get = _flood },
-    { .name = "_speed_override",      .get = _speed_override },
-    { .name = "_feed_override",       .get = _feed_override },
-    { .name = "_adaptive_feed",       .get = _false },
-    { .name = "_feed_hold",           .get = _feed_hold },
-    { .name = "_feed",                .get = _feed },
-    { .name = "_rpm",                 .get = _rpm },
-    { .name = "_x",                   .get = _x },      // = 5420
-    { .name = "_y",                   .get = _y },      // = 5421
-    { .name = "_z",                   .get = _z },      // = 5422
-    { .name = "_a",                   .get = _a },      // = 5423
-    { .name = "_b",                   .get = _b },      // = 5424
-    { .name = "_c",                   .get = _c },      // = 5425
-    { .name = "_u",                   .get = _false },  // = 5426
-    { .name = "_v",                   .get = _false },  // = 5427
-    { .name = "_w",                   .get = _false },  // = 5428
-    { .name = "_current_tool",        .get = _current_tool },
-    { .name = "_current_pocket",      .get = _false },
-    { .name = "_selected_tool",       .get = _selected_tool },
-    { .name = "_selected_pocket",     .get = _false }
-};
 
 bool ngc_named_param_get (char *name, float *value)
 {
@@ -557,7 +541,7 @@ bool ngc_named_param_get (char *name, float *value)
      if(*name == '_') do {
         idx--;
         if((found = !strcmp(name, ngc_named_ro_param[idx].name)))
-            *value = ngc_named_ro_param[idx].get();
+            *value = ngc_named_param_get_by_id(ngc_named_ro_param[idx].id);
     } while(idx && !found);
 
     if(!found) {
@@ -587,6 +571,7 @@ bool ngc_named_param_exists (char *name)
 
     // Check if name is supplied, return false if not.
     if((*name == '_' ? *(name + 1) : *name) == '\0')
+        return false;
 
     // Check if it is a (read only) predefined parameter.
     if(*name == '_') do {

@@ -79,6 +79,8 @@ typedef void (*on_realtime_report_ptr)(stream_write_ptr stream_write, report_tra
 typedef void (*on_unknown_feedback_message_ptr)(stream_write_ptr stream_write);
 typedef void (*on_stream_changed_ptr)(stream_type_t type);
 typedef bool (*on_laser_ppi_enable_ptr)(uint_fast16_t ppi, uint_fast16_t pulse_length);
+typedef void (*on_homing_rate_set_ptr)(axes_signals_t axes, float rate);
+typedef void (*on_probe_fixture_ptr)(bool on);
 typedef status_code_t (*on_unknown_sys_command_ptr)(sys_state_t state, char *line); // return Status_Unhandled.
 typedef status_code_t (*on_user_command_ptr)(char *line);
 typedef sys_commands_t *(*on_get_commands_ptr)(void);
@@ -105,6 +107,8 @@ typedef struct {
     on_get_commands_ptr on_get_commands;
     on_user_command_ptr on_user_command;
     on_stream_changed_ptr on_stream_changed;
+    on_homing_rate_set_ptr on_homing_rate_set;
+    on_probe_fixture_ptr on_probe_fixture;
     on_laser_ppi_enable_ptr on_laser_ppi_enable;
     // core entry points - set up by core before driver_init() is called.
     enqueue_gcode_ptr enqueue_gcode;

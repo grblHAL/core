@@ -511,7 +511,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_StepperIdleLockTime, "Sets a short hold delay when stopping to let dynamics settle before disabling steppers. Value 255 keeps motors enabled." },
     { Setting_StepInvertMask, "Inverts the step signals (active low)." },
     { Setting_DirInvertMask, "Inverts the direction signals (active low)." },
-    { Setting_InvertStepperEnable, "Inverts the stepper driver enable signals  (active low). If the stepper drivers shares the same enable signal only X is used." },
+    { Setting_InvertStepperEnable, "Inverts the stepper driver enable signals (active low). If the stepper drivers shares the same enable signal only X is used." },
     { Setting_LimitPinsInvertMask, "Inverts the axis limit input signals." },
     { Setting_InvertProbePin, "Inverts the probe input pin signal." },
     { Setting_SpindlePWMBehaviour, "" },
@@ -522,10 +522,10 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_JunctionDeviation, "Sets how fast Grbl travels through consecutive motions. Lower value slows it down." },
     { Setting_ArcTolerance, "Sets the G2 and G3 arc tracing accuracy based on radial error. Beware: A very small value may effect performance." },
     { Setting_ReportInches, "Enables inch units when returning any position and rate value that is not a settings value." },
-    { Setting_ControlInvertMask, "Inverts the control signals  (active low).\\n"
+    { Setting_ControlInvertMask, "Inverts the control signals (active low).\\n"
                                  "NOTE: Block delete, Optional stop, EStop and Probe connected are optional signals, availability is driver dependent."
     },
-    { Setting_CoolantInvertMask, "Inverts the coolant and mist signals  (active low)." },
+    { Setting_CoolantInvertMask, "Inverts the coolant and mist signals (active low)." },
     { Setting_SpindleInvertMask, "Inverts the spindle on, counterclockwise and PWM signals (active low)." },
     { Setting_ControlPullUpDisableMask, "Disable the control signals pullup resistors. Potentially enables pulldown resistor if available.\\n"
                                         "NOTE: Block delete, Optional stop and EStop are optional signals, availability is driver dependent."

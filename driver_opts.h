@@ -162,6 +162,10 @@
 #define WEBUI_AUTH_ENABLE   0
 #endif
 
+#ifndef WEBUI_INFLASH
+#define WEBUI_INFLASH 0
+#endif
+
 #if WEBUI_ENABLE && !defined(ESP_PLATFORM)
 
 #ifdef ETHERNET_ENABLE

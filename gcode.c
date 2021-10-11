@@ -2982,17 +2982,19 @@ status_code_t gc_execute_block(char *block)
             // Execute coordinate change and spindle/coolant stop.
             if (!check_mode) {
 
+                if (!(settings_read_coord_data(gc_state.modal.coord_system.id, &gc_state.modal.coord_system.xyz)))
+                    FAIL(Status_SettingReadFail);
+
+#if COMPATIBILITY_LEVEL <= 1
                 float g92_offset_stored[N_AXIS];
                 if(settings_read_coord_data(CoordinateSystem_G92, &g92_offset_stored) && !isequal_position_vector(g92_offset_stored, gc_state.g92_coord_offset))
                     settings_write_coord_data(CoordinateSystem_G92, &gc_state.g92_coord_offset); // Save G92 offsets to non-volatile storage
+#endif
 
-                if (!(settings_read_coord_data(gc_state.modal.coord_system.id, &gc_state.modal.coord_system.xyz)))
-                    FAIL(Status_SettingReadFail);
                 system_flag_wco_change(); // Set to refresh immediately just in case something altered.
                 hal.spindle.set_state(gc_state.modal.spindle, 0.0f);
                 hal.coolant.set_state(gc_state.modal.coolant);
-                sys.report.spindle = On; // Set to report change immediately
-                sys.report.coolant = On; // ...
+                sys.report.spindle = sys.report.coolant = On; // Set to report change immediately
             }
 
             if(grbl.on_program_completed)
