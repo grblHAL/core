@@ -57,6 +57,11 @@
 #endif
 #endif
 
+#ifdef __MSP430F5529__
+#define isnanf(x) __isnanf(x)
+#define isinff(x) __isinff(x)
+#endif
+
 // Axis array index values. Must start with 0 and be continuous.
 #define X_AXIS 0 // Axis indexing value.
 #define Y_AXIS 1

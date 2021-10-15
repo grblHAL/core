@@ -361,6 +361,14 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 //#define DEFAULT_TOOLCHANGE_SEEK_RATE 200.0f     // mm/min
 //#define DEFAULT_TOOLCHANGE_PULLOFF_RATE 200.0f  // mm/min
 
+// The grbl.on_probe_fixture event handler is called by the default tool change algorithm when probing at G59.3.
+// In addition it will be called on a "normal" probe sequence if the XY position is
+// within the radius of the G59.3 position defined below.
+// Uncomment and change if the default value of 5mm is not suitable or set it to 0.0f to disable.
+// NOTE: A grbl.on_probe_fixture event handler is not installed by the core, it has to be provided
+//       by a driver or a plugin.
+//#define TOOLSETTER_RADIUS 5.0f
+
 // By default, Grbl sets all input pins to normal-low operation with their internal pull-up resistors
 // enabled. This simplifies the wiring for users by requiring only a normally closed (NC) switch connected
 // to ground. It is not recommended to use normally-open (NO) switches as this increases the risk
@@ -642,6 +650,10 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 #endif // DEFAULT_HOMING_ENABLE
 
 // Uncomment to enable experimental support for parameters and expressions
-#define NGC_EXPRESSIONS_ENABLE 1
+//#define NGC_EXPRESSIONS_ENABLE 1
+
+#ifndef TOOLSETTER_RADIUS
+#define TOOLSETTER_RADIUS 5.0f // Default value - do not change here!
+#endif
 
 #endif

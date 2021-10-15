@@ -1,10 +1,28 @@
 ## grblHAL changelog
 
+Build 2021015:
+
+Core:
+
+* Improved `grbl.on_probe_fixture` event signature by adding pointer to the pending tool when fired when M6 is executing \(NULL if not\) and a flag indicating that the current XY-position is within 5mm of G59.3.
+* A few minor fixes.
+
+Plugins:
+
+* I2C keypad: Switch to metric mode when jogging.
+* WebUI: added option to store read-only webui files in flash.
+
+Templates:
+
+* Updated the [probe select](https://github.com/grblHAL/Templates/blob/master/my_plugin/probe%20select/my_plugin.c) example for the `grbl.on_probe_fixture` signature change and added an optional mode select parameter to M401.
+
+---
+
 Build 2021010:
 
 Core:
 * Added enum and associated get function for system defined named parameters.
-* Added events (function pointers) for tool change mode 2 and 3 events (can be used to switch between probes) and for publishing active homing feedrate.
+* Added events (function pointers) for tool change mode 2 and 3 events \(can be used to switch between probes\) and for publishing active homing feedrate.
 
 Drivers:
 * Improved stream support in many drivers by adding support for _write_n_ characters. This is mainly used for outputting human readable settings descriptions.

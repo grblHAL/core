@@ -83,6 +83,12 @@ static status_code_t set_startup_line1 (sys_state_t state, char *args);
 static status_code_t output_memmap (sys_state_t state, char *args);
 #endif
 
+// Simple hypotenuse computation function.
+inline static float hypot_f (float x, float y)
+{
+    return sqrtf(x*x + y*y);
+}
+
 // Pin change interrupt for pin-out commands, i.e. cycle start, feed hold, and reset. Sets
 // only the realtime command execute variable to have the main program execute these when
 // its ready. This works exactly like the character-based realtime commands when picked off
@@ -897,6 +903,23 @@ void system_convert_array_steps_to_mpos (float *position, int32_t *steps)
     } while(idx);
 #endif
 }
+
+// Checks if XY position is within coordinate system XY with given tolerance.
+// If tolerance is 0 false is returned.
+bool system_xy_at_fixture (coord_system_id_t id, float tolerance)
+{
+    bool ok = false;
+
+    coord_data_t target, position;
+
+    if(tolerance > 0.0f && settings_read_coord_data(id, &target.values)) {
+        system_convert_array_steps_to_mpos(position.values, sys.position);
+        ok = hypot_f(position.x - target.x, position.y - target.y) <= tolerance;
+    }
+
+    return ok;
+}
+
 
 // Checks and reports if target array exceeds machine travel limits. Returns false if check failed.
 // NOTE: max_travel is stored as negative

@@ -79,7 +79,7 @@ static void change_completed (void)
     }
 
     if(probe_fixture)
-        grbl.on_probe_fixture(false);
+        grbl.on_probe_fixture(&current_tool, true, false);
 
     grbl.on_probe_completed = NULL;
     gc_state.tool_change = probe_fixture = false;
@@ -175,7 +175,7 @@ static void execute_probe (sys_state_t state)
     gc_parser_flags_t flags = {0};
 
     if(probe_fixture)
-        grbl.on_probe_fixture(true);
+        grbl.on_probe_fixture(next_tool, true, true);
 
     // G59.3 contains offsets to position of TLS.
     settings_read_coord_data(CoordinateSystem_G59_3, &offset.values);
@@ -328,7 +328,9 @@ static status_code_t tool_change (parser_state_t *parser_state)
 
     execute_posted = false;
     probe_fixture = grbl.on_probe_fixture != NULL &&
-                     (settings.tool_change.mode == ToolChange_Manual_G59_3 || settings.tool_change.mode == ToolChange_SemiAutomatic);
+                     (settings.tool_change.mode == ToolChange_Manual ||
+                       settings.tool_change.mode == ToolChange_Manual_G59_3 ||
+                        settings.tool_change.mode == ToolChange_SemiAutomatic);
     parser_state->tool_change = true;
 
     // Save current position.
@@ -443,7 +445,7 @@ status_code_t tc_probe_workpiece (void)
     plan_line_data_t plan_data = {0};
 
     if(probe_fixture)
-        grbl.on_probe_fixture(true);
+        grbl.on_probe_fixture(next_tool, system_xy_at_fixture(CoordinateSystem_G59_3, TOOLSETTER_RADIUS), true);
 
     // Get current position.
     system_convert_array_steps_to_mpos(target.values, sys.position);

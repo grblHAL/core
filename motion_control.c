@@ -792,7 +792,7 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
         gc_state.modal.coolant.mask = 0;
         coolant_set_state(gc_state.modal.coolant);
 
-        // -------------------------------------------------------------------------------------
+        // ---------------------------------------------------------------------------
         // Perform homing routine. NOTE: Special motion case. Only system reset works.
 
         if (!home_all) // Perform homing cycle based on mask.
@@ -835,7 +835,7 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
         }
 
         // Homing cycle complete! Setup system for normal operation.
-        // -------------------------------------------------------------------------------------
+        // ---------------------------------------------------------
 
         // Sync gcode parser and planner positions to homed position.
         sync_position();
@@ -847,7 +847,6 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
             ? Status_LimitsEngaged
             : Status_OK;
 }
-
 
 // Perform tool length probe cycle. Requires probe switch.
 // NOTE: Upon probe failure, the program will be stopped and placed into ALARM state.
@@ -882,6 +881,13 @@ gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_f
     // Activate the probing state monitor in the stepper module.
     sys.probing_state = Probing_Active;
 
+#if COMPATIBILITY_LEVEL <= 1
+    bool at_g59_3 = false, probe_fixture = grbl.on_probe_fixture != NULL && state_get() != STATE_TOOL_CHANGE;
+
+    if(probe_fixture)
+        grbl.on_probe_fixture(NULL, at_g59_3 = system_xy_at_fixture(CoordinateSystem_G59_3, TOOLSETTER_RADIUS), true);
+#endif
+
     // Perform probing cycle. Wait here until probe is triggered or motion completes.
     system_set_exec_state_flag(EXEC_CYCLE_START);
     do {
@@ -903,6 +909,11 @@ gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_f
     sys.probing_state = Probing_Off;    // Ensure probe state monitor is disabled.
     hal.probe.configure(false, false);  // Re-initialize invert mask.
     protocol_execute_realtime();        // Check and execute run-time commands
+
+#if COMPATIBILITY_LEVEL <= 1
+    if(probe_fixture)
+        grbl.on_probe_fixture(NULL, at_g59_3, false);
+#endif
 
     // Reset the stepper and planner buffers to remove the remainder of the probe motion.
     st_reset();             // Reset step segment buffer.

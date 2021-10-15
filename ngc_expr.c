@@ -254,7 +254,7 @@ static status_code_t execute_unary (float *operand, ngc_unary_op_t operation)
             break;
 
         case NGCUnaryOp_FIX:
-            *operand = floor(*operand);
+            *operand = floorf(*operand);
             break;
 
         case NGCUnaryOp_FUP:
