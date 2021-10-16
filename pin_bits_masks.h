@@ -39,11 +39,15 @@
 #ifndef RESET_BIT
 #define RESET_BIT       (1<<RESET_PIN)
 #endif
+#ifdef FEED_HOLD_PIN
 #ifndef FEED_HOLD_BIT
 #define FEED_HOLD_BIT   (1<<FEED_HOLD_PIN)
 #endif
-#ifndef CYCLE_START_BIT
+#endif
+#ifdef CYCLE_START_PIN
+#ifndef CYCLE_START_BIT 
 #define CYCLE_START_BIT (1<<CYCLE_START_PIN)
+#endif
 #endif
 #if SAFETY_DOOR_ENABLE && !defined(SAFETY_DOOR_BIT)
 #define SAFETY_DOOR_BIT (1<<SAFETY_DOOR_PIN)
