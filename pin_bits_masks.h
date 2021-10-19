@@ -37,17 +37,37 @@
 #endif
 
 #ifndef RESET_BIT
+#ifdef RESET_PIN
 #define RESET_BIT       (1<<RESET_PIN)
+#else
+#define RESET_BIT       0
 #endif
+#endif
+
 #ifndef FEED_HOLD_BIT
+#ifdef FEED_HOLD_PIN
 #define FEED_HOLD_BIT   (1<<FEED_HOLD_PIN)
+#else
+#define FEED_HOLD_BIT   0
 #endif
+#endif
+
 #ifndef CYCLE_START_BIT
+#ifdef CYCLE_START_PIN
 #define CYCLE_START_BIT (1<<CYCLE_START_PIN)
+#else
+#define CYCLE_START_BIT 0
 #endif
+#endif
+
 #if SAFETY_DOOR_ENABLE && !defined(SAFETY_DOOR_BIT)
+#ifdef SAFETY_DOOR_PIN
 #define SAFETY_DOOR_BIT (1<<SAFETY_DOOR_PIN)
+#else
+#define SAFETY_DOOR_BIT 0
 #endif
+#endif
+
 #ifndef CONTROL_MASK
 #if SAFETY_DOOR_ENABLE
 #define CONTROL_MASK    (RESET_BIT|FEED_HOLD_BIT|CYCLE_START_BIT|SAFETY_DOOR_BIT)

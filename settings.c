@@ -603,14 +603,14 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_PositionIGain, "" },
     { Setting_PositionDGain, "" },
     { Setting_PositionIMaxError, "Spindle sync PID max integrator error." },
-    { Setting_AxisStepsPerMM, "Axis travel resolution in steps per millimeter." },
-    { Setting_AxisMaxRate, "Axis maximum rate. Used as G0 rapid rate." },
-    { Setting_AxisAcceleration, "Axis acceleration. Used for motion planning to not exceed motor torque and lose steps." },
+    { Setting_AxisStepsPerMM, "Travel resolution in steps per millimeter." },
+    { Setting_AxisMaxRate, "Maximum rate. Used as G0 rapid rate." },
+    { Setting_AxisAcceleration, "Acceleration. Used for motion planning to not exceed motor torque and lose steps." },
     { Setting_AxisMaxTravel, "Maximum axis travel distance from homing switch. Determines valid machine space for soft-limits and homing search distances." },
 #ifdef ENABLE_BACKLASH_COMPENSATION
-    { Setting_AxisBacklash, "Axis backlash distance to compensate for." },
+    { Setting_AxisBacklash, "Backlash distance to compensate for." },
 #endif
-    { Setting_AxisAutoSquareOffset, "Axis offset between sides to compensate for homing switches inaccuracies." },
+    { Setting_AxisAutoSquareOffset, "Offset between sides to compensate for homing switches inaccuracies." },
     { Setting_SpindleAtSpeedTolerance, "Spindle at speed" },
     { Setting_ToolChangeMode, "Normal: allows jogging for manual touch off. Set new position manually.\\n\\n"
                               "Manual touch off: retracts tool axis to home position for tool change, use jogging or $TPW for touch off.\\n\\n"
@@ -677,7 +677,9 @@ static void restore_override_backup (void)
 // Note: only allowed when current state is idle.
 bool settings_override_acceleration (uint8_t axis, float acceleration)
 {
-    if(state_get() != STATE_IDLE)
+    sys_state_t state = state_get();
+
+    if(!(state == STATE_IDLE || (state & (STATE_HOMING|STATE_ALARM))))
         return false;
 
     if(acceleration <= 0.0f) {

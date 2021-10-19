@@ -312,11 +312,12 @@ static bool limits_homing_cycle (axes_signals_t cycle, axes_signals_t auto_squar
             }
         } while(idx);
 
-        homing_rate *= sqrtf(n_active_axis); // [sqrt(N_AXIS)] Adjust so individual axes all move at homing rate.
         sys.homing_axis_lock.mask = axislock.mask;
 
         if(grbl.on_homing_rate_set)
-            grbl.on_homing_rate_set(cycle, homing_rate);
+            grbl.on_homing_rate_set(cycle, homing_rate, !approach);
+
+        homing_rate *= sqrtf(n_active_axis); // [sqrt(N_AXIS)] Adjust so individual axes all move at homing rate.
 
         // Perform homing cycle. Planner buffer should be empty, as required to initiate the homing cycle.
         plan_data.feed_rate = homing_rate;      // Set current homing rate.
@@ -430,7 +431,7 @@ static bool limits_homing_cycle (axes_signals_t cycle, axes_signals_t auto_squar
             hal.stepper.disable_motors((axes_signals_t){0}, SquaringMode_Both);
         }
 
-    } while (cycle.mask && n_cycle-- > 0);
+    } while (homing_rate > 0.0f && cycle.mask && n_cycle-- > 0);
 
     // Pull off B motor to compensate for switch inaccuracy when configured.
     if(auto_square.mask && settings.axis[dual_motor_axis].dual_axis_offset != 0.0f) {

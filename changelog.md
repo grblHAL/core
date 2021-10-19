@@ -1,19 +1,34 @@
 ## grblHAL changelog
 
+Build 2021019:
+
+Core:
+* Some minor changes to better support Trinamic drivers, probing and drivers/boards with limited number of control inputs \(cycle start, feed hold, ...\).
+
+Plugins:
+* Trinamic driver enhancements: Allow different StallGuard threshold settings for seek and locate phases, option to reduce acceleration during homing, bug fixes++  
+  __NOTE__: _All_ plugin settings will be reset when updating if the Trinamic plugin is in use. Backup and restore.
+
+Drivers:
+* Improved TMC2209 UART support for the STM32F407 based BTT SKR 2.0 board. By @fitch22
+* Added PicoBOB board support to RP2040 driver. By @andrewmarles
+
+Templates:
+* Corrections for Arduino builds, a few minor bug fixes.
+
+---
+
 Build 2021015:
 
 Core:
-
 * Improved `grbl.on_probe_fixture` event signature by adding pointer to the pending tool when fired when M6 is executing \(NULL if not\) and a flag indicating that the current XY-position is within 5mm of G59.3.
 * A few minor fixes.
 
 Plugins:
-
 * I2C keypad: Switch to metric mode when jogging.
 * WebUI: added option to store read-only webui files in flash.
 
 Templates:
-
 * Updated the [probe select](https://github.com/grblHAL/Templates/blob/master/my_plugin/probe%20select/my_plugin.c) example for the `grbl.on_probe_fixture` signature change and added an optional mode select parameter to M401.
 
 ---
@@ -26,7 +41,7 @@ Core:
 
 Drivers:
 * Improved stream support in many drivers by adding support for _write_n_ characters. This is mainly used for outputting human readable settings descriptions.
-* Added TMC2209 UART support to the STM32F407 based BTT SKR 2.0 board. By @fitch22.
+* Added TMC2209 UART support to the STM32F407 based BTT SKR 2.0 board. By @fitch22
 
 Plugins:
 * Added support for reading files from flash based storage to http daemon support code.  

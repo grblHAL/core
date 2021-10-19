@@ -743,7 +743,6 @@ void mc_dwell (float seconds)
     }
 }
 
-
 // Perform homing cycle to locate and set machine zero. Only '$H' executes this command.
 // NOTE: There should be no motions in the buffer and Grbl must be in an idle state before
 // executing the homing cycle. This prevents incorrect buffered plans after homing.
@@ -767,6 +766,9 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
         limits_set_machine_positions(cycle, false);
 #endif
     } else {
+
+        if(settings.homing.seek_rate <= 0.0f)
+            return Status_HomingDisabled;
 
         // Check and abort homing cycle, if hard limits are already enabled. Helps prevent problems
         // with machines with limits wired on both ends of travel to one limit pin.

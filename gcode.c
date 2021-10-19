@@ -1397,7 +1397,7 @@ status_code_t gc_execute_block(char *block)
 
     if (!gc_block.words.s)
         gc_block.values.s = gc_state.modal.spindle_rpm_mode == SpindleSpeedMode_RPM ? gc_state.spindle.rpm : gc_state.spindle.css.surface_speed;
-    else if(gc_state.modal.spindle_rpm_mode == SpindleSpeedMode_CSS)
+    else if(!user_words.s && gc_state.modal.spindle_rpm_mode == SpindleSpeedMode_CSS)
         // Unsure what to do about S values when in SpindleSpeedMode_CSS - ignore? For now use it to (re)calculate surface speed.
         // Reinsert commented out code above if this is removed!!
         gc_block.values.s *= (gc_block.modal.units_imperial ? MM_PER_INCH * 12.0f : 1000.0f); // convert surface speed to mm/min
@@ -2497,7 +2497,8 @@ status_code_t gc_execute_block(char *block)
 
     // [4. Set spindle speed ]:
     if(gc_state.modal.spindle_rpm_mode == SpindleSpeedMode_CSS) {
-        gc_state.spindle.css.surface_speed = gc_block.values.s;
+        if(!user_words.s)
+            gc_state.spindle.css.surface_speed = gc_block.values.s;
         if((plan_data.condition.is_rpm_pos_adjusted = gc_block.modal.motion != MotionMode_None && gc_block.modal.motion != MotionMode_Seek)) {
             gc_state.spindle.css.active = true;
             gc_state.spindle.css.axis = plane.axis_1;
@@ -2514,7 +2515,7 @@ status_code_t gc_execute_block(char *block)
         }
     }
 
-    if ((gc_state.spindle.rpm != gc_block.values.s) || gc_parser_flags.spindle_force_sync) {
+    if (!user_words.s && ((gc_state.spindle.rpm != gc_block.values.s) || gc_parser_flags.spindle_force_sync)) {
         if (gc_state.modal.spindle.on && !gc_parser_flags.laser_is_motion)
             spindle_sync(gc_state.modal.spindle, gc_parser_flags.laser_disable ? 0.0f : gc_block.values.s);
         gc_state.spindle.rpm = gc_block.values.s; // Update spindle speed state.
@@ -2656,7 +2657,7 @@ status_code_t gc_execute_block(char *block)
             protocol_buffer_synchronize(); // Ensure user defined mcode is executed when specified in program.
         gc_block.words.mask = user_words.mask;
         hal.user_mcode.execute(state_get(), &gc_block);
-//        gc_block.words.mask ^= user_words.mask;
+        gc_block.words.mask = 0;
     }
 
     // [10. Dwell ]:

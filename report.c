@@ -1234,9 +1234,11 @@ void report_realtime_status (void)
 
     if(settings.status_report.work_coord_offset) {
 
-        if (wco_counter > 0 && !sys.report.wco)
+        if(wco_counter > 0 && !sys.report.wco) {
+            if(wco_counter > (REPORT_WCO_REFRESH_IDLE_COUNT - 1) && state_get() == STATE_IDLE)
+                wco_counter = REPORT_WCO_REFRESH_IDLE_COUNT - 1;
             wco_counter--;
-        else
+        } else
             wco_counter = state_get() & (STATE_HOMING|STATE_CYCLE|STATE_HOLD|STATE_JOG|STATE_SAFETY_DOOR)
                             ? (REPORT_WCO_REFRESH_BUSY_COUNT - 1) // Reset counter for slow refresh
                             : (REPORT_WCO_REFRESH_IDLE_COUNT - 1);
