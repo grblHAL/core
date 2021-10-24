@@ -866,6 +866,13 @@ gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_f
     sys.flags.probe_succeeded = Off; // Re-initialize probe history before beginning cycle.
     hal.probe.configure(parser_flags.probe_is_away, true);
 
+#if COMPATIBILITY_LEVEL <= 1
+    bool at_g59_3 = false, probe_fixture = grbl.on_probe_fixture != NULL && state_get() != STATE_TOOL_CHANGE && (sys.homed.mask & (X_AXIS_BIT|Y_AXIS_BIT));
+
+    if(probe_fixture)
+        grbl.on_probe_fixture(NULL, at_g59_3 = system_xy_at_fixture(CoordinateSystem_G59_3, TOOLSETTER_RADIUS), true);
+#endif
+
     // After syncing, check if probe is already triggered or not connected. If so, halt and issue alarm.
     // NOTE: This probe initialization error applies to all probing cycles.
     probe_state_t probe = hal.probe.get_state();
@@ -882,13 +889,6 @@ gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_f
 
     // Activate the probing state monitor in the stepper module.
     sys.probing_state = Probing_Active;
-
-#if COMPATIBILITY_LEVEL <= 1
-    bool at_g59_3 = false, probe_fixture = grbl.on_probe_fixture != NULL && state_get() != STATE_TOOL_CHANGE;
-
-    if(probe_fixture)
-        grbl.on_probe_fixture(NULL, at_g59_3 = system_xy_at_fixture(CoordinateSystem_G59_3, TOOLSETTER_RADIUS), true);
-#endif
 
     // Perform probing cycle. Wait here until probe is triggered or motion completes.
     system_set_exec_state_flag(EXEC_CYCLE_START);

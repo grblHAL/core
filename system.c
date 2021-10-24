@@ -240,10 +240,9 @@ PROGMEM static const sys_command_t sys_commands[] = {
 void system_command_help (void)
 {
     hal.stream.write("$I - output system information" ASCII_EOL);
+    hal.stream.write("$I+ - output extended system information" ASCII_EOL);
     hal.stream.write("$<n> - output setting <n> value" ASCII_EOL);
     hal.stream.write("$<n>=<value> - assign <value> to settings <n>" ASCII_EOL);
-    hal.stream.write("$I - output system information" ASCII_EOL);
-    hal.stream.write("$I+ - output extended system information" ASCII_EOL);
     hal.stream.write("$$ - output all setting values" ASCII_EOL);
     hal.stream.write("$+ - output all setting values" ASCII_EOL);
     hal.stream.write("$$=<n> - output setting details for setting <n>" ASCII_EOL);
@@ -259,7 +258,7 @@ void system_command_help (void)
     hal.stream.write("$SLP - enter sleep mode" ASCII_EOL);
     hal.stream.write("$HELP - output help topics" ASCII_EOL);
     hal.stream.write("$HELP <topic> - output help for <topic>" ASCII_EOL);
-    hal.stream.write("$RST=* - restore/reset all" ASCII_EOL);
+    hal.stream.write("$RST=* - restore/reset all settings" ASCII_EOL);
     hal.stream.write("$RST=$ - restore default settings" ASCII_EOL);
     if(settings_get_details()->on_get_settings)
         hal.stream.write("$RST=& - restore driver and plugin default settings" ASCII_EOL);

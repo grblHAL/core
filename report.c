@@ -1249,8 +1249,7 @@ void report_realtime_status (void)
 
         if (override_counter > 0 && !sys.report.overrides)
             override_counter--;
-        else {
-            sys.report.overrides = On;
+        else if((sys.report.overrides = !sys.report.wco)) {
             sys.report.spindle = sys.report.spindle || hal.spindle.get_state().on;
             sys.report.coolant = sys.report.coolant || hal.coolant.get_state().value != 0;
             override_counter = state_get() & (STATE_HOMING|STATE_CYCLE|STATE_HOLD|STATE_JOG|STATE_SAFETY_DOOR)

@@ -1,5 +1,20 @@
 ## grblHAL changelog
 
+Build 2021024:
+
+Core:
+* Moved @ G59.3 probing event call earlier in code, added check for X and Y homed.
+* Minor "bug fix" for real-time report, no longer sends `WCO` and `Ov` elements in the same response.
+
+Plugins:
+* A bit of cleanup in the websocket protocol code.
+* Fixed some miscopied lines in the Trinamic driver from a manual merge of [PR#3](https://github.com/grblHAL/Plugins_motor/pull/3).
+
+Drivers:
+* Added map file for [GRBLHAL2000](https://github.com/Expatria-Technologies/grblhal_2000_PrintNC) board to iMRXT1062 driver \(Teensy 4.1\) From [PR#23](https://github.com/grblHAL/iMXRT1062/pull/23) by @andrewmarles
+
+---
+
 Build 2021019:
 
 Core:

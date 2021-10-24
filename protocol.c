@@ -160,7 +160,7 @@ bool protocol_main_loop (void)
     while(true) {
 
         // Process one line of incoming stream data, as the data becomes available. Performs an
-        // initial filtering by removing spaces and comments and capitalizing all letters.
+        // initial filtering by removing leading spaces and control characters.
         while((c = hal.stream.read()) != SERIAL_NO_DATA) {
 
             if(c == ASCII_CAN) {
