@@ -2569,7 +2569,7 @@ status_code_t gc_execute_block(char *block)
                 break;
 
             case 66:
-                sys.var5933 = hal.port.wait_on_input(gc_block.output_command.is_digital, gc_block.output_command.port, (wait_mode_t)gc_block.values.l, gc_block.values.q);
+                sys.var5399 = hal.port.wait_on_input(gc_block.output_command.is_digital, gc_block.output_command.port, (wait_mode_t)gc_block.values.l, gc_block.values.q);
                 sys.report.m66result = On;
                 break;
 

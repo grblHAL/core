@@ -191,7 +191,7 @@ for handing feed-holds, overrides, soft resets etc.
 
 \param disable \a true to disable stream, \a false to enable,
 */
-typedef bool (*disable_stream_ptr)(bool disable);
+typedef bool (*disable_rx_stream_ptr)(bool disable);
 
 //! Properties and handlers for stream I/O
 typedef struct {
@@ -208,7 +208,7 @@ typedef struct {
     set_enqueue_rt_handler_ptr set_enqueue_rt_handler;      //!< Handler for setting the enqueue realtime command character handler.
     suspend_read_ptr suspend_read;                          //!< Optional handler for saving away and restoring the current input buffer.
     stream_write_n_ptr write_n;                             //!< Optional handler for writing n characters to current output stream only. Required for Modbus support.
-    disable_stream_ptr disable;                             //!< Optional handler for disabling/enabling a stream. Recommended?
+    disable_rx_stream_ptr disable_rx;                       //!< Optional handler for disabling/enabling a stream. Recommended?
     get_stream_buffer_count_ptr get_rx_buffer_count;        //!< Optional handler for getting number of characters in the input buffer.
     get_stream_buffer_count_ptr get_tx_buffer_count;        //!< Optional handler for getting number of characters in the output buffer(s). Count shall include any unsent characters in any transmit FIFO and/or transmit register. Required for Modbus support.
     flush_stream_buffer_ptr reset_write_buffer;             //!< Optional handler for flushing the output buffer. Any transmit FIFO shall be flushed as well. Required for Modbus support.

@@ -119,6 +119,13 @@
 #ifndef SPINDLE_HUANYANG
 #define SPINDLE_HUANYANG    0
 #endif
+#ifndef MODBUS_ENABLE
+#if SPINDLE_HUANYANG
+#define MODBUS_ENABLE       1
+#else
+#define MODBUS_ENABLE       0
+#endif
+#endif
 #ifndef QEI_ENABLE
 #define QEI_ENABLE          0
 #endif

@@ -113,9 +113,9 @@ ISR_CODE bool stream_enable_mpg (const io_stream_t *mpg_stream, bool mpg_mode)
     if(mpg_mode) {
         if(org_stream.type == StreamType_Redirected) {
             memcpy(&org_stream, &hal.stream, sizeof(io_stream_t));
-            if(hal.stream.disable)
-                hal.stream.disable(true);
-            mpg_stream->disable(false);
+            if(hal.stream.disable_rx)
+                hal.stream.disable_rx(true);
+            mpg_stream->disable_rx(false);
             mpg_stream->set_enqueue_rt_handler(org_stream.set_enqueue_rt_handler(NULL));
             hal.stream.read = mpg_stream->read;
             hal.stream.get_rx_buffer_free = mpg_stream->get_rx_buffer_free;
@@ -123,11 +123,11 @@ ISR_CODE bool stream_enable_mpg (const io_stream_t *mpg_stream, bool mpg_mode)
             hal.stream.reset_read_buffer = mpg_stream->reset_read_buffer;
         }
     } else if(org_stream.type != StreamType_Redirected) {
-        mpg_stream->disable(true);
+        mpg_stream->disable_rx(true);
         memcpy(&hal.stream, &org_stream, sizeof(io_stream_t));
         org_stream.type = StreamType_Redirected;
-        if(hal.stream.disable)
-            hal.stream.disable(false);
+        if(hal.stream.disable_rx)
+            hal.stream.disable_rx(false);
     }
 
     hal.stream.reset_read_buffer();

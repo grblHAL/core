@@ -236,7 +236,7 @@ typedef struct system {
     volatile rt_exec_t rt_exec_state;       //!< Realtime executor bitflag variable for state management. See EXEC bitmasks.
     volatile uint_fast16_t rt_exec_alarm;   //!< Realtime executor bitflag variable for setting various alarms.
     float spindle_rpm;                      //!< Current spindle RPM
-    int32_t var5933;                        //!< Last result from M66 - wait on input
+    int32_t var5399;                        //!< Last result from M66 - wait on input
 #ifdef PID_LOG
     pid_data_t pid_log;
 #endif

@@ -116,7 +116,7 @@ typedef bool (*analog_out_ptr)(uint8_t port, float value);
 
 /*! \brief Pointer to function for reading a digital or analog input.
 
-__NOTE:__ The latest value read is stored in \ref #sys  \ref #sys#var5933.
+__NOTE:__ The latest value read is stored in \ref #sys  \ref #sys#var5399.
 
 \param digital true if port is digital, false if analog.
 \param port port number.

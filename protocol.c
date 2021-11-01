@@ -714,7 +714,7 @@ ISR_CODE bool protocol_enqueue_realtime_command (char c)
                 bool tlo = sys.report.tool_offset;
                 sys.report.value = (uint32_t)-1;
                 sys.report.tool_offset = tlo;
-                sys.report.m66result = sys.var5933 > -2;
+                sys.report.m66result = sys.var5399 > -2;
             }
             // no break
 

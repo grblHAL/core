@@ -111,7 +111,7 @@ static float home_pos (ngc_param_id_t id)
 */
 static float m66_result (ngc_param_id_t id)
 {
-    return (float)sys.var5933;
+    return (float)sys.var5399;
 }
 
 static float tool_number (ngc_param_id_t id)
