@@ -1,5 +1,18 @@
 ## grblHAL changelog
 
+Build 2021029:
+
+Core:
+* Fixed variable name typo.
+* Renamed hal.stream.disable to hal.stream.disable_rx to better reflect function.
+
+Plugins:
+* Spindle plugin modified to support multiple Modbus clients.
+
+Drivers:
+* Updated for HAL function pointer rename, multiple Modbus clients where relevant.
+* Added support for using UART8 as serial port in iMXRT1062 driver.
+
 Build 2021024:
 
 Core:
