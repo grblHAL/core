@@ -78,7 +78,7 @@ typedef enum {
     SpindleData_AngularPosition //!< 2
 } spindle_data_request_t;
 
-void spindle_set_override (uint_fast8_t speed_override);
+void spindle_set_override (int_fast16_t speed_override);
 
 // Called by g-code parser when setting spindle state and requires a buffer sync.
 // Immediately sets spindle running state with direction and spindle RPM, if enabled.

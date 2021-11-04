@@ -144,6 +144,6 @@ uint_fast16_t plan_get_block_buffer_available();
 // Returns the status of the block ring buffer. True, if buffer is full.
 bool plan_check_full_buffer();
 
-void plan_feed_override (uint_fast8_t feed_override, uint_fast8_t rapid_override);
+void plan_feed_override (int_fast16_t feed_override, int_fast16_t rapid_override);
 
 #endif

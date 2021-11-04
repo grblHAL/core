@@ -29,7 +29,7 @@
 
 // Set spindle speed override
 // NOTE: Unlike motion overrides, spindle overrides do not require a planner reinitialization.
-void spindle_set_override (uint_fast8_t speed_override)
+void spindle_set_override (int_fast16_t speed_override)
 {
     if(sys.override.control.spindle_rpm_disable)
         return;

@@ -565,7 +565,7 @@ void plan_cycle_reinitialize ()
 }
 
 // Set feed overrides
-void plan_feed_override (uint_fast8_t feed_override, uint_fast8_t rapid_override)
+void plan_feed_override (int_fast16_t feed_override, int_fast16_t rapid_override)
 {
     if(sys.override.control.feed_rate_disable)
         return;
