@@ -34,7 +34,7 @@ void spindle_set_override (uint_fast8_t speed_override)
     if(sys.override.control.spindle_rpm_disable)
         return;
 
-    speed_override = max(min(speed_override, MAX_SPINDLE_RPM_OVERRIDE), MIN_SPINDLE_RPM_OVERRIDE);
+    speed_override = constrain(speed_override, MIN_SPINDLE_RPM_OVERRIDE, MAX_SPINDLE_RPM_OVERRIDE);
 
     if ((uint8_t)speed_override != sys.override.spindle_rpm) {
         sys.override.spindle_rpm = (uint8_t)speed_override;

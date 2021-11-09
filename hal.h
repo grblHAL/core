@@ -170,6 +170,23 @@ typedef struct {
     ioport_register_interrupt_handler_ptr register_interrupt_handler;
 } io_port_t;
 
+/*! \brief Pointer to function for registering information about a peripheral pin.
+\param pin as periph_pin_t struct containing pin information.
+*/
+typedef void (*register_periph_pin_ptr)(const periph_pin_t *pin);
+
+/*! \brief Pointer to function for setting pin description for a peripheral pin.
+\param function as #pin_function_t enum.
+\param group as #pin_group_t enum.
+\param s pointer to null terminated description string.
+*/
+typedef void (*set_periph_pin_description_ptr)(const pin_function_t function, const pin_group_t group, const char *description);
+
+typedef struct {
+    register_periph_pin_ptr register_pin;               //!< Opional handler for registering information about a peripheral pin (with the driver).
+    set_periph_pin_description_ptr set_pin_description; //!< Optional handler for setting a description of a peripheral pin.
+} periph_port_t;
+
 /*! \brief Pointer to callback function for pin enumerations.
 \param pin pointer to the \a xbar_t structure holding the pin information.
 */
@@ -610,6 +627,13 @@ typedef struct {
     encoder_reset_ptr reset;                    //!< Optional handler for resetting data for an encoder.
 } encoder_ptrs_t;
 
+/*! \brief Pointer to function for claiming higher level interrupt requests (irq).
+\param irq irq type as a #irq_type_t enum value.
+\param id irq id, normally 0, > 0 if there are several sources for the same irq type.
+\param callback function as a \a irq_callback_ptr function pointer.
+*/
+typedef bool (*irq_claim_ptr)(irq_type_t irq, uint_fast8_t id, irq_callback_ptr callback);
+
 /*! \brief HAL structure used for the driver interface.
 
 This structure contains properties and function pointers (to handlers) that the core uses to communicate with the driver.
@@ -674,6 +698,9 @@ typedef struct {
     //! \brief Optional handler to enable global interrupts.
     void (*irq_disable)(void);
 
+    //! \brief Optional handler for claiming higher level interrupts. Set to a dummy handler on startup.
+    irq_claim_ptr irq_claim;
+
     limits_ptrs_t limits;                   //!< Handlers for limit switches.
     homing_ptrs_t homing;                   //!< Handlers for limit switches, used by homing cycle.
     control_signals_ptrs_t control;         //!< Handlers for control switches.
@@ -686,6 +713,7 @@ typedef struct {
     probe_ptrs_t probe;                     //!< Optional handlers for probe input(s).
     tool_ptrs_t tool;                       //!< Optional handlers for tool changes.
     io_port_t port;                         //!< Optional handlers for axuillary I/O (adds support for M62-M66).
+    periph_port_t periph_port;              //!< Optional handlers for peripheral pin registration.
     driver_reset_ptr driver_reset;          //!< Optional handler, called on soft resets. Set to a dummy handler by the core at startup.
     nvs_io_t nvs;                           //!< Optional handlers for storing/retrieving settings and data to/from non-volatile storage (NVS).
     enumerate_pins_ptr enumerate_pins;      //!< Optional handler for enumerating pins used by the driver.

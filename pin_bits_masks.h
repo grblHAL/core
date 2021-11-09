@@ -94,8 +94,8 @@
 #define PROBE_BIT               (1<<PROBE_PIN)
 #endif
 
-#if defined(KEYPAD_STROBE_PIN) && !defined(KEYPAD_STROBE_BIT)
-#define KEYPAD_STROBE_BIT       (1<<KEYPAD_STROBE_PIN)
+#if defined(I2C_STROBE_PIN) && !defined(I2C_STROBE_BIT)
+#define I2C_STROBE_BIT          (1<<I2C_STROBE_PIN)
 #endif
 
 #ifndef AUXINPUT_MASK

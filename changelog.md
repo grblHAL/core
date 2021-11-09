@@ -1,6 +1,26 @@
 ## grblHAL changelog
 
-Build 2021029:
+Build 20211108:
+
+Core:
+* Renamed default hostnames/device names from _Grbl_ to _grblHAL_.
+* Added early application of constraints for feedrate and spindle RPM overrides to avoid variable under/overflow. From PR#83.
+* Added higher level \(than generic GPIO\) interrupt handler registration to HAL.
+* Added optional MCU peripheral \(other than GPIO\) pin registration to HAL. For `$pins` report.
+* Added region for [third party plugin](https://github.com/grblHAL/plugins#i-have-written-a-plugin-and-i-want-to-make-it-available-to-grblhal-users) init functions to _plugins_init.h_.
+
+Plugins:
+* Modified keypad plugin to claim strobe interrupt only when using I2C, added `KEYPAD_ENABLE 2` option to _my_machine.h_ to not claim it.
+* Fixed botched include in Bluetooth plugin, added pin description to claimed UART pins.
+* Made Modbus plugin configuration symbols settable from compiler command line, added pin description to claimed UART pins.
+
+Drivers:
+* Updated most to provide peripheral pin info to `$pins` report.
+* Some bug fixes.
+
+---
+
+Build 20211029:
 
 Core:
 * Fixed variable name typo.
@@ -13,7 +33,9 @@ Drivers:
 * Updated for HAL function pointer rename, multiple Modbus clients where relevant.
 * Added support for using UART8 as serial port in iMXRT1062 driver.
 
-Build 2021024:
+---
+
+Build 20211024:
 
 Core:
 * Moved @ G59.3 probing event call earlier in code, added check for X and Y homed.
@@ -28,7 +50,7 @@ Drivers:
 
 ---
 
-Build 2021019:
+Build 20211019:
 
 Core:
 * Some minor changes to better support Trinamic drivers, probing and drivers/boards with limited number of control inputs \(cycle start, feed hold, ...\).
@@ -46,7 +68,7 @@ Templates:
 
 ---
 
-Build 2021015:
+Build 20211015:
 
 Core:
 * Improved `grbl.on_probe_fixture` event signature by adding pointer to the pending tool when fired when M6 is executing \(NULL if not\) and a flag indicating that the current XY-position is within 5mm of G59.3.
@@ -61,7 +83,7 @@ Templates:
 
 ---
 
-Build 2021010:
+Build 20211010:
 
 Core:
 * Added enum and associated get function for system defined named parameters.

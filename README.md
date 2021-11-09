@@ -11,7 +11,7 @@ It has been written to complement grblHAL and has features such as proper keyboa
 
 ---
 
-Latest build date is 20211029, see the [changelog](changelog.md) for details.  
+Latest build date is 20211109, see the [changelog](changelog.md) for details.  
 __NOTE:__ Drivers built with more than three axes configured \(`N_AXIS` > `3`\) will force a settings reset when upgraded. Backup and restore of settings is recommended for these.
 
 ---

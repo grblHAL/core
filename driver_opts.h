@@ -84,6 +84,15 @@
 #ifndef KEYPAD_ENABLE
 #define KEYPAD_ENABLE       0
 #endif
+#if KEYPAD_ENABLE == 1
+#ifdef I2C_STROBE_ENABLE
+#undef I2C_STROBE_ENABLE
+#endif
+#define I2C_STROBE_ENABLE   1
+#endif
+#ifndef I2C_STROBE_ENABLE
+#define I2C_STROBE_ENABLE   0
+#endif
 #ifndef EEPROM_ENABLE
 #define EEPROM_ENABLE       0
 #endif
@@ -132,9 +141,6 @@
 #ifndef ODOMETER_ENABLE
 #define ODOMETER_ENABLE     0
 #endif
-#ifndef BLUETOOTH_ENABLE
-#define BLUETOOTH_ENABLE    0
-#endif
 #ifndef OPENPNP_ENABLE
 #define OPENPNP_ENABLE      0
 #endif
@@ -144,6 +150,19 @@
 #ifndef LIMITS_OVERRIDE_ENABLE
 #define LIMITS_OVERRIDE_ENABLE  0
 #endif
+
+#ifndef BLUETOOTH_ENABLE
+#define BLUETOOTH_ENABLE    0
+#endif
+#if BLUETOOTH_ENABLE
+#ifndef BLUETOOTH_DEVICE
+#define BLUETOOTH_DEVICE    "grblHAL"
+#endif
+#ifndef BLUETOOTH_SERVICE
+#define BLUETOOTH_SERVICE   "grblHAL Serial Port" // Minimum 8 characters, or blank for open
+#endif
+#endif
+
 
 #ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
 #define SAFETY_DOOR_ENABLE 1
@@ -218,7 +237,7 @@
 
 #if ETHERNET_ENABLE
 #ifndef NETWORK_HOSTNAME
-#define NETWORK_HOSTNAME        "GRBL"
+#define NETWORK_HOSTNAME        "grblHAL"
 #endif
 #ifndef NETWORK_IPMODE
 #define NETWORK_IPMODE          1 // 0 = static, 1 = DHCP, 2 = AutoIP

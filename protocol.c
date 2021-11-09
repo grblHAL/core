@@ -514,7 +514,8 @@ bool protocol_exec_rt_system (void)
 
         if((rt_exec = get_feed_override())) {
 
-            uint_fast8_t new_f_override = sys.override.feed_rate, new_r_override = sys.override.rapid_rate;
+            int_fast16_t new_f_override = sys.override.feed_rate;
+            uint_fast8_t new_r_override = sys.override.rapid_rate;
 
             do {
 
@@ -551,17 +552,19 @@ bool protocol_exec_rt_system (void)
                     case CMD_OVERRIDE_RAPID_LOW:
                         new_r_override = RAPID_OVERRIDE_LOW;
                         break;
-                  }
+                }
+
+                new_f_override = constrain(new_f_override, MIN_FEED_RATE_OVERRIDE, MAX_FEED_RATE_OVERRIDE);
 
             } while((rt_exec = get_feed_override()));
 
-            plan_feed_override(new_f_override, new_r_override);
+            plan_feed_override((uint_fast8_t)new_f_override, new_r_override);
         }
 
         if((rt_exec = get_accessory_override())) {
 
             bool spindle_stop = false;
-            uint_fast8_t last_s_override = sys.override.spindle_rpm;
+            int_fast16_t last_s_override = sys.override.spindle_rpm;
             coolant_state_t coolant_state = gc_state.modal.coolant;
 
             do {
@@ -610,9 +613,11 @@ bool protocol_exec_rt_system (void)
                         break;
                 }
 
+                last_s_override = constrain(last_s_override, MIN_SPINDLE_RPM_OVERRIDE, MAX_SPINDLE_RPM_OVERRIDE);
+
             } while((rt_exec = get_accessory_override()));
 
-            spindle_set_override(last_s_override);
+            spindle_set_override((uint_fast8_t)last_s_override);
 
           // NOTE: Since coolant state always performs a planner sync whenever it changes, the current
           // run state can be determined by checking the parser state.

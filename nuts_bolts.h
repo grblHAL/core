@@ -156,21 +156,24 @@ typedef enum {
 #define STRLEN_COORDVALUE (MAX_INT_DIGITS + N_DECIMAL_COORDVALUE_INCH + 1) // 8.4 format - excluding terminating null
 
 // Useful macros
-#define clear_vector(a) memset(a, 0, sizeof(a))
 #ifndef max
 #define max(a,b) (((a) > (b)) ? (a) : (b))
 #endif
 #ifndef min
 #define min(a,b) (((a) < (b)) ? (a) : (b))
 #endif
-#define isequal_position_vector(a,b) !memcmp(a, b, sizeof(coord_data_t))
+#ifndef constrain
+#define constrain(val, min, max) ((val) < (min) ? (min) : ((val) > (max) ? (max) : (val)))
+#endif
+#define clear_vector(a) memset(a, 0, sizeof(a))
+#define isequal_position_vector(a, b) !memcmp(a, b, sizeof(coord_data_t))
 
 // Bit field and masking macros
 #ifndef bit
 #define bit(n) (1UL << n)
 #endif
-#define bit_true(x,mask) (x) |= (mask)
-#define bit_false(x,mask) (x) &= ~(mask)
+#define bit_true(x, mask) (x) |= (mask)
+#define bit_false(x, mask) (x) &= ~(mask)
 #define BIT_SET(x, bit, v) { if (v) { x |= (bit); } else { x &= ~(bit); } }
 
 #define bit_istrue(x, mask) ((x & (mask)) != 0)

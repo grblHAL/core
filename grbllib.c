@@ -85,6 +85,11 @@ void dummy_bool_handler (bool arg)
     // NOOP
 }
 
+static bool dummy_irq_claim (irq_type_t irq, uint_fast8_t id, irq_callback_ptr callback)
+{
+    return false;
+}
+
 // main entry point
 
 int grbl_enter (void)
@@ -108,6 +113,7 @@ int grbl_enter (void)
     hal.driver_reset = dummy_handler;
     hal.irq_enable = dummy_handler;
     hal.irq_disable = dummy_handler;
+    hal.irq_claim = dummy_irq_claim;
     hal.nvs.size = GRBL_NVS_SIZE;
     hal.limits.interrupt_callback = limit_interrupt_handler;
     hal.control.interrupt_callback = control_interrupt_handler;

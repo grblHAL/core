@@ -52,7 +52,8 @@ typedef enum {
     Input_LimitV_Max,
     Input_MISO,
     Input_RX,
-    Input_KeypadStrobe,
+    Input_KeypadStrobe, // To be deprecated?
+    Input_I2CStrobe,
     Input_QEI_A,
     Input_QEI_B,
     Input_QEI_Select,
@@ -171,6 +172,7 @@ PROGMEM static const pin_name_t pin_names[] = {
    { .function = Input_MISO,             .name = "MISO" },
    { .function = Input_RX,               .name = "RX" },
    { .function = Input_KeypadStrobe,     .name = "Keypad strobe" },
+   { .function = Input_I2CStrobe,        .name = "I2C strobe" },
    { .function = Input_QEI_A,            .name = "QEI A" },
    { .function = Input_QEI_B,            .name = "QEI B" },
    { .function = Input_QEI_Select,       .name = "QEI select" },
@@ -285,6 +287,18 @@ typedef enum {
 } pin_irq_mode_t;
 
 typedef enum {
+    IRQ_I2C_Strobe = 0
+} irq_type_t;
+
+typedef bool (*irq_callback_ptr)(uint_fast8_t id, bool level);
+
+typedef struct driver_irq_handler {
+    irq_type_t type;
+    irq_callback_ptr callback;
+    struct driver_irq_handler *next;
+} driver_irq_handler_t;
+
+typedef enum {
     PullMode_None    = 0b00,
     PullMode_Up      = 0b01,
     PullMode_Down    = 0b10
@@ -334,5 +348,19 @@ typedef struct {
     xbar_set_value_ptr set_value;
     xbar_event_ptr on_event;
 } xbar_t;
+
+typedef struct {
+    pin_function_t function;
+    pin_group_t group;
+    void *port;
+    uint_fast8_t pin;
+    pin_mode_t mode;
+    const char *description;
+} periph_pin_t;
+
+typedef struct periph_signal {
+    periph_pin_t pin;
+    struct periph_signal *next;
+} periph_signal_t;
 
 #endif

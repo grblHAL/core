@@ -196,6 +196,7 @@ typedef bool (*disable_rx_stream_ptr)(bool disable);
 //! Properties and handlers for stream I/O
 typedef struct {
     stream_type_t type;                                     //!< Type of stream.
+    uint8_t instance;                                       //!< Instance of stream type, starts from 0.
     bool connected;                                         //!< Set to true by the driver if stream is connected. _Optional._ Under consideration.
     get_stream_buffer_count_ptr get_rx_buffer_free;         //!< Handler for getting number of free characters in the input buffer.
     stream_write_ptr write;                                 //!< Handler for writing string to current output stream only.

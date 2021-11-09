@@ -55,6 +55,23 @@
 
     my_plugin_init();
 
+// Third party plugin definitions.
+// The code for these has to be downloaded from the source and placed in the same folder as driver.c
+// Note: Third party plugins may have more than one implementation, there is no "owner" of plugins listed here.
+//       It is also guaranteed that there will be no implementation in the grblHAL repository of these.
+
+#if PROBE_RELAY_ENABLE
+    extern void probe_relay_init (void);
+    probe_relay_init();
+#endif
+
+#if STATUS_LIGHT_ENABLE
+    extern void status_light_init (void);
+    status_light_init();
+#endif
+
+// End third party plugin definitions.
+
 #if ODOMETER_ENABLE
     extern void odometer_init (void);
     odometer_init(); // NOTE: this *must* be last plugin to be initialized as it claims storage at the end of NVS.

@@ -108,7 +108,7 @@ typedef enum {
 
 typedef struct {
     status_code_t id;
-    const char *name;
+    const char *xname;
     const char *description;
 } status_detail_t;
 

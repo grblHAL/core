@@ -570,7 +570,7 @@ void plan_feed_override (uint_fast8_t feed_override, uint_fast8_t rapid_override
     if(sys.override.control.feed_rate_disable)
         return;
 
-    feed_override = max(min(feed_override, MAX_FEED_RATE_OVERRIDE), MIN_FEED_RATE_OVERRIDE);
+    feed_override = constrain(feed_override, MIN_FEED_RATE_OVERRIDE, MAX_FEED_RATE_OVERRIDE);
 
     if ((feed_override != sys.override.feed_rate) || (rapid_override != sys.override.rapid_rate)) {
       sys.override.feed_rate = (uint8_t)feed_override;

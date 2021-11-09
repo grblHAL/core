@@ -358,12 +358,12 @@ static bool report_group_settings (const setting_group_detail_t *groups, const u
 {
     bool found = false;
     uint_fast8_t idx;
-    char c, *s, group[25];
+    char c, *s, group[26];
 
     for(idx = 0; idx < n_groups; idx++) {
 
         s = group;
-        strncpy(group, groups[idx].name, sizeof(group));
+        strncpy(group, groups[idx].name, sizeof(group) - 1);
 
         // Uppercase group name
         while((c = *s))
@@ -1846,14 +1846,15 @@ status_code_t report_alarm_details (bool grbl_format)
 
             if(grbl_format) {
                 write_quoted(uitoa(list->alarms[idx].id), ",");
-                write_quoted(list->alarms[idx].name, ",");
+                write_quoted("N/A", ",");
+//                write_quoted(list->alarms[idx].name, ",");
                 write_quoted(list->alarms[idx].description ? list->alarms[idx].description : "", NULL);
                 hal.stream.write(ASCII_EOL);
             } else {
                 hal.stream.write("[ALARMCODE:");
                 hal.stream.write(uitoa(list->alarms[idx].id));
                 hal.stream.write(vbar);
-                hal.stream.write(list->alarms[idx].name);
+//                hal.stream.write(list->alarms[idx].name);
                 hal.stream.write(vbar);
                 if(list->alarms[idx].description)
                     hal.stream.write(list->alarms[idx].description);
@@ -1882,14 +1883,15 @@ status_code_t report_error_details (bool grbl_format)
 
             if(grbl_format) {
                 write_quoted(uitoa(list->errors[idx].id), ",");
-                write_quoted(list->errors[idx].name, ",");
+                write_quoted("N/A", ",");
+//                write_quoted(list->errors[idx].name, ",");
                 write_quoted(list->errors[idx].description ? list->errors[idx].description : "", NULL);
                 hal.stream.write(ASCII_EOL);
             } else {
                 hal.stream.write("[ERRORCODE:");
                 hal.stream.write(uitoa(list->errors[idx].id));
                 hal.stream.write(vbar);
-                hal.stream.write(list->errors[idx].name);
+//                hal.stream.write(list->errors[idx].name);
                 hal.stream.write(vbar);
                 if(list->errors[idx].description)
                     hal.stream.write(list->errors[idx].description);
