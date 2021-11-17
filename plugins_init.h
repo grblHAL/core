@@ -28,6 +28,11 @@
     trinamic_init();
 #endif
 
+#if HUANYANG_ENABLE
+    extern void huanyang_init (void);
+    huanyang_init();
+#endif
+
 #if KEYPAD_ENABLE
     extern bool keypad_init (void);
     keypad_init();
@@ -48,6 +53,9 @@
     openpnp_init();
 #endif
 
+// ESP32 has its own webui_init and crashes at runtime if the weak my_plugin_init() is called...
+#ifndef GRBL_ESP32
+
 #if WEBUI_ENABLE
     extern void webui_init (void);
     webui_init();
@@ -55,10 +63,17 @@
 
     my_plugin_init();
 
+#endif
+
 // Third party plugin definitions.
 // The code for these has to be downloaded from the source and placed in the same folder as driver.c
 // Note: Third party plugins may have more than one implementation, there is no "owner" of plugins listed here.
 //       It is also guaranteed that there will be no implementation in the grblHAL repository of these.
+
+#if ATC_ENABLE
+    extern void atc_init (void);
+    atc_init();
+#endif
 
 #if PROBE_RELAY_ENABLE
     extern void probe_relay_init (void);

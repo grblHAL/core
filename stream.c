@@ -1,5 +1,5 @@
 /*
-  stream.h - stream RX handling for tool change protocol
+  stream.c - stream RX handling for tool change protocol
 
   Part of grblHAL
 

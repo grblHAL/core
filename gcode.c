@@ -1771,7 +1771,7 @@ status_code_t gc_execute_block(char *block)
                         FAIL(Status_GcodeUnsupportedCoordSys); // [Greater than N sys]
                     // Determine coordinate system to change and try to load from non-volatile storage.
                     gc_block.values.coord_data.id = p_value == 0
-                                                     ? gc_block.modal.coord_system.id      // Index P0 as the active coordinate system
+                                                     ? gc_block.modal.coord_system.id       // Index P0 as the active coordinate system
                                                      : (coord_system_id_t)(p_value - 1);    // else adjust index to NVS coordinate data indexing.
 
                     if (!settings_read_coord_data(gc_block.values.coord_data.id, &gc_block.values.coord_data.xyz))
@@ -1924,7 +1924,7 @@ status_code_t gc_execute_block(char *block)
 
         // [G80 Errors]: Axis word are programmed while G80 is active.
         // NOTE: Even non-modal commands or TLO that use axis words will throw this strict error.
-        if (axis_words.mask) // [No axis words allowed]
+        if (axis_words.mask && axis_command != AxisCommand_NonModal) // [No axis words allowed]
             FAIL(Status_GcodeAxisWordsExist);
 
         gc_block.modal.retract_mode = CCRetractMode_Previous;

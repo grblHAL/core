@@ -844,7 +844,9 @@ void report_execute_startup_message (char *line, status_code_t status_code)
 // Prints build info line
 void report_build_info (char *line, bool extended)
 {
-    hal.stream.write("[VER:" GRBL_VERSION "." GRBL_VERSION_BUILD ":");
+    hal.stream.write("[VER:" GRBL_VERSION ".");
+    hal.stream.write(uitoa(GRBL_BUILD));
+    hal.stream.write(":");
     hal.stream.write(line);
     hal.stream.write("]" ASCII_EOL);
 

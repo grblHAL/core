@@ -125,16 +125,27 @@
 #ifndef PPI_ENABLE
 #define PPI_ENABLE          0
 #endif
-#ifndef SPINDLE_HUANYANG
-#define SPINDLE_HUANYANG    0
+
+#ifndef HUANYANG_ENABLE
+#define HUANYANG_ENABLE     0
+#else
+#ifndef VFD_SPINDLE
+#define VFD_SPINDLE         1
 #endif
+#endif
+
+#ifndef VFD_SPINDLE
+#define VFD_SPINDLE         0
+#endif
+
 #ifndef MODBUS_ENABLE
-#if SPINDLE_HUANYANG
+#if HUANYANG_ENABLE
 #define MODBUS_ENABLE       1
 #else
 #define MODBUS_ENABLE       0
 #endif
 #endif
+
 #ifndef QEI_ENABLE
 #define QEI_ENABLE          0
 #endif

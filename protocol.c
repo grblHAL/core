@@ -142,6 +142,7 @@ bool protocol_main_loop (void)
         hal.coolant.set_state((coolant_state_t){0});
         if(realtime_queue.head != realtime_queue.tail)
             system_set_exec_state_flag(EXEC_RT_COMMAND);  // execute any boot up commands
+        sys.cold_start = false;
     } else
         memset(&realtime_queue, 0, sizeof(realtime_queue_t));
 

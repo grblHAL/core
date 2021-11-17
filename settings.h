@@ -319,7 +319,7 @@ typedef union {
                  legacy_rt_commands              :1,
                  restore_after_feed_hold         :1,
                  keep_coolant_state_on_door_open :1,
-                 g92_is_volatile               :1,
+                 g92_is_volatile                 :1,
                  unassigned                      :6;
     };
 } settingflags_t;

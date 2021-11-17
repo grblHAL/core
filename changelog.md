@@ -1,5 +1,29 @@
 ## grblHAL changelog
 
+Build 20211117:
+
+Core:
+
+* Enhanced [ioports API](http://svn.io-engineering.com/grblHAL/html/ioports_8h.html) with new calls for claiming ports and swapping pin to port mappings.
+* Fixed bug #87 where executing G28/G30 with explicit motion when a motion mode was not active \(following a G80\) raised error 31.
+* Replaced string symbol `GRBL_VERSION_BUILD` with numeric symbol `GRBL_BUILD`.  
+The new symbol can be used by plugin code to check for functionality.
+
+Plugins:
+
+* Updated Bluetooth plugin for enhanced ioports API, bug fix.
+* Updated Spindle plugin for dual spindle support, merged PR#4.
+* Updated some to use the new `GRBL_BUILD` symbol.
+
+Drivers:
+
+* Updated many for define symbol changes (harmonization) and enhanced ioports API.
+* iMRXT1062 \(Teensy 4\): Fixed bugs, one was a typo and one slowed down max USB streaming rate.
+* RP2040 \(Pi Pico\): Added  support for SD card and ioports API for aux output pins on Pico CNC board.
+* STM32F3xx: Fixed typo and some compiler warnings.
+
+---
+
 Build 20211108:
 
 Core:
@@ -15,7 +39,7 @@ Plugins:
 * Made Modbus plugin configuration symbols settable from compiler command line, added pin description to claimed UART pins.
 
 Drivers:
-* Updated most to provide peripheral pin info to `$pins` report.
+* Updated to provide peripheral pin info to `$pins` report.
 * Some bug fixes.
 
 ---

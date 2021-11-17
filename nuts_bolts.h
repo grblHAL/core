@@ -51,7 +51,7 @@
 #define CAPS(c) ((c >= 'a' && c <= 'z') ? (c & 0x5F) : c)
 #define LCAPS(c) ((c >= 'A' && c <= 'Z') ? (c | 0x20) : c)
 
-#ifndef STM32F103xB
+#if !(defined(STM32F103xB) || defined(STM32F303xC))
 #ifndef UNUSED
 #define UNUSED(x) (void)(x)
 #endif

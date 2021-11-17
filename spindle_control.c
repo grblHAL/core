@@ -76,10 +76,12 @@ bool spindle_set_state (spindle_state_t state, float rpm)
 // if an abort or check-mode is active.
 bool spindle_sync (spindle_state_t state, float rpm)
 {
-    bool ok = true;
-    bool at_speed = state_get() == STATE_CHECK_MODE || !state.on || !hal.driver_cap.spindle_at_speed || settings.spindle.at_speed_tolerance <= 0.0f;
+    bool ok;
 
-    if (state_get() != STATE_CHECK_MODE) {
+    if (!(ok = state_get() == STATE_CHECK_MODE)) {
+
+        bool at_speed = !state.on || !hal.driver_cap.spindle_at_speed || settings.spindle.at_speed_tolerance <= 0.0f;
+
         // Empty planner buffer to ensure spindle is set when programmed.
         if((ok = protocol_buffer_synchronize()) && spindle_set_state(state, rpm) && !at_speed) {
             float delay = 0.0f;
@@ -94,9 +96,11 @@ bool spindle_sync (spindle_state_t state, float rpm)
                 }
             }
         }
+
+        ok &= at_speed;
     }
 
-    return ok && at_speed;
+    return ok;
 }
 
 // Restore spindle running state with direction, enable, spindle RPM and appropriate delay.

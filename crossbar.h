@@ -281,6 +281,7 @@ typedef enum {
     IRQ_Mode_Rising  = 0b00001, //!< 0b00001 (0x01)
     IRQ_Mode_Falling = 0b00010, //!< 0b00010 (0x02)
     IRQ_Mode_Change  = 0b00100, //!< 0b00100 (0x04)
+    IRQ_Mode_Edges   = 0b00111, //!< 0b00111 (0x07) - only used to report port capability.
     IRQ_Mode_High    = 0b01000, //!< 0b01000 (0x08)
     IRQ_Mode_Low     = 0b10000, //!< 0b10000 (0x10)
     IRQ_Mode_All     = 0b11111  //!< 0b11111 (0x1F) - only used to report port capability.
@@ -298,10 +299,12 @@ typedef struct driver_irq_handler {
     struct driver_irq_handler *next;
 } driver_irq_handler_t;
 
+//! Pin pullup and pulldown modes, may be or'ed when reporting pin capability.
 typedef enum {
-    PullMode_None    = 0b00,
-    PullMode_Up      = 0b01,
-    PullMode_Down    = 0b10
+    PullMode_None    = 0b00, //!< 0b00 (0x00)
+    PullMode_Up      = 0b01, //!< 0b01 (0x01)
+    PullMode_Down    = 0b10, //!< 0b10 (0x02)
+    PullMode_UpDown  = 0b11  //!< 0b11 (0x03) - only used to report port capability.
 } pull_mode_t;
 
 #define PINMODE_NONE     (0)
@@ -324,7 +327,8 @@ typedef union {
                  pwm        :1,
                  analog     :1,
                  peripheral :1,
-                 reserved   :2,
+                 claimed    :1,
+                 remapped   :1,
                  can_remap  :1;
     };
 } pin_mode_t;

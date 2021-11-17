@@ -26,6 +26,7 @@ target_sources(grbl INTERFACE
  ${CMAKE_CURRENT_LIST_DIR}/ngc_params.c
  ${CMAKE_CURRENT_LIST_DIR}/ngc_expr.c
  ${CMAKE_CURRENT_LIST_DIR}/regex.c
+ ${CMAKE_CURRENT_LIST_DIR}/ioports.c
 )
 
 target_include_directories(grbl INTERFACE ${CMAKE_CURRENT_LIST_DIR})
