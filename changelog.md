@@ -1,5 +1,34 @@
 ## grblHAL changelog
 
+Build 20211121:
+
+Core:
+
+* Added some data fields to the settings structures and modified a HAL API call signature.  
+Due to this settings and HAL version numbers has been increased to 21 and 9 respectively.  
+__NOTE:__ due to this settings will be reset to default values after an update. Backup and restore!
+* Added `$8` setting for inverting direction signals for the second motor for ganged axes.  
+__NOTE:__ This setting is applied _after_ inversion is performed according to the `$3` setting.  
+__NOTE:__ I have only bench tested this for a couple of drivers, correct function should be verified after updating!
+* Changed default value for `$4` stepper enable setting to invert all axes \(active low\).
+* Added reason code \(flags\) to "Incompatible driver" message, delayed halt so other POS \(Power On Self-test\) messages is not lost.
+* Some bug fixes in new ioports code.
+
+Plugins:
+
+* Updated _Bluetooth_, _Fans_, _Laser coolant_ and _Plasma_ plugins with settings for selecting aux port\(s\) to use.  
+__NOTE:__ Port settings are added under the _Aux ports_ setting group even when the plugin has its own setting group.
+* Updated SD card plugin to support manual tool change on `M6` \(only available if the driver supports it\).
+
+Drivers:
+
+* Updated many for additional features in enhanced ioports API.
+* Updated drivers supporting ganged axes for the new `$8` setting.
+* iMRXT1062 \(Teensy 4\): Added full ioports support for MCP3221 I2C ADC.
+* Some bug/regression fixes.
+
+---
+
 Build 20211117:
 
 Core:
@@ -19,7 +48,7 @@ Drivers:
 
 * Updated many for define symbol changes (harmonization) and enhanced ioports API.
 * iMRXT1062 \(Teensy 4\): Fixed bugs, one was a typo and one slowed down max USB streaming rate.
-* RP2040 \(Pi Pico\): Added  support for SD card and ioports API for aux output pins on Pico CNC board.
+* RP2040 \(Pi Pico\): Added support for SD card and ioports API for aux output pins on Pico CNC board.
 * STM32F3xx: Fixed typo and some compiler warnings.
 
 ---

@@ -107,7 +107,7 @@ ISR_CODE void control_interrupt_handler (control_signals_t signals)
         else {
 #ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
             if (signals.safety_door_ajar) {
-                if(settings.flags.safety_door_ignore_when_idle) {
+                if(settings.safety_door.flags.ignore_when_idle) {
                     // Only stop the spindle (laser off) when idle or jogging,
                     // this to allow positioning the controlled point (spindle) when door is open.
                     // NOTE: at least for lasers there should be an external interlock blocking laser power.
@@ -613,7 +613,7 @@ static status_code_t go_home (sys_state_t state, axes_signals_t axes)
     else if (!(settings.homing.flags.enabled && (sys.homing.mask || settings.homing.flags.single_axis_commands || settings.homing.flags.manual)))
         retval = Status_HomingDisabled;
     // Block if safety door is ajar.
-    else if (control_signals.safety_door_ajar && !settings.flags.safety_door_ignore_when_idle)
+    else if (control_signals.safety_door_ajar && !settings.safety_door.flags.ignore_when_idle)
         retval = Status_CheckDoor;
     // Block if safety reset is active.
     else if(control_signals.reset)
@@ -983,7 +983,7 @@ void system_raise_alarm (alarm_code_t alarm)
     if(sys.alarm != alarm) {
         sys.alarm = alarm;
         state_set(alarm == Alarm_EStop ? STATE_ESTOP : STATE_ALARM);
-        if(sys.driver_started)
+        if(sys.driver_started || sys.alarm == Alarm_SelftestFailed)
             report_alarm_message(alarm);
     }
 }

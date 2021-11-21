@@ -38,7 +38,7 @@ static uint8_t ioports_count (io_port_type_t type, io_port_direction_t dir)
 
     // determine how many ports, including claimed ports, that are available
     do {
-        if((port = hal.port.get_pin_info(type, type, n_ports)))
+        if((port = hal.port.get_pin_info(type, dir, n_ports)))
             n_ports++;
     } while(port != NULL);
 
@@ -88,16 +88,19 @@ bool ioport_claim (io_port_type_t type, io_port_direction_t dir, uint8_t *port, 
 {
     bool ok = false;
     uint8_t n_ports = ioports_available(type, dir);
+    uint8_t base = type == Port_Digital
+                    ? (dir == Port_Input ? Input_Aux0 : Output_Aux0)
+                    : (dir == Port_Input ? Input_Aux0 : Output_Aux0); // TODO add analog ports?
 
-    if(hal.port.claim != 0) {
+    if(hal.port.claim != NULL) {
 
-        xbar_t *portinfo = NULL;
+        xbar_t *portinfo;
 
         if(n_ports > 0) do {
             n_ports--;
             portinfo = hal.port.get_pin_info(type, dir, n_ports);
-            if((ok = portinfo && !portinfo->mode.claimed && (portinfo->function - Output_Aux0) == *port)) {
-                hal.port.claim(type, dir, port, description);
+            if((ok = portinfo && !portinfo->mode.claimed && (portinfo->function - base) == *port)) {
+                ok = hal.port.claim(type, dir, port, description);
                 break;
             }
         } while(n_ports && !ok);

@@ -33,6 +33,10 @@
 #define SQUARING_ENABLED
 #endif
 
+#if N_GANGED
+#define GANGING_ENABLED
+#endif
+
 #if Z_GANGED
 #define Z_DOUBLED N_ABC_MOTORS
 #elif Y_GANGED

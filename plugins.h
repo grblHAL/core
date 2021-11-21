@@ -76,6 +76,7 @@ typedef struct {
     uint16_t telnet_port;
     uint16_t websocket_port;
     uint16_t http_port;
+    uint16_t ftp_port;
     ip_mode_t ip_mode;
     network_services_t services;
 } network_settings_t;

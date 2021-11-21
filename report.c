@@ -921,7 +921,7 @@ void report_build_info (char *line, bool extended)
     if(!settings.status_report.sync_on_wco_change) // NOTE: Shown when disabled.
         *append++ = 'W';
 
-    if(hal.stepper.get_auto_squared)
+    if(hal.stepper.get_ganged)
         *append++ = '2';
 
     *append++ = ',';

@@ -50,9 +50,25 @@
 #include "wall_plotter.h"
 #endif
 
+
+typedef union {
+    uint8_t ok;
+    struct {
+        uint8_t init          :1,
+                setup         :1,
+                spindle       :1,
+                door          :1,
+                amass         :1,
+                pulse_delay   :1,
+                linearization :1,
+                unused        :1;
+    };
+} driver_startup_t;
+
 struct system sys = {0}; //!< System global variable structure.
 grbl_t grbl;
 grbl_hal_t hal;
+static driver_startup_t driver = { .ok = 0xFF };
 
 #ifdef KINEMATICS_API
 
@@ -90,6 +106,18 @@ static bool dummy_irq_claim (irq_type_t irq, uint_fast8_t id, irq_callback_ptr c
     return false;
 }
 
+static void report_driver_error (sys_state_t state)
+{
+    char msg[40];
+
+    driver.ok = ~driver.ok;
+    strcpy(msg, "Fatal: Incompatible driver (");
+    strcat(msg, uitoa(driver.ok));
+    strcat(msg, ")");
+
+    report_message(msg, Message_Plain);
+}
+
 // main entry point
 
 int grbl_enter (void)
@@ -97,7 +125,7 @@ int grbl_enter (void)
     assert(NVS_ADDR_PARAMETERS + N_CoordinateSystems * (sizeof(coord_data_t) + NVS_CRC_BYTES) < NVS_ADDR_STARTUP_BLOCK);
     assert(NVS_ADDR_STARTUP_BLOCK + N_STARTUP_LINE * (sizeof(stored_line_t) + NVS_CRC_BYTES) < NVS_ADDR_BUILD_INFO);
 
-    bool looping = true, driver_ok;
+    bool looping = true;
 
     // Clear all and set some core function pointers
     memset(&grbl, 0, sizeof(grbl_t));
@@ -138,7 +166,7 @@ int grbl_enter (void)
 #ifdef DEBUGOUT
     hal.debug_out = debug_out; // must be overridden by driver to have any effect
 #endif
-    driver_ok = driver_init();
+    driver.init = driver_init();
 
 #if COMPATIBILITY_LEVEL > 0
     hal.stream.suspend_read = NULL;
@@ -147,27 +175,27 @@ int grbl_enter (void)
 #ifndef ENABLE_SAFETY_DOOR_INPUT_PIN
     hal.signals_cap.safety_door_ajar = Off;
 #else
-    driver_ok &= hal.signals_cap.safety_door_ajar;
+    driver.door = hal.signals_cap.safety_door_ajar;
 #endif
 
   #ifdef BUFFER_NVSDATA
     nvs_buffer_init();
   #endif
-    settings_init(); // Load Grbl settings from non-volatile storage
+    settings_init(); // Load settings from non-volatile storage
 
     memset(sys.position, 0, sizeof(sys.position)); // Clear machine position.
 
 // check and configure driver
 
 #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
-    driver_ok = driver_ok && hal.driver_cap.amass_level >= MAX_AMASS_LEVEL;
+    driver.amass = hal.driver_cap.amass_level >= MAX_AMASS_LEVEL;
     hal.driver_cap.amass_level = MAX_AMASS_LEVEL;
 #else
     hal.driver_cap.amass_level = 0;
 #endif
 
 #ifdef DEFAULT_STEP_PULSE_DELAY
-    driver_ok = driver_ok & hal.driver_cap.step_pulse_delay;
+    driver.pulse_delay = hal.driver_cap.step_pulse_delay;
 #endif
 /*
 #if AXIS_N_SETTINGS > 4
@@ -176,19 +204,20 @@ int grbl_enter (void)
 */
     sys.mpg_mode = false;
 
-    driver_ok = driver_ok && hal.driver_setup(&settings);
+    if(driver.ok == 0xFF)
+        driver.setup = hal.driver_setup(&settings);
 
 #ifdef ENABLE_SPINDLE_LINEARIZATION
-    driver_ok = driver_ok && hal.driver_cap.spindle_pwm_linearization;
+    driver.linearization = hal.driver_cap.spindle_pwm_linearization;
 #endif
 
 #ifdef SPINDLE_PWM_DIRECT
-    driver_ok = driver_ok && (!hal.driver_cap.variable_spindle || (hal.spindle.get_pwm != NULL && hal.spindle.update_pwm != NULL));
+    driver.spindle = (!hal.driver_cap.variable_spindle || (hal.spindle.get_pwm != NULL && hal.spindle.update_pwm != NULL));
 #endif
 
-    if(!driver_ok) {
-        hal.stream.write("grblHAL: incompatible driver" ASCII_EOL);
-        while(true);
+    if(driver.ok != 0xFF) {
+        sys.alarm = Alarm_SelftestFailed;
+        protocol_enqueue_rt_command(report_driver_error);
     }
 
     if(hal.get_position)
@@ -202,7 +231,7 @@ int grbl_enter (void)
     wall_plotter_init();
 #endif
 
-    sys.driver_started = true;
+    sys.driver_started = sys.alarm != Alarm_SelftestFailed;
 
     // "Wire" homing switches to limit switches if not provided by the driver.
     if(hal.homing.get_state == NULL)

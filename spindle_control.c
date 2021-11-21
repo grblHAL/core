@@ -90,7 +90,7 @@ bool spindle_sync (spindle_state_t state, float rpm)
                 delay += 0.1f;
                 if(ABORTED)
                     break;
-                if(delay >= SAFETY_DOOR_SPINDLE_DELAY) {
+                if(delay >= settings.safety_door.spindle_on_delay) {
                     system_raise_alarm(Alarm_Spindle);
                     break;
                 }
@@ -114,7 +114,7 @@ bool spindle_restore (spindle_state_t state, float rpm)
         spindle_set_state(state, rpm);
         if(state.on) {
             if((ok = !hal.driver_cap.spindle_at_speed))
-                delay_sec(SAFETY_DOOR_SPINDLE_DELAY, DelayMode_SysSuspend);
+                delay_sec(settings.safety_door.spindle_on_delay, DelayMode_SysSuspend);
             else if((ok == (settings.spindle.at_speed_tolerance <= 0.0f))) {
                 float delay = 0.0f;
                 while(!(ok = hal.spindle.get_state().at_speed)) {
@@ -122,7 +122,7 @@ bool spindle_restore (spindle_state_t state, float rpm)
                     delay += 0.1f;
                     if(ABORTED)
                         break;
-                    if(delay >= SAFETY_DOOR_SPINDLE_DELAY) {
+                    if(delay >= settings.safety_door.spindle_on_delay) {
                         system_raise_alarm(Alarm_Spindle);
                         break;
                     }

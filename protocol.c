@@ -86,6 +86,7 @@ bool protocol_enqueue_gcode (char *gcode)
 bool protocol_main_loop (void)
 {
     if(sys.alarm == Alarm_SelftestFailed) {
+        sys.alarm = Alarm_None;
         system_raise_alarm(Alarm_SelftestFailed);
     } else if (hal.control.get_state().e_stop) {
         // Check for e-stop active. Blocks everything until cleared.
@@ -127,7 +128,7 @@ bool protocol_main_loop (void)
         state_set(STATE_IDLE);
 #ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
         // Check if the safety door is open.
-        if (!settings.flags.safety_door_ignore_when_idle && hal.control.get_state().safety_door_ajar) {
+        if (!settings.safety_door.flags.ignore_when_idle && hal.control.get_state().safety_door_ajar) {
             system_set_exec_state_flag(EXEC_SAFETY_DOOR);
             protocol_execute_realtime(); // Enter safety door mode. Should return as IDLE state.
         }
@@ -887,6 +888,9 @@ static void protocol_execute_rt_commands (void)
         }
         realtime_queue.tail = (bptr + 1) & (RT_QUEUE_SIZE - 1);
     }
+
+    if(!sys.driver_started)
+        while(true);
 }
 
 void protocol_execute_noop (sys_state_t state)

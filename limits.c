@@ -470,8 +470,8 @@ bool limits_go_home (axes_signals_t cycle)
 
     axes_signals_t auto_square = {0}, auto_squared = {0};
 
-    if(hal.stepper.get_auto_squared)
-        auto_squared = hal.stepper.get_auto_squared();
+    if(hal.stepper.get_ganged)
+        auto_squared = hal.stepper.get_ganged(true);
 
     auto_squared.mask &= cycle.mask;
 

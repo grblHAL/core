@@ -103,6 +103,7 @@ PROGMEM const settings_t defaults = {
     .steppers.idle_lock_time = DEFAULT_STEPPER_IDLE_LOCK_TIME,
     .steppers.step_invert.mask = DEFAULT_STEPPING_INVERT_MASK,
     .steppers.dir_invert.mask = DEFAULT_DIRECTION_INVERT_MASK,
+    .steppers.ganged_dir_invert.mask = DEFAULT_GANGED_DIRECTION_INVERT_MASK,
     .steppers.enable_invert.mask = INVERT_ST_ENABLE_MASK,
     .steppers.deenergize.mask = ST_DEENERGIZE_MASK,
 #if N_AXIS > 3
@@ -284,7 +285,10 @@ PROGMEM const settings_t defaults = {
     .parking.target = DEFAULT_PARKING_TARGET,
     .parking.rate = DEFAULT_PARKING_RATE,
     .parking.pullout_rate = DEFAULT_PARKING_PULLOUT_RATE,
-    .parking.pullout_increment = DEFAULT_PARKING_PULLOUT_INCREMENT
+    .parking.pullout_increment = DEFAULT_PARKING_PULLOUT_INCREMENT,
+
+    .safety_door.spindle_on_delay = SAFETY_DOOR_SPINDLE_DELAY,
+    .safety_door.coolant_on_delay = SAFETY_DOOR_COOLANT_DELAY
 };
 
 PROGMEM static const setting_group_detail_t setting_group_detail [] = {
@@ -344,10 +348,10 @@ static status_code_t set_force_initialization_alarm (setting_id_t id, uint_fast1
 static status_code_t set_probe_allow_feed_override (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_tool_change_mode (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_tool_change_probing_distance (setting_id_t id, float value);
+static status_code_t set_ganged_dir_invert (setting_id_t id, uint_fast16_t int_value);
 #ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
 static status_code_t set_parking_enable (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_restore_overrides (setting_id_t id, uint_fast16_t int_value);
-static status_code_t set_door_options (setting_id_t id, uint_fast16_t int_value);
 #endif
 #ifdef ENABLE_SPINDLE_LINEARIZATION
 static status_code_t set_linear_piece (setting_id_t id, char *svalue);
@@ -367,17 +371,17 @@ static float get_float (setting_id_t setting);
 static uint32_t get_int (setting_id_t id);
 static bool is_setting_available (const setting_detail_t *setting);
 
-
 static char control_signals[] = "Reset,Feed hold,Cycle start,Safety door,Block delete,Optional stop,EStop,Probe connected,Motor fault";
 static char spindle_signals[] = "Spindle enable,Spindle direction,PWM";
 static char coolant_signals[] = "Flood,Mist";
+static char ganged_axes[] = "X-Axis,Y-Axis,Z-Axis";
 
 PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_PulseMicroseconds, Group_Stepper, "Step pulse time", "microseconds", Format_Decimal, "#0.0", "2.0", NULL, Setting_IsLegacy, &settings.steppers.pulse_microseconds, NULL, NULL },
      { Setting_StepperIdleLockTime, Group_Stepper, "Step idle delay", "milliseconds", Format_Int16, "####0", NULL, "65535", Setting_IsLegacy, &settings.steppers.idle_lock_time, NULL, NULL },
      { Setting_StepInvertMask, Group_Stepper, "Step pulse invert", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsLegacy, &settings.steppers.step_invert.mask, NULL, NULL },
      { Setting_DirInvertMask, Group_Stepper, "Step direction invert", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsLegacy, &settings.steppers.dir_invert.mask, NULL, NULL },
-     { Setting_InvertStepperEnable, Group_Stepper, "Invert step enable pin(s)", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsLegacy, &settings.steppers.enable_invert.mask, NULL, NULL },
+     { Setting_InvertStepperEnable, Group_Stepper, "Invert stepper enable pin(s)", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsLegacy, &settings.steppers.enable_invert.mask, NULL, NULL },
 #if COMPATIBILITY_LEVEL <= 1
      { Setting_LimitPinsInvertMask, Group_Limits, "Invert limit pins", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsLegacy, &settings.limits.invert.mask, NULL, NULL },
 #else
@@ -386,6 +390,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_InvertProbePin, Group_Probing, "Invert probe pin", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsLegacyFn, set_probe_invert, get_int, NULL },
      { Setting_SpindlePWMBehaviour, Group_Spindle, "Disable spindle with zero speed", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtended, &settings.spindle.flags.mask, NULL, is_setting_available },
 //     { Setting_SpindlePWMBehaviour, Group_Spindle, "Spindle enable vs. speed behaviour", NULL, Format_RadioButtons, "No action,Disable spindle with zero speed,Enable spindle with all speeds", NULL, NULL, Setting_IsExtended, &settings.spindle.flags.mask, NULL, NULL },
+     { Setting_GangedDirInvertMask, Group_Stepper, "Ganged axes direction invert", NULL, Format_Bitfield, ganged_axes, NULL, NULL, Setting_IsExtendedFn, set_ganged_dir_invert, get_int, NULL },
 #if COMPATIBILITY_LEVEL <= 1
      { Setting_StatusReportMask, Group_General, "Status report options", NULL, Format_Bitfield, "Position in machine coordinate,Buffer state,Line numbers,Feed & speed,Pin state,Work coordinate offset,Overrides,Probe coordinates,Buffer sync on WCO change,Parser state,Alarm substatus,Run substatus", NULL, NULL, Setting_IsExtendedFn, set_report_mask, get_int, NULL },
 #else
@@ -452,7 +457,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_ParkingTarget, Group_SafetyDoor, "Parking target", "mm", Format_Decimal, "-###0.0", "-100000", NULL, Setting_IsExtended, &settings.parking.target, NULL, NULL },
      { Setting_ParkingFastRate, Group_SafetyDoor, "Parking fast rate", "mm/min", Format_Decimal, "###0.0", NULL, NULL, Setting_IsExtended, &settings.parking.rate, NULL, NULL },
      { Setting_RestoreOverrides, Group_General, "Restore overrides", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_restore_overrides, get_int, NULL },
-     { Setting_DoorOptions, Group_SafetyDoor, "Safety door options", NULL, Format_Bitfield, "Ignore when idle,Keep coolant state on open", NULL, NULL, Setting_IsExtendedFn, set_door_options, get_int, NULL },
+     { Setting_DoorOptions, Group_SafetyDoor, "Safety door options", NULL, Format_Bitfield, "Ignore when idle,Keep coolant state on open", NULL, NULL, Setting_IsExtended, &settings.safety_door.flags.value, NULL, NULL },
 #endif
      { Setting_SleepEnable, Group_General, "Sleep enable", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_sleep_enable, get_int, NULL },
      { Setting_HoldActions, Group_General, "Feed hold actions", NULL, Format_Bitfield, "Disable laser during hold,Restore spindle and coolant state on resume", NULL, NULL, Setting_IsExtendedFn, set_hold_actions, get_int, NULL },
@@ -511,10 +516,13 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_StepperIdleLockTime, "Sets a short hold delay when stopping to let dynamics settle before disabling steppers. Value 255 keeps motors enabled." },
     { Setting_StepInvertMask, "Inverts the step signals (active low)." },
     { Setting_DirInvertMask, "Inverts the direction signals (active low)." },
-    { Setting_InvertStepperEnable, "Inverts the stepper driver enable signals (active low). If the stepper drivers shares the same enable signal only X is used." },
+    { Setting_InvertStepperEnable, "Inverts the stepper driver enable signals. Most drivers uses active low enable requiring inversion.\\n"
+                                   "NOTE: If the stepper drivers shares the same enable signal only X is used."
+    },
     { Setting_LimitPinsInvertMask, "Inverts the axis limit input signals." },
     { Setting_InvertProbePin, "Inverts the probe input pin signal." },
     { Setting_SpindlePWMBehaviour, "" },
+    { Setting_GangedDirInvertMask, "Inverts the direction signals for ganged axes." },
     { Setting_StatusReportMask, "Specifies optional data included in status reports.\\n"
                                 "If Run substatus is enabled it may be used for simple probe protection.\\n\\n"
                                 "Note that Parser state will be sent separately after the status report and only on changes."
@@ -723,6 +731,16 @@ static status_code_t set_probe_invert (setting_id_t id, uint_fast16_t int_value)
     return Status_OK;
 }
 
+static status_code_t set_ganged_dir_invert (setting_id_t id, uint_fast16_t int_value)
+{
+    if(!hal.stepper.get_ganged)
+        return Status_SettingDisabled;
+
+    settings.steppers.ganged_dir_invert.mask = int_value & hal.stepper.get_ganged(false).mask;
+
+    return Status_OK;
+}
+
 static status_code_t set_report_mask (setting_id_t id, uint_fast16_t int_value)
 {
 #if COMPATIBILITY_LEVEL <= 1
@@ -888,14 +906,6 @@ static status_code_t set_parking_enable (setting_id_t id, uint_fast16_t int_valu
 static status_code_t set_restore_overrides (setting_id_t id, uint_fast16_t int_value)
 {
     settings.flags.restore_overrides = int_value != 0;;
-
-    return Status_OK;
-}
-
-static status_code_t set_door_options (setting_id_t id, uint_fast16_t int_value)
-{
-    settings.flags.safety_door_ignore_when_idle = bit_istrue(int_value, bit(0));
-    settings.flags.keep_coolant_state_on_door_open = bit_istrue(int_value, bit(1));
 
     return Status_OK;
 }
@@ -1078,7 +1088,7 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
             break;
 
         case Setting_AxisAutoSquareOffset:
-            if(hal.stepper.get_auto_squared && bit_istrue(hal.stepper.get_auto_squared().mask, bit(idx)))
+            if(hal.stepper.get_ganged && bit_istrue(hal.stepper.get_ganged(true).mask, bit(idx)))
                 settings.axis[idx].dual_axis_offset = value;
             else
                 status = Status_SettingDisabled;
@@ -1164,6 +1174,10 @@ static uint32_t get_int (setting_id_t id)
             value = settings.probe.invert_probe_pin;
             break;
 
+        case Setting_GangedDirInvertMask:
+            value = settings.steppers.ganged_dir_invert.mask;
+            break;
+
         case Setting_StatusReportMask:
 #if COMPATIBILITY_LEVEL <= 1
             value = settings.status_report.mask;
@@ -1231,10 +1245,6 @@ static uint32_t get_int (setting_id_t id)
 
         case Setting_RestoreOverrides:
             value = settings.flags.restore_overrides;
-            break;
-
-        case Setting_DoorOptions:
-            value = settings.flags.safety_door_ignore_when_idle | (settings.flags.keep_coolant_state_on_door_open << 1) ;
             break;
 
         case Setting_SleepEnable:
@@ -1358,6 +1368,10 @@ static bool is_setting_available (const setting_detail_t *setting)
 
     if(setting) switch(normalize_id(setting->id)) {
 
+        case Setting_GangedDirInvertMask:
+            available = hal.stepper.get_ganged && hal.stepper.get_ganged(false).mask != 0;
+            break;
+
         case Setting_SpindlePWMBehaviour:
             available = hal.driver_cap.variable_spindle;
             break;
@@ -1380,7 +1394,8 @@ static bool is_setting_available (const setting_detail_t *setting)
             break;
 
         case Setting_AxisAutoSquareOffset:
-            available = hal.stepper.get_auto_squared != NULL;
+            available = hal.stepper.get_ganged && hal.stepper.get_ganged(true).mask != 0;
+//            available = hal.stepper.get_ganged && bit_istrue(hal.stepper.get_ganged(true).mask, setting->id - Setting_AxisAutoSquareOffset);
             break;
 
         default:
@@ -1614,7 +1629,7 @@ bool settings_is_group_available (setting_group_t group)
             break;
 
         case Group_Limits_DualAxis:
-            available = hal.stepper.get_auto_squared != NULL;
+            available = hal.stepper.get_ganged && hal.stepper.get_ganged(true).mask != 0;
             break;
 
         case Group_General:
@@ -2123,6 +2138,9 @@ void settings_init (void)
 
     setting_remove_elements(Setting_SpindleInvertMask, spindle_cap.mask);
     setting_remove_elements(Setting_ControlInvertMask, hal.signals_cap.mask);
+
+    if(hal.stepper.get_ganged)
+        setting_remove_elements(Setting_GangedDirInvertMask, hal.stepper.get_ganged(false).mask);
 
     if(!hal.driver_cap.mist_control)
         setting_remove_element(Setting_CoolantInvertMask, 1);

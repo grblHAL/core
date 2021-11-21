@@ -81,7 +81,7 @@ static void state_restore_conditions (planner_cond_t *condition, float rpm)
         if (gc_state.modal.coolant.value != hal.coolant.get_state().value) {
             // NOTE: Laser mode will honor this delay. An exhaust system is often controlled by this pin.
             coolant_set_state(condition->coolant);
-            delay_sec(SAFETY_DOOR_COOLANT_DELAY, DelayMode_SysSuspend);
+            delay_sec(settings.safety_door.coolant_on_delay, DelayMode_SysSuspend);
         }
 
         park.flags.restoring = Off;
@@ -554,7 +554,7 @@ static void state_await_resume (uint_fast16_t rt_exec)
                     if (restore_condition.coolant.value != hal.coolant.get_state().value) {
                         // NOTE: Laser mode will honor this delay. An exhaust system is often controlled by coolant signals.
                         coolant_set_state(restore_condition.coolant);
-                        delay_sec(SAFETY_DOOR_COOLANT_DELAY, DelayMode_SysSuspend);
+                        delay_sec(settings.safety_door.coolant_on_delay, DelayMode_SysSuspend);
                     }
 
                     sys.override.spindle_stop.value = 0; // Clear spindle stop override states

@@ -38,7 +38,7 @@
 #include "ioports.h"
 #include "plugins.h"
 
-#define HAL_VERSION 8
+#define HAL_VERSION 9
 
 /// Bitmap flags for driver capabilities, to be set by driver in driver_init(), flags may be cleared after to switch off option.
 typedef union {
@@ -369,9 +369,9 @@ typedef void (*stepper_output_step_ptr)(axes_signals_t step_outbits, axes_signal
 
 /*! \brief Pointer to function for getting which axes are configured for auto squaring.
 
-\returns which axes are configured for auto squaring in an \a axes_signals_t union.
+\returns which axes are configured for ganging or auto squaring in an \a axes_signals_t union.
 */
-typedef axes_signals_t (*stepper_get_auto_squared_ptr)(void);
+typedef axes_signals_t (*stepper_get_ganged_ptr)(bool auto_squared);
 
 /*! \brief Pointer to callback function for outputting the next direction and step pulse signals. _Set by the core on startup._
 
@@ -388,7 +388,7 @@ typedef struct {
     stepper_cycles_per_tick_ptr cycles_per_tick;        //!< Handler for setting the step pulse rate for the next motion segment.
     stepper_pulse_start_ptr pulse_start;                //!< Handler for starting outputting direction signals and a step pulse.
     stepper_interrupt_callback_ptr interrupt_callback;  //!< Callback for informing about the next step pulse to output. _Set by the core at startup._
-    stepper_get_auto_squared_ptr get_auto_squared;      //!< Optional handler getting which axes are configured for auto squaring.
+    stepper_get_ganged_ptr get_ganged;                  //!< Optional handler getting which axes are configured for ganging or auto squaring.
     stepper_output_step_ptr output_step;                //!< Optional handler for outputting a single step pulse. _Experimental._
     motor_iterator_ptr motor_iterator;                  //!< Optional handler iteration over motor vs. axis mappings. Required for the motors plugin (Trinamic drivers).
 } stepper_ptrs_t;
@@ -436,7 +436,6 @@ typedef struct {
     probe_get_state_ptr get_state;                  //!< Optional handler for getting probe status.
     probe_connected_toggle_ptr connected_toggle;    //!< Optional handler for toggling probe connected status.
 } probe_ptrs_t;
-
 
 /*******************************
  *  Tool selection and change  *

@@ -30,14 +30,7 @@
 
 // Version of the persistent storage data. Will be used to migrate existing data from older versions of Grbl
 // when firmware is upgraded. Always stored in byte 0 of non-volatile storage
-
-// TODO: add ftp port to network settings, enable safety_door settings
-
-#if N_AXIS > 3 // TODO: remove on next version update
-#define SETTINGS_VERSION 20  // NOTE: Check settings_reset() when moving to next version.
-#else
-#define SETTINGS_VERSION 19  // NOTE: Check settings_reset() when moving to next version.
-#endif
+#define SETTINGS_VERSION 21  // NOTE: Check settings_reset() when moving to next version.
 
 // Define axis settings numbering scheme. Starts at Setting_AxisSettingsBase, every INCREMENT, over N_SETTINGS.
 #define AXIS_SETTINGS_INCREMENT  10 // Must be greater than the number of axis settings.
@@ -46,6 +39,8 @@
 // Not referenced by the core.
 #define ENCODER_N_SETTINGS_MAX 5 // NOTE: This is the maximum number of encoders allowed.
 #define ENCODER_SETTINGS_INCREMENT 10
+
+#define SETTINGS_HARD_RESET_REQUIRED "\\n\\nNOTE: A hard reset of the controller is required after changing this setting."
 
 typedef enum {
     Setting_PulseMicroseconds = 0,
@@ -56,6 +51,7 @@ typedef enum {
     Setting_LimitPinsInvertMask = 5,
     Setting_InvertProbePin = 6,
     Setting_SpindlePWMBehaviour = 7,
+    Setting_GangedDirInvertMask = 8,
     Setting_StatusReportMask = 10,
     Setting_JunctionDeviation = 11,
     Setting_ArcTolerance = 12,
@@ -226,6 +222,10 @@ typedef enum {
     Setting_Arc_HeightPerVolt = 363,
     Setting_Arc_OkHighVoltage = 364,
     Setting_Arc_OkLowVoltage = 365,
+    Setting_Arc_VoltagePort = 366,
+    Setting_Arc_OkPort = 367,
+    Setting_THC_CutterDownPort = 368,
+    Setting_THC_CutterUpPort = 369,
 
     Settings_IoPort_InvertIn  = 370,
     Settings_IoPort_Pullup_Disable = 371,
@@ -242,6 +242,13 @@ typedef enum {
     Setting_CoolantOffset = 382,
     Setting_CoolantGain = 383,
     Setting_DisableG92Persistence = 384,
+    Setting_BlueToothStateInput = 385,
+    Setting_FanPort0 = 386,
+    Setting_FanPort1 = 387,
+    Setting_FanPort2 = 388,
+    Setting_FanPort3 = 389,
+    Setting_CoolantTempPort = 390,
+    Setting_CoolantOkPort = 391,
 
     Setting_EncoderSettingsBase = 400, // NOTE: Reserving settings values >= 400 for encoder settings. Up to 449.
     Setting_EncoderSettingsMax = 449,
@@ -471,6 +478,7 @@ typedef struct {
 typedef struct {
     axes_signals_t step_invert;
     axes_signals_t dir_invert;
+    axes_signals_t ganged_dir_invert; // applied after inversion for the master motor
     axes_signals_t enable_invert;
     axes_signals_t deenergize;
 #if N_AXIS > 3
@@ -575,7 +583,7 @@ typedef struct {
     homing_settings_t homing;
     limit_settings_t limits;
     parking_settings_t parking;
-//    safety_door_settings_t safety_door;
+    safety_door_settings_t safety_door;
     position_pid_t position;    // Used for synchronized motion
     ioport_signals_t ioport;
 } settings_t;
