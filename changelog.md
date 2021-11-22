@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+Build 20211122:
+
+Core:
+
+* Fixed silly typedef mistake in setting struct, added settings $392 and $393 for spindle and coolant startup delays on safety door open.
+* Removed Grbl v0.9 error messages.
+
+Drivers:
+
+* Added setting $308 for FTP port to use for networking capable drivers. Defaults to 21.
+* Fixed WebUI processor clock speed report in ESP32 driver, added FTP port, board name and driver version to same.
+
 Build 20211121:
 
 Core:

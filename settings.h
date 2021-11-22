@@ -169,6 +169,7 @@ typedef enum {
     Setting_TelnetPort = 305,
     Setting_HttpPort = 306,
     Setting_WebSocketPort = 307,
+    Setting_FtpPort = 308,
 
     // Normally used for WiFi Access Point
     Setting_Hostname2 = 310,
@@ -179,6 +180,7 @@ typedef enum {
     Setting_TelnetPort2 = 315,
     Setting_HttpPort2 = 316,
     Setting_WebSocketPort2 = 317,
+    Setting_FtpPort2 = 318,
 
     Setting_Hostname3 = 320,
     Setting_IpMode3 = 321,
@@ -188,6 +190,7 @@ typedef enum {
     Setting_TelnetPort3 = 325,
     Setting_HttpPort3 = 326,
     Setting_WebSocketPort3 = 327,
+    Setting_FtpPort3 = 328,
 
     Setting_AdminPassword = 330,
     Setting_UserPassword = 331,
@@ -249,6 +252,8 @@ typedef enum {
     Setting_FanPort3 = 389,
     Setting_CoolantTempPort = 390,
     Setting_CoolantOkPort = 391,
+    Setting_DoorSpindleOnDelay = 392,
+    Setting_DoorCoolantOnDelay = 393,
 
     Setting_EncoderSettingsBase = 400, // NOTE: Reserving settings values >= 400 for encoder settings. Up to 449.
     Setting_EncoderSettingsMax = 449,
@@ -319,13 +324,13 @@ typedef union {
     struct {
         uint16_t report_inches                   :1,
                  restore_overrides               :1,
-                 safety_door_ignore_when_idle    :1,
+                 unused0                         :1,
                  sleep_enable                    :1,
                  disable_laser_during_hold       :1,
                  force_initialization_alarm      :1,
                  legacy_rt_commands              :1,
                  restore_after_feed_hold         :1,
-                 keep_coolant_state_on_door_open :1,
+                 unused1                         :1,
                  g92_is_volatile                 :1,
                  unassigned                      :6;
     };
@@ -372,7 +377,7 @@ typedef union {
     };
 } safety_door_setting_flags_t;
 
-typedef union {
+typedef struct {
     safety_door_setting_flags_t flags;
     float spindle_on_delay;
     float coolant_on_delay;

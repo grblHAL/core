@@ -505,6 +505,10 @@ PROGMEM static const setting_detail_t setting_detail[] = {
 #elif N_AXIS > 5
      { Settings_Axis_Rotational, Group_Stepper, "Rotational axes", NULL, Format_Bitfield, "A-Axis,B-Axis,C-Axis", NULL, NULL, Setting_IsExtendedFn, set_rotational_axes, get_int, NULL },
 #endif
+#ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
+     { Setting_DoorSpindleOnDelay, Group_SafetyDoor, "Spindle on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.spindle_on_delay, NULL, NULL },
+     { Setting_DoorCoolantOnDelay, Group_SafetyDoor, "Coolant on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.coolant_on_delay, NULL, NULL },
+#endif
 };
 
 #ifndef NO_SETTINGS_DESCRIPTIONS
@@ -516,16 +520,18 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_StepperIdleLockTime, "Sets a short hold delay when stopping to let dynamics settle before disabling steppers. Value 255 keeps motors enabled." },
     { Setting_StepInvertMask, "Inverts the step signals (active low)." },
     { Setting_DirInvertMask, "Inverts the direction signals (active low)." },
-    { Setting_InvertStepperEnable, "Inverts the stepper driver enable signals. Most drivers uses active low enable requiring inversion.\\n"
+    { Setting_InvertStepperEnable, "Inverts the stepper driver enable signals. Most drivers uses active low enable requiring inversion.\\n\\n"
                                    "NOTE: If the stepper drivers shares the same enable signal only X is used."
     },
     { Setting_LimitPinsInvertMask, "Inverts the axis limit input signals." },
     { Setting_InvertProbePin, "Inverts the probe input pin signal." },
     { Setting_SpindlePWMBehaviour, "" },
-    { Setting_GangedDirInvertMask, "Inverts the direction signals for ganged axes." },
+    { Setting_GangedDirInvertMask, "Inverts the direction signals for the second motor used for ganged axes.\\n\\n"
+                                   "NOTE: This inversion will be applied in addition to the inversion from setting $3."
+    },
     { Setting_StatusReportMask, "Specifies optional data included in status reports.\\n"
                                 "If Run substatus is enabled it may be used for simple probe protection.\\n\\n"
-                                "Note that Parser state will be sent separately after the status report and only on changes."
+                                "NOTE: Parser state will be sent separately after the status report and only on changes."
     },
     { Setting_JunctionDeviation, "Sets how fast Grbl travels through consecutive motions. Lower value slows it down." },
     { Setting_ArcTolerance, "Sets the G2 and G3 arc tracing accuracy based on radial error. Beware: A very small value may effect performance." },
@@ -635,6 +641,10 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_DualAxisLengthFailMax, "Dual axis length fail minimum distance." },
 #if COMPATIBILITY_LEVEL <= 1
     { Setting_DisableG92Persistence, "Disables save/restore of G92 offset to non-volatile storage (NVS)." },
+#endif
+#ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
+    { Setting_DoorSpindleOnDelay, "Delay to allow spindle to spin up after safety door is opened." },
+    { Setting_DoorCoolantOnDelay, "Delay to allow coolant to restart after safety door is opened." },
 #endif
 };
 
