@@ -114,12 +114,12 @@ typedef struct {
 typedef struct error_details {
     const uint16_t n_errors;
     const status_detail_t *errors;
-    struct error_details *(*on_get_errors)(void);
+    struct error_details *next;
 } error_details_t;
 
-// NOTE: this must match the signature of on_get_alarms in the on_get_statuses struct above!
 typedef error_details_t *(*on_get_errors_ptr)(void);
 
 error_details_t *errors_get_details (void);
+void errors_register (error_details_t *details);
 
 #endif

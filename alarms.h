@@ -49,19 +49,18 @@ typedef enum {
 
 typedef struct {
     alarm_code_t id;
-    const char *name;
     const char *description;
 } alarm_detail_t;
 
 typedef struct alarm_details {
     const uint16_t n_alarms;
     const alarm_detail_t *alarms;
-    struct alarm_details *(*on_get_alarms)(void);
+    struct alarm_details *next;
 } alarm_details_t;
 
-// NOTE: this must match the signature of on_get_alarms in the alarm_details_t struct above!
 typedef alarm_details_t *(*on_get_alarms_ptr)(void);
 
+void alarms_register (alarm_details_t *details);
 alarm_details_t *alarms_get_details (void);
 
 #endif

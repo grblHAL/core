@@ -80,6 +80,47 @@ bool protocol_enqueue_gcode (char *gcode)
     return ok;
 }
 
+static bool recheck_line (char *line, line_flags_t *flags)
+{
+    bool keep_rt_commands = false, first_char = true;
+
+    flags->value = 0;
+
+    if(*line != '\0') do {
+
+        switch(*line) {
+
+            case '$':
+            case '[':
+                if(first_char)
+                    keep_rt_commands = true;
+                break;
+
+            case '(':
+                if(!keep_rt_commands && (flags->comment_parentheses = !flags->comment_semicolon))
+                    keep_rt_commands = !hal.driver_cap.no_gcode_message_handling; // Suspend real-time processing of printable command characters.
+                break;
+
+            case ')':
+                if(!flags->comment_semicolon)
+                    flags->comment_parentheses = keep_rt_commands = false;
+                break;
+
+            case ';':
+                if(!flags->comment_parentheses) {
+                    keep_rt_commands = false;
+                    flags->comment_semicolon = On;
+                }
+                break;
+        }
+
+        first_char = false;
+
+    } while(*++line != '\0');
+
+    return keep_rt_commands;
+}
+
 /*
   GRBL PRIMARY LOOP:
 */
@@ -259,6 +300,13 @@ bool protocol_main_loop (void)
                             line_flags.comment_semicolon = On;
                         }
                         break;
+
+                    case ASCII_DEL:
+                        if(char_counter) {
+                            line[--char_counter] = '\0';
+                            keep_rt_commands = recheck_line(line, &line_flags);
+                        }
+                        continue;
                 }
                 if(!(line_flags.overflow = char_counter >= (LINE_BUFFER_SIZE - 1)))
                     line[char_counter++] = c;
@@ -816,7 +864,7 @@ ISR_CODE bool protocol_enqueue_realtime_command (char c)
             break;
 
         default:
-            if(c < ' ' || (c >= 0x7F && c <= 0xBF))
+            if(c < ' ' || (c > ASCII_DEL && c <= 0xBF))
                 drop = grbl.on_unknown_realtime_cmd == NULL || grbl.on_unknown_realtime_cmd(c);
             break;
     }

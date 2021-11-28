@@ -106,10 +106,14 @@ bool ioport_claim (io_port_type_t type, io_port_direction_t dir, uint8_t *port, 
         } while(n_ports && !ok);
 
     } else if((ok = n_ports > 0)) {
+
         if(type == Port_Digital)
             *port = dir == Port_Input ? --hal.port.num_digital_in : --hal.port.num_digital_out;
         else
             *port = dir == Port_Input ? --hal.port.num_analog_in : --hal.port.num_analog_out;
+
+        if(hal.port.set_pin_description)
+            hal.port.set_pin_description(type, dir, *port, description);
     }
 
     return ok;

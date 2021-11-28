@@ -134,6 +134,9 @@ int grbl_enter (void)
     grbl.enqueue_realtime_command = stream_enqueue_realtime_command;
     grbl.on_report_options = dummy_bool_handler;
     grbl.on_report_command_help = system_command_help;
+    grbl.on_get_alarms = alarms_get_details;
+    grbl.on_get_errors = errors_get_details;
+    grbl.on_get_settings = settings_get_details;
 
     // Clear all and set some HAL function pointers
     memset(&hal, 0, sizeof(grbl_hal_t));

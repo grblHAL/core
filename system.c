@@ -260,7 +260,7 @@ void system_command_help (void)
     hal.stream.write("$HELP <topic> - output help for <topic>" ASCII_EOL);
     hal.stream.write("$RST=* - restore/reset all settings" ASCII_EOL);
     hal.stream.write("$RST=$ - restore default settings" ASCII_EOL);
-    if(settings_get_details()->on_get_settings)
+    if(settings_get_details()->next)
         hal.stream.write("$RST=& - restore driver and plugin default settings" ASCII_EOL);
 #ifdef N_TOOLS
     hal.stream.write("$RST=# - reset offsets and tool data" ASCII_EOL);

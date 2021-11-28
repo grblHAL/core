@@ -97,9 +97,15 @@ static error_details_t details = {
     .n_errors = sizeof(status_detail) / sizeof(status_detail_t)
 };
 
+static error_details_t *errors = &details;
+
+void errors_register (error_details_t *details)
+{
+    errors->next = details;
+    errors = details;
+}
+
 error_details_t *errors_get_details (void)
 {
-    details.on_get_errors = grbl.on_get_errors;
-
     return &details;
 }

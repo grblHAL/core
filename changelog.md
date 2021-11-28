@@ -1,16 +1,42 @@
 ## grblHAL changelog
 
+Build 20211128:
+
+Core:
+
+* Added functionality for serial stream registration and enumeration, allows plugins to claim stream(s) from free pool.
+* Simplified registration of settings, alarms and error codes from driver and plugin code.
+* Fixed `$$` settings report, it reported some configuration dependent settings when not available.
+* Added pin id definitions for soft UART pins \(used by Trinamic TMC2209\) driver code.
+
+Plugins, templates and drivers:
+
+* Updated for core changes above.
+
+Drivers:
+
+* ESP32 driver: updated for ESP-IDF 4.3 API call change that prevented WiFi AP mode initialization. Rewrite of wifi code that used deprecated library calls.
+* STM32F4xx driver: added tentative support for Trinamic stepper drivers for BTT SKR Pro 1.1 \(and 1.2 that can use the same map\) board. _Not tested!_
+
+Plugins:
+
+* Motors plugin: bug fixes for handling of ganged motors with Trinamic drivers. Added optional callbacks to low level driver code pre and post configuration \(per driver\).
+
+---
+
 Build 20211122:
 
 Core:
 
-* Fixed silly typedef mistake in setting struct, added settings $392 and $393 for spindle and coolant startup delays on safety door open.
+* Fixed silly typedef mistake in setting struct, added settings `$392` and `$393` for spindle and coolant startup delays on safety door open.
 * Removed Grbl v0.9 error messages.
 
 Drivers:
 
 * Added setting $308 for FTP port to use for networking capable drivers. Defaults to 21.
 * Fixed WebUI processor clock speed report in ESP32 driver, added FTP port, board name and driver version to same.
+
+---
 
 Build 20211121:
 

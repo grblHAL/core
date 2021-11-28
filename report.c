@@ -416,17 +416,10 @@ status_code_t report_help (char *args)
 
             found = report_group_settings(settings_info->groups, settings_info->n_groups, args);
 
-            if(!found && grbl.on_get_settings) {
-
-                on_get_settings_ptr on_get_settings = grbl.on_get_settings;
-
-                while(on_get_settings) {
-                    settings_info = on_get_settings();
-                    if(settings_info->groups && (found = report_group_settings(settings_info->groups, settings_info->n_groups, args)))
-                        break;
-                    on_get_settings = settings_info->on_get_settings;
-                }
-            }
+            if(!found && (settings_info = settings_info->next)) do {
+                if(settings_info->groups && (found = report_group_settings(settings_info->groups, settings_info->n_groups, args)))
+                    break;
+            } while((settings_info = settings_info->next));
 
             if(!found)
                 hal.stream.write( ASCII_EOL "N/A" ASCII_EOL);
@@ -488,25 +481,22 @@ static bool print_setting (const setting_detail_t *setting, uint_fast16_t offset
 
 void report_grbl_settings (bool all, void *data)
 {
-    setting_details_t *details = settings_get_details();
-    uint16_t n_settings = details->n_settings;
+    uint_fast16_t idx, n_settings = 0;
     const setting_detail_t *setting;
-
-    while(details->on_get_settings) {
-        details = details->on_get_settings();
-        n_settings += details->n_settings;
-    }
-
     setting_detail_t **all_settings, **psetting;
+    setting_details_t *details = settings_get_details();
 
-    if((all_settings = calloc(n_settings, sizeof(setting_detail_t *)))) {
+    do {
+        n_settings += details->n_settings;
+    } while((details = details->next));
 
-        uint_fast16_t idx;
+    details = settings_get_details();
 
-        details = settings_get_details();
-        psetting = all_settings;
+    if((all_settings = psetting = calloc(n_settings, sizeof(setting_detail_t *)))) {
+
         n_settings = 0;
 
+        // Report core settings
         for(idx = 0; idx < details->n_settings; idx++) {
             setting = &details->settings[idx];
             if((all || setting->type == Setting_IsLegacy || setting->type == Setting_IsLegacyFn) &&
@@ -516,8 +506,8 @@ void report_grbl_settings (bool all, void *data)
             }
         }
 
-        if(all) while(details->on_get_settings) {
-            details = details->on_get_settings();
+        // Report driver and plugin settings
+        if(all && (details = details->next)) do {
             for(idx = 0; idx < details->n_settings; idx++) {
                 setting = &details->settings[idx];
                 if(setting->is_available == NULL ||setting->is_available(setting)) {
@@ -525,7 +515,7 @@ void report_grbl_settings (bool all, void *data)
                     n_settings++;
                 }
             }
-        }
+        } while((details = details->next));
 
         qsort(all_settings, n_settings, sizeof(setting_detail_t *), cmp_settings);
 
@@ -533,7 +523,11 @@ void report_grbl_settings (bool all, void *data)
             settings_iterator(all_settings[idx], print_setting, data);
 
         free(all_settings);
-    }
+
+    } else do {
+        for(idx = 0; idx < n_settings; idx++)
+            settings_iterator(&details->settings[idx], print_setting, data);
+    } while((details = details->next));
 }
 
 
@@ -1684,72 +1678,6 @@ static bool print_sorted (const setting_detail_t *setting, uint_fast16_t offset,
     return true;
 }
 
-static status_code_t sort_settings_details (settings_format_t format, setting_group_t group)
-{
-    bool reported = group == Group_All;
-
-    setting_details_t *details = settings_get_details();
-    uint16_t n_settings = details->n_settings;
-    const setting_detail_t *setting;
-    report_args_t args;
-
-    args.group = settings_normalize_group(group);
-    args.offset = group - args.group;
-    args.format = format;
-
-    while(details->on_get_settings) {
-        details = details->on_get_settings();
-        n_settings += details->n_settings;
-    }
-
-    setting_detail_t **all_settings, **psetting;
-
-    if((all_settings = calloc(n_settings, sizeof(setting_detail_t *)))) {
-
-        uint_fast16_t idx;
-
-        details = settings_get_details();
-
-        psetting = all_settings;
-        n_settings = 0;
-
-        for(idx = 0; idx < details->n_settings; idx++) {
-            setting = &details->settings[idx];
-            if((group == Group_All || setting->group == args.group) && (setting->is_available == NULL ||setting->is_available(setting))) {
-                *psetting++ = (setting_detail_t *)setting;
-                n_settings++;
-            }
-        }
-
-        while(details->on_get_settings) {
-            details = details->on_get_settings();
-            for(idx = 0; idx < details->n_settings; idx++) {
-                setting = &details->settings[idx];
-                if((group == Group_All || setting->group == args.group) && (setting->is_available == NULL ||setting->is_available(setting))) {
-                    *psetting++ = (setting_detail_t *)setting;
-                    n_settings++;
-                }
-            }
-        }
-
-        qsort(all_settings, n_settings, sizeof(setting_detail_t *), cmp_settings);
-
-        if(format == SettingsFormat_Grbl)
-            hal.stream.write("\"$-Code\",\" Setting\",\" Units\",\" Setting Description\"" ASCII_EOL);
-        else if(format == SettingsFormat_grblHAL)
-            hal.stream.write("$-Code\tSetting\tUnits\tDatatype\tData format\tSetting Description\tMin\tMax" ASCII_EOL);
-
-        for(idx = 0; idx < n_settings; idx++) {
-            if(settings_iterator(all_settings[idx], print_sorted, &args))
-                reported = true;
-        }
-
-        free(all_settings);
-    }
-
-    return all_settings == NULL ? Status_Unhandled : (reported ? Status_OK : Status_SettingDisabled);
-}
-
 static bool print_unsorted (const setting_detail_t *setting, uint_fast16_t offset, void *args)
 {
     if(!(((report_args_t *)args)->group == setting->group && ((report_args_t *)args)->offset != offset) &&
@@ -1759,43 +1687,70 @@ static bool print_unsorted (const setting_detail_t *setting, uint_fast16_t offse
     return true;
 }
 
-static status_code_t print_settings_details (settings_format_t format, setting_group_t group, uint_fast16_t axis_rpt)
+static status_code_t print_settings_details (settings_format_t format, setting_group_t group)
 {
-    status_code_t status;
-
-    if((status = sort_settings_details(format, group)) != Status_Unhandled)
-        return status;
-
+    uint_fast16_t idx, n_settings = 0;
     bool reported = group == Group_All;
-    uint_fast16_t idx;
     const setting_detail_t *setting;
-    setting_details_t *settings = settings_get_details();
     report_args_t args;
+    setting_detail_t **all_settings, **psetting;
+    setting_details_t *details = settings_get_details();
 
     args.group = settings_normalize_group(group);
     args.offset = group - args.group;
     args.format = format;
 
     do {
-        for(idx = 0; idx < settings->n_settings; idx++) {
+        n_settings += details->n_settings;
+    } while((details = details->next));
 
-            setting = &settings->settings[idx];
+    if(format == SettingsFormat_Grbl)
+        hal.stream.write("\"$-Code\",\" Setting\",\" Units\",\" Setting Description\"" ASCII_EOL);
+    else if(format == SettingsFormat_grblHAL)
+        hal.stream.write("$-Code\tSetting\tUnits\tDatatype\tData format\tSetting Description\tMin\tMax" ASCII_EOL);
+
+    details = settings_get_details();
+
+    if((all_settings = psetting = calloc(n_settings, sizeof(setting_detail_t *)))) {
+
+        n_settings = 0;
+
+        do {
+            for(idx = 0; idx < details->n_settings; idx++) {
+                setting = &details->settings[idx];
+                if((group == Group_All || setting->group == args.group) && (setting->is_available == NULL || setting->is_available(setting))) {
+                    *psetting++ = (setting_detail_t *)setting;
+                    n_settings++;
+                }
+            }
+        } while((details = details->next));
+
+        qsort(all_settings, n_settings, sizeof(setting_detail_t *), cmp_settings);
+
+        for(idx = 0; idx < n_settings; idx++) {
+            if(settings_iterator(all_settings[idx], print_sorted, &args))
+                reported = true;
+        }
+
+        free(all_settings);
+
+    } else do {
+        for(idx = 0; idx < details->n_settings; idx++) {
+
+            setting = &details->settings[idx];
 
             if(group == Group_All || setting->group == args.group) {
                 if(settings_iterator(setting, print_unsorted, &args))
                     reported = true;
             }
         }
-        settings = settings->on_get_settings ? settings->on_get_settings() : NULL;
-    } while(settings);
+    } while((details = details->next));
 
     return reported ? Status_OK : Status_SettingDisabled;
 }
 
 status_code_t report_settings_details (settings_format_t format, setting_id_t id, setting_group_t group)
 {
-    uint_fast16_t axis_rpt = 0;
-
     if(id != Setting_SettingsAll) {
         status_code_t status = Status_OK;
 
@@ -1809,7 +1764,7 @@ status_code_t report_settings_details (settings_format_t format, setting_id_t id
         return status;
     }
 
-    return print_settings_details(format, group, axis_rpt);
+    return print_settings_details(format, group);
 }
 
 #ifndef NO_SETTINGS_DESCRIPTIONS
@@ -1834,76 +1789,122 @@ status_code_t report_setting_description (settings_format_t format, setting_id_t
 
 #endif
 
+static int cmp_alarms (const void *a, const void *b)
+{
+  return (*(alarm_detail_t **)(a))->id - (*(alarm_detail_t **)(b))->id;
+}
+
+static void print_alarm (const alarm_detail_t *alarm, bool grbl_format)
+{
+    if(grbl_format) {
+        write_quoted(uitoa(alarm->id), ",");
+        write_quoted("N/A", ",");
+        write_quoted(alarm->description ? alarm->description : "", NULL);
+        hal.stream.write(ASCII_EOL);
+    } else {
+        hal.stream.write("[ALARMCODE:");
+        hal.stream.write(uitoa(alarm->id));
+        hal.stream.write(vbar);
+        hal.stream.write(vbar);
+        if(alarm->description)
+            hal.stream.write(alarm->description);
+        hal.stream.write("]" ASCII_EOL);
+    }
+}
+
 status_code_t report_alarm_details (bool grbl_format)
 {
-    uint_fast16_t idx;
-    alarm_details_t *list = alarms_get_details();
+    uint_fast16_t idx, n_alarms = 0;
+    alarm_details_t *details = grbl.on_get_alarms();
+    alarm_detail_t **all_alarms, **palarm;
 
     if(grbl_format)
         hal.stream.write("\"Alarm Code in v1.1+\",\" Alarm Message in v1.0-\",\" Alarm Description\"" ASCII_EOL);
 
-    do { // TODO: add sorting?
+    do {
+        n_alarms += details->n_alarms;
+    } while((details = details->next));
 
-        for(idx = 0; idx < list->n_alarms; idx++) {
+    details = grbl.on_get_alarms();
 
-            if(grbl_format) {
-                write_quoted(uitoa(list->alarms[idx].id), ",");
-                write_quoted("N/A", ",");
-//                write_quoted(list->alarms[idx].name, ",");
-                write_quoted(list->alarms[idx].description ? list->alarms[idx].description : "", NULL);
-                hal.stream.write(ASCII_EOL);
-            } else {
-                hal.stream.write("[ALARMCODE:");
-                hal.stream.write(uitoa(list->alarms[idx].id));
-                hal.stream.write(vbar);
-//                hal.stream.write(list->alarms[idx].name);
-                hal.stream.write(vbar);
-                if(list->alarms[idx].description)
-                    hal.stream.write(list->alarms[idx].description);
-                hal.stream.write("]" ASCII_EOL);
-            }
-        }
+    if((all_alarms = palarm = calloc(n_alarms, sizeof(alarm_detail_t *)))) {
 
-        list = list->on_get_alarms ? list->on_get_alarms() : NULL;
+        do {
+            for(idx = 0; idx < details->n_alarms; idx++)
+                *palarm++ = (alarm_detail_t *)&(details->alarms[idx]);
+        } while((details = details->next));
 
-    } while(list);
+        qsort(all_alarms, n_alarms, sizeof(alarm_detail_t *), cmp_alarms);
+
+        for(idx = 0; idx < n_alarms; idx++)
+            print_alarm(all_alarms[idx], grbl_format);
+
+        free(all_alarms);
+
+    } else do {
+        for(idx = 0; idx < details->n_alarms; idx++)
+            print_alarm(&details->alarms[idx], grbl_format);
+    } while((details = details->next));
 
     return Status_OK;
 }
 
+static int cmp_errors (const void *a, const void *b)
+{
+  return (*(status_detail_t **)(a))->id - (*(status_detail_t **)(b))->id;
+}
+
+static void print_error (const status_detail_t *error, bool grbl_format)
+{
+    if(grbl_format) {
+        write_quoted(uitoa(error->id), ",");
+        write_quoted("N/A", ",");
+        write_quoted(error->description ? error->description : "", NULL);
+        hal.stream.write(ASCII_EOL);
+    } else {
+        hal.stream.write("[ERRORCODE:");
+        hal.stream.write(uitoa(error->id));
+        hal.stream.write(vbar);
+        hal.stream.write(vbar);
+        if(error->description)
+            hal.stream.write(error->description);
+        hal.stream.write("]" ASCII_EOL);
+    }
+}
+
 status_code_t report_error_details (bool grbl_format)
 {
-    uint_fast16_t idx;
-    error_details_t *list = errors_get_details();
+    uint_fast16_t idx, n_errors = 0;
+    error_details_t *details = grbl.on_get_errors();
+    status_detail_t **all_errors, **perror;
 
     if(grbl_format)
         hal.stream.write("\"Error Code in v1.1+\",\"Error Message in v1.0-\",\"Error Description\"" ASCII_EOL);
 
-    do { // TODO: add sorting?
+    do {
+        n_errors += details->n_errors;
+    } while((details = details->next));
 
-        for(idx = 0; idx < list->n_errors; idx++) {
+    details = grbl.on_get_errors();
 
-            if(grbl_format) {
-                write_quoted(uitoa(list->errors[idx].id), ",");
-                write_quoted("N/A", ",");
-//                write_quoted(list->errors[idx].name, ",");
-                write_quoted(list->errors[idx].description ? list->errors[idx].description : "", NULL);
-                hal.stream.write(ASCII_EOL);
-            } else {
-                hal.stream.write("[ERRORCODE:");
-                hal.stream.write(uitoa(list->errors[idx].id));
-                hal.stream.write(vbar);
-//                hal.stream.write(list->errors[idx].name);
-                hal.stream.write(vbar);
-                if(list->errors[idx].description)
-                    hal.stream.write(list->errors[idx].description);
-                hal.stream.write("]" ASCII_EOL);
-            }
-        }
+    if((all_errors = perror = calloc(n_errors, sizeof(status_detail_t *)))) {
 
-        list = list->on_get_errors ? list->on_get_errors() : NULL;
+        do {
+            for(idx = 0; idx < details->n_errors; idx++)
+                *perror++ = (status_detail_t *)&(details->errors[idx]);
+        } while((details = details->next));
 
-    } while(list);
+        qsort(all_errors, n_errors, sizeof(status_detail_t *), cmp_errors);
+
+        for(idx = 0; idx < n_errors; idx++)
+            print_error(all_errors[idx], grbl_format);
+
+        free(all_errors);
+
+    } else do {
+        for(idx = 0; idx < details->n_errors; idx++)
+            print_error(&details->errors[idx], grbl_format);
+    } while((details = details->next));
 
     return Status_OK;
 }
@@ -1937,30 +1938,28 @@ static int cmp_setting_group_name (const void *a, const void *b)
     return strcmp((*(setting_detail_t **)(a))->name, (*(setting_detail_t **)(b))->name);
 }
 
-static status_code_t sort_setting_group_details (bool by_id, char *prefix)
+status_code_t report_setting_group_details (bool by_id, char *prefix)
 {
+    uint_fast16_t idx, n_groups = 0;
     setting_details_t *details = settings_get_details();
-    uint8_t n_groups = details->n_groups;
-
-    while(details->on_get_settings) {
-        details = details->on_get_settings();
-        n_groups += details->n_groups;
-    }
-
     setting_group_detail_t **all_groups, **group;
 
-    if((all_groups = calloc(n_groups, sizeof(setting_group_detail_t *)))) {
+    do {
+        n_groups += details->n_groups;
+    } while((details = details->next));
+
+    details = settings_get_details();
+
+    if((all_groups = group = calloc(n_groups, sizeof(setting_group_detail_t *)))) {
 
         uint_fast16_t idx;
 
-        group = all_groups;
         details = settings_get_details();
 
         do {
             for(idx = 0; idx < details->n_groups; idx++)
                 *group++ = (setting_group_detail_t *)&details->groups[idx];
-            details = details->on_get_settings ? details->on_get_settings() : NULL;
-        } while(details);
+        } while((details = details->next));
 
         qsort(all_groups, n_groups, sizeof(setting_group_detail_t *), by_id ? cmp_setting_group_id : cmp_setting_group_name);
 
@@ -1968,24 +1967,11 @@ static status_code_t sort_setting_group_details (bool by_id, char *prefix)
             print_setting_group(all_groups[idx], prefix);
 
         free(all_groups);
-    }
 
-    return all_groups == NULL ? Status_Unhandled : Status_OK;
-}
-
-status_code_t report_setting_group_details (bool by_id, char *prefix)
-{
-    if(sort_setting_group_details(by_id, prefix) != Status_Unhandled)
-        return Status_OK;
-
-    uint_fast16_t idx;
-    setting_details_t *details = settings_get_details();
-
-    do {
+    } else do {
         for(idx = 0; idx < details->n_groups; idx++)
             print_setting_group(&details->groups[idx], prefix);
-        details = details->on_get_settings ? details->on_get_settings() : NULL;
-    } while(details);
+    } while((details = details->next));
 
     return Status_OK;
 }

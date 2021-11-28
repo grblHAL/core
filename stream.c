@@ -34,6 +34,33 @@ typedef struct {
 } stream_state_t;
 
 static stream_state_t stream = {0};
+static io_stream_details_t *streams = NULL;
+
+void stream_register_streams (io_stream_details_t *details)
+{
+    details->next = streams;
+    streams = details;
+}
+
+bool stream_enumerate_streams (stream_enumerate_callback_ptr callback)
+{
+    if(streams == NULL || callback == NULL)
+        return false;
+
+    bool claimed = false;
+    io_stream_details_t *details = streams;
+
+    while(details && !claimed) {
+        uint_fast8_t idx;
+        for(idx = 0; idx < details->n_streams; idx++) {
+            if((claimed = callback(&details->streams[idx])))
+                break;
+        }
+        details = details->next;
+    };
+
+    return claimed;
+}
 
 // called from stream drivers while tx is blocking, returns false to terminate
 bool stream_tx_blocking (void)

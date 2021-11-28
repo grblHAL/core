@@ -193,6 +193,19 @@ for handing feed-holds, overrides, soft resets etc.
 */
 typedef bool (*disable_rx_stream_ptr)(bool disable);
 
+typedef union {
+    uint8_t value;
+    struct {
+        uint8_t connected    :1,
+                claimable    :1,
+                claimed      :1,
+                can_set_baud :1,
+                rx_only      :1,
+                modbus_ready :1,
+                unused       :2;
+    };
+} io_stream_flags_t;
+
 //! Properties and handlers for stream I/O
 typedef struct {
     stream_type_t type;                                     //!< Type of stream.
@@ -216,6 +229,22 @@ typedef struct {
     set_baud_rate_ptr set_baud_rate;                        //!< Optional handler for setting the stream baud rate. Required for Modbus support, recommended for Bluetooth support.
 } io_stream_t;
 
+typedef const io_stream_t *(*stream_claim_ptr)(uint32_t baud_rate);
+
+typedef struct {
+    stream_type_t type;                                     //!< Type of stream.
+    uint8_t instance;                                       //!< Instance of stream type, starts from 0.
+    io_stream_flags_t flags;
+    stream_claim_ptr claim;
+} io_stream_properties_t;
+
+typedef bool (*stream_enumerate_callback_ptr)(io_stream_properties_t const *properties);
+
+typedef struct io_stream_details {
+    uint8_t n_streams;
+    io_stream_properties_t *streams;
+    struct io_stream_details *next;
+} io_stream_details_t;
 
 // The following structures and functions are not referenced in the core code, may be used by drivers
 
@@ -281,6 +310,10 @@ bool stream_buffer_all (char c);
 bool stream_tx_blocking (void);
 
 bool stream_enqueue_realtime_command (char c);
+
+void stream_register_streams (io_stream_details_t *details);
+
+bool stream_enumerate_streams (stream_enumerate_callback_ptr callback);
 
 #ifdef DEBUGOUT
 void debug_write (const char *s);

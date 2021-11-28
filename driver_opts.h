@@ -102,8 +102,19 @@
 #ifndef SPINDLE_SYNC_ENABLE
 #define SPINDLE_SYNC_ENABLE 0
 #endif
+
 #ifndef TRINAMIC_ENABLE
-#define TRINAMIC_ENABLE     0
+#define TRINAMIC_ENABLE      0
+#endif
+#if TRINAMIC_ENABLE == 2209
+#define TRINAMIC_UART_ENABLE 1
+#else
+#define TRINAMIC_UART_ENABLE 0
+#endif
+#if TRINAMIC_ENABLE == 2130 || TRINAMIC_ENABLE == 5160
+#define TRINAMIC_SPI_ENABLE  1
+#else
+#define TRINAMIC_SPI_ENABLE  0
 #endif
 #ifndef TRINAMIC_I2C
 #define TRINAMIC_I2C        0
@@ -116,6 +127,7 @@
 #ifndef TRINAMIC_DEV
 #define TRINAMIC_DEV        0
 #endif
+
 #ifndef PWM_RAMPED
 #define PWM_RAMPED          0
 #endif

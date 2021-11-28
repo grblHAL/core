@@ -731,7 +731,8 @@ typedef struct setting_details {
     const uint16_t n_descriptions;
     const setting_descr_t *descriptions;
 #endif
-    struct setting_details *(*on_get_settings)(void);
+//    struct setting_details *(*on_get_settings)(void);
+    struct setting_details *next;
     settings_changed_ptr on_changed;
     driver_settings_save_ptr save;
     driver_settings_load_ptr load;
@@ -782,6 +783,7 @@ bool settings_read_tool_data (uint32_t tool, tool_data_t *tool_data);
 // Temporarily override acceleration, if 0 restore to configured setting value
 bool settings_override_acceleration (uint8_t axis, float acceleration);
 
+void settings_register (setting_details_t *details);
 setting_details_t *settings_get_details (void);
 bool settings_is_group_available (setting_group_t group);
 bool settings_iterator (const setting_detail_t *setting, setting_output_ptr callback, void *data);

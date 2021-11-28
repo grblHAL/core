@@ -28,9 +28,21 @@
     trinamic_init();
 #endif
 
+#if MODBUS_ENABLE
+    extern void modbus_init (void);
+    modbus_init();
+#endif
+
 #if HUANYANG_ENABLE
     extern void huanyang_init (void);
     huanyang_init();
+#endif
+
+#ifndef GRBL_ESP32 // ESP32 has its own bluetooth_init
+#if BLUETOOTH_ENABLE
+    extern void bluetooth_init (void);
+    bluetooth_init();
+#endif
 #endif
 
 #if KEYPAD_ENABLE
