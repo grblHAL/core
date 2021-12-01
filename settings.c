@@ -499,7 +499,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_DisableG92Persistence, Group_General, "Disable G92 persistence", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_g92_disable_persistence, get_int, NULL },
 #endif
 #if N_AXIS == 4
-     { Settings_Axis_Rotational, Group_Stepper, "Rotational axes", NULL, Format_Bitfield, "A-Axis", NULL, NULL, Setting_IsExtendedFn, set_rotational_axes, get_int, NULL }
+     { Settings_Axis_Rotational, Group_Stepper, "Rotational axes", NULL, Format_Bitfield, "A-Axis", NULL, NULL, Setting_IsExtendedFn, set_rotational_axes, get_int, NULL },
 #elif N_AXIS == 5
      { Settings_Axis_Rotational, Group_Stepper, "Rotational axes", NULL, Format_Bitfield, "A-Axis,B-Axis", NULL, NULL, Setting_IsExtendedFn, set_rotational_axes, get_int, NULL },
 #elif N_AXIS > 5
