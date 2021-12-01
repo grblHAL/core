@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+Build 20211130:
+
+Core:
+
+* Fixed regression affecting ESP32 driver, crashes the controller in some circumstances. One is starting a second WebUI when the first is executing movements.
+
+Drivers:
+
+* ESP32 driver: Added compiler flags to shut down some compiler warnings, increased main task stack size.
+* LPC176x driver: Added option to enable I2C current control for Smoothieboard. _Not tested!_
+* Some minor fixes in a couple.
+
+Plugins:
+
+* Networking plugin: Fixed issue in WebSocket daemon that resulted in some clients not accepting connection offered.
+
+---
+
 Build 20211128:
 
 Core:
