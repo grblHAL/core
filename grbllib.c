@@ -89,13 +89,6 @@ static bool kinematics_segment_line (float *target, plan_line_data_t *pl_data, b
 
 #endif
 
-#ifdef DEBUGOUT
-static void debug_out (bool on)
-{
-    // NOOP
-}
-#endif
-
 void dummy_bool_handler (bool arg)
 {
     // NOOP
@@ -166,10 +159,11 @@ int grbl_enter (void)
     kinematics.segment_line = kinematics_segment_line; // default to no segmentation
 #endif
 
-#ifdef DEBUGOUT
-    hal.debug_out = debug_out; // must be overridden by driver to have any effect
-#endif
     driver.init = driver_init();
+
+#ifdef DEBUGOUT
+    debug_stream_init();
+#endif
 
 #if COMPATIBILITY_LEVEL > 0
     hal.stream.suspend_read = NULL;

@@ -114,7 +114,7 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 
 // Enables code for debugging purposes. Not for general use and always in constant flux.
 // #define DEBUG // Uncomment to enable. Default disabled.
-// #define DEBUGOUT // Uncomment to add HAL entry point for debug output.
+// #define DEBUGOUT 0 // Uncomment to claim serial port with given instance number and add HAL entry point for debug output.
 
 // If spindle RPM is set by high-level commands to a spindle controller (eg. via Modbus) or the driver supports closed loop
 // spindle RPM control either uncomment the #define SPINDLE_RPM_CONTROLLED below or add SPINDLE_RPM_CONTROLLED as predefined symbol

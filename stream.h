@@ -206,11 +206,20 @@ typedef union {
     };
 } io_stream_flags_t;
 
+typedef union {
+    uint8_t value;
+    struct {
+        uint8_t connected       :1,
+                webui_connected :1,
+                unused          :6;
+    };
+} io_stream_state_t;
+
 //! Properties and handlers for stream I/O
 typedef struct {
     stream_type_t type;                                     //!< Type of stream.
     uint8_t instance;                                       //!< Instance of stream type, starts from 0.
-    bool connected;                                         //!< Set to true by the driver if stream is connected. _Optional._ Under consideration.
+    io_stream_state_t state;                                //!< Optional status flags such as connected status.
     get_stream_buffer_count_ptr get_rx_buffer_free;         //!< Handler for getting number of free characters in the input buffer.
     stream_write_ptr write;                                 //!< Handler for writing string to current output stream only.
     stream_write_ptr write_all;                             //!< Handler for writing string to all active output streams.
@@ -317,7 +326,7 @@ bool stream_enumerate_streams (stream_enumerate_callback_ptr callback);
 
 #ifdef DEBUGOUT
 void debug_write (const char *s);
-void debug_stream_init (io_stream_t *stream);
+bool debug_stream_init (void);
 #endif
 
 #ifdef __cplusplus

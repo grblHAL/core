@@ -508,8 +508,10 @@ bool protocol_exec_rt_system (void)
             // Tell driver/plugins about reset.
             hal.driver_reset();
 
-            if(hal.stream.suspend_read && hal.stream.suspend_read(false))
+            if(!sys.flags.keep_input && hal.stream.suspend_read && hal.stream.suspend_read(false))
                 hal.stream.cancel_read_buffer(); // flush pending blocks (after M6)
+
+            sys.flags.keep_input = Off;
 
             gc_init();
             plan_reset();

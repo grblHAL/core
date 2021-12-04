@@ -172,6 +172,11 @@ ISR_CODE bool stream_enable_mpg (const io_stream_t *mpg_stream, bool mpg_mode)
 
 static stream_write_ptr dbg_write = NULL;
 
+static void debug_stream_warning (uint_fast16_t state)
+{
+    report_message("Failed to initialize debug stream!", Message_Warning);
+}
+
 void debug_write (const char *s)
 {
     if(dbg_write) {
@@ -180,13 +185,34 @@ void debug_write (const char *s)
     }
 }
 
-void debug_stream_init (io_stream_t *stream)
+static bool debug_claim_stream (io_stream_properties_t const *stream)
 {
-    memcpy(&hal.debug, stream, sizeof(io_stream_t));
-    dbg_write = hal.debug.write;
-    hal.debug.write = debug_write;
+    io_stream_t const *claimed = NULL;
 
-    hal.debug.write(ASCII_EOL "UART debug active:" ASCII_EOL);
+    if(stream->type == StreamType_Serial && stream->flags.claimable && !stream->flags.claimed) {
+
+        if(stream->instance == DEBUGOUT && (claimed = stream->claim(115200))) {
+
+            memcpy(&hal.debug, claimed, sizeof(io_stream_t));
+            dbg_write = hal.debug.write;
+            hal.debug.write = debug_write;
+
+            if(hal.periph_port.set_pin_description)
+                hal.periph_port.set_pin_description(Output_TX, hal.debug.instance == 0 ? PinGroup_UART : PinGroup_UART2, "Debug out");
+        }
+    }
+
+    return claimed != NULL;
+}
+
+bool debug_stream_init (void)
+{
+    if(stream_enumerate_streams(debug_claim_stream))
+        hal.debug.write(ASCII_EOL "UART debug active:" ASCII_EOL);
+    else
+        protocol_enqueue_rt_command(debug_stream_warning);
+
+    return hal.debug.write == debug_write;
 }
 
 #endif

@@ -1,5 +1,25 @@
 ## grblHAL changelog
 
+Build 20211203:
+
+Core:
+
+* Added flags for WebUI reconnect handling.
+* For developers: Changed debug stream initialization to claim specific stream instance and moved init call to core.  
+Enabling the debug stream is done in [grbl/config.h](https://github.com/grblHAL/core/blob/master/config.h).
+
+Drivers:
+
+* All: updated for core changes \(new flags\).
+* iMRXRT driver: fixed regression causing UART mode to fail, driver issue [#28](https://github.com/grblHAL/iMXRT1062/issues/28).
+
+Plugins:
+
+* SD card plugin: Fixed issue that crashes the controller if a client disconnects/reconnects while a job is running.   
+Added support for WebUI disconnect/reconnect without terminating a running job.
+
+---
+
 Build 20211130:
 
 Core:
