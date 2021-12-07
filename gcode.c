@@ -151,7 +151,7 @@ inline static bool motion_is_lasercut (motion_mode_t motion)
     return motion == MotionMode_Linear || motion == MotionMode_CwArc || motion == MotionMode_CcwArc || motion == MotionMode_CubicSpline;
 }
 
-parser_state_t *get_state (void)
+parser_state_t *gc_get_state (void)
 {
     return &gc_state;
 }

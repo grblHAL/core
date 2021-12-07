@@ -1,5 +1,24 @@
 ## grblHAL changelog
 
+Core:
+
+* Renamed unused function.
+
+Plugins:
+
+* Networking: "hardened" websocket code. Increased ftpd buffer for faster ftp downloads.
+* SD Card: Added mount and unmount events to allow moving driver specific code out of the plugin.
+
+Drivers:
+
+* RP2040, Simulator: updated for core changes that should have been committed for build 20211203.
+* ESP32, iMXRT1062 and MSP432E401Y: moved driver specific SD card mount/unmount code from the SD card plugin to _driver.c_.
+* ESP32: improved SD card mount/unmount code. Added `$FU` command to be used to unmount the card before removing it. The `$FU` command may be removed later.
+* LPC176x: Changed IRQ priorities in order to avoid random delays when sending lots of short movements \(e.g. when laser engraving\).  
+Fixed bug in SD card driver code.
+
+---
+
 Build 20211203:
 
 Core:

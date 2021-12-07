@@ -552,7 +552,7 @@ status_code_t gc_execute_block (char *block);
 // Driver support for pulsing the laser on signal is required for this to work.
 // Returns true if driver uses hardware implementation.
 bool gc_laser_ppi_enable (uint_fast16_t ppi, uint_fast16_t pulse_length);
-parser_state_t *get_state (void);
+parser_state_t *gc_get_state (void);
 // Gets axes scaling state.
 axes_signals_t gc_get_g51_state (void);
 float *gc_get_scaling (void);
