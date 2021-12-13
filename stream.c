@@ -1,5 +1,5 @@
 /*
-  stream.c - stream RX handling for tool change protocol
+  stream.c - high level (serial) stream handling
 
   Part of grblHAL
 
@@ -19,6 +19,7 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "hal.h"
@@ -33,8 +34,15 @@ typedef struct {
     stream_rx_buffer_t *rxbuffer;
 } stream_state_t;
 
+typedef struct stream_connection {
+    const io_stream_t *stream;
+    bool is_up;
+    struct stream_connection *next;
+} stream_connection_t;
+
 static stream_state_t stream = {0};
 static io_stream_details_t *streams = NULL;
+static stream_connection_t base = {0}, *connections = &base;
 
 void stream_register_streams (io_stream_details_t *details)
 {
@@ -166,6 +174,149 @@ ISR_CODE bool stream_enable_mpg (const io_stream_t *mpg_stream, bool mpg_mode)
     protocol_enqueue_realtime_command(mpg_mode ? CMD_STATUS_REPORT_ALL : CMD_STATUS_REPORT);
 
     return true;
+}
+
+static void stream_write_all (const char *s)
+{
+    stream_connection_t *connection = connections;
+
+    while(connection) {
+        if(connection->is_up)
+            connection->stream->write(s);
+        connection = connection->next;
+    }
+}
+
+static bool stream_select (const io_stream_t *stream, bool add)
+{
+    static const io_stream_t *active_stream = NULL;
+
+    stream_connection_t *connection, *last = connections;
+
+    if(stream == base.stream) {
+        base.is_up = add;
+        return true;
+    }
+
+    if(add) {
+
+        if(base.stream == NULL) {
+            base.stream = stream;
+            base.is_up = stream->state.connected == On;
+        } else if((connection = malloc(sizeof(stream_connection_t)))) {
+            connection->stream = stream;
+            connection->is_up = stream->state.connected == On || stream->state.is_usb == On; // TODO: add connect/disconnect event to driver code
+            connection->next = NULL;
+            while(last->next) {
+                last = last->next;
+                if(last->stream == stream) {
+                    free(connection);
+                    return true;
+                }
+            }
+            last->next = connection;
+        } else
+            return false;
+
+    } else { // disconnect
+
+        stream_connection_t *prev;
+
+        while(last->next) {
+            prev = last;
+            last = last->next;
+            if(last->stream == stream) {
+                prev->next = last->next;
+                free(last);
+                if(prev->next)
+                    return false;
+                else {
+                    stream = prev->stream;
+                    break;
+                }
+            }
+        }
+    }
+
+    bool webui_connected = hal.stream.state.webui_connected;
+
+    switch(stream->type) {
+
+        case StreamType_Serial:
+            if(active_stream && active_stream->type != StreamType_Serial && stream->state.connected) {
+                hal.stream.write = stream->write;
+                report_message("SERIAL STREAM ACTIVE", Message_Plain);
+            }
+            break;
+
+        case StreamType_Telnet:
+            if(hal.stream.state.connected)
+                report_message("TELNET STREAM ACTIVE", Message_Plain);
+            if(add && sys.driver_started) {
+                hal.stream.write_all = stream->write;
+                report_init_message();
+            }
+            break;
+
+        case StreamType_WebSocket:
+            if(hal.stream.state.connected)
+                report_message("WEBSOCKET STREAM ACTIVE", Message_Plain);
+            if(add && sys.driver_started && !hal.stream.state.webui_connected) {
+                hal.stream.write_all = stream->write;
+                report_init_message();
+            }
+            break;
+
+        case StreamType_Bluetooth:
+            if(hal.stream.state.connected)
+                report_message("BLUETOOTH STREAM ACTIVE", Message_Plain);
+            if(add && sys.driver_started) {
+                hal.stream.write_all = stream->write;
+                report_init_message();
+            }
+            break;
+
+        default:
+            break;
+    }
+
+    memcpy(&hal.stream, stream, sizeof(io_stream_t));
+
+    if(!hal.stream.write_all)
+        hal.stream.write_all = base.next != NULL ? stream_write_all : hal.stream.write;
+
+    if(stream->type == StreamType_WebSocket)
+        hal.stream.state.webui_connected = webui_connected;
+
+    hal.stream.set_enqueue_rt_handler(protocol_enqueue_realtime_command);
+
+    if(hal.stream.disable_rx)
+        hal.stream.disable_rx(false);
+
+    if(grbl.on_stream_changed)
+        grbl.on_stream_changed(hal.stream.type);
+
+    active_stream = stream;
+
+    return true;
+}
+
+const io_stream_t *stream_get_base (void)
+{
+    return base.stream;
+}
+
+bool stream_connect (const io_stream_t *stream)
+{
+    return hal.stream_select ? hal.stream_select(stream) : stream_select(stream, true);
+}
+
+void stream_disconnect (const io_stream_t *stream)
+{
+    if(hal.stream_select)
+        hal.stream_select(NULL);
+    else if(stream)
+        stream_select(stream, false);
 }
 
 #ifdef DEBUGOUT

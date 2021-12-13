@@ -1,5 +1,26 @@
 ## grblHAL changelog
 
+Build 20211213:
+
+Core:
+
+* Added generic stream switcher functions for driver use, to avoid duplicated code.
+* Added HAL entry point as workaround fix for random ESP32 crashes \(related to unreferenced float variable in ISR context\). 
+
+Drivers:
+
+* Most: updated to use new core based stream switcher.
+* STM32F4xx: updates for BTT SKR 1.1 & 2.0 UART mode Trinamic stepper driver support.
+* LPC176x: Added tentative support for BTT SKR E3 board including soft UART mode Trinamic TMC2209 drivers. Code by Dimitris Zervas, somewhat modified by Terje Io.
+* ESP32: added driver support for ganged/auto squared axes and Trinamic SPI mode stepper drivers. Untested for now since hardware is not available.  
+Added board map for xPro v5 controller with TMC5160 drivers. Untested.  
+Fix for random Guru crashes when streaming gcode at high feedrates/accelerations.
+
+Plugins:
+* Trinamic: workaround for ESP32 enums always defaulting to 32bit(!)
+* Networking, Bluetooth: updated for core stream switcher.
+
+---
 Core:
 
 * Renamed unused function.

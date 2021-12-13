@@ -184,6 +184,9 @@ typedef struct {
 #else
     spindle_update_rpm_ptr update_rpm;  //!< Handler for updating spindle RPM.
 #endif
+#ifdef GRBL_ESP32
+    void (*esp32_off)(void);            //!< Workaround handler for snowflake ESP32 Guru awaken by floating point data in ISR context.
+#endif
     // Optional entry points:
     spindle_get_data_ptr get_data;      //!< Optional handler for getting spindle data. Required for spindle sync.
     spindle_reset_data_ptr reset_data;  //!< Optional handler for resetting spindle data. Required for spindle sync.

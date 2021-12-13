@@ -186,6 +186,6 @@ typedef struct {
 } nvs_transfer_t;
 
 extern nvs_transfer_result_t i2c_nvs_transfer (nvs_transfer_t *i2c, bool read);
-extern void my_plugin_init (void)  __attribute__((weak));
+extern void my_plugin_init (void);
 
 #endif

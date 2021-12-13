@@ -1,5 +1,5 @@
 /*
-  stream.h - some ASCII control character definitions and optional structures for stream buffers
+  stream.h - high level (serial) stream handling
 
   Part of grblHAL
 
@@ -211,7 +211,8 @@ typedef union {
     struct {
         uint8_t connected       :1,
                 webui_connected :1,
-                unused          :6;
+                is_usb          :1,
+                unused          :5;
     };
 } io_stream_state_t;
 
@@ -323,6 +324,12 @@ bool stream_enqueue_realtime_command (char c);
 void stream_register_streams (io_stream_details_t *details);
 
 bool stream_enumerate_streams (stream_enumerate_callback_ptr callback);
+
+bool stream_connect (const io_stream_t *stream);
+
+void stream_disconnect (const io_stream_t *stream);
+
+const io_stream_t *stream_get_base (void);
 
 #ifdef DEBUGOUT
 void debug_write (const char *s);

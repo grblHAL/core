@@ -404,9 +404,15 @@ ISR_CODE void stepper_driver_interrupt_handler (void)
         } else {
             // Segment buffer empty. Shutdown.
             st_go_idle();
+
             // Ensure pwm is set properly upon completion of rate-controlled motion.
-            if (st.exec_block->dynamic_rpm && settings.mode == Mode_Laser)
+            if (st.exec_block->dynamic_rpm && settings.mode == Mode_Laser) {
+              #ifndef GRBL_ESP32
                 hal.spindle.set_state((spindle_state_t){0}, 0.0f);
+              #else
+                hal.spindle.esp32_off();
+              #endif
+            }
 
             st.exec_block = NULL;
             system_set_exec_state_flag(EXEC_CYCLE_COMPLETE); // Flag main program for cycle complete

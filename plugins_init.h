@@ -65,7 +65,7 @@
     openpnp_init();
 #endif
 
-// ESP32 has its own webui_init and crashes at runtime if the weak my_plugin_init() is called...
+// ESP32 has its own webui_init
 #ifndef GRBL_ESP32
 
 #if WEBUI_ENABLE
@@ -73,9 +73,9 @@
     webui_init();
 #endif
 
-    my_plugin_init();
-
 #endif
+
+    my_plugin_init();
 
 // Third party plugin definitions.
 // The code for these has to be downloaded from the source and placed in the same folder as driver.c
