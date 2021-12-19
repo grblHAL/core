@@ -1,5 +1,31 @@
 ## grblHAL changelog
 
+Build 20211218:
+
+Core:
+
+* Fixed issue where VFD spindle alarm during homing failed to stop movement. Changed homing init to only stop spindle and coolant if already on.
+
+Plugins:
+
+* Trinamic: Bug fixes and improvements for ganged axes handling.
+
+Drivers:
+
+* All STM32 drivers, LPC176x, MSP432E401Y and TM4C1294:  
+Made folder references relative in Eclipse _.cproject_ file to allow renaming of project.
+
+* STM32F4xx:    
+Added alternative startup code for F407 and F446 to allow use of additional peripherals in user code.  
+__NOTE:__ This may break PlatformIO compilation. A possible workaround is to delete the startup folders not matching the MCU variant.  
+Added support for Bigtreetech SKR 1.2 boards \(as a synonomym for SKR 1.1\), switched soft UART pins for Trinamic drivers to direct connection.
+
+* ESP32: Bug fixes for ganged axes and output pins with pin number > 31.
+
+* SAM3X8E and SAMD21: Simplified USB polling.
+
+---
+
 Build 20211213:
 
 Core:
@@ -21,6 +47,7 @@ Plugins:
 * Networking, Bluetooth: updated for core stream switcher.
 
 ---
+
 Core:
 
 * Renamed unused function.

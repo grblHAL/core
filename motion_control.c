@@ -781,18 +781,22 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
 
         state_set(STATE_HOMING);                                // Set homing system state.
 #if COMPATIBILITY_LEVEL == 0
-        protocol_enqueue_realtime_command(CMD_STATUS_REPORT);            // Force a status report and
+        protocol_enqueue_realtime_command(CMD_STATUS_REPORT);   // Force a status report and
         delay_sec(0.1f, DelayMode_Dwell);                       // delay a bit to get it sent (or perhaps wait a bit for a request?)
 #endif
         hal.limits.enable(false, true); // Disable hard limits pin change register for cycle duration
 
         // Turn off spindle and coolant (and update parser state)
-        gc_state.spindle.rpm = 0.0f;
-        gc_state.modal.spindle.on = gc_state.modal.spindle.ccw = Off;
-        spindle_set_state(gc_state.modal.spindle, 0.0f);
+        if(hal.spindle.get_state().on) {
+            gc_state.spindle.rpm = 0.0f;
+            gc_state.modal.spindle.on = gc_state.modal.spindle.ccw = Off;
+            spindle_set_state(gc_state.modal.spindle, 0.0f);
+        }
 
-        gc_state.modal.coolant.mask = 0;
-        coolant_set_state(gc_state.modal.coolant);
+        if(hal.coolant.get_state().mask) {
+            gc_state.modal.coolant.mask = 0;
+            coolant_set_state(gc_state.modal.coolant);
+        }
 
         // ---------------------------------------------------------------------------
         // Perform homing routine. NOTE: Special motion case. Only system reset works.

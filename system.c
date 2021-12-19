@@ -980,7 +980,9 @@ void system_apply_jog_limits (float *target)
 
 void system_raise_alarm (alarm_code_t alarm)
 {
-    if(sys.alarm != alarm) {
+    if(state_get() == STATE_HOMING && !(sys.rt_exec_state & EXEC_RESET))
+        system_set_exec_alarm(alarm);
+    else if(sys.alarm != alarm) {
         sys.alarm = alarm;
         state_set(alarm == Alarm_EStop ? STATE_ESTOP : STATE_ALARM);
         if(sys.driver_started || sys.alarm == Alarm_SelftestFailed)

@@ -285,7 +285,7 @@ status_code_t report_status_message (status_code_t status_code)
 alarm_code_t report_alarm_message (alarm_code_t alarm_code)
 {
     hal.stream.write_all(appendbuf(3, "ALARM:", uitoa((uint32_t)alarm_code), ASCII_EOL));
-    hal.delay_ms(500, NULL); // Force delay to ensure message clears output stream buffer.
+    hal.delay_ms(100, NULL); // Force delay to ensure message clears output stream buffer.
 
     return alarm_code;
 }
