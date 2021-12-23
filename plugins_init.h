@@ -33,9 +33,9 @@
     modbus_init();
 #endif
 
-#if HUANYANG_ENABLE
-    extern void huanyang_init (void);
-    huanyang_init();
+#if VFD_ENABLE
+    extern void vfd_init (void);
+    vfd_init();
 #endif
 
 #ifndef GRBL_ESP32 // ESP32 has its own bluetooth_init

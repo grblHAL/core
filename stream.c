@@ -40,8 +40,23 @@ typedef struct stream_connection {
     struct stream_connection *next;
 } stream_connection_t;
 
+static const io_stream_properties_t null_stream = {
+    .type = StreamType_Null,
+    .instance = 0,
+    .flags.claimable = On,
+    .flags.claimed = Off,
+    .flags.connected = On,
+    .flags.can_set_baud = On,
+    .claim = stream_null_init
+};
+
+static io_stream_details_t null_streams = {
+    .n_streams = 1,
+    .streams = (io_stream_properties_t *)&null_stream,
+};
+
 static stream_state_t stream = {0};
-static io_stream_details_t *streams = NULL;
+static io_stream_details_t *streams = &null_streams;
 static stream_connection_t base = {0}, *connections = &base;
 
 void stream_register_streams (io_stream_details_t *details)
@@ -52,7 +67,7 @@ void stream_register_streams (io_stream_details_t *details)
 
 bool stream_enumerate_streams (stream_enumerate_callback_ptr callback)
 {
-    if(streams == NULL || callback == NULL)
+    if(callback == NULL)
         return false;
 
     bool claimed = false;
@@ -308,7 +323,37 @@ const io_stream_t *stream_get_base (void)
 
 bool stream_connect (const io_stream_t *stream)
 {
-    return hal.stream_select ? hal.stream_select(stream) : stream_select(stream, true);
+    bool ok = hal.stream_select ? hal.stream_select(stream) : stream_select(stream, true);
+
+    if(ok && stream->type == StreamType_Serial && hal.periph_port.set_pin_description) {
+        hal.periph_port.set_pin_description(Input_RX, (pin_group_t)(PinGroup_UART + stream->instance), "Primary UART");
+        hal.periph_port.set_pin_description(Output_TX, (pin_group_t)(PinGroup_UART + stream->instance), "Primary UART");
+    }
+
+    return ok;
+}
+
+static struct {
+    uint8_t instance;
+    uint32_t baud_rate;
+} connection;
+
+static bool _connect_instance (io_stream_properties_t const *stream)
+{
+    io_stream_t const *claimed = NULL;
+
+    if(stream->type == StreamType_Serial && stream->instance == connection.instance && stream->flags.claimable && !stream->flags.claimed)
+        stream_connect(claimed = stream->claim(connection.baud_rate));
+
+    return claimed != NULL;
+}
+
+bool stream_connect_instance (uint8_t instance, uint32_t baud_rate)
+{
+    connection.instance = instance;
+    connection.baud_rate = baud_rate;
+
+    return stream_enumerate_streams(_connect_instance);
 }
 
 void stream_disconnect (const io_stream_t *stream)
@@ -317,6 +362,83 @@ void stream_disconnect (const io_stream_t *stream)
         hal.stream_select(NULL);
     else if(stream)
         stream_select(stream, false);
+}
+
+// null stream, discards output and returns no input
+
+static enqueue_realtime_command_ptr enqueue_realtime_command = protocol_enqueue_realtime_command;
+
+static uint16_t null_rx_free (void)
+{
+    return RX_BUFFER_SIZE;
+}
+
+static uint16_t null_count (void)
+{
+    return 0;
+}
+
+static bool null_put_c (const char c)
+{
+    return true;
+}
+
+static void null_write_string (const char *s)
+{
+}
+
+static void null_write(const char *s, uint16_t length)
+{
+}
+
+static bool null_suspend_disable (bool suspend)
+{
+    return true;
+}
+
+static bool null_set_baudrate (uint32_t baud_rate)
+{
+    return true;
+}
+
+static bool null_enqueue_rt_command (char c)
+{
+    return enqueue_realtime_command(c);
+}
+
+static enqueue_realtime_command_ptr null_set_rt_handler (enqueue_realtime_command_ptr handler)
+{
+    enqueue_realtime_command_ptr prev = enqueue_realtime_command;
+
+    if(handler)
+        enqueue_realtime_command = handler;
+
+    return prev;
+}
+
+const io_stream_t *stream_null_init (uint32_t baud_rate)
+{
+    static const io_stream_t stream = {
+        .type = StreamType_Null,
+        .state.connected = On,
+        .read = stream_get_null,
+        .write = null_write_string,
+        .write_n =  null_write,
+        .write_char = null_put_c,
+        .enqueue_rt_command = null_enqueue_rt_command,
+        .get_rx_buffer_free = null_rx_free,
+        .get_rx_buffer_count = null_count,
+        .get_tx_buffer_count = null_count,
+        .reset_write_buffer = dummy_handler,
+        .reset_read_buffer = dummy_handler,
+        .cancel_read_buffer = dummy_handler,
+        .suspend_read = null_suspend_disable,
+        .disable_rx = null_suspend_disable,
+        .set_baud_rate = null_set_baudrate,
+        .set_enqueue_rt_handler = null_set_rt_handler
+    };
+
+    return &stream;
 }
 
 #ifdef DEBUGOUT

@@ -272,7 +272,10 @@ typedef enum {
     PinGroup_I2C,
     PinGroup_SPI,
     PinGroup_UART,
+    PinGroup_UART1 = PinGroup_UART,
     PinGroup_UART2,
+    PinGroup_UART3,
+    PinGroup_UART4,
     PinGroup_USB,
 // Interrupt capable pins that may have debounce processing enabled
     PinGroup_Control       = (1<<8),

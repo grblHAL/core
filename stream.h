@@ -327,9 +327,13 @@ bool stream_enumerate_streams (stream_enumerate_callback_ptr callback);
 
 bool stream_connect (const io_stream_t *stream);
 
+bool stream_connect_instance (uint8_t instance, uint32_t baud_rate);
+
 void stream_disconnect (const io_stream_t *stream);
 
 const io_stream_t *stream_get_base (void);
+
+const io_stream_t *stream_null_init (uint32_t baud_rate);
 
 #ifdef DEBUGOUT
 void debug_write (const char *s);

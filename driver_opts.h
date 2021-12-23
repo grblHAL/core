@@ -99,6 +99,15 @@
 #ifndef EEPROM_IS_FRAM
 #define EEPROM_IS_FRAM      0
 #endif
+
+#ifndef I2C_ENABLE
+#if EEPROM_ENABLE || KEYPAD_ENABLE == 1 || (TRINAMIC_ENABLE && TRINAMIC_I2C)
+#define I2C_ENABLE 1
+#else
+#define I2C_ENABLE 0
+#endif
+#endif
+
 #ifndef SPINDLE_SYNC_ENABLE
 #define SPINDLE_SYNC_ENABLE 0
 #endif
@@ -128,6 +137,18 @@
 #define TRINAMIC_DEV        0
 #endif
 
+#ifndef SDCARD_ENABLE
+#define SDCARD_ENABLE       0
+#endif
+
+#ifndef SPI_ENABLE
+#if SDCARD_ENABLE || TRINAMIC_SPI_ENABLE
+#define SPI_ENABLE 1
+#else
+#define SPI_ENABLE 0
+#endif
+#endif
+
 #ifndef PWM_RAMPED
 #define PWM_RAMPED          0
 #endif
@@ -138,20 +159,16 @@
 #define PPI_ENABLE          0
 #endif
 
-#ifndef HUANYANG_ENABLE
-#define HUANYANG_ENABLE     0
-#else
 #ifndef VFD_SPINDLE
+#if VFD_ENABLE
 #define VFD_SPINDLE         1
-#endif
-#endif
-
-#ifndef VFD_SPINDLE
+#else
 #define VFD_SPINDLE         0
+#endif
 #endif
 
 #ifndef MODBUS_ENABLE
-#if HUANYANG_ENABLE
+#if VFD_ENABLE
 #define MODBUS_ENABLE       1
 #else
 #define MODBUS_ENABLE       0
@@ -233,10 +250,6 @@
 #undef SDCARD_ENABLE
 #endif
 #define SDCARD_ENABLE       1
-#endif
-
-#ifndef SDCARD_ENABLE
-#define SDCARD_ENABLE       0
 #endif
 
 #ifndef ETHERNET_ENABLE
