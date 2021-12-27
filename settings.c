@@ -370,6 +370,7 @@ static status_code_t set_g92_disable_persistence (setting_id_t id, uint_fast16_t
 static float get_float (setting_id_t setting);
 static uint32_t get_int (setting_id_t id);
 static bool is_setting_available (const setting_detail_t *setting);
+static bool is_group_available (const setting_detail_t *setting);
 
 static char control_signals[] = "Reset,Feed hold,Cycle start,Safety door,Block delete,Optional stop,EStop,Probe connected,Motor fault";
 static char spindle_signals[] = "Spindle enable,Spindle direction,PWM";
@@ -469,15 +470,15 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_LinearSpindlePiece3, Group_Spindle, "Spindle linearisation, third point", NULL, Format_String, "x30", NULL, "30", Setting_IsExtendedFn, set_linear_piece, get_linear_piece, NULL },
      { Setting_LinearSpindlePiece4, Group_Spindle, "Spindle linearisation, fourth point", NULL, Format_String, "x30", NULL, "30", Setting_IsExtendedFn, set_linear_piece, get_linear_piece, NULL },
 #endif
-     { Setting_SpindlePGain, Group_Spindle_ClosedLoop, "Spindle P-gain", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.spindle.pid.p_gain, NULL, is_setting_available },
-     { Setting_SpindleIGain, Group_Spindle_ClosedLoop, "Spindle I-gain", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.spindle.pid.i_gain, NULL, is_setting_available },
-     { Setting_SpindleDGain, Group_Spindle_ClosedLoop, "Spindle D-gain", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.spindle.pid.d_gain, NULL, is_setting_available },
-     { Setting_SpindleMaxError, Group_Spindle_ClosedLoop, "Spindle PID max error", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.spindle.pid.max_error, NULL, is_setting_available },
-     { Setting_SpindleIMaxError, Group_Spindle_ClosedLoop, "Spindle PID max I error", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.spindle.pid.i_max_error, NULL, is_setting_available },
-     { Setting_PositionPGain, Group_Spindle_Sync, "Spindle sync P-gain", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.position.pid.p_gain, NULL, is_setting_available },
-     { Setting_PositionIGain, Group_Spindle_Sync, "Spindle sync I-gain", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.position.pid.i_gain, NULL, is_setting_available },
-     { Setting_PositionDGain, Group_Spindle_Sync, "Spindle sync D-gain", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.position.pid.d_gain, NULL, is_setting_available },
-     { Setting_PositionIMaxError, Group_Spindle_Sync, "Spindle sync PID max I error", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.position.pid.i_max_error, NULL, is_setting_available },
+     { Setting_SpindlePGain, Group_Spindle_ClosedLoop, "Spindle P-gain", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.spindle.pid.p_gain, NULL, is_group_available },
+     { Setting_SpindleIGain, Group_Spindle_ClosedLoop, "Spindle I-gain", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.spindle.pid.i_gain, NULL, is_group_available },
+     { Setting_SpindleDGain, Group_Spindle_ClosedLoop, "Spindle D-gain", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.spindle.pid.d_gain, NULL, is_group_available },
+     { Setting_SpindleMaxError, Group_Spindle_ClosedLoop, "Spindle PID max error", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.spindle.pid.max_error, NULL, is_group_available },
+     { Setting_SpindleIMaxError, Group_Spindle_ClosedLoop, "Spindle PID max I error", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.spindle.pid.i_max_error, NULL, is_group_available },
+     { Setting_PositionPGain, Group_Spindle_Sync, "Spindle sync P-gain", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.position.pid.p_gain, NULL, is_group_available },
+     { Setting_PositionIGain, Group_Spindle_Sync, "Spindle sync I-gain", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.position.pid.i_gain, NULL, is_group_available },
+     { Setting_PositionDGain, Group_Spindle_Sync, "Spindle sync D-gain", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.position.pid.d_gain, NULL, is_group_available },
+     { Setting_PositionIMaxError, Group_Spindle_Sync, "Spindle sync PID max I error", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.position.pid.i_max_error, NULL, is_group_available },
      { Setting_AxisStepsPerMM, Group_Axis0, "?-axis travel resolution", "step/mm", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL },
      { Setting_AxisMaxRate, Group_Axis0, "?-axis maximum rate", "mm/min", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL },
      { Setting_AxisAcceleration, Group_Axis0, "?-axis acceleration", "mm/sec^2", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL },
@@ -508,6 +509,8 @@ PROGMEM static const setting_detail_t setting_detail[] = {
 #ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
      { Setting_DoorSpindleOnDelay, Group_SafetyDoor, "Spindle on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.spindle_on_delay, NULL, NULL },
      { Setting_DoorCoolantOnDelay, Group_SafetyDoor, "Coolant on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.coolant_on_delay, NULL, NULL },
+#else
+     { Setting_DoorSpindleOnDelay, Group_Spindle, "Spindle on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.spindle_on_delay, NULL, is_setting_available },
 #endif
 };
 
@@ -625,7 +628,9 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_AxisBacklash, "Backlash distance to compensate for." },
 #endif
     { Setting_AxisAutoSquareOffset, "Offset between sides to compensate for homing switches inaccuracies." },
-    { Setting_SpindleAtSpeedTolerance, "Spindle at speed" },
+    { Setting_SpindleAtSpeedTolerance, "Spindle at speed tolerance as percentage deviation from programmed speed, set to 0 to disable.\\n"
+                                       "If not within tolerance when checked after spindle on delay ($392) alarm 14 is raised."
+    },
     { Setting_ToolChangeMode, "Normal: allows jogging for manual touch off. Set new position manually.\\n\\n"
                               "Manual touch off: retracts tool axis to home position for tool change, use jogging or $TPW for touch off.\\n\\n"
                               "Manual touch off @ G59.3: retracts tool axis to home position then to G59.3 position for tool change, use jogging or $TPW for touch off.\\n\\n"
@@ -645,6 +650,8 @@ PROGMEM static const setting_descr_t setting_descr[] = {
 #ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
     { Setting_DoorSpindleOnDelay, "Delay to allow spindle to spin up after safety door is opened." },
     { Setting_DoorCoolantOnDelay, "Delay to allow coolant to restart after safety door is opened." },
+#else
+    { Setting_DoorSpindleOnDelay, "Delay to allow spindle to spin up when spindle at speed tolerance is > 0." },
 #endif
 };
 
@@ -1380,7 +1387,7 @@ char *setting_get_value (const setting_detail_t *setting, uint_fast16_t offset)
 
 static bool is_setting_available (const setting_detail_t *setting)
 {
-    bool available = false; // settings_is_group_available(setting->group);
+    bool available = false;
 
     if(setting) switch(normalize_id(setting->id)) {
 
@@ -1406,6 +1413,7 @@ static bool is_setting_available (const setting_detail_t *setting)
             break;
 
         case Setting_SpindleAtSpeedTolerance:
+        case Setting_DoorSpindleOnDelay:
             available = hal.driver_cap.spindle_at_speed;
             break;
 
@@ -1630,6 +1638,11 @@ void settings_restore (settings_restore_t restore)
 inline static bool is_available (const setting_detail_t *setting)
 {
     return setting->is_available == NULL || setting->is_available(setting);
+}
+
+static bool is_group_available (const setting_detail_t *setting)
+{
+    return settings_is_group_available(setting->group);
 }
 
 bool settings_is_group_available (setting_group_t group)

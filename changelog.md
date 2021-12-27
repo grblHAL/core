@@ -1,5 +1,18 @@
 ## grblHAL changelog
 
+Build 20211226:
+
+Core:
+
+* Fix for spindle sync PID $-settings not showing up when spindle sync option is enabled.
+* Made `$392` \(spindle spin up delay\) available when spindle driver supports spindle at speed functionality.
+
+Drivers:
+
+* iMRX1062, STM32F4xx, STM32F7xx and MSP432: Fix for changes to spindle sync PID $-settings requiring a hard reset to take effect.
+
+---
+
 Build 20211223:
 
 Core:
