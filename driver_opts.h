@@ -81,6 +81,7 @@
 #ifndef USB_SERIAL_WAIT
 #define USB_SERIAL_WAIT     0
 #endif
+
 #ifndef KEYPAD_ENABLE
 #define KEYPAD_ENABLE       0
 #endif
@@ -93,6 +94,18 @@
 #ifndef I2C_STROBE_ENABLE
 #define I2C_STROBE_ENABLE   0
 #endif
+
+#ifndef MPG_ENABLE
+#define MPG_MODE            0
+#define MPG_ENABLE          0
+#else
+#if KEYPAD_ENABLE == 2
+#define MPG_MODE            2
+#else
+#define MPG_MODE            1
+#endif
+#endif
+
 #ifndef EEPROM_ENABLE
 #define EEPROM_ENABLE       0
 #endif

@@ -1,5 +1,27 @@
 ## grblHAL changelog
 
+Build 20220105:
+
+Core:
+
+* Moved and enhanced handling of pendant serial stream \(MPG\) to core. Added some new stream handling functions.
+* Added real time command character `0x8B` for toggling MPG stream on/off.
+* Fix for issue #104.
+
+Plugins:
+
+* Bluetooth: updated to use new stream open function.
+* Keypad: added MPG stream toggle support, bug fix.
+* Networking: refactored and renamed telnet and websocket daemons.
+* Spindle: changed to get actual RPM from encoder when available.
+
+Drivers:
+
+* iMXRT1062, ESP32, STM32F7xx, MSP432E401Y and TM4C1294: updated for networking plugin refactor.
+* iMXRT1062, RP2040, ESP32, STM32F4xx, STM32F7xx, MSP432E401Y and TM4C1294: updated for pendant serial stream handling changes.  
+
+---
+
 Build 20211226:
 
 Core:

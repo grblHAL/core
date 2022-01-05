@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021 Terje Io
+  Copyright (c) 2021-2022 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -34,9 +34,19 @@ typedef struct {
     stream_rx_buffer_t *rxbuffer;
 } stream_state_t;
 
+typedef union {
+    uint8_t value;
+    struct {
+        uint8_t is_up     :1,
+                is_mpg    :1,
+                is_mpg_tx :1,
+                unused    :5;
+    };
+} stream_connection_flags_t;
+
 typedef struct stream_connection {
     const io_stream_t *stream;
-    bool is_up;
+    stream_connection_flags_t flags;
     struct stream_connection *next;
 } stream_connection_t;
 
@@ -57,7 +67,8 @@ static io_stream_details_t null_streams = {
 
 static stream_state_t stream = {0};
 static io_stream_details_t *streams = &null_streams;
-static stream_connection_t base = {0}, *connections = &base;
+static stream_connection_t base = {0}, mpg = {0}, *connections = &base;
+static stream_write_char_ptr mpg_write_char = NULL;
 
 void stream_register_streams (io_stream_details_t *details)
 {
@@ -146,96 +157,59 @@ ISR_CODE bool stream_enqueue_realtime_command (char c)
     return hal.stream.enqueue_rt_command ? hal.stream.enqueue_rt_command(c) : protocol_enqueue_realtime_command(c);
 }
 
-ISR_CODE bool stream_enable_mpg (const io_stream_t *mpg_stream, bool mpg_mode)
-{
-    static io_stream_t org_stream = {
-        .type = StreamType_Redirected
-    };
-
-    sys_state_t state = state_get();
-
-    // Deny entering MPG mode if busy
-    if(mpg_mode == sys.mpg_mode || (mpg_mode && (gc_state.file_run || !(state == STATE_IDLE || (state & (STATE_ALARM|STATE_ESTOP)))))) {
-        protocol_enqueue_realtime_command(CMD_STATUS_REPORT_ALL);
-        return false;
-    }
-
-    if(mpg_mode) {
-        if(org_stream.type == StreamType_Redirected) {
-            memcpy(&org_stream, &hal.stream, sizeof(io_stream_t));
-            if(hal.stream.disable_rx)
-                hal.stream.disable_rx(true);
-            mpg_stream->disable_rx(false);
-            mpg_stream->set_enqueue_rt_handler(org_stream.set_enqueue_rt_handler(NULL));
-            hal.stream.read = mpg_stream->read;
-            hal.stream.get_rx_buffer_free = mpg_stream->get_rx_buffer_free;
-            hal.stream.cancel_read_buffer = mpg_stream->cancel_read_buffer;
-            hal.stream.reset_read_buffer = mpg_stream->reset_read_buffer;
-        }
-    } else if(org_stream.type != StreamType_Redirected) {
-        mpg_stream->disable_rx(true);
-        memcpy(&hal.stream, &org_stream, sizeof(io_stream_t));
-        org_stream.type = StreamType_Redirected;
-        if(hal.stream.disable_rx)
-            hal.stream.disable_rx(false);
-    }
-
-    hal.stream.reset_read_buffer();
-
-    sys.mpg_mode = mpg_mode;
-    sys.report.mpg_mode = On;
-
-    // Force a realtime status report, all reports when MPG mode active
-    protocol_enqueue_realtime_command(mpg_mode ? CMD_STATUS_REPORT_ALL : CMD_STATUS_REPORT);
-
-    return true;
-}
-
 static void stream_write_all (const char *s)
 {
     stream_connection_t *connection = connections;
 
     while(connection) {
-        if(connection->is_up)
+        if(connection->flags.is_up)
             connection->stream->write(s);
         connection = connection->next;
     }
+}
+
+static stream_connection_t *add_connection (const io_stream_t *stream)
+{
+    stream_connection_t *connection, *last = connections;
+
+    if(base.stream == NULL) {
+        base.stream = stream;
+        base.flags.is_up = stream->state.connected == On;
+        connection = &base;
+    } else if((connection = malloc(sizeof(stream_connection_t)))) {
+        connection->stream = stream;
+        connection->flags.is_up = stream->state.connected == On || stream->state.is_usb == On; // TODO: add connect/disconnect event to driver code
+        connection->next = NULL;
+        while(last->next) {
+            last = last->next;
+            if(last->stream == stream) {
+                free(connection);
+                return NULL;
+            }
+        }
+        last->next = connection;
+    }
+
+    return connection;
 }
 
 static bool stream_select (const io_stream_t *stream, bool add)
 {
     static const io_stream_t *active_stream = NULL;
 
-    stream_connection_t *connection, *last = connections;
-
     if(stream == base.stream) {
-        base.is_up = add;
+        base.flags.is_up = add;
         return true;
     }
 
     if(add) {
 
-        if(base.stream == NULL) {
-            base.stream = stream;
-            base.is_up = stream->state.connected == On;
-        } else if((connection = malloc(sizeof(stream_connection_t)))) {
-            connection->stream = stream;
-            connection->is_up = stream->state.connected == On || stream->state.is_usb == On; // TODO: add connect/disconnect event to driver code
-            connection->next = NULL;
-            while(last->next) {
-                last = last->next;
-                if(last->stream == stream) {
-                    free(connection);
-                    return true;
-                }
-            }
-            last->next = connection;
-        } else
+        if(add_connection(stream) == NULL)
             return false;
 
     } else { // disconnect
 
-        stream_connection_t *prev;
+        stream_connection_t *prev, *last = connections;
 
         while(last->next) {
             prev = last;
@@ -336,24 +310,24 @@ bool stream_connect (const io_stream_t *stream)
 static struct {
     uint8_t instance;
     uint32_t baud_rate;
+    io_stream_t const *stream;
 } connection;
 
-static bool _connect_instance (io_stream_properties_t const *stream)
+static bool _open_instance (io_stream_properties_t const *stream)
 {
-    io_stream_t const *claimed = NULL;
+    if(stream->type == StreamType_Serial && (connection.instance == 255 || stream->instance == connection.instance) && stream->flags.claimable && !stream->flags.claimed)
+        connection.stream = stream->claim(connection.baud_rate);
 
-    if(stream->type == StreamType_Serial && stream->instance == connection.instance && stream->flags.claimable && !stream->flags.claimed)
-        stream_connect(claimed = stream->claim(connection.baud_rate));
-
-    return claimed != NULL;
+    return connection.stream != NULL;
 }
 
 bool stream_connect_instance (uint8_t instance, uint32_t baud_rate)
 {
     connection.instance = instance;
     connection.baud_rate = baud_rate;
+    connection.stream = NULL;
 
-    return stream_enumerate_streams(_connect_instance);
+    return stream_enumerate_streams(_open_instance) && stream_connect(connection.stream);
 }
 
 void stream_disconnect (const io_stream_t *stream)
@@ -362,6 +336,110 @@ void stream_disconnect (const io_stream_t *stream)
         hal.stream_select(NULL);
     else if(stream)
         stream_select(stream, false);
+}
+
+io_stream_t const *stream_open_instance (uint8_t instance, uint32_t baud_rate, stream_write_char_ptr rx_handler)
+{
+    connection.instance = instance;
+    connection.baud_rate = baud_rate;
+    connection.stream = NULL;
+
+    if(stream_enumerate_streams(_open_instance))
+        connection.stream->set_enqueue_rt_handler(rx_handler);
+
+    return connection.stream;
+}
+
+// MPG stream
+
+bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stream_write_char_ptr write_char)
+{
+    if(stream == NULL)
+        return false;
+
+    base.flags.is_up = On;
+
+    mpg_write_char = write_char;
+
+    if(stream->write == NULL || rx_only) {
+
+        mpg.stream = stream;
+        mpg.flags.is_up = stream->state.connected;
+
+        return true;
+    }
+
+    stream_connection_t *connection = add_connection(stream);
+
+    if(connection) {
+
+        memcpy(&mpg, connection, sizeof(stream_connection_t));
+
+        mpg.flags.is_mpg_tx = On;
+
+        if(mpg_write_char)
+            mpg.stream->set_enqueue_rt_handler(mpg_write_char);
+        else
+            mpg.stream->disable_rx(true);
+
+        hal.stream.write_all = stream_write_all;
+    }
+
+    return connection != NULL;
+}
+
+bool stream_mpg_enable (bool on)
+{
+    static io_stream_t org_stream = {
+        .type = StreamType_Redirected
+    };
+
+    if(mpg.stream == NULL)
+        return false;
+
+    sys_state_t state = state_get();
+
+    // Deny entering MPG mode if busy
+    if(on == sys.mpg_mode || (on && (gc_state.file_run || !(state == STATE_IDLE || (state & (STATE_ALARM|STATE_ESTOP)))))) {
+        protocol_enqueue_realtime_command(CMD_STATUS_REPORT_ALL);
+        return false;
+    }
+
+    if(on) {
+        if(org_stream.type == StreamType_Redirected) {
+            memcpy(&org_stream, &hal.stream, sizeof(io_stream_t));
+            if(hal.stream.disable_rx)
+                hal.stream.disable_rx(true);
+            mpg.stream->disable_rx(false);
+            mpg.stream->set_enqueue_rt_handler(org_stream.set_enqueue_rt_handler(NULL));
+            hal.stream.type = StreamType_MPG;
+            hal.stream.read = mpg.stream->read;
+            if(mpg.flags.is_mpg_tx)
+                hal.stream.write = mpg.stream->write;
+            hal.stream.get_rx_buffer_free = mpg.stream->get_rx_buffer_free;
+            hal.stream.cancel_read_buffer = mpg.stream->cancel_read_buffer;
+            hal.stream.reset_read_buffer = mpg.stream->reset_read_buffer;
+        }
+    } else if(org_stream.type != StreamType_Redirected) {
+        if(mpg_write_char)
+            mpg.stream->set_enqueue_rt_handler(mpg_write_char);
+        else
+            mpg.stream->disable_rx(true);
+        memcpy(&hal.stream, &org_stream, sizeof(io_stream_t));
+        org_stream.type = StreamType_Redirected;
+        if(hal.stream.disable_rx)
+            hal.stream.disable_rx(false);
+    }
+
+    hal.stream.reset_read_buffer();
+
+    sys.mpg_mode = on;
+    sys.report.mpg_mode = On;
+
+    // Force a realtime status report, all reports when MPG mode active
+    protocol_enqueue_realtime_command(on ? CMD_STATUS_REPORT_ALL : CMD_STATUS_REPORT);
+
+    return true;
 }
 
 // null stream, discards output and returns no input

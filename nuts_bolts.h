@@ -170,7 +170,7 @@ typedef enum {
 
 // Bit field and masking macros
 #ifndef bit
-#define bit(n) (1UL << n)
+#define bit(n) (1UL << (n))
 #endif
 #define bit_true(x, mask) (x) |= (mask)
 #define bit_false(x, mask) (x) &= ~(mask)

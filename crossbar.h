@@ -30,7 +30,8 @@ typedef enum {
     Input_SafetyDoor,
     Input_LimitsOverride,
     Input_EStop,
-    Input_ModeSelect,
+    Input_MPGSelect,
+    Input_ModeSelect = Input_MPGSelect, // Deprecated
     Input_LimitX,
     Input_LimitX_2,
     Input_LimitX_Max,
@@ -156,7 +157,7 @@ PROGMEM static const pin_name_t pin_names[] = {
    { .function = Input_SafetyDoor,          .name = "Safety door" },
    { .function = Input_LimitsOverride,      .name = "Limits override" },
    { .function = Input_EStop,               .name = "Emergency stop" },
-   { .function = Input_ModeSelect,          .name = "MPG mode select" },
+   { .function = Input_MPGSelect,           .name = "MPG mode select" },
    { .function = Input_LimitX,              .name = "X limit min" },
    { .function = Input_LimitX_2,            .name = "X limit min 2" },
    { .function = Input_LimitX_Max,          .name = "X limit max" },

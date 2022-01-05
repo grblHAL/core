@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
+  Copyright (c) 2017-202 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -833,6 +833,11 @@ ISR_CODE bool protocol_enqueue_realtime_command (char c)
         case CMD_PID_REPORT:
             system_set_exec_state_flag(EXEC_PID_REPORT);
             drop = true;
+            break;
+
+        case CMD_MPG_MODE_TOGGLE:           // Switch off MPG mode
+            if(hal.stream.type == StreamType_MPG)
+                stream_mpg_enable(false);
             break;
 
         case CMD_OVERRIDE_FEED_RESET:

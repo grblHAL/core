@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2019-2021 Terje Io
+  Copyright (c) 2019-2022 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -308,12 +308,13 @@ int16_t stream_get_null (void);
 */
 bool stream_rx_suspend (stream_rx_buffer_t *rxbuffer, bool suspend);
 
+bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stream_write_char_ptr write_char);
+
 /*! \brief Function for enabling/disabling input from a secondary input stream.
-\param mpg_stream pointer to a io_stream_t.
-\param mpg_mode \a true if switching input to mpg stream, \a false when restoring original input.
+\param on \a true if switching input to mpg stream, \a false when restoring original input.
 \returns \a true when succsessful, \a false otherwise.
 */
-bool stream_enable_mpg (const io_stream_t *mpg_stream, bool mpg_mode);
+bool stream_mpg_enable (bool on);
 
 bool stream_buffer_all (char c);
 
@@ -334,6 +335,8 @@ void stream_disconnect (const io_stream_t *stream);
 const io_stream_t *stream_get_base (void);
 
 const io_stream_t *stream_null_init (uint32_t baud_rate);
+
+io_stream_t const *stream_open_instance (uint8_t instance, uint32_t baud_rate, stream_write_char_ptr rx_handler);
 
 #ifdef DEBUGOUT
 void debug_write (const char *s);
