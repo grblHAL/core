@@ -7,7 +7,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021 Terje Io
+  Copyright (c) 2021-2022 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -36,6 +36,10 @@
 #if VFD_ENABLE
     extern void vfd_init (void);
     vfd_init();
+#if DUAL_SPINDLE
+    extern void spindle_select_init(void);
+    spindle_select_init();
+#endif
 #endif
 
 #ifndef GRBL_ESP32 // ESP32 has its own bluetooth_init

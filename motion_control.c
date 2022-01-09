@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
+  Copyright (c) 2017-2022 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -787,16 +787,11 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
         hal.limits.enable(false, true); // Disable hard limits pin change register for cycle duration
 
         // Turn off spindle and coolant (and update parser state)
-        if(hal.spindle.get_state().on) {
-            gc_state.spindle.rpm = 0.0f;
-            gc_state.modal.spindle.on = gc_state.modal.spindle.ccw = Off;
-            spindle_set_state(gc_state.modal.spindle, 0.0f);
-        }
+        if(hal.spindle.get_state().on)
+            gc_spindle_off();
 
-        if(hal.coolant.get_state().mask) {
-            gc_state.modal.coolant.mask = 0;
-            coolant_set_state(gc_state.modal.coolant);
-        }
+        if(hal.coolant.get_state().mask)
+            gc_coolant_off();
 
         // ---------------------------------------------------------------------------
         // Perform homing routine. NOTE: Special motion case. Only system reset works.

@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2020 Terje Io
+  Copyright (c) 2017-2022 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -222,7 +222,8 @@ typedef enum {
     Trinamic_ReportPrewarnFlags = 911,  //!< 911 - M122, Marlin format
     Trinamic_ClearPrewarnFlags = 912,   //!< 912 - M122, Marlin format
     Trinamic_HybridThreshold = 913,     //!< 913 - M122, Marlin format
-    Trinamic_HomingSensitivity = 914    //!< 914 - M122, Marlin format
+    Trinamic_HomingSensitivity = 914,   //!< 914 - M122, Marlin format
+    Spindle_Select = UserMCode_Generic4 //!< Value to be assigned later!
 } user_mcode_t;
 
 //! Data for M62, M63 and M67 commands when executed synchronized with motion.
@@ -559,6 +560,9 @@ float *gc_get_scaling (void);
 
 // Get current axis offset.
 float gc_get_offset (uint_fast8_t idx);
+
+void gc_spindle_off (void);
+void gc_coolant_off (void);
 
 void gc_set_tool_offset (tool_offset_mode_t mode, uint_fast8_t idx, int32_t offset);
 plane_t *gc_get_plane_data (plane_t *plane, plane_select_t select);

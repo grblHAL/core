@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-202 Terje Io
+  Copyright (c) 2017-2022 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -496,15 +496,12 @@ bool protocol_exec_rt_system (void)
                 sys.override.control = gc_state.modal.override_ctrl;
 
             gc_state.tool_change = false;
-            gc_state.modal.coolant.value = 0;
-            gc_state.modal.spindle.value = 0;
-            gc_state.spindle.rpm = sys.spindle_rpm = 0.0f;
             gc_state.modal.spindle_rpm_mode = SpindleSpeedMode_RPM;
 
             // Kill spindle and coolant. TODO: Check Mach3 behaviour?
-            hal.spindle.set_state(gc_state.modal.spindle, 0.0f);
-            hal.coolant.set_state(gc_state.modal.coolant);
-            sys.report.spindle = sys.report.coolant = On; // Set to report change immediately
+            gc_spindle_off();
+            gc_coolant_off();
+
             // Tell driver/plugins about reset.
             hal.driver_reset();
 

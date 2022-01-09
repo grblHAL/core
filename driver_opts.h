@@ -188,6 +188,10 @@
 #endif
 #endif
 
+#ifndef DUAL_SPINDLE
+#define DUAL_SPINDLE        0
+#endif
+
 #ifndef QEI_ENABLE
 #define QEI_ENABLE          0
 #endif

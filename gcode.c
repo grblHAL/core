@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
+  Copyright (c) 2017-2022 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -328,6 +328,21 @@ bool gc_laser_ppi_enable (uint_fast16_t ppi, uint_fast16_t pulse_length)
     gc_state.is_laser_ppi_mode = ppi > 0 && pulse_length > 0;
 
     return grbl.on_laser_ppi_enable && grbl.on_laser_ppi_enable(ppi, pulse_length);
+}
+
+void gc_spindle_off (void)
+{
+    gc_state.spindle.rpm = 0.0f;
+    gc_state.modal.spindle.value = 0;
+    spindle_set_state(gc_state.modal.spindle, gc_state.spindle.rpm);
+    sys.report.spindle = On;
+}
+
+void gc_coolant_off (void)
+{
+    gc_state.modal.coolant.value = 0;
+    hal.coolant.set_state(gc_state.modal.coolant);
+    sys.report.coolant = On;
 }
 
 // Add output command to linked list

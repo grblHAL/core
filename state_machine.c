@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2021 Terje Io
+  Copyright (c) 2018-2022 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -539,10 +539,8 @@ static void state_await_resume (uint_fast16_t rt_exec)
 
             default:
                 if (!settings.flags.restore_after_feed_hold) {
-                    if (!hal.spindle.get_state().on) {
-                        gc_state.spindle.rpm = 0.0f;
-                        gc_state.modal.spindle.on = gc_state.modal.spindle.ccw = Off;
-                    }
+                    if (!hal.spindle.get_state().on)
+                        gc_spindle_off();
                     sys.override.spindle_stop.value = 0; // Clear spindle stop override states
                 } else {
 

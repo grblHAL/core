@@ -1,5 +1,25 @@
 ## grblHAL changelog
 
+Build 20220109:
+
+Core:
+
+* Added optional spindle select event to core events, for dual spindle enabled configurations \(VFD + PWM spindle\).
+* Attempted fix for weird issue with VFD spindle when spindle at speed tolerance is set > 0 with `$340`.
+
+Plugins:
+
+* Networking: fix for [dependency issue](https://github.com/grblHAL/core/discussions/106) with iMXRT1062 driver when lwIP library was not installed.
+* Spindle: updated Huanyang VFD driver to support the new spindle select event.  
+Added experimental M-code for switching spindles, `M401P0` for PWM spindle, `M401P1` for VFD spindle. Only available in `DUAL_SPINDLE` configurations.
+* Keypad: added many new single character commands, mostly the same as available as standard real time commands.
+
+Drivers:
+* STM32F4xx: fixed name case for FatFs driver directory, added FatFs R0.13c source.
+* iMXRT1062, STM32F4xx and SAM3X8E: added `DUAL_SPINDLE` configuration option \(for testing\).
+
+---
+
 Build 20220105:
 
 Core:

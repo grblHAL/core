@@ -84,13 +84,14 @@ bool spindle_sync (spindle_state_t state, float rpm)
 
         // Empty planner buffer to ensure spindle is set when programmed.
         if((ok = protocol_buffer_synchronize()) && spindle_set_state(state, rpm) && !at_speed) {
-            float delay = 0.0f;
+            float on_delay = 0.0f;
             while(!(at_speed = hal.spindle.get_state().at_speed)) {
-                delay_sec(0.1f, DelayMode_Dwell);
-                delay += 0.1f;
+                delay_sec(0.2f, DelayMode_Dwell);
+                on_delay += 0.2f;
                 if(ABORTED)
                     break;
-                if(delay >= settings.safety_door.spindle_on_delay) {
+                if(on_delay >= settings.safety_door.spindle_on_delay) {
+                    gc_spindle_off();
                     system_raise_alarm(Alarm_Spindle);
                     break;
                 }

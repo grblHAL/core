@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
+  Copyright (c) 2017-2022 Terje Io
   Copyright (c) 2011-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -2122,13 +2122,19 @@ status_code_t settings_store_setting (setting_id_t id, char *svalue)
     }
 
     if(status == Status_OK) {
+
         if(set->save)
             set->save();
+
 #ifdef ENABLE_BACKLASH_COMPENSATION
-  mc_backlash_init();
+        mc_backlash_init();
 #endif
+
         if(set->on_changed)
             set->on_changed(&settings);
+
+        if(set == &setting_details && grbl.on_spindle_select)
+            grbl.on_spindle_select(hal.driver_cap.dual_spindle && settings.mode == Mode_Laser ? 0 : 1);
     }
 
     return status;
@@ -2161,6 +2167,7 @@ void settings_init (void)
         mc_backlash_init();
 #endif
         hal.settings_changed(&settings);
+
         if(hal.probe.configure) // Initialize probe invert mask.
             hal.probe.configure(false, false);
     }

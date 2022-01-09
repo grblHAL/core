@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
+  Copyright (c) 2017-2022 Terje Io
   Copyright (c) 2011-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -211,6 +211,9 @@ int grbl_enter (void)
 #ifdef SPINDLE_PWM_DIRECT
     driver.spindle = (!hal.driver_cap.variable_spindle || (hal.spindle.get_pwm != NULL && hal.spindle.update_pwm != NULL));
 #endif
+
+    if(grbl.on_spindle_select)
+        grbl.on_spindle_select(hal.driver_cap.dual_spindle && settings.mode == Mode_Laser ? 0 : 1);
 
     if(driver.ok != 0xFF) {
         sys.alarm = Alarm_SelftestFailed;
