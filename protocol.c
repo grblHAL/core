@@ -726,7 +726,7 @@ static void protocol_exec_rt_suspend (void)
 // These characters are not passed into the main buffer,
 // but rather sets system state flag bits for later execution by protocol_exec_rt_system().
 // Called from input stream interrupt handler.
-ISR_CODE bool protocol_enqueue_realtime_command (char c)
+ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(char c)
 {
     static bool esc = false;
 
@@ -914,7 +914,7 @@ ISR_CODE bool protocol_enqueue_realtime_command (char c)
 
 // Enqueue a function to be called once by the
 // foreground process, typically enqueued from an interrupt handler.
-ISR_CODE bool protocol_enqueue_rt_command (on_execute_realtime_ptr fn)
+ISR_CODE bool ISR_FUNC(protocol_enqueue_rt_command)(on_execute_realtime_ptr fn)
 {
     bool ok;
     uint_fast8_t bptr = (realtime_queue.head + 1) & (RT_QUEUE_SIZE - 1);    // Get next head pointer

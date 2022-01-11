@@ -72,7 +72,7 @@ bool mc_parking_motion(float *parking_target, plan_line_data_t *pl_data);
 void mc_cubic_b_spline(float *target, plan_line_data_t *pl_data, float *position, float *offset1, float *offset2);
 
 // Performs system reset. If in motion state, kills all motion and sets system alarm.
-void mc_reset();
+void mc_reset (void);
 
 #ifdef ENABLE_BACKLASH_COMPENSATION
 void mc_backlash_init (void);

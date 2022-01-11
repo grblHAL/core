@@ -59,7 +59,7 @@
 // your e-stop switch to the microcontroller reset pin, since it is the most correct way to do this.
 
 // Merge (bitwise or) all limit switch inputs.
-ISR_CODE axes_signals_t limit_signals_merge (limit_signals_t signals)
+ISR_CODE axes_signals_t ISR_FUNC(limit_signals_merge)(limit_signals_t signals)
 {
     axes_signals_t state;
 
@@ -69,7 +69,7 @@ ISR_CODE axes_signals_t limit_signals_merge (limit_signals_t signals)
 }
 
 // Merge (bitwise or) home switch inputs (typically aquired from limits.min and limits.min2).
-ISR_CODE static axes_signals_t homing_signals_select (limit_signals_t signals, axes_signals_t auto_square, squaring_mode_t mode)
+ISR_CODE static axes_signals_t ISR_FUNC(homing_signals_select)(limit_signals_t signals, axes_signals_t auto_square, squaring_mode_t mode)
 {
     axes_signals_t state;
 
@@ -92,7 +92,7 @@ ISR_CODE static axes_signals_t homing_signals_select (limit_signals_t signals, a
     return state;
 }
 
-ISR_CODE void limit_interrupt_handler (limit_signals_t state) // DEFAULT: Limit pin change interrupt process.
+ISR_CODE void ISR_FUNC(limit_interrupt_handler)(limit_signals_t state) // DEFAULT: Limit pin change interrupt process.
 {
     // Ignore limit switches if already in an alarm state or in-process of executing an alarm.
     // When in the alarm state, Grbl should have been reset or will force a reset, so any pending

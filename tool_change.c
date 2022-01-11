@@ -231,7 +231,7 @@ static void execute_probe (sys_state_t state)
 
 // Trap cycle start commands and redirect to foreground process
 // by adding the function to be called to the realtime execution queue.
-ISR_CODE static void trap_control_cycle_start (control_signals_t signals)
+ISR_CODE static void ISR_FUNC(trap_control_cycle_start)(control_signals_t signals)
 {
     spin_lock++;
 
@@ -249,7 +249,7 @@ ISR_CODE static void trap_control_cycle_start (control_signals_t signals)
     spin_lock--;
 }
 
-ISR_CODE static bool trap_stream_cycle_start (char c)
+ISR_CODE static bool ISR_FUNC(trap_stream_cycle_start)(char c)
 {
     bool drop = false;
 

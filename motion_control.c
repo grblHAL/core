@@ -969,7 +969,7 @@ void mc_override_ctrl_update (gc_override_flags_t override_state)
 // is in a motion state. If so, kills the steppers and sets the system alarm to flag position
 // lost, since there was an abrupt uncontrolled deceleration. Called at an interrupt level by
 // realtime abort command and hard limits. So, keep to a minimum.
-ISR_CODE void mc_reset ()
+ISR_CODE void ISR_FUNC(mc_reset)(void)
 {
     // Only this function can set the system reset. Helps prevent multiple kill calls.
     if (bit_isfalse(sys.rt_exec_state, EXEC_RESET)) {

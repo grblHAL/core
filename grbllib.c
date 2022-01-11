@@ -122,7 +122,7 @@ int grbl_enter (void)
 
     // Clear all and set some core function pointers
     memset(&grbl, 0, sizeof(grbl_t));
-    grbl.on_execute_realtime = protocol_execute_noop;
+    grbl.on_execute_realtime = grbl.on_execute_delay = protocol_execute_noop;
     grbl.enqueue_gcode = protocol_enqueue_gcode;
     grbl.enqueue_realtime_command = stream_enqueue_realtime_command;
     grbl.on_report_options = dummy_bool_handler;

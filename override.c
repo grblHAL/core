@@ -32,7 +32,7 @@ typedef struct {
 
 static override_queue_t feed = {0}, accessory = {0};
 
-ISR_CODE void enqueue_feed_override (uint8_t cmd)
+ISR_CODE void ISR_FUNC(enqueue_feed_override)(uint8_t cmd)
 {
     uint_fast8_t bptr = (feed.head + 1) & (OVERRIDE_BUFSIZE - 1);    // Get next head pointer
 
@@ -56,7 +56,7 @@ uint8_t get_feed_override (void)
     return data;
 }
 
-ISR_CODE void enqueue_accessory_override (uint8_t cmd)
+ISR_CODE void ISR_FUNC(enqueue_accessory_override)(uint8_t cmd)
 {
     uint_fast8_t bptr = (accessory.head + 1) & (OVERRIDE_BUFSIZE - 1);    // Get next head pointer
 

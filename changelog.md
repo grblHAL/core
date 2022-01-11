@@ -1,5 +1,25 @@
 ## grblHAL changelog
 
+Build 20220111:
+
+Core:
+
+* Added new core event triggered during looping when executing a millisecond delay.
+* Added `ISR_FUNC` macro for placing time critical functions in RAM.
+
+Drivers:
+
+* RP2040: Limited max time between step pulses to avoid jog movements taking too long to complete. Moved time critical code run in interrupt context to RAM.
+* iMXRT1062: Fixed memory leak in ioports code.
+* Many: Forced ioports numbers \(_Aux \<n\>_\) to be contiguous regardless of how they are defined in the map file. 
+
+Plugins:
+
+* Spindle \(Modbus\): Added subscription to new core event to poll for responses during delays, fixes issue with spindle at speed check for some drivers.
+* Some: Moved time critical code run in interrupt context to RAM \(for RP2040 driver\).
+
+---
+
 Build 20220109:
 
 Core:

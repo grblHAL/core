@@ -93,7 +93,7 @@ inline static float hypot_f (float x, float y)
 // only the realtime command execute variable to have the main program execute these when
 // its ready. This works exactly like the character-based realtime commands when picked off
 // directly from the incoming data stream.
-ISR_CODE void control_interrupt_handler (control_signals_t signals)
+ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
 {
     if(signals.deasserted)
         return; // for now...

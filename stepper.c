@@ -188,7 +188,7 @@ static void output_message (sys_state_t state)
 }
 
 // Callback from delay to deenergize steppers after movement, might been cancelled
-void st_deenergize ()
+void st_deenergize (void)
 {
     if(sys.steppers_deenergize) {
         hal.stepper.enable(settings.steppers.deenergize);
@@ -199,7 +199,7 @@ void st_deenergize ()
 
 // Stepper state initialization. Cycle should only start if the st.cycle_start flag is
 // enabled. Startup init and limits call this function but shouldn't start the cycle.
-void st_wake_up ()
+void st_wake_up (void)
 {
     if(sys.steppers_deenergize) {
         sys.steppers_deenergize = false;
@@ -215,7 +215,7 @@ void st_wake_up ()
 
 
 // Stepper shutdown
-ISR_CODE void st_go_idle ()
+ISR_CODE void ISR_FUNC(st_go_idle)(void)
 {
     // Disable Stepper Driver Interrupt. Allow Stepper Port Reset Interrupt to finish, if active.
 
@@ -282,7 +282,7 @@ ISR_CODE void st_go_idle ()
 
 //! \cond
 
-ISR_CODE void stepper_driver_interrupt_handler (void)
+ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
 {
 #ifdef ENABLE_BACKLASH_COMPENSATION
     static bool backlash_motion;
@@ -539,7 +539,7 @@ ISR_CODE void stepper_driver_interrupt_handler (void)
 //! \endcond
 
 // Reset and clear stepper subsystem variables
-void st_reset ()
+void st_reset (void)
 {
     if(hal.probe.configure)
         hal.probe.configure(false, false);
@@ -600,7 +600,7 @@ void st_rpm_changed (float rpm)
 }
 
 // Called by planner_recalculate() when the executing block is updated by the new plan.
-void st_update_plan_block_parameters ()
+void st_update_plan_block_parameters (void)
 {
     if (pl_block != NULL) { // Ignore if at start of a new block.
         prep.recalculate.velocity_profile = On;
@@ -610,7 +610,7 @@ void st_update_plan_block_parameters ()
 }
 
 // Changes the run state of the step segment buffer to execute the special parking motion.
-void st_parking_setup_buffer()
+void st_parking_setup_buffer (void)
 {
     // Store step execution data of partially completed block, if necessary.
     if (prep.recalculate.hold_partial_block && !prep.recalculate.parking) {
@@ -628,7 +628,7 @@ void st_parking_setup_buffer()
 
 
 // Restores the step segment buffer to the normal run state after a parking motion.
-void st_parking_restore_buffer()
+void st_parking_restore_buffer (void)
 {
     // Restore step execution data and flags of partially completed block, if necessary.
     if (prep.recalculate.hold_partial_block) {
@@ -659,7 +659,7 @@ void st_parking_restore_buffer()
    Currently, the segment buffer conservatively holds roughly up to 40-50 msec of steps.
    NOTE: Computation units are in steps, millimeters, and minutes.
 */
-void st_prep_buffer()
+void st_prep_buffer (void)
 {
     // Block step prep buffer, while in a suspend state and there is no suspend motion to execute.
     if (sys.step_control.end_motion)
@@ -1087,7 +1087,7 @@ void st_prep_buffer()
 // however is not exactly the current speed, but the speed computed in the last step segment
 // in the segment buffer. It will always be behind by up to the number of segment blocks (-1)
 // divided by the ACCELERATION TICKS PER SECOND in seconds.
-float st_get_realtime_rate()
+float st_get_realtime_rate (void)
 {
     return state_get() & (STATE_CYCLE|STATE_HOMING|STATE_HOLD|STATE_JOG|STATE_SAFETY_DOOR) ? prep.current_speed : 0.0f;
 }

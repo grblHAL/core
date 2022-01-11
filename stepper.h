@@ -111,16 +111,16 @@ typedef struct stepper {
 } stepper_t;
 
 // Initialize and setup the stepper motor subsystem
-void stepper_init();
+void stepper_init (void);
 
 // Enable steppers, but cycle does not start unless called by motion control or realtime command.
-void st_wake_up();
+void st_wake_up (void);
 
 // Immediately disables steppers
-void st_go_idle();
+void st_go_idle (void);
 
 // Reset the stepper subsystem variables
-void st_reset();
+void st_reset (void);
 
 // Called by spindle_set_state() to inform about RPM changes.
 void st_rpm_changed(float rpm);
@@ -129,16 +129,16 @@ void st_rpm_changed(float rpm);
 void st_parking_setup_buffer();
 
 // Restores the step segment buffer to the normal run state after a parking motion.
-void st_parking_restore_buffer();
+void st_parking_restore_buffer (void);
 
 // Reloads step segment buffer. Called continuously by realtime execution system.
-void st_prep_buffer();
+void st_prep_buffer (void);
 
 // Called by planner_recalculate() when the executing block is updated by the new plan.
-void st_update_plan_block_parameters();
+void st_update_plan_block_parameters (void);
 
 // Called by realtime status reporting if realtime rate reporting is enabled in config.h.
-float st_get_realtime_rate();
+float st_get_realtime_rate (void);
 
 void stepper_driver_interrupt_handler (void);
 

@@ -1556,6 +1556,9 @@ bool read_global_settings ()
     if(settings.mode == Mode_Laser && !hal.driver_cap.variable_spindle)
         settings.mode = Mode_Standard;
 
+    if(!(hal.driver_cap.spindle_sync || hal.driver_cap.spindle_pid))
+        settings.spindle.ppr = 0;
+
 #if COMPATIBILITY_LEVEL > 1 && DISABLE_G92_PERSISTENCE
     settings.flags.g92_is_volatile = On;
 #endif

@@ -34,7 +34,7 @@
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_BUILD 20220109
+#define GRBL_BUILD 20220111
 
 // The following symbols are set here if not already set by the compiler or in config.h
 // Do NOT change here!
@@ -47,6 +47,13 @@
 // Used to decorate code run in interrupt context.
 // Do not remove or change unless you know what you are doing.
 #define ISR_CODE //!< Used by some drivers to force a function to always stay in RAM to improve performance.
+#endif
+
+#ifdef RP2040
+#include "pico.h"
+#define ISR_FUNC(fn) __not_in_flash_func(fn)
+#else
+#define ISR_FUNC(fn) fn
 #endif
 
 #ifdef ARDUINO

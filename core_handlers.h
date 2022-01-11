@@ -94,6 +94,7 @@ typedef struct {
     on_probe_completed_ptr on_probe_completed;
     on_program_completed_ptr on_program_completed;
     on_execute_realtime_ptr on_execute_realtime;
+    on_execute_realtime_ptr on_execute_delay;
     on_unknown_accessory_override_ptr on_unknown_accessory_override;
     on_report_options_ptr on_report_options;
     on_report_command_help_ptr on_report_command_help;

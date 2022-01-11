@@ -145,7 +145,7 @@ void state_update (rt_exec_t rt_exec)
     stateHandler(rt_exec);
 }
 
-ISR_CODE sys_state_t state_get (void)
+ISR_CODE sys_state_t ISR_FUNC(state_get)(void)
 {
     return sys_state;
 }
