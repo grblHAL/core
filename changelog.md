@@ -4,8 +4,8 @@ Build 20220111:
 
 Core:
 
-* Added new core event triggered during looping when executing a millisecond delay.
-* Added `ISR_FUNC` macro for placing time critical functions in RAM.
+Added new core event triggered during looping when executing a millisecond delay.
+Added `ISR_FUNC` macro for placing time critical functions in RAM.
 
 Drivers:
 
@@ -16,7 +16,7 @@ Drivers:
 Plugins:
 
 * Spindle \(Modbus\): Added subscription to new core event to poll for responses during delays, fixes issue with spindle at speed check for some drivers.
-* Some: Moved time critical code run in interrupt context to RAM \(for RP2040 driver\).
+* Some: Moved time critical code run in interrupt context to RAM (for RP2040 driver).
 
 ---
 
@@ -31,7 +31,7 @@ Plugins:
 
 * Networking: fix for [dependency issue](https://github.com/grblHAL/core/discussions/106) with iMXRT1062 driver when lwIP library was not installed.
 * Spindle: updated Huanyang VFD driver to support the new spindle select event.  
-Added experimental M-code for switching spindles, `M401P0` for PWM spindle, `M401P1` for VFD spindle. Only available in `DUAL_SPINDLE` configurations.
+Added experimental M-code for switching spindles, `M104P0` for PWM spindle, `M104P1` for VFD spindle. Only available in `DUAL_SPINDLE` configurations.
 * Keypad: added many new single character commands, mostly the same as available as standard real time commands.
 
 Drivers:
