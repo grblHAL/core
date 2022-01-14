@@ -63,6 +63,8 @@ typedef struct {
 // Core event handler and other entry points.
 // Most of the event handlers defaults to NULL, a few is set up to call a dummy handler for simpler code.
 
+// Trying to force a submodule update...
+
 typedef bool (*enqueue_gcode_ptr)(char *data);
 typedef bool (*protocol_enqueue_realtime_command_ptr)(char c);
 
