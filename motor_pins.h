@@ -697,7 +697,7 @@ static void motor_iterator (motor_iterator_callback_ptr callback)
 {
     motor_map_t motor;
 
-    for(motor.id = 0; motor.id < N_AXIS + N_GANGED; motor.id++)
+    if(callback) for(motor.id = 0; motor.id < N_AXIS + N_GANGED; motor.id++)
     {
         if(motor.id < N_AXIS)
             motor.axis = motor.id;

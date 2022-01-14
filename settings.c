@@ -1079,6 +1079,7 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
                 if(settings.axis[idx].steps_per_mm > 0.0f && settings.axis[idx].steps_per_mm != value) {
                     float comp = value / settings.axis[idx].steps_per_mm;
                     sys.position[idx] *= comp;
+                    sys.home_position[idx] *= comp;
                     sys.probe_position[idx] *= comp;
                     sys.tlo_reference[idx] *= comp;
                     sync_position();
@@ -1099,6 +1100,8 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
             break;
 
         case Setting_AxisMaxTravel:
+            if((sys.report.homed = settings.axis[idx].max_travel != -value))
+                bit_false(sys.homed.mask, bit(idx));
             settings.axis[idx].max_travel = -value; // Store as negative for grbl internal use.
             break;
 
