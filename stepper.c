@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2016-2021 Terje Io
+  Copyright (c) 2016-2022 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -28,6 +28,8 @@
 #include "hal.h"
 #include "protocol.h"
 #include "state_machine.h"
+
+//#define MINIMIZE_PROBE_OVERSHOOT
 
 //#include "debug.h"
 
@@ -90,10 +92,14 @@ static amass_t amass;
 // Message to be output by foreground process
 static char *message = NULL; // TODO: do we need a queue for this?
 
+// Used for blocking new segments beeing added to the seqment buffer until deceleration starts
+// after probe signal has been asserted.
+static volatile bool probe_asserted = false;
+
 // Stepper timer ticks per minute
 static float cycles_per_min;
 
-// Step segment ring buffer indices
+// Step segment ring buffer pointers
 static volatile segment_t *segment_buffer_tail;
 static segment_t *segment_buffer_head, *segment_next_head;
 
@@ -212,7 +218,6 @@ void st_wake_up (void)
 
     hal.stepper.wake_up();
 }
-
 
 // Stepper shutdown
 ISR_CODE void ISR_FUNC(st_go_idle)(void)
@@ -406,7 +411,7 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
             st_go_idle();
 
             // Ensure pwm is set properly upon completion of rate-controlled motion.
-            if (st.exec_block->dynamic_rpm && settings.mode == Mode_Laser) {
+            if (st.exec_block->dynamic_rpm && sys.mode == Mode_Laser) {
               #ifndef GRBL_ESP32
                 hal.spindle.set_state((spindle_state_t){0}, 0.0f);
               #else
@@ -425,9 +430,20 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
     // Monitors probe pin state and records the system position when detected.
     // NOTE: This function must be extremely efficient as to not bog down the stepper ISR.
     if (sys.probing_state == Probing_Active && hal.probe.get_state().triggered) {
+
         sys.probing_state = Probing_Off;
         memcpy(sys.probe_position, sys.position, sizeof(sys.position));
         bit_true(sys.rt_exec_state, EXEC_MOTION_CANCEL);
+
+#ifdef MINIMIZE_PROBE_OVERSHOOT
+        // "Flush" segment buffer if full in order to start deceleration early.
+        if((probe_asserted = segment_buffer_head->next == segment_buffer_tail)) {
+            segment_buffer_head = segment_buffer_tail->next;
+            if(st.step_count < 3 || st.step_count < (st.exec_segment->n_step >> 3))
+                segment_buffer_head = segment_buffer_head->next;
+            segment_next_head = segment_next_head->next;
+        }
+#endif
     }
 
     register axes_signals_t step_outbits = (axes_signals_t){0};
@@ -839,8 +855,14 @@ void st_prep_buffer (void)
             }
 
             if(state_get() != STATE_HOMING)
-                sys.step_control.update_spindle_rpm |= (settings.mode == Mode_Laser); // Force update whenever updating block in laser mode.
+                sys.step_control.update_spindle_rpm |= (sys.mode == Mode_Laser); // Force update whenever updating block in laser mode.
+
+            probe_asserted = false;
         }
+
+        // Block adding new segments after probe is asserted until deceleration is started.
+        if(probe_asserted)
+            return;
 
         // Initialize new segment
         segment_t *prep_segment = segment_buffer_head;

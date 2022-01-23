@@ -31,6 +31,7 @@
 #include "errors.h"
 #include "settings.h"
 #include "report.h"
+#include "planner.h"
 
 /* TODO: add to grbl pointers so that a different formatting (xml, json etc) of reports may be implemented by driver?
 typedef struct {
@@ -63,13 +64,10 @@ typedef struct {
 // Core event handler and other entry points.
 // Most of the event handlers defaults to NULL, a few is set up to call a dummy handler for simpler code.
 
-// Trying to force a submodule update...
-
 typedef bool (*enqueue_gcode_ptr)(char *data);
 typedef bool (*protocol_enqueue_realtime_command_ptr)(char c);
 
 typedef void (*on_state_change_ptr)(sys_state_t state);
-typedef void (*on_probe_completed_ptr)(void);
 typedef void (*on_program_completed_ptr)(program_flow_t program_flow, bool check_mode);
 typedef void (*on_execute_realtime_ptr)(sys_state_t state);
 typedef void (*on_unknown_accessory_override_ptr)(uint8_t cmd);
@@ -83,6 +81,8 @@ typedef void (*on_stream_changed_ptr)(stream_type_t type);
 typedef bool (*on_laser_ppi_enable_ptr)(uint_fast16_t ppi, uint_fast16_t pulse_length);
 typedef void (*on_homing_rate_set_ptr)(axes_signals_t axes, float rate, bool pulloff);
 typedef bool (*on_probe_fixture_ptr)(tool_data_t *tool, bool at_g59_3, bool on);
+typedef bool (*on_probe_start_ptr)(axes_signals_t axes, float *target, plan_line_data_t *pl_data);
+typedef void (*on_probe_completed_ptr)(void);
 typedef bool (*on_spindle_select_ptr)(uint_fast8_t spindle_id);
 typedef status_code_t (*on_unknown_sys_command_ptr)(sys_state_t state, char *line); // return Status_Unhandled.
 typedef status_code_t (*on_user_command_ptr)(char *line);
@@ -93,7 +93,6 @@ typedef struct {
     report_t report;
     // grbl core events - may be subscribed to by drivers or by the core.
     on_state_change_ptr on_state_change;
-    on_probe_completed_ptr on_probe_completed;
     on_program_completed_ptr on_program_completed;
     on_execute_realtime_ptr on_execute_realtime;
     on_execute_realtime_ptr on_execute_delay;
@@ -113,6 +112,8 @@ typedef struct {
     on_stream_changed_ptr on_stream_changed;
     on_homing_rate_set_ptr on_homing_rate_set;
     on_probe_fixture_ptr on_probe_fixture;
+    on_probe_start_ptr on_probe_start;
+    on_probe_completed_ptr on_probe_completed;
     on_laser_ppi_enable_ptr on_laser_ppi_enable;
     on_spindle_select_ptr on_spindle_select;
     // core entry points - set up by core before driver_init() is called.

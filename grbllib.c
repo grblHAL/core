@@ -57,11 +57,10 @@ typedef union {
         uint8_t init          :1,
                 setup         :1,
                 spindle       :1,
-                door          :1,
                 amass         :1,
                 pulse_delay   :1,
                 linearization :1,
-                unused        :1;
+                unused        :2;
     };
 } driver_startup_t;
 
@@ -169,10 +168,8 @@ int grbl_enter (void)
     hal.stream.suspend_read = NULL;
 #endif
 
-#ifndef ENABLE_SAFETY_DOOR_INPUT_PIN
+#ifdef NO_SAFETY_DOOR_SUPPORT
     hal.signals_cap.safety_door_ajar = Off;
-#else
-    driver.door = hal.signals_cap.safety_door_ajar;
 #endif
 
   #ifdef BUFFER_NVSDATA

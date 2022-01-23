@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
+  Copyright (c) 2017-2022 Terje Io
   Copyright (c) 2014-2016 Sungeun K. Jeon for Gnea Research LLC
 
   Grbl is free software: you can redistribute it and/or modify
@@ -105,15 +105,15 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
         if ((signals.reset || signals.e_stop || signals.motor_fault) && state_get() != STATE_ESTOP)
             mc_reset();
         else {
-#ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
-            if (signals.safety_door_ajar) {
+#ifndef NO_SAFETY_DOOR_SUPPORT
+            if (signals.safety_door_ajar && hal.signals_cap.safety_door_ajar) {
                 if(settings.safety_door.flags.ignore_when_idle) {
                     // Only stop the spindle (laser off) when idle or jogging,
                     // this to allow positioning the controlled point (spindle) when door is open.
                     // NOTE: at least for lasers there should be an external interlock blocking laser power.
                     if(state_get() != STATE_IDLE && state_get() != STATE_JOG)
                         system_set_exec_state_flag(EXEC_SAFETY_DOOR);
-                    if(settings.mode == Mode_Laser) // Turn off spindle imeediately (laser) when in laser mode
+                    if(sys.mode == Mode_Laser) // Turn off spindle imeediately (laser) when in laser mode
                         hal.spindle.set_state((spindle_state_t){0}, 0.0f);
                 } else
                     system_set_exec_state_flag(EXEC_SAFETY_DOOR);

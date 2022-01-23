@@ -349,7 +349,7 @@ static status_code_t set_probe_allow_feed_override (setting_id_t id, uint_fast16
 static status_code_t set_tool_change_mode (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_tool_change_probing_distance (setting_id_t id, float value);
 static status_code_t set_ganged_dir_invert (setting_id_t id, uint_fast16_t int_value);
-#ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
+#ifndef NO_SAFETY_DOOR_SUPPORT
 static status_code_t set_parking_enable (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_restore_overrides (setting_id_t id, uint_fast16_t int_value);
 #endif
@@ -435,9 +435,9 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_SpindlePPR, Group_Spindle, "Spindle pulses per revolution (PPR)", NULL, Format_Int16, "###0", NULL, NULL, Setting_IsExtended, &settings.spindle.ppr, NULL, is_setting_available },
      { Setting_EnableLegacyRTCommands, Group_General, "Enable legacy RT commands", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_enable_legacy_rt_commands, get_int, NULL },
      { Setting_JogSoftLimited, Group_Jogging, "Limit jog commands", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_jog_soft_limited, get_int, NULL },
-#ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
-     { Setting_ParkingEnable, Group_SafetyDoor, "Parking cycle", NULL, Format_XBitfield, "Enable,Enable parking override control,Deactivate upon init", NULL, NULL, Setting_IsExtendedFn, set_parking_enable, get_int, NULL },
-     { Setting_ParkingAxis, Group_SafetyDoor, "Parking axis", NULL, Format_RadioButtons, "X,Y,Z", NULL, NULL, Setting_IsExtended, &settings.parking.axis, NULL, NULL },
+#ifndef NO_SAFETY_DOOR_SUPPORT
+     { Setting_ParkingEnable, Group_SafetyDoor, "Parking cycle", NULL, Format_XBitfield, "Enable,Enable parking override control,Deactivate upon init", NULL, NULL, Setting_IsExtendedFn, set_parking_enable, get_int, is_setting_available },
+     { Setting_ParkingAxis, Group_SafetyDoor, "Parking axis", NULL, Format_RadioButtons, "X,Y,Z", NULL, NULL, Setting_IsExtended, &settings.parking.axis, NULL, is_setting_available },
 #endif
      { Setting_HomingLocateCycles, Group_Homing, "Homing passes", NULL, Format_Int8, "##0", "1", "128", Setting_IsExtended, &settings.homing.locate_cycles, NULL, NULL },
      { Setting_HomingCycle_1, Group_Homing, "Axes homing, first pass", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_homing_cycle, get_int, NULL },
@@ -452,13 +452,13 @@ PROGMEM static const setting_detail_t setting_detail[] = {
 #ifdef C_AXIS
      { Setting_HomingCycle_6, Group_Homing, "Axes homing, sixth pass", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_homing_cycle, get_int, NULL },
 #endif
-#ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
-     { Setting_ParkingPulloutIncrement, Group_SafetyDoor, "Parking pull-out distance", "mm", Format_Decimal, "###0.0", NULL, NULL, Setting_IsExtended, &settings.parking.pullout_increment, NULL, NULL },
-     { Setting_ParkingPulloutRate, Group_SafetyDoor, "Parking pull-out rate", "mm/min", Format_Decimal, "###0.0", NULL, NULL, Setting_IsExtended, &settings.parking.pullout_rate, NULL, NULL },
-     { Setting_ParkingTarget, Group_SafetyDoor, "Parking target", "mm", Format_Decimal, "-###0.0", "-100000", NULL, Setting_IsExtended, &settings.parking.target, NULL, NULL },
-     { Setting_ParkingFastRate, Group_SafetyDoor, "Parking fast rate", "mm/min", Format_Decimal, "###0.0", NULL, NULL, Setting_IsExtended, &settings.parking.rate, NULL, NULL },
-     { Setting_RestoreOverrides, Group_General, "Restore overrides", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_restore_overrides, get_int, NULL },
-     { Setting_DoorOptions, Group_SafetyDoor, "Safety door options", NULL, Format_Bitfield, "Ignore when idle,Keep coolant state on open", NULL, NULL, Setting_IsExtended, &settings.safety_door.flags.value, NULL, NULL },
+#ifndef NO_SAFETY_DOOR_SUPPORT
+     { Setting_ParkingPulloutIncrement, Group_SafetyDoor, "Parking pull-out distance", "mm", Format_Decimal, "###0.0", NULL, NULL, Setting_IsExtended, &settings.parking.pullout_increment, NULL, is_setting_available },
+     { Setting_ParkingPulloutRate, Group_SafetyDoor, "Parking pull-out rate", "mm/min", Format_Decimal, "###0.0", NULL, NULL, Setting_IsExtended, &settings.parking.pullout_rate, NULL, is_setting_available },
+     { Setting_ParkingTarget, Group_SafetyDoor, "Parking target", "mm", Format_Decimal, "-###0.0", "-100000", NULL, Setting_IsExtended, &settings.parking.target, NULL, is_setting_available },
+     { Setting_ParkingFastRate, Group_SafetyDoor, "Parking fast rate", "mm/min", Format_Decimal, "###0.0", NULL, NULL, Setting_IsExtended, &settings.parking.rate, NULL, is_setting_available },
+     { Setting_RestoreOverrides, Group_General, "Restore overrides", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_restore_overrides, get_int, is_setting_available },
+     { Setting_DoorOptions, Group_SafetyDoor, "Safety door options", NULL, Format_Bitfield, "Ignore when idle,Keep coolant state on open", NULL, NULL, Setting_IsExtended, &settings.safety_door.flags.value, NULL, is_setting_available },
 #endif
      { Setting_SleepEnable, Group_General, "Sleep enable", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_sleep_enable, get_int, NULL },
      { Setting_HoldActions, Group_General, "Feed hold actions", NULL, Format_Bitfield, "Disable laser during hold,Restore spindle and coolant state on resume", NULL, NULL, Setting_IsExtendedFn, set_hold_actions, get_int, NULL },
@@ -506,12 +506,11 @@ PROGMEM static const setting_detail_t setting_detail[] = {
 #elif N_AXIS > 5
      { Settings_Axis_Rotational, Group_Stepper, "Rotational axes", NULL, Format_Bitfield, "A-Axis,B-Axis,C-Axis", NULL, NULL, Setting_IsExtendedFn, set_rotational_axes, get_int, NULL },
 #endif
-#ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
-     { Setting_DoorSpindleOnDelay, Group_SafetyDoor, "Spindle on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.spindle_on_delay, NULL, NULL },
-     { Setting_DoorCoolantOnDelay, Group_SafetyDoor, "Coolant on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.coolant_on_delay, NULL, NULL },
-#else
-     { Setting_DoorSpindleOnDelay, Group_Spindle, "Spindle on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.spindle_on_delay, NULL, is_setting_available },
+#ifndef NO_SAFETY_DOOR_SUPPORT
+     { Setting_DoorSpindleOnDelay, Group_SafetyDoor, "Spindle on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.spindle_on_delay, NULL, is_setting_available },
+     { Setting_DoorCoolantOnDelay, Group_SafetyDoor, "Coolant on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.coolant_on_delay, NULL, is_setting_available },
 #endif
+     { Setting_SpindleOnDelay, Group_Spindle, "Spindle on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.spindle_on_delay, NULL, is_setting_available },
 };
 
 #ifndef NO_SETTINGS_DESCRIPTIONS
@@ -599,7 +598,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_JogStepDistance, "Jog distance for single step jogging." },
     { Setting_JogSlowDistance, "Jog distance before automatic stop." },
     { Setting_JogFastDistance, "Jog distance before automatic stop." },
-#ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
+#ifndef NO_SAFETY_DOOR_SUPPORT
     { Setting_ParkingPulloutIncrement, "Spindle pull-out and plunge distance in mm.Incremental distance." },
     { Setting_ParkingPulloutRate, "Spindle pull-out/plunge slow feed rate in mm/min." },
     { Setting_ParkingTarget, "Parking axis target. In mm, as machine coordinate [-max_travel, 0]." },
@@ -647,7 +646,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
 #if COMPATIBILITY_LEVEL <= 1
     { Setting_DisableG92Persistence, "Disables save/restore of G92 offset to non-volatile storage (NVS)." },
 #endif
-#ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
+#ifndef NO_SAFETY_DOOR_SUPPORT
     { Setting_DoorSpindleOnDelay, "Delay to allow spindle to spin up after safety door is opened." },
     { Setting_DoorCoolantOnDelay, "Delay to allow coolant to restart after safety door is opened." },
 #else
@@ -912,12 +911,12 @@ static status_code_t set_mode (setting_id_t id, uint_fast16_t int_value)
             return Status_InvalidStatement;
     }
 
-    settings.mode = (machine_mode_t)int_value;
+    settings.mode = sys.mode = (machine_mode_t)int_value;
 
     return Status_OK;
 }
 
-#ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
+#ifndef NO_SAFETY_DOOR_SUPPORT
 
 static status_code_t set_parking_enable (setting_id_t id, uint_fast16_t int_value)
 {
@@ -1415,11 +1414,6 @@ static bool is_setting_available (const setting_detail_t *setting)
             available = hal.driver_cap.spindle_sync || hal.driver_cap.spindle_pid;
             break;
 
-        case Setting_SpindleAtSpeedTolerance:
-        case Setting_DoorSpindleOnDelay:
-            available = hal.driver_cap.spindle_at_speed;
-            break;
-
         case Setting_RpmMax:
         case Setting_RpmMin:
         case Setting_PWMFreq:
@@ -1435,6 +1429,29 @@ static bool is_setting_available (const setting_detail_t *setting)
         case Setting_AxisAutoSquareOffset:
             available = hal.stepper.get_ganged && hal.stepper.get_ganged(true).mask != 0;
 //            available = hal.stepper.get_ganged && bit_istrue(hal.stepper.get_ganged(true).mask, setting->id - Setting_AxisAutoSquareOffset);
+            break;
+
+#ifndef NO_SAFETY_DOOR_SUPPORT
+        case Setting_ParkingEnable:
+        case Setting_ParkingAxis:
+        case Setting_ParkingPulloutIncrement:
+        case Setting_ParkingPulloutRate:
+        case Setting_ParkingTarget:
+        case Setting_ParkingFastRate:
+        case Setting_RestoreOverrides:
+        case Setting_DoorOptions:
+        case Setting_DoorSpindleOnDelay:
+        case Setting_DoorCoolantOnDelay:
+            available = hal.signals_cap.safety_door_ajar;
+            break;
+#endif
+
+        case Setting_SpindleAtSpeedTolerance:
+            available = hal.driver_cap.spindle_at_speed;
+            break;
+
+        case Setting_SpindleOnDelay:
+            available = !hal.signals_cap.safety_door_ajar && hal.driver_cap.spindle_at_speed;
             break;
 
         default:
@@ -1559,6 +1576,8 @@ bool read_global_settings ()
     if(settings.mode == Mode_Laser && !hal.driver_cap.variable_spindle)
         settings.mode = Mode_Standard;
 
+    sys.mode = settings.mode;
+
     if(!(hal.driver_cap.spindle_sync || hal.driver_cap.spindle_pid))
         settings.spindle.ppr = 0;
 
@@ -1593,8 +1612,10 @@ void settings_restore (settings_restore_t restore)
     hal.nvs.put_byte(0, SETTINGS_VERSION); // Forces write to physical storage
 
     if (restore.defaults) {
+
         memcpy(&settings, &defaults, sizeof(settings_t));
 
+        sys.mode = settings.mode;
         settings.control_invert.mask &= hal.signals_cap.mask;
         settings.spindle.invert.ccw &= hal.driver_cap.spindle_dir;
         settings.spindle.invert.pwm &= hal.driver_cap.spindle_pwm_invert;

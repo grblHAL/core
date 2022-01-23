@@ -189,7 +189,7 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
 
         // Plan and queue motion into planner buffer
         // bool plan_status; // Not used in normal operation.
-        if(!plan_buffer_line(target, pl_data) && settings.mode == Mode_Laser && pl_data->condition.spindle.on && !pl_data->condition.spindle.ccw) {
+        if(!plan_buffer_line(target, pl_data) && sys.mode == Mode_Laser && pl_data->condition.spindle.on && !pl_data->condition.spindle.ccw) {
             // Correctly set spindle state, if there is a coincident position passed.
             // Forces a buffer sync while in M3 laser mode only.
             hal.spindle.set_state(pl_data->condition.spindle, pl_data->spindle.rpm);
@@ -247,8 +247,18 @@ void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *o
             pl_data->condition.inverse_time = Off; // Force as feed absolute mode over arc segments.
         }
 
-        float theta_per_segment = angular_travel/segments;
+        float theta_per_segment = angular_travel / segments;
+#if N_AXIS > 3
+        uint_fast8_t idx = N_AXIS;
+        float linear_per_segment[N_AXIS];
+        do {
+            idx--;
+            if(!(idx == plane.axis_0 || idx == plane.axis_1))
+                linear_per_segment[idx] = (target[idx] - position[idx]) / segments;
+        } while(idx);
+#else
         float linear_per_segment = (target[plane.axis_linear] - position[plane.axis_linear]) / segments;
+#endif
 
     /* Vector rotation by transformation matrix: r is the original vector, r_T is the rotated vector,
        and phi is the angle of rotation. Solution approach by Jens Geisler.
@@ -295,7 +305,7 @@ void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *o
                 r_axis1 = r_axisi;
                 count++;
             } else {
-                // Arc correction to radius vector. Computed only every N_ARC_CORRECTION increments. ~375 usec
+                // Arc correction to radius vector. Computed only every N_ARC_CORRECTION increments.
                 // Compute exact location by applying transformation matrix from initial radius vector(=-offset).
                 cos_Ti = cosf(i * theta_per_segment);
                 sin_Ti = sinf(i * theta_per_segment);
@@ -307,7 +317,16 @@ void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *o
             // Update arc_target location
             position[plane.axis_0] = center_axis0 + r_axis0;
             position[plane.axis_1] = center_axis1 + r_axis1;
+#if N_AXIS > 3
+            idx = N_AXIS;
+            do {
+                idx--;
+                if(!(idx == plane.axis_0 || idx == plane.axis_1))
+                    position[idx] += linear_per_segment[idx];
+            } while(idx);
+#else
             position[plane.axis_linear] += linear_per_segment;
+#endif
 
             // Bail mid-circle on system abort. Runtime command check already performed by mc_line.
             if(!mc_line(position, pl_data))
@@ -880,6 +899,23 @@ gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_f
         protocol_execute_realtime();
         hal.probe.configure(false, false); // Re-initialize invert mask before returning.
         return GCProbe_FailInit; // Nothing else to do but bail.
+    }
+
+    if(grbl.on_probe_start) {
+
+        uint_fast8_t idx = N_AXIS;
+        axes_signals_t axes = {0};
+        coord_data_t position;
+
+        system_convert_array_steps_to_mpos(position.values, sys.position);
+
+        do {
+            idx--;
+            if(position.values[idx] != target[idx])
+                bit_true(axes.mask, bit(idx));
+        } while(idx--);
+
+        grbl.on_probe_start(axes, target, pl_data);
     }
 
     // Setup and queue probing motion. Auto cycle-start should not start the cycle.

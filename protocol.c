@@ -167,9 +167,9 @@ bool protocol_main_loop (void)
         grbl.report.feedback_message(Message_AlarmLock);
     } else {
         state_set(STATE_IDLE);
-#ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
+#ifndef NO_SAFETY_DOOR_SUPPORT
         // Check if the safety door is open.
-        if (!settings.safety_door.flags.ignore_when_idle && hal.control.get_state().safety_door_ajar) {
+        if (hal.signals_cap.safety_door_ajar && !settings.safety_door.flags.ignore_when_idle && hal.control.get_state().safety_door_ajar) {
             system_set_exec_state_flag(EXEC_SAFETY_DOOR);
             protocol_execute_realtime(); // Enter safety door mode. Should return as IDLE state.
         }

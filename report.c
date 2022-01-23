@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
+  Copyright (c) 2017-2022 Terje Io
   Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
 
   Grbl is free software: you can redistribute it and/or modify
@@ -715,7 +715,7 @@ void report_gcode_modes (void)
 
 #endif
 
-    if(settings.mode == Mode_Lathe)
+    if(sys.mode == Mode_Lathe)
         hal.stream.write(gc_state.modal.diameter_mode ? " G7" : " G8");
 
     hal.stream.write(" G");
@@ -728,7 +728,7 @@ void report_gcode_modes (void)
     hal.stream.write(" G");
     hal.stream.write(uitoa((uint32_t)(94 - gc_state.modal.feed_mode)));
 
-    if(settings.mode == Mode_Lathe && hal.driver_cap.variable_spindle)
+    if(sys.mode == Mode_Lathe && hal.driver_cap.variable_spindle)
         hal.stream.write(gc_state.modal.spindle_rpm_mode == SpindleSpeedMode_RPM ? " G97" : " G96");
 
 #if COMPATIBILITY_LEVEL < 10
@@ -1319,7 +1319,7 @@ void report_realtime_status (void)
                 hal.stream.write_all(appendbuf(2, ",", uitoa(sys.homed.mask)));
         }
 
-        if(sys.report.xmode && settings.mode == Mode_Lathe)
+        if(sys.report.xmode && sys.mode == Mode_Lathe)
             hal.stream.write_all(gc_state.modal.diameter_mode ? "|D:1" : "|D:0");
 
         if(sys.report.tool)

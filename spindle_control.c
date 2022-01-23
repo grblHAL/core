@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
+  Copyright (c) 2017-2022 Terje Io
   Copyright (c) 2012-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -59,7 +59,7 @@ bool spindle_set_state (spindle_state_t state, float rpm)
         } else {
             // NOTE: Assumes all calls to this function is when Grbl is not moving or must remain off.
             // TODO: alarm/interlock if going from CW to CCW directly in non-laser mode?
-            if (settings.mode == Mode_Laser && state.ccw)
+            if (sys.mode == Mode_Laser && state.ccw)
                 rpm = 0.0f; // TODO: May need to be rpm_min*(100/MAX_SPINDLE_RPM_OVERRIDE);
 
             hal.spindle.set_state(state, spindle_set_rpm(rpm, sys.override.spindle_rpm));
@@ -109,7 +109,7 @@ bool spindle_restore (spindle_state_t state, float rpm)
 {
     bool ok = true;
 
-    if(settings.mode == Mode_Laser) // When in laser mode, ignore spindle spin-up delay. Set to turn on laser when cycle starts.
+    if(sys.mode == Mode_Laser) // When in laser mode, ignore spindle spin-up delay. Set to turn on laser when cycle starts.
         sys.step_control.update_spindle_rpm = On;
     else { // TODO: add check for current spindle state matches restore state?
         spindle_set_state(state, rpm);

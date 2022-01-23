@@ -110,7 +110,7 @@ bool initiate_hold (uint_fast16_t new_state)
         restore_spindle_rpm = block->spindle.rpm;
     }
 
-    if (settings.mode == Mode_Laser && settings.flags.disable_laser_during_hold)
+    if (sys.mode == Mode_Laser && settings.flags.disable_laser_during_hold)
         enqueue_accessory_override(CMD_OVERRIDE_SPINDLE_STOP);
 
     if (sys_state & (STATE_CYCLE|STATE_JOG)) {
@@ -267,7 +267,7 @@ void state_suspend_manager (void)
         // Handles restoring of spindle state
         if (sys.override.spindle_stop.restore) {
             grbl.report.feedback_message(Message_SpindleRestore);
-            if (settings.mode == Mode_Laser) // When in laser mode, ignore spindle spin-up delay. Set to turn on laser when cycle starts.
+            if (sys.mode == Mode_Laser) // When in laser mode, ignore spindle spin-up delay. Set to turn on laser when cycle starts.
                 sys.step_control.update_spindle_rpm = On;
             else
                 spindle_set_state(restore_condition.spindle, restore_spindle_rpm);
@@ -409,7 +409,7 @@ static void state_await_hold (uint_fast16_t rt_exec)
 
                 // Parking requires parking axis homed, the current location not exceeding the???
                 // parking target location, and laser mode disabled.
-                if (settings.parking.flags.enabled && !sys.override.control.parking_disable && settings.mode != Mode_Laser) {
+                if (settings.parking.flags.enabled && !sys.override.control.parking_disable && sys.mode != Mode_Laser) {
 
                     // Get current position and store as restore location.
                     if (!park.flags.active) {

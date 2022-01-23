@@ -220,11 +220,12 @@
 #endif
 #endif
 
+#ifndef SAFETY_DOOR_ENABLE
+#define SAFETY_DOOR_ENABLE  0
+#endif
 
-#ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
-#define SAFETY_DOOR_ENABLE 1
-#else
-#define SAFETY_DOOR_ENABLE 0
+#if SAFETY_DOOR_ENABLE && defined(NO_SAFETY_DOOR_SUPPORT)
+#error "Driver does not support safety door functionality!"
 #endif
 
 #ifndef ESTOP_ENABLE

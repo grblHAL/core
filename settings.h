@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
+  Copyright (c) 2017-2022 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -254,6 +254,7 @@ typedef enum {
     Setting_CoolantOkPort = 391,
     Setting_DoorSpindleOnDelay = 392,
     Setting_DoorCoolantOnDelay = 393,
+    Setting_SpindleOnDelay = 394, // made available if safety door input not provided
 
     Setting_EncoderSettingsBase = 400, // NOTE: Reserving settings values >= 400 for encoder settings. Up to 449.
     Setting_EncoderSettingsMax = 449,
@@ -544,12 +545,6 @@ typedef struct {
     ioport_bus_t invert_out;
     ioport_bus_t od_enable_out;
 } ioport_signals_t;
-
-typedef enum {
-    Mode_Standard = 0,
-    Mode_Laser,
-    Mode_Lathe
-} machine_mode_t;
 
 typedef enum {
     ToolChange_Disabled = 0,

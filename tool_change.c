@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2020-2021 Terje Io
+  Copyright (c) 2020-2022 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -423,7 +423,7 @@ void tc_clear_tlo_reference (axes_signals_t homing_cycle)
 #else
         gc_get_plane_data(&plane, gc_state.modal.plane_select);
 #endif
-        if(homing_cycle.mask & (settings.mode == Mode_Lathe ? (X_AXIS_BIT|Z_AXIS_BIT) : bit(plane.axis_linear))) {
+        if(homing_cycle.mask & (sys.mode == Mode_Lathe ? (X_AXIS_BIT|Z_AXIS_BIT) : bit(plane.axis_linear))) {
             sys.report.tlo_reference = sys.tlo_reference_set.mask != 0;
             sys.tlo_reference_set.mask = 0;  // Invalidate tool length offset reference
         }

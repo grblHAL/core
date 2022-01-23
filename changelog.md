@@ -1,5 +1,27 @@
 ## grblHAL changelog
 
+Build 20220123:
+
+Core:
+
+* The symbol `ENABLE_SAFETY_DOOR_INPUT_PIN` in _grbl/config.h_ has been replaced with `SAFETY_DOOR_ENABLE` in _my_machine.h_.
+* Changed probe touch off handling to reduce deceleration overshoot.  
+Uncomment `//#define MINIMIZE_PROBE_OVERSHOOT` in _grbl/stepper.c_ to enable this feature.  
+Later it may be permanently enabled if no side-effects are experienced, test with care!
+
+Drivers:
+
+* Most: Added `\\#define SAFETY_DOOR_ENABLE 1` to options in _my_machine.h_, uncomment to enable. Requires board support for safety door input.
+* RP2040: Added pin map and support code for the [C.ITOH CX-6000 plotter project](https://hackaday.io/project/183600-citoh-cx-6000-plotter-upgrade). Uses the HPGL and keypad plugins.
+* RP2040: Added tentative support for BTT SKR Pico 1.0 board. Incomplete and untested!
+* LPC176x: Made TMC2209 UART driver support for BTT SKR E3 Turbo board available for BTT SKR V1.4 Turbo, still untested!
+
+Templates:
+
+* Added [HPGL template plugin](https://github.com/grblHAL/Templates/tree/master/my_plugin/hpgl). Replaces the G-code parser with a HPGL parser and is a good example of grblHAL programmability. _Not a single line of code was changed in the core for this!_
+
+---
+
 Build 20220111:
 
 Core:

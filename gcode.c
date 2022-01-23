@@ -742,7 +742,7 @@ status_code_t gc_execute_block(char *block)
                 switch(int_value) {
 
                     case 7: case 8:
-                        if(settings.mode == Mode_Lathe) {
+                        if(sys.mode == Mode_Lathe) {
                             word_bit.modal_group.G15 = On;
                             gc_block.modal.diameter_mode = int_value == 7; // TODO: find specs for implementation, only affects X calculation? reporting? current position?
                         } else
@@ -915,7 +915,7 @@ status_code_t gc_execute_block(char *block)
                         break;
 */
                     case 96: case 97:
-                        if(settings.mode == Mode_Lathe && hal.driver_cap.variable_spindle) {
+                        if(sys.mode == Mode_Lathe && hal.driver_cap.variable_spindle) {
                             word_bit.modal_group.G14 = On;
                             gc_block.modal.spindle_rpm_mode = (spindle_rpm_mode_t)((int_value - 96) ^ 1);
                         } else
@@ -2467,7 +2467,7 @@ status_code_t gc_execute_block(char *block)
     }
 
     // If in laser mode, setup laser power based on current and past parser conditions.
-    if(settings.mode == Mode_Laser) {
+    if(sys.mode == Mode_Laser) {
 
         if(!motion_is_lasercut(gc_block.modal.motion))
             gc_parser_flags.laser_disable = On;

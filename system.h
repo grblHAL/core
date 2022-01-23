@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
+  Copyright (c) 2017-2022 Terje Io
   Copyright (c) 2014-2016 Sungeun K. Jeon for Gnea Research LLC
 
   Grbl is free software: you can redistribute it and/or modify
@@ -80,6 +80,12 @@ __NOTE:__ flags are mutually exclusive, bit map allows testing for multiple stat
 #define STATE_ESTOP         bit(8) //!< EStop mode, reports and is mainly handled similar to alarm state
 #define STATE_TOOL_CHANGE   bit(9) //!< Manual tool change, similar to #STATE_HOLD - but stops spindle and allows jogging.
 ///@}
+
+typedef enum {
+    Mode_Standard = 0,
+    Mode_Laser,
+    Mode_Lathe
+} machine_mode_t;
 
 typedef enum {
     Parking_DoorClosed = 0, //!< 0
@@ -222,6 +228,7 @@ typedef struct system {
     bool suspend;                           //!< System suspend state flag.
     bool position_lost;                     //!< Set when mc_reset is called when machine is moving.
     volatile bool steppers_deenergize;      //!< Set to true to deenergize stepperes
+    machine_mode_t mode;                    //!< Current machine mode, copied from settings.mode on startup.
     axes_signals_t tlo_reference_set;       //!< Axes with tool length reference offset set
     int32_t tlo_reference[N_AXIS];          //!< Tool length reference offset
     alarm_code_t alarm_pending;             //!< Delayed alarm, currently used for probe protection
