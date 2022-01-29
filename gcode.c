@@ -334,7 +334,11 @@ void gc_spindle_off (void)
 {
     gc_state.spindle.rpm = 0.0f;
     gc_state.modal.spindle.value = 0;
-    spindle_set_state(gc_state.modal.spindle, gc_state.spindle.rpm);
+#ifndef GRBL_ESP32
+    hal.spindle.set_state(gc_state.modal.spindle, 0.0f);
+#else
+    hal.spindle.esp32_off();
+#endif
     sys.report.spindle = On;
 }
 
