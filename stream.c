@@ -121,6 +121,8 @@ ISR_CODE static bool ISR_FUNC(await_toolchange_ack)(char c)
         hal.stream.read = stream.read; // restore normal input
         hal.stream.set_enqueue_rt_handler(stream.enqueue_realtime_command);
         stream.enqueue_realtime_command = NULL;
+        if(grbl.on_toolchange_ack)
+            grbl.on_toolchange_ack();
     } else
         return stream.enqueue_realtime_command(c);
 
@@ -130,11 +132,13 @@ ISR_CODE static bool ISR_FUNC(await_toolchange_ack)(char c)
 bool stream_rx_suspend (stream_rx_buffer_t *rxbuffer, bool suspend)
 {
     if(suspend) {
-        stream.rxbuffer = rxbuffer;
-        stream.read = hal.stream.read;
-        stream.enqueue_realtime_command = hal.stream.set_enqueue_rt_handler(await_toolchange_ack);
-        hal.stream.read = stream_get_null;
-    } else {
+        if(stream.rxbuffer == NULL) {
+            stream.rxbuffer = rxbuffer;
+            stream.read = hal.stream.read;
+            stream.enqueue_realtime_command = hal.stream.set_enqueue_rt_handler(await_toolchange_ack);
+            hal.stream.read = stream_get_null;
+        }
+    } else if(stream.rxbuffer) {
         if(rxbuffer->backup)
             memcpy(rxbuffer, &rxbackup, sizeof(stream_rx_buffer_t));
         if(stream.enqueue_realtime_command) {
@@ -142,6 +146,7 @@ bool stream_rx_suspend (stream_rx_buffer_t *rxbuffer, bool suspend)
             hal.stream.set_enqueue_rt_handler(stream.enqueue_realtime_command);
             stream.enqueue_realtime_command = NULL;
         }
+        stream.rxbuffer = NULL;
     }
 
     return rxbuffer->tail != rxbuffer->head;

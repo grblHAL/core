@@ -270,6 +270,15 @@ ISR_CODE static bool ISR_FUNC(trap_stream_cycle_start)(char c)
     return drop;
 }
 
+// Trap cycle start command and control signal when tool change is acknowledged by sender.
+ISR_CODE static void ISR_FUNC(on_toolchange_ack)(void)
+{
+    control_interrupt_callback = hal.control.interrupt_callback;
+    hal.control.interrupt_callback = trap_control_cycle_start;
+    enqueue_realtime_command = hal.stream.set_enqueue_rt_handler(trap_stream_cycle_start);
+
+}
+
 // Set next and/or current tool. Called by gcode.c on on a Tn or M61 command (via HAL).
 static void tool_select (tool_data_t *tool, bool next)
 {
@@ -316,11 +325,7 @@ static status_code_t tool_change (parser_state_t *parser_state)
     if(settings.tool_change.mode != ToolChange_SemiAutomatic)
         grbl.on_probe_completed = on_probe_completed;
 
-    // Trap cycle start command and control signal.
     block_cycle_start = settings.tool_change.mode != ToolChange_SemiAutomatic;
-    enqueue_realtime_command = hal.stream.set_enqueue_rt_handler(trap_stream_cycle_start);
-    control_interrupt_callback = hal.control.interrupt_callback;
-    hal.control.interrupt_callback = trap_control_cycle_start;
 
     // Stop spindle and coolant.
     hal.spindle.set_state((spindle_state_t){0}, 0.0f);
@@ -331,7 +336,6 @@ static status_code_t tool_change (parser_state_t *parser_state)
                      (settings.tool_change.mode == ToolChange_Manual ||
                        settings.tool_change.mode == ToolChange_Manual_G59_3 ||
                         settings.tool_change.mode == ToolChange_SemiAutomatic);
-    parser_state->tool_change = true;
 
     // Save current position.
     system_convert_array_steps_to_mpos(previous.values, sys.position);
@@ -378,6 +382,7 @@ static status_code_t tool_change (parser_state_t *parser_state)
     sync_position();
 
     // Enter tool change mode, waits for cycle start to continue.
+    parser_state->tool_change = true;
     system_set_exec_state_flag(EXEC_TOOL_CHANGE);   // Set up program pause for manual tool change
     protocol_execute_realtime();                    // Execute...
 
@@ -402,9 +407,11 @@ void tc_init (void)
     if(settings.tool_change.mode == ToolChange_Disabled || settings.tool_change.mode == ToolChange_Ignore) {
         hal.tool.select = NULL;
         hal.tool.change = NULL;
+        grbl.on_toolchange_ack = NULL;
     } else {
         hal.tool.select = tool_select;
         hal.tool.change = tool_change;
+        grbl.on_toolchange_ack = on_toolchange_ack;
         if(driver_reset == NULL) {
             driver_reset = hal.driver_reset;
             hal.driver_reset = reset;

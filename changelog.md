@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+Build 20220131:
+
+Core:
+
+* Fixed tool change and spindle stop on reset/stop commands regressions.
+
+Plugins:
+
+* WebUI: Added number of configured axes to firmware status report. Issue [#18}(https://github.com/grblHAL/ESP32/issues/18).
+
+---
+
 Build 20220123:
 
 Core:

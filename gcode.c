@@ -143,7 +143,7 @@ static scale_factor_t scale_factor = {
 // Simple hypotenuse computation function.
 inline static float hypot_f (float x, float y)
 {
-    return sqrtf(x*x + y*y);
+    return sqrtf(x * x + y * y);
 }
 
 inline static bool motion_is_lasercut (motion_mode_t motion)
@@ -332,7 +332,7 @@ bool gc_laser_ppi_enable (uint_fast16_t ppi, uint_fast16_t pulse_length)
 
 void gc_spindle_off (void)
 {
-    gc_state.spindle.rpm = 0.0f;
+    gc_state.spindle.rpm = sys.spindle_rpm = 0.0f;
     gc_state.modal.spindle.value = 0;
 #ifndef GRBL_ESP32
     hal.spindle.set_state(gc_state.modal.spindle, 0.0f);
