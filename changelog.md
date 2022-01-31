@@ -6,9 +6,14 @@ Core:
 
 * Fixed tool change and spindle stop on reset/stop commands regressions.
 
+Drivers:
+
+* ESP32: Updated WiFi stream handling on network connect/disconnect to use shared code in the core.
+
 Plugins:
 
 * WebUI: Added number of configured axes to firmware status report. Issue [#18}(https://github.com/grblHAL/ESP32/issues/18).
+* Networking: Added close \(stream\) connections calls.
 
 ---
 
