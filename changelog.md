@@ -1,5 +1,18 @@
 ## grblHAL changelog
 
+20220203:
+
+Plugins:
+
+* Networking: Added critical sections for FreeRTOS builds and bit of code harmonization for the telnet and websocket daemons.
+
+Drivers:
+
+* ESP32: Increased FreeRTOS tick rate to 1KHz, pinned tcp task to core 0 and increased network daemons polling rate. Hopefully this along with networking plugin changes fixes issue [#10](https://github.com/grblHAL/ESP32/issues/10).
+* iMXRT1062: Added workaround for potential compiler bug, added small delay to PJRC USB polling to avoid overwhelming senders with responses in _Check mode_. This should fix issue [#31](https://github.com/grblHAL/iMXRT1062/issues/31).
+
+---
+
 Build 20220131:
 
 Core:
