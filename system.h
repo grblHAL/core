@@ -228,7 +228,6 @@ typedef struct system {
     bool suspend;                           //!< System suspend state flag.
     bool position_lost;                     //!< Set when mc_reset is called when machine is moving.
     volatile bool steppers_deenergize;      //!< Set to true to deenergize stepperes
-    machine_mode_t mode;                    //!< Current machine mode, copied from settings.mode on startup.
     axes_signals_t tlo_reference_set;       //!< Axes with tool length reference offset set
     int32_t tlo_reference[N_AXIS];          //!< Tool length reference offset
     alarm_code_t alarm_pending;             //!< Delayed alarm, currently used for probe protection
@@ -260,6 +259,7 @@ typedef struct system {
     bool cold_start;                        //!< Set to true on boot, is false on subsequent soft resets.
     bool driver_started;                    //!< Set to true when driver initialization is completed.
     bool mpg_mode;                          //!< To be moved to system_flags_t
+    machine_mode_t mode;                    //!< Current machine mode, copied from settings.mode on startup.
     signal_event_t last_event;              //!< Last signal events (control and limits signal).
     int32_t position[N_AXIS];               //!< Real-time machine (aka home) position vector in steps.
 //@}

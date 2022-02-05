@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+Build 20220204:
+
+Core:
+
+* Fix for regression where laser mode / lathe mode settings were ignored.
+
+Plugins:
+
+* Motors: Added 100ms delay before attempting to initialize Trinamic drivers after power up. At least TMC2130 require this.
+
+Drivers:
+
+* STM32F4xx: Removed Trinamc driver restriction for ganged axes configs for BTT SKR 2.0 board. Corrected linker script used for Nucleo F411 builds.
+
+---
+
 20220203:
 
 Plugins:
