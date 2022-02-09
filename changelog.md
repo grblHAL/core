@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+20220209:
+
+Plugins:
+
+* Trinamic: "Bug fix" for soft UART TMC2209 drivers.
+
+Drivers:
+
+* LPC176x and STM32F4xx: Refactored soft UART code used for TMC2209 drivers. Hopefully this fixes remaining issues, however I do not have the actual hardware to verify the code.
+
+---
+
 Build 20220204:
 
 Core:
