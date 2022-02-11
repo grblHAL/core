@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
+  Copyright (c) 2017-2022 Terje Io
   Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -454,7 +454,7 @@ static bool limits_homing_cycle (axes_signals_t cycle, axes_signals_t auto_squar
 #endif
 
 #ifdef ENABLE_BACKLASH_COMPENSATION
-    mc_backlash_init();
+    mc_backlash_init(cycle);
 #endif
     sys.step_control.flags = 0; // Return step control to normal operation.
     sys.homed.mask |= cycle.mask;

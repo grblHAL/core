@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
+  Copyright (c) 2017-2022 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
   Copyright (c) 2011 Jens Geisler
@@ -32,12 +32,14 @@
 #ifdef KINEMATICS_API
 #include "kinematics.h"
 #endif
-
 #ifndef MINIMUM_JUNCTION_SPEED
 #define MINIMUM_JUNCTION_SPEED 0.0f
 #endif
 #ifndef MINIMUM_FEED_RATE
 #define MINIMUM_FEED_RATE 1.0f
+#endif
+#ifdef ENABLE_BACKLASH_COMPENSATION
+void mc_sync_backlash_position (void);
 #endif
 
 static plan_block_t block_buffer[BLOCK_BUFFER_SIZE];    // A ring buffer for motion instructions
@@ -542,6 +544,9 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
 void plan_sync_position ()
 {
     memcpy(pl.position, sys.position, sizeof(pl.position));
+#ifdef ENABLE_BACKLASH_COMPENSATION
+    mc_sync_backlash_position();
+#endif
 }
 
 

@@ -1,5 +1,13 @@
 ## grblHAL changelog
 
+Build 20220210:
+
+Core:
+
+* Fixes for backlash compensation: no longer resets current direction on a soft reset/stop, added handling of backlash setting changes per axis.
+
+---
+
 20220209:
 
 Plugins:

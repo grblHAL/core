@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2019 Terje Io
+  Copyright (c) 2017-2022 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -75,7 +75,7 @@ void mc_cubic_b_spline(float *target, plan_line_data_t *pl_data, float *position
 void mc_reset (void);
 
 #ifdef ENABLE_BACKLASH_COMPENSATION
-void mc_backlash_init (void);
+void mc_backlash_init (axes_signals_t axes);
 void mc_sync_backlash_position (void);
 #endif
 

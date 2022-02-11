@@ -263,9 +263,7 @@ int grbl_enter (void)
         plan_reset();                   // Clear block buffer and planner variables
         st_reset();                     // Clear stepper subsystem variables.
         limits_set_homing_axes();       // Set axes to be homed from settings.
-#ifdef ENABLE_BACKLASH_COMPENSATION
-        mc_backlash_init();             // Init backlash configuration.
-#endif
+
         // Sync cleared gcode and planner positions to current system position.
         sync_position();
 

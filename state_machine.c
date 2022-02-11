@@ -363,9 +363,6 @@ static void state_await_motion_cancel (uint_fast16_t rt_exec)
             plan_reset();
             st_reset();
             sync_position();
-#ifdef ENABLE_BACKLASH_COMPENSATION
-            mc_sync_backlash_position();
-#endif
             sys.suspend = false;
         }
         state_set(pending_state);

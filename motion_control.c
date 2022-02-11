@@ -59,21 +59,19 @@
 #ifdef ENABLE_BACKLASH_COMPENSATION
 
 static float target_prev[N_AXIS];
-static axes_signals_t dir_negative, backlash_enabled;
+static axes_signals_t dir_negative = {0}, backlash_enabled = {0};
 
-void mc_backlash_init (void)
+void mc_backlash_init (axes_signals_t axes)
 {
     uint_fast8_t idx = N_AXIS;
 
-    backlash_enabled.mask = dir_negative.value = 0;
-
     do {
-        if(settings.axis[--idx].backlash > 0.0001f)
-            backlash_enabled.mask |= bit(idx);
-        dir_negative.value |= bit(idx);
+        idx--;
+        if(bit_istrue(axes.mask, bit(idx))) {
+            BIT_SET(backlash_enabled.mask, bit(idx), settings.axis[idx].backlash > 0.0001f);
+            BIT_SET(dir_negative.mask, bit(idx), bit_isfalse(settings.homing.dir_mask.mask, bit(idx)));
+        }
     } while(idx);
-
-    dir_negative.value ^= settings.homing.dir_mask.value;
 
     mc_sync_backlash_position();
 }

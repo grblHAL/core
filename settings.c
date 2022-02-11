@@ -1106,7 +1106,12 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
 
         case Setting_AxisBacklash:
 #ifdef ENABLE_BACKLASH_COMPENSATION
-            settings.axis[idx].backlash = value;
+            if(settings.axis[idx].backlash != value) {
+                axes_signals_t axes;
+                axes.mask = bit(idx);
+                settings.axis[idx].backlash = value;
+                mc_backlash_init(axes);
+            }
 #else
             status = Status_SettingDisabled;
 #endif
@@ -1619,7 +1624,9 @@ void settings_restore (settings_restore_t restore)
         settings.control_invert.mask &= hal.signals_cap.mask;
         settings.spindle.invert.ccw &= hal.driver_cap.spindle_dir;
         settings.spindle.invert.pwm &= hal.driver_cap.spindle_pwm_invert;
-
+#ifdef ENABLE_BACKLASH_COMPENSATION
+        mc_backlash_init((axes_signals_t){AXES_BITMASK});
+#endif
         settings_write_global();
     }
 
@@ -2153,10 +2160,6 @@ status_code_t settings_store_setting (setting_id_t id, char *svalue)
         if(set->save)
             set->save();
 
-#ifdef ENABLE_BACKLASH_COMPENSATION
-        mc_backlash_init();
-#endif
-
         if(set->on_changed)
             set->on_changed(&settings);
 
@@ -2191,7 +2194,7 @@ void settings_init (void)
 #endif
         report_init();
 #ifdef ENABLE_BACKLASH_COMPENSATION
-        mc_backlash_init();
+        mc_backlash_init((axes_signals_t){AXES_BITMASK});
 #endif
         hal.settings_changed(&settings);
 
