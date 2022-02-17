@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2020-2021 Terje Io
+  Copyright (c) 2020-2022 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -85,25 +85,43 @@
 #ifndef KEYPAD_ENABLE
 #define KEYPAD_ENABLE       0
 #endif
+
+#ifndef MPG_ENABLE
+#define MPG_ENABLE          0
+#endif
+
+#if MPG_ENABLE == 1 && KEYPAD_ENABLE == 2
+#define MPG_MODE            2
+#elif MPG_ENABLE
+#define MPG_MODE            1
+#else
+#define MPG_MODE            0
+#endif
+
+#if MPG_ENABLE && !defined(MPG_STREAM)
+#if USB_SERIAL_CDC
+#define MPG_STREAM          0
+#else
+#define MPG_STREAM          1
+#endif
+#endif
+
 #if KEYPAD_ENABLE == 1
 #ifdef I2C_STROBE_ENABLE
 #undef I2C_STROBE_ENABLE
 #endif
-#define I2C_STROBE_ENABLE   1
+#define I2C_STROBE_ENABLE 1
+#elif KEYPAD_ENABLE == 2 && !defined(MPG_STREAM)
+#ifndef KEYPAD_STREAM
+#if USB_SERIAL_CDC
+#define KEYPAD_STREAM     0
+#else
+#define KEYPAD_STREAM     1
+#endif
+#endif
 #endif
 #ifndef I2C_STROBE_ENABLE
 #define I2C_STROBE_ENABLE   0
-#endif
-
-#ifndef MPG_ENABLE
-#define MPG_MODE            0
-#define MPG_ENABLE          0
-#else
-#if KEYPAD_ENABLE == 2
-#define MPG_MODE            2
-#else
-#define MPG_MODE            1
-#endif
 #endif
 
 #ifndef EEPROM_ENABLE

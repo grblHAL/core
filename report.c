@@ -152,8 +152,12 @@ static char *get_axis_values_inches (float *axis_values)
     for (idx = 0; idx < N_AXIS; idx++) {
         if(idx == X_AXIS && gc_state.modal.diameter_mode)
             strcat(buf, ftoa(axis_values[idx] * INCH_PER_MM * 2.0f, N_DECIMAL_COORDVALUE_INCH));
+#if N_AXIS > 3
+        else if(idx > Z_AXIS && bit_istrue(settings.steppers.is_rotational.mask, bit(idx)))
+            strcat(buf, ftoa(axis_values[idx], N_DECIMAL_COORDVALUE_MM));
+#endif
         else
-            strcat(buf, ftoa(axis_values[idx] * INCH_PER_MM, N_DECIMAL_COORDVALUE_INCH));
+             strcat(buf, ftoa(axis_values[idx] * INCH_PER_MM, N_DECIMAL_COORDVALUE_INCH));
         if (idx < (N_AXIS - 1))
             strcat(buf, ",");
     }

@@ -388,6 +388,11 @@ bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stream_write_
             mpg.stream->disable_rx(true);
 
         hal.stream.write_all = stream_write_all;
+
+        if(hal.periph_port.set_pin_description) {
+            hal.periph_port.set_pin_description(Output_TX, (pin_group_t)(PinGroup_UART + stream->instance), "MPG");
+            hal.periph_port.set_pin_description(Input_RX, (pin_group_t)(PinGroup_UART + stream->instance), "MPG");
+        }
     }
 
     return connection != NULL;

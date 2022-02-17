@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+Build 20220215:
+
+Core:
+
+* Added a MPG mode option for using input pin for mode switching when enabled together with keypad plugin. Added pin descriptions for UART pins used for MPG.
+
+Plugins:
+
+* Keypad: added block for MPG mode change real-time command when input pin is used for mode switching.
+
+Drivers:
+
+* Some: updated for new MPG mode option.
+
+* ESP32: bug fix for random guru wakeups and subsequent crash for I2S enabled boards.
+
+---
+
 Build 20220210:
 
 Core:
