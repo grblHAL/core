@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+20220315:
+
+Drivers:
+
+* LPC176x: Fix for issue #122, polling of limit switches during homing.
+
+* SAM3X8E: Fix for issue #124, limit signals inversion did not work.
+
+* RP2040: [Fixed typo](https://github.com/grblHAL/RP2040/issues/16#issuecomment-1058560536) in enable/disable of secondary UART port.  
+Fixed incorrect check for UART TX shift register empty and handling of stepper enable when Trinamic drivers are enabled.  
+Updated BTT SKR Pico map - may still need adjustments...
+
+---
+
 Build 20220215:
 
 Core:
