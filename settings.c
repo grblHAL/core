@@ -333,6 +333,7 @@ static status_code_t set_report_mask (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_report_inches (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_control_invert (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_spindle_invert (setting_id_t id, uint_fast16_t int_value);
+static status_code_t set_spindle_type (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_control_disable_pullup (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_probe_disable_pullup (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_soft_limits_enable (setting_id_t id, uint_fast16_t int_value);
@@ -376,6 +377,7 @@ static char control_signals[] = "Reset,Feed hold,Cycle start,Safety door,Block d
 static char spindle_signals[] = "Spindle enable,Spindle direction,PWM";
 static char coolant_signals[] = "Flood,Mist";
 static char ganged_axes[] = "X-Axis,Y-Axis,Z-Axis";
+static char spindle_types[100] = "";
 
 PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_PulseMicroseconds, Group_Stepper, "Step pulse time", "microseconds", Format_Decimal, "#0.0", "2.0", NULL, Setting_IsLegacy, &settings.steppers.pulse_microseconds, NULL, NULL },
@@ -511,6 +513,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_DoorCoolantOnDelay, Group_SafetyDoor, "Coolant on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.coolant_on_delay, NULL, is_setting_available },
 #endif
      { Setting_SpindleOnDelay, Group_Spindle, "Spindle on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.spindle_on_delay, NULL, is_setting_available },
+     { Setting_SpindleType, Group_Spindle, "Default spindle", NULL, Format_RadioButtons, spindle_types, NULL, NULL, Setting_IsExtendedFn, set_spindle_type, get_int, is_setting_available },
 };
 
 #ifndef NO_SETTINGS_DESCRIPTIONS
@@ -652,6 +655,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
 #else
     { Setting_DoorSpindleOnDelay, "Delay to allow spindle to spin up when spindle at speed tolerance is > 0." },
 #endif
+    { Setting_SpindleType, "Spindle selected on startup." },
 };
 
 #endif
@@ -791,10 +795,24 @@ static status_code_t set_control_invert (setting_id_t id, uint_fast16_t int_valu
     return Status_OK;
 }
 
+static status_code_t set_spindle_type (setting_id_t id, uint_fast16_t int_value)
+{
+    if(spindle_get_count() < 2)
+        return Status_SettingDisabled;
+    else if(int_value >= spindle_get_count())
+        return Status_SettingValueOutOfRange;
+
+    settings.spindle.flags.type = int_value;
+
+    spindle_select(settings.spindle.flags.type);
+
+    return Status_OK;
+}
+
 static status_code_t set_spindle_invert (setting_id_t id, uint_fast16_t int_value)
 {
     settings.spindle.invert.mask = int_value;
-    if(settings.spindle.invert.pwm && !hal.driver_cap.spindle_pwm_invert) {
+    if(settings.spindle.invert.pwm && !spindle_get_caps().pwm_invert) {
         settings.spindle.invert.pwm = Off;
         return Status_SettingDisabled;
     }
@@ -896,7 +914,7 @@ static status_code_t set_mode (setting_id_t id, uint_fast16_t int_value)
            break;
 
         case Mode_Laser:
-            if(!hal.driver_cap.variable_spindle)
+            if(!spindle_get_caps().laser)
                 return Status_SettingDisabledLaser;
             if(settings.mode != Mode_Laser)
                 settings.flags.disable_laser_during_hold = DEFAULT_ENABLE_LASER_DURING_HOLD;
@@ -911,7 +929,8 @@ static status_code_t set_mode (setting_id_t id, uint_fast16_t int_value)
             return Status_InvalidStatement;
     }
 
-    settings.mode = sys.mode = (machine_mode_t)int_value;
+    settings.mode = (machine_mode_t)int_value;
+    sys.mode = settings.mode == Mode_Laser && !hal.spindle.cap.laser ? Mode_Standard : settings.mode;
 
     return Status_OK;
 }
@@ -1301,6 +1320,10 @@ static uint32_t get_int (setting_id_t id)
             value = settings.flags.g92_is_volatile;
             break;
 
+        case Setting_SpindleType:
+            value = settings.spindle.flags.type;
+            break;
+
 #if N_AXIS > 3
         case Settings_Axis_Rotational:
             value = (settings.steppers.is_rotational.mask & AXES_BITMASK) >> 3;
@@ -1403,7 +1426,7 @@ static bool is_setting_available (const setting_detail_t *setting)
             break;
 
         case Setting_SpindlePWMBehaviour:
-            available = hal.driver_cap.variable_spindle;
+            available = spindle_get_caps().variable;
             break;
 
         case Setting_InvertProbePin:
@@ -1413,6 +1436,10 @@ static bool is_setting_available (const setting_detail_t *setting)
 //        case Setting_ToolChangeFeedRate:
 //        case Setting_ToolChangeSeekRate:
             available = hal.probe.get_state != NULL;
+            break;
+
+        case Setting_SpindleType:
+            available = spindle_get_count() > 1;
             break;
 
         case Setting_SpindlePPR:
@@ -1425,7 +1452,7 @@ static bool is_setting_available (const setting_detail_t *setting)
         case Setting_PWMOffValue:
         case Setting_PWMMinValue:
         case Setting_PWMMaxValue:
-            available = hal.driver_cap.variable_spindle;
+            available = spindle_get_caps().variable;
             break;
 
         case Setting_DualAxisLengthFailPercent:
@@ -1452,11 +1479,11 @@ static bool is_setting_available (const setting_detail_t *setting)
 #endif
 
         case Setting_SpindleAtSpeedTolerance:
-            available = hal.driver_cap.spindle_at_speed;
+            available = hal.spindle.cap.at_speed;
             break;
 
         case Setting_SpindleOnDelay:
-            available = !hal.signals_cap.safety_door_ajar && hal.driver_cap.spindle_at_speed;
+            available = !hal.signals_cap.safety_door_ajar && hal.spindle.cap.at_speed;
             break;
 
         default:
@@ -1578,8 +1605,11 @@ bool read_global_settings ()
     bool ok = hal.nvs.type != NVS_None && SETTINGS_VERSION == hal.nvs.get_byte(0) && hal.nvs.memcpy_from_nvs((uint8_t *)&settings, NVS_ADDR_GLOBAL, sizeof(settings_t), true) == NVS_TransferResult_OK;
 
     // Sanity check of settings, board map could have been changed...
-    if(settings.mode == Mode_Laser && !hal.driver_cap.variable_spindle)
+    if(settings.mode == Mode_Laser && !spindle_get_caps().laser)
         settings.mode = Mode_Standard;
+
+    if(settings.spindle.flags.type >= spindle_get_count())
+        settings.spindle.flags.type = 0;
 
     sys.mode = settings.mode;
 
@@ -1620,10 +1650,10 @@ void settings_restore (settings_restore_t restore)
 
         memcpy(&settings, &defaults, sizeof(settings_t));
 
-        sys.mode = settings.mode;
+        sys.mode = settings.mode == Mode_Laser && !hal.spindle.cap.laser ? Mode_Standard : settings.mode;
         settings.control_invert.mask &= hal.signals_cap.mask;
-        settings.spindle.invert.ccw &= hal.driver_cap.spindle_dir;
-        settings.spindle.invert.pwm &= hal.driver_cap.spindle_pwm_invert;
+        settings.spindle.invert.ccw &= spindle_get_caps().direction;
+        settings.spindle.invert.pwm &= spindle_get_caps().pwm_invert;
 #ifdef ENABLE_BACKLASH_COMPENSATION
         mc_backlash_init((axes_signals_t){AXES_BITMASK});
 #endif
@@ -2157,17 +2187,32 @@ status_code_t settings_store_setting (setting_id_t id, char *svalue)
 
     if(status == Status_OK) {
 
+        if(!hal.spindle.cap.rpm_range_locked) {
+            hal.spindle.rpm_min = settings.spindle.rpm_min;
+            hal.spindle.rpm_max = settings.spindle.rpm_max;
+        }
+
         if(set->save)
             set->save();
 
         if(set->on_changed)
             set->on_changed(&settings);
-
-        if(set == &setting_details && grbl.on_spindle_select)
-            grbl.on_spindle_select(hal.driver_cap.dual_spindle && settings.mode == Mode_Laser ? 0 : 1);
     }
 
     return status;
+}
+
+bool settings_add_spindle_type (const char *type)
+{
+    bool ok;
+
+    if((ok = strlen(spindle_types) + strlen(type) + 1 < sizeof(spindle_types))) {
+        if(*spindle_types != '\0')
+            strcat(spindle_types, ",");
+        strcat(spindle_types, type);
+    }
+
+    return ok;
 }
 
 // Initialize the config subsystem
@@ -2202,11 +2247,15 @@ void settings_init (void)
             hal.probe.configure(false, false);
     }
 
+    if(spindle_get_count() == 0)
+        spindle_add_null();
+
     spindle_state_t spindle_cap = {
         .on = On,
-        .ccw = hal.driver_cap.spindle_dir,
-        .pwm = hal.driver_cap.spindle_pwm_invert
     };
+
+    spindle_cap.ccw = spindle_get_caps().direction;
+    spindle_cap.pwm = spindle_get_caps().pwm_invert;
 
     setting_remove_elements(Setting_SpindleInvertMask, spindle_cap.mask);
     setting_remove_elements(Setting_ControlInvertMask, hal.signals_cap.mask);

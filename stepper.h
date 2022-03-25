@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2019-2020 Terje Io
+  Copyright (c) 2019-2022 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -65,11 +65,9 @@ typedef struct st_segment {
     float current_rate;
     float target_position;          //!< Target position of segment relative to block start, used by spindle sync code
     uint_fast16_t n_step;           //!< Number of step events to be executed for this segment
-#ifdef SPINDLE_PWM_DIRECT
     uint_fast16_t spindle_pwm;      //!< Spindle PWM to be set at the start of segment execution
-#else
     float spindle_rpm;              //!< Spindle RPM to be set at the start of the segment execution
-#endif
+    bool update_pwm;                //!< True if set spindle speed at the start of the segment execution
     bool update_rpm;                //!< True if set spindle speed at the start of the segment execution
     bool spindle_sync;              //!< True if block is spindle synchronized
     bool cruising;                  //!< True when in cruising part of profile, only set for spindle synced moves

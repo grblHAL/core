@@ -399,13 +399,10 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
            #endif
          #endif
 
-            if(st.exec_segment->update_rpm) {
-              #ifdef SPINDLE_PWM_DIRECT
+            if(st.exec_segment->update_pwm)
                 hal.spindle.update_pwm(st.exec_segment->spindle_pwm);
-              #else
+            else if(st.exec_segment->update_rpm)
                 hal.spindle.update_rpm(st.exec_segment->spindle_rpm);
-              #endif
-            }
         } else {
             // Segment buffer empty. Shutdown.
             st_go_idle();
@@ -869,7 +866,7 @@ void st_prep_buffer (void)
 
         // Set new segment to point to the current segment data block.
         prep_segment->exec_block = st_prep_block;
-        prep_segment->update_rpm = false;
+        prep_segment->update_rpm = prep_segment->update_pwm = false;
 
         /*------------------------------------------------------------------------------------
             Compute the average velocity of this new segment by determining the total distance
@@ -998,13 +995,13 @@ void st_prep_buffer (void)
                 sys.spindle_rpm = rpm = 0.0f;
 
             if(rpm != prep.current_spindle_rpm) {
-              #ifdef SPINDLE_PWM_DIRECT
-                prep.current_spindle_rpm = rpm;
-                prep_segment->spindle_pwm = hal.spindle.get_pwm(rpm);
-              #else
-                prep.current_spindle_rpm = prep_segment->spindle_rpm = rpm;
-              #endif
-                prep_segment->update_rpm = true;
+                if((prep_segment->update_pwm = hal.spindle.get_pwm != NULL)) {
+                    prep.current_spindle_rpm = rpm;
+                    prep_segment->spindle_pwm = hal.spindle.get_pwm(rpm);
+                } else {
+                    prep_segment->update_rpm = true;
+                    prep.current_spindle_rpm = prep_segment->spindle_rpm = rpm;
+                }
                 sys.step_control.update_spindle_rpm = Off;
             }
         }

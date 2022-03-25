@@ -113,7 +113,7 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
                     // NOTE: at least for lasers there should be an external interlock blocking laser power.
                     if(state_get() != STATE_IDLE && state_get() != STATE_JOG)
                         system_set_exec_state_flag(EXEC_SAFETY_DOOR);
-                    if(sys.mode == Mode_Laser) // Turn off spindle imeediately (laser) when in laser mode
+                    if(sys.mode == Mode_Laser) // Turn off spindle immediately (laser) when in laser mode
                         hal.spindle.set_state((spindle_state_t){0}, 0.0f);
                 } else
                     system_set_exec_state_flag(EXEC_SAFETY_DOOR);

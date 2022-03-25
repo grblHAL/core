@@ -732,7 +732,7 @@ void report_gcode_modes (void)
     hal.stream.write(" G");
     hal.stream.write(uitoa((uint32_t)(94 - gc_state.modal.feed_mode)));
 
-    if(sys.mode == Mode_Lathe && hal.driver_cap.variable_spindle)
+    if(sys.mode == Mode_Lathe && hal.spindle.cap.variable)
         hal.stream.write(gc_state.modal.spindle_rpm_mode == SpindleSpeedMode_RPM ? " G97" : " G96");
 
 #if COMPATIBILITY_LEVEL < 10
@@ -817,7 +817,7 @@ void report_gcode_modes (void)
 
     hal.stream.write(appendbuf(2, " F", get_rate_value(gc_state.feed_rate)));
 
-    if(hal.driver_cap.variable_spindle)
+    if(hal.spindle.cap.variable)
         hal.stream.write(appendbuf(2, " S", ftoa(gc_state.spindle.rpm, N_DECIMAL_RPMVALUE)));
 
     hal.stream.write("]" ASCII_EOL);
@@ -858,7 +858,7 @@ void report_build_info (char *line, bool extended)
 
     strcpy(buf, "[OPT:");
 
-    if(hal.driver_cap.variable_spindle)
+    if(spindle_get_caps().variable)
         *append++ = 'V';
 
     *append++ = 'N';
@@ -971,6 +971,9 @@ void report_build_info (char *line, bool extended)
 
         if(settings.mode == Mode_Lathe)
             strcat(buf, "LATHE,");
+
+        if(hal.driver_cap.laser_ppi_mode)
+            strcat(buf, "PPI,");
 
     #if NGC_EXPRESSIONS_ENABLE
         strcat(buf, "EXPR,");
@@ -1195,7 +1198,7 @@ void report_realtime_status (void)
 
     // Report realtime feed speed
     if(settings.status_report.feed_speed) {
-        if(hal.driver_cap.variable_spindle) {
+        if(hal.spindle.cap.variable) {
             hal.stream.write_all(appendbuf(2, "|FS:", get_rate_value(st_get_realtime_rate())));
             hal.stream.write_all(appendbuf(2, ",", uitoa(sp_state.on ? lroundf(sys.spindle_rpm) : 0)));
             if(hal.spindle.get_data /* && sys.mpg_mode */)

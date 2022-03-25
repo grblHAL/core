@@ -572,7 +572,7 @@ void mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_
                 return;
 
             if(canned->spindle_off)
-                spindle_sync(gc_state.modal.spindle, pl_data->spindle.rpm);
+                spindle_sync(0, gc_state.modal.spindle, pl_data->spindle.rpm);
         }
 
        // rapid move to next position if incremental mode

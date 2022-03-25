@@ -40,6 +40,12 @@ If more than 3 axes are configured a compliant driver and map file is needed.
 #define N_AXIS 3 // Number of axes
 #endif
 
+#ifndef N_SPINDLE
+/*! Defines number of spindles supported - minimum 1, maximum 8
+*/
+#define N_SPINDLE 1
+#endif
+
 #ifndef COMPATIBILITY_LEVEL
 /*! Define compatibility level with the grbl 1.1 protocol.
 
@@ -109,12 +115,6 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 // Enables code for debugging purposes. Not for general use and always in constant flux.
 // #define DEBUG // Uncomment to enable. Default disabled.
 // #define DEBUGOUT 0 // Uncomment to claim serial port with given instance number and add HAL entry point for debug output.
-
-// If spindle RPM is set by high-level commands to a spindle controller (eg. via Modbus) or the driver supports closed loop
-// spindle RPM control either uncomment the #define SPINDLE_RPM_CONTROLLED below or add SPINDLE_RPM_CONTROLLED as predefined symbol
-// on the compiler command line. This will send spindle speed as a RPM value instead of a PWM value to the driver.
-//#define SPINDLE_RPM_CONTROLLED
-
 
 // Some status report data isn't necessary for realtime, only intermittently, because the values don't
 // change often. The following macros configures how many times a status report needs to be called before

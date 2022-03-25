@@ -201,24 +201,26 @@ int grbl_enter (void)
     if(driver.ok == 0xFF)
         driver.setup = hal.driver_setup(&settings);
 
+    spindle_select(settings.spindle.flags.type);
+
 #ifdef ENABLE_SPINDLE_LINEARIZATION
     driver.linearization = hal.driver_cap.spindle_pwm_linearization;
 #endif
 
-#ifdef SPINDLE_PWM_DIRECT
-    driver.spindle = (!hal.driver_cap.variable_spindle || (hal.spindle.get_pwm != NULL && hal.spindle.update_pwm != NULL));
-#endif
-
-    if(grbl.on_spindle_select)
-        grbl.on_spindle_select(hal.driver_cap.dual_spindle && settings.mode == Mode_Laser ? 0 : 1);
+    driver.spindle = hal.spindle.get_pwm == NULL || hal.spindle.update_pwm != NULL;
 
     if(driver.ok != 0xFF) {
         sys.alarm = Alarm_SelftestFailed;
         protocol_enqueue_rt_command(report_driver_error);
     }
 
+    if(hal.spindle.set_state)
+        hal.spindle.set_state((spindle_state_t){0}, 0.0f);
+
+    hal.coolant.set_state((coolant_state_t){0});
+
     if(hal.get_position)
-        hal.get_position(&sys.position); // TODO:  restore on abort when returns true?
+        hal.get_position(&sys.position); // TODO: restore on abort when returns true?
 
 #ifdef COREXY
     corexy_init();

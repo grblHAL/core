@@ -919,7 +919,7 @@ status_code_t gc_execute_block(char *block)
                         break;
 */
                     case 96: case 97:
-                        if(sys.mode == Mode_Lathe && hal.driver_cap.variable_spindle) {
+                        if(sys.mode == Mode_Lathe && hal.spindle.cap.variable) {
                             word_bit.modal_group.G14 = On;
                             gc_block.modal.spindle_rpm_mode = (spindle_rpm_mode_t)((int_value - 96) ^ 1);
                         } else
@@ -1405,10 +1405,10 @@ status_code_t gc_execute_block(char *block)
                 FAIL(Status_GcodeValueWordMissing);
     // see below!! gc_block.values.s *= (gc_block.modal.units_imperial ? MM_PER_INCH * 12.0f : 1000.0f); // convert surface speed to mm/min
             if (gc_block.words.d) {
-                gc_state.spindle.css.max_rpm = min(gc_block.values.d, settings.spindle.rpm_max);
+                gc_state.spindle.css.max_rpm = min(gc_block.values.d, hal.spindle.rpm_max);
                 gc_block.words.d = Off;
             } else
-                gc_state.spindle.css.max_rpm = settings.spindle.rpm_max;
+                gc_state.spindle.css.max_rpm = hal.spindle.rpm_max;
         } else if(gc_state.modal.spindle_rpm_mode == SpindleSpeedMode_CSS)
             gc_state.spindle.rpm = sys.spindle_rpm; // Is it correct to restore latest spindle RPM here?
         gc_state.modal.spindle_rpm_mode = gc_block.modal.spindle_rpm_mode;
@@ -2005,7 +2005,7 @@ status_code_t gc_execute_block(char *block)
                       (gc_block.words.l && (gc_taper_type)gc_block.values.l > Taper_Both))
                     FAIL(Status_GcodeValueOutOfRange);
 
-                if(gc_state.spindle.rpm < settings.spindle.rpm_min || gc_state.spindle.rpm > settings.spindle.rpm_max)
+                if(gc_state.spindle.rpm < hal.spindle.rpm_min || gc_state.spindle.rpm > hal.spindle.rpm_max)
                     FAIL(Status_GcodeRPMOutOfRange);
 
                 if(gc_block.modal.motion != gc_state.modal.motion) {
@@ -2491,7 +2491,7 @@ status_code_t gc_execute_block(char *block)
                 gc_parser_flags.spindle_force_sync = On;
         }
 
-        gc_state.is_rpm_rate_adjusted = gc_state.modal.spindle.ccw && !gc_parser_flags.laser_disable && hal.driver_cap.variable_spindle;
+        gc_state.is_rpm_rate_adjusted = gc_state.modal.spindle.ccw && !gc_parser_flags.laser_disable && hal.spindle.cap.variable;
     }
 
     // [0. Non-specific/common error-checks and miscellaneous setup]:
@@ -2536,7 +2536,7 @@ status_code_t gc_execute_block(char *block)
 
     if (!user_words.s && ((gc_state.spindle.rpm != gc_block.values.s) || gc_parser_flags.spindle_force_sync)) {
         if (gc_state.modal.spindle.on && !gc_parser_flags.laser_is_motion)
-            spindle_sync(gc_state.modal.spindle, gc_parser_flags.laser_disable ? 0.0f : gc_block.values.s);
+            spindle_sync(0, gc_state.modal.spindle, gc_parser_flags.laser_disable ? 0.0f : gc_block.values.s);
         gc_state.spindle.rpm = gc_block.values.s; // Update spindle speed state.
     }
 
@@ -2634,7 +2634,7 @@ status_code_t gc_execute_block(char *block)
         // Update spindle control and apply spindle speed when enabling it in this block.
         // NOTE: All spindle state changes are synced, even in laser mode. Also, plan_data,
         // rather than gc_state, is used to manage laser state for non-laser motions.
-        if(spindle_sync(gc_block.modal.spindle, plan_data.spindle.rpm))
+        if(spindle_sync(0, gc_block.modal.spindle, plan_data.spindle.rpm))
             gc_state.modal.spindle = gc_block.modal.spindle;
     }
 

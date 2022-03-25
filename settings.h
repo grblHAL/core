@@ -255,6 +255,7 @@ typedef enum {
     Setting_DoorSpindleOnDelay = 392,
     Setting_DoorCoolantOnDelay = 393,
     Setting_SpindleOnDelay = 394, // made available if safety door input not provided
+    Setting_SpindleType = 395,
 
     Setting_EncoderSettingsBase = 400, // NOTE: Reserving settings values >= 400 for encoder settings. Up to 449.
     Setting_EncoderSettingsMax = 449,
@@ -425,7 +426,8 @@ typedef union {
     uint8_t mask;
     struct {
         uint8_t pwm_action :2,
-                unassigned     :6;
+                type       :3,
+                unassigned :3;
     };
 } spindle_settings_flags_t;
 
@@ -790,5 +792,6 @@ char *setting_get_value (const setting_detail_t *setting, uint_fast16_t offset);
 setting_id_t settings_get_axis_base (setting_id_t id, uint_fast8_t *idx);
 bool setting_is_list (const setting_detail_t *setting);
 void setting_remove_elements (setting_id_t id, uint32_t mask);
+bool settings_add_spindle_type (const char *type);
 
 #endif

@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2016-2021 Terje Io
+  Copyright (c) 2016-2022 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -45,30 +45,25 @@ typedef union {
     uint32_t value; //!< All bitmap flags.
     struct {
         uint32_t mist_control              :1, //!< Mist control (M7) is supported.
-                 variable_spindle          :1, //!< Variable spindle speed is supported.
-                 spindle_dir               :1, //!< Spindle direction (M4) is supported.
                  software_debounce         :1, //!< Software debounce of input switches signals is supported.
                  step_pulse_delay          :1, //!< Stepper step pulse delay is supported.
                  limits_pull_up            :1, //!< Pullup resistors for limit inputs are are supported.
                  control_pull_up           :1, //!< Pullup resistors for control inputs are supported.
                  probe_pull_up             :1, //!< Pullup resistors for probe inputs are supported.
                  amass_level               :2, // 0...3 Deprecated?
-                 spindle_at_speed          :1, //!< Spindle at speed feedback is supported.
-                 laser_ppi_mode            :1, //!< Laser PPI (Pulses Per Inch) mode is supported.
                  spindle_sync              :1, //!< Spindle synced motion is supported.
                  sd_card                   :1,
                  bluetooth                 :1,
                  ethernet                  :1,
                  wifi                      :1,
-                 spindle_pwm_invert        :1, //!< Spindle PWM output can be inverted.
                  spindle_pid               :1,
                  mpg_mode                  :1,
                  spindle_pwm_linearization :1,
+                 laser_ppi_mode            :1, //!< Laser PPI (Pulses Per Inch) mode is supported.
                  atc                       :1, //!< Automatic tool changer (ATC) is supported.
                  no_gcode_message_handling :1,
-                 dual_spindle              :1,
                  odometers                 :1,
-                 unassigned                :7;
+                 unassigned                :12;
     };
 } driver_cap_t;
 
@@ -115,84 +110,6 @@ typedef void (*pin_info_ptr)(xbar_t *pin);
 The callback function will be called for each pin.
 */
 typedef void (*enumerate_pins_ptr)(bool low_level, pin_info_ptr callback);
-
-
-/*************
- *  Spindle  *
- *************/
-
-/*! \brief Pointer to function for setting the spindle state.
-\param state a \a spindle_state_t union variable.
-\param rpm spindle RPM.
-*/
-typedef void (*spindle_set_state_ptr)(spindle_state_t state, float rpm);
-
-/*! \brief Pointer to function for getting the spindle state.
-\returns state in a \a spindle_state_t union variable.
-*/
-typedef spindle_state_t (*spindle_get_state_ptr)(void);
-
-#ifdef SPINDLE_PWM_DIRECT
-
-/*! \brief Pointer to function for converting a RPM value to a PWM value.
-
-Typically this is a wrapper for the spindle_compute_pwm_value() function provided by the core.
-
-\param rpm spindle RPM.
-\returns the corresponding PWM value.
-*/
-typedef uint_fast16_t (*spindle_get_pwm_ptr)(float rpm);
-
-/*! \brief Pointer to function for updating spindle speed on the fly.
-\param pwm new spindle PWM value.
-\returns the actual PWM value used.
-
-__NOTE:__ this function will be called from an interrupt context.
-*/
-typedef void (*spindle_update_pwm_ptr)(uint_fast16_t pwm);
-
-#else
-
-typedef void (*spindle_update_rpm_ptr)(float rpm);
-
-#endif
-
-/*! \brief Pointer to function for getting spindle data.
-\param request request type as a \a #spindle_data_request_t enum.
-\returns pointer to the requested information in a spindle_data_t structure.
-
-__NOTE:__ this function requires input from a spindle encoder.
-*/
-typedef spindle_data_t *(*spindle_get_data_ptr)(spindle_data_request_t request);
-
-/*! \brief Pointer to function for resetting spindle data. */
-typedef void (*spindle_reset_data_ptr)(void);
-
-/*! \brief Pointer to function for outputting a spindle on pulse.
-Used for Pulses Per Inch (PPI) laser mode.
-\param pulse_length spindle on length in microseconds.
-*/
-typedef void (*spindle_pulse_on_ptr)(uint_fast16_t pulse_length);
-
-//! Handlers for spindle support.
-typedef struct {
-    spindle_set_state_ptr set_state;    //!< Handler for setting spindle state.
-    spindle_get_state_ptr get_state;    //!< Handler for getting spindle state.
-#ifdef SPINDLE_PWM_DIRECT
-    spindle_get_pwm_ptr get_pwm;        //!< Handler for calculating spindle PWM value from RPM.
-    spindle_update_pwm_ptr update_pwm;  //!< Handler for updating spindle PWM output.
-#else
-    spindle_update_rpm_ptr update_rpm;  //!< Handler for updating spindle RPM.
-#endif
-#ifdef GRBL_ESP32
-    void (*esp32_off)(void);            //!< Workaround handler for snowflake ESP32 Guru awaken by floating point data in ISR context.
-#endif
-    // Optional entry points:
-    spindle_get_data_ptr get_data;      //!< Optional handler for getting spindle data. Required for spindle sync.
-    spindle_reset_data_ptr reset_data;  //!< Optional handler for resetting spindle data. Required for spindle sync.
-    spindle_pulse_on_ptr pulse_on;      //!< Optional handler for Pulses Per Inch (PPI) mode. Required for the laser PPI plugin.
-} spindle_ptrs_t;
-
 
 /*************
  *  Coolant  *

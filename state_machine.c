@@ -260,7 +260,7 @@ void state_suspend_manager (void)
         // Handles beginning of spindle stop
         if (sys.override.spindle_stop.initiate) {
             sys.override.spindle_stop.value = 0; // Clear stop override state
-            spindle_set_state((spindle_state_t){0}, 0.0f); // De-energize
+            spindle_set_state(0, (spindle_state_t){0}, 0.0f); // De-energize
             sys.override.spindle_stop.enabled = On; // Set stop override state to enabled, if de-energized.
         }
 
@@ -270,13 +270,13 @@ void state_suspend_manager (void)
             if (sys.mode == Mode_Laser) // When in laser mode, ignore spindle spin-up delay. Set to turn on laser when cycle starts.
                 sys.step_control.update_spindle_rpm = On;
             else
-                spindle_set_state(restore_condition.spindle, restore_spindle_rpm);
+                spindle_set_state(0, restore_condition.spindle, restore_spindle_rpm);
             sys.override.spindle_stop.value = 0; // Clear stop override state
         }
 
     } else if (sys.step_control.update_spindle_rpm && hal.spindle.get_state().on) {
         // Handles spindle state during hold. NOTE: Spindle speed overrides may be altered during hold state.
-        spindle_set_state(restore_condition.spindle, restore_spindle_rpm);
+        spindle_set_state(0, restore_condition.spindle, restore_spindle_rpm);
         sys.step_control.update_spindle_rpm = Off;
     }
 }
