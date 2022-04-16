@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+20220416:
+
+Drivers:
+
+* SAM3X8E: Fix for [issue #7](https://github.com/grblHAL/SAM3X8E/issues/7).
+
+* LPC176x: Allowed auto squared axes for RAMPS 1.6 board, routed serial port to the WiFi port when USB serial is disabled for BTT SKR v1.4 Turbo board.
+
+* STM32F4xx: Fix for [issue #69](https://github.com/grblHAL/STM32F4xx/issues/69). Added PB9 as option for spindle PWM.
+
+* RP2040: Added support for spindle plugin, [issue #26](https://github.com/grblHAL/RP2040/issues/26).
+
+---
+
 20220325:
 
 Core:
