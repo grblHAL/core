@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
+  Copyright (c) 2017-2022 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -43,7 +43,8 @@ PROGMEM static const alarm_detail_t alarm_detail[] = {
     { Alarm_Spindle, "Spindle at speed timeout. Clear before continuing." },
     { Alarm_HomingFailAutoSquaringApproach, "Homing fail. Could not find second limit switch for auto squared axis within search distances. Try increasing max travel, decreasing pull-off distance, or check wiring." },
     { Alarm_SelftestFailed, "Power on selftest (POS) failed." },
-    { Alarm_MotorFault, "Motor fault." }
+    { Alarm_MotorFault, "Motor fault." },
+    { Alarm_HomingFail, "Homing fail. Bad configuration." }
 };
 
 static alarm_details_t details = {

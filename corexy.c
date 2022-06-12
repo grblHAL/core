@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2019 Terje Io
+  Copyright (c) 2019-2022 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
 
   Grbl is free software: you can redistribute it and/or modify
@@ -23,6 +23,8 @@
 #include "grbl.h"
 
 #ifdef COREXY
+
+#include <math.h>
 
 #include "settings.h"
 #include "planner.h"
@@ -45,37 +47,27 @@ inline static int32_t corexy_convert_to_b_motor_steps (int32_t *steps)
 }
 
 // Returns machine position of axis 'idx'. Must be sent a 'step' array.
-static void corexy_convert_array_steps_to_mpos (float *position, int32_t *steps)
+static float *corexy_convert_array_steps_to_mpos (float *position, int32_t *steps)
 {
     position[X_AXIS] = corexy_convert_to_a_motor_steps(steps) / settings.axis[X_AXIS].steps_per_mm;
     position[Y_AXIS] = corexy_convert_to_b_motor_steps(steps) / settings.axis[Y_AXIS].steps_per_mm;
     position[Z_AXIS] = steps[Z_AXIS] / settings.axis[Z_AXIS].steps_per_mm;
+
+    return position;
 }
 
-// Transform absolute position from cartesian coordinate system (mm) to corexy coordinate system (step)
-static void corexy_target_to_steps (int32_t *target_steps, float *target)
+// Transform position from cartesian coordinate system to corexy coordinate system
+static inline float *transform_from_cartesian (float *target, float *position)
 {
-    uint_fast8_t idx = N_AXIS;
-    int32_t a_steps, b_steps;
+    uint_fast8_t idx;
 
-    do {
-        switch(--idx) {
-            case X_AXIS:
-                a_steps = lroundf(target[idx] * settings.axis[idx].steps_per_mm);
-                break;
+    target[X_AXIS] = position[X_AXIS] + position[Y_AXIS];
+    target[Y_AXIS] = position[X_AXIS] - position[Y_AXIS];
 
-            case Y_AXIS:
-                b_steps = lroundf(target[idx] * settings.axis[idx].steps_per_mm);
-                break;
+    for(idx = Z_AXIS; idx < N_AXIS; idx++)
+        target[idx] = position[idx];
 
-            default:
-                target_steps[idx] = lroundf(target[idx] * settings.axis[idx].steps_per_mm);
-                break;
-        }
-    } while(idx);
-
-    target_steps[A_MOTOR] = a_steps + b_steps;
-    target_steps[B_MOTOR] = a_steps - b_steps;
+    return target;
 }
 
 static uint_fast8_t corexy_limits_get_axis_mask (uint_fast8_t idx)
@@ -151,6 +143,57 @@ static void corexy_limits_set_machine_positions (axes_signals_t cycle)
     } while(idx);
 }
 
+static inline float get_distance (float *p0, float *p1)
+{
+    uint_fast8_t idx = N_AXIS;
+    float distance = 0.0f;
+
+    do {
+        idx--;
+        distance += (p0[idx] - p1[idx]) * (p0[idx] - p1[idx]);
+    } while(idx);
+
+    return sqrtf(distance);
+}
+
+// called from mc_line() to segment lines if not overridden, default implementation for pass-through
+static float *kinematics_segment_line (float *target, float *position, plan_line_data_t *pl_data, bool init)
+{
+    static uint_fast8_t iterations;
+    static float trsf[N_AXIS];
+
+    if(init) {
+
+        iterations = 2;
+
+        transform_from_cartesian(trsf, target);
+
+        if(!pl_data->condition.rapid_motion) {
+
+            uint_fast8_t idx;
+            float cpos[N_AXIS];
+
+            cpos[X_AXIS] = (position[X_AXIS] + position[Y_AXIS]) * .5f;
+            cpos[Y_AXIS] = (position[X_AXIS] - position[Y_AXIS]) * .5f;
+            for(idx = Z_AXIS; idx < N_AXIS; idx++)
+                cpos[idx] = position[idx];
+
+            pl_data->feed_rate *= get_distance(trsf, position) / get_distance(target, cpos);
+        }
+    }
+
+    return iterations-- == 0 ? NULL : trsf;
+}
+
+static bool homing_cycle_validate (axes_signals_t cycle)
+{
+    return (cycle.mask & (X_AXIS_BIT|Y_AXIS_BIT)) == 0 || cycle.mask < 3;
+}
+
+static float homing_cycle_get_feedrate (float feedrate, axes_signals_t cycle)
+{
+    return feedrate * sqrtf(2.0f);
+}
 
 // Initialize API pointers for CoreXY kinematics
 void corexy_init (void)
@@ -158,9 +201,11 @@ void corexy_init (void)
     kinematics.limits_set_target_pos = corexy_limits_set_target_pos;
     kinematics.limits_get_axis_mask = corexy_limits_get_axis_mask;
     kinematics.limits_set_machine_positions = corexy_limits_set_machine_positions;
-    kinematics.plan_target_to_steps = corexy_target_to_steps;
-    kinematics.convert_array_steps_to_mpos = corexy_convert_array_steps_to_mpos;
+    kinematics.transform_from_cartesian = transform_from_cartesian;
+    kinematics.transform_steps_to_cartesian = corexy_convert_array_steps_to_mpos;
+    kinematics.segment_line = kinematics_segment_line;
+    kinematics.homing_cycle_validate = homing_cycle_validate;
+    kinematics.homing_cycle_get_feedrate = homing_cycle_get_feedrate;
 }
 
 #endif
-

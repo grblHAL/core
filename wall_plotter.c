@@ -28,9 +28,13 @@
 
 #ifdef WALL_PLOTTER
 
+#include <math.h>
+#include <string.h>
+
 #include "settings.h"
 #include "planner.h"
 #include "kinematics.h"
+#include "hal.h"
 
 #define A_MOTOR X_AXIS // Must be X_AXIS
 #define B_MOTOR Y_AXIS // Must be Y_AXIS
@@ -52,11 +56,12 @@ typedef struct {
     float b;
 } coord_t;
 
+static bool jog_cancel = false;
 static machine_t machine = {0};
 
 // Returns machine position in mm converted from system position steps.
 // TODO: perhaps change to double precision here - float calculation results in errors of a couple of micrometers.
-static void wp_convert_array_steps_to_mpos (float *position, int32_t *steps)
+static float *wp_convert_array_steps_to_mpos (float *position, int32_t *steps)
 {
     coord_t len;
 
@@ -67,71 +72,109 @@ static void wp_convert_array_steps_to_mpos (float *position, int32_t *steps)
     len.a = machine.width_mm - position[X_AXIS];
     position[Y_AXIS] = sqrtf(len.b * len.b - len.a * len.a );
     position[Z_AXIS] = steps[Z_AXIS] / settings.axis[Z_AXIS].steps_per_mm;
+
+    return position;
+}
+
+// Returns machine position in mm converted from system position steps.
+// TODO: perhaps change to double precision here - float calculation results in errors of a couple of micrometers.
+static float *transform_to_cartesian (float *target, float *position)
+{
+    coord_t len;
+
+    len.a = position[A_MOTOR];
+    len.b = position[B_MOTOR];
+
+    target[X_AXIS] = (machine.width_pow + len.a * len.a - len.b * len.b) / (2.0f * machine.width_mm);
+    len.a = machine.width_mm - target[X_AXIS];
+    target[Y_AXIS] = sqrtf(len.b * len.b - len.a * len.a );
+    target[Z_AXIS] = position[Z_AXIS];
+
+    return target;
 }
 
 // Wall plotter calculation only. Returns x or y-axis "steps" based on wall plotter motor steps.
 // A length = sqrt( X^2 + Y^2 )
 // B length = sqrt( (MACHINE_WIDTH - X)^2 + Y^2 )
-inline static int32_t wp_convert_to_a_motor_steps (float *target)
+inline static float wp_convert_to_a_motor_steps (float *target)
 {
-    return (int32_t)lroundf(sqrtf(target[A_MOTOR] * target[A_MOTOR] + target[B_MOTOR] * target[B_MOTOR]) * settings.axis[A_MOTOR].steps_per_mm);
+    return sqrtf(target[A_MOTOR] * target[A_MOTOR] + target[B_MOTOR] * target[B_MOTOR]);
 }
 
-inline static int32_t wp_convert_to_b_motor_steps (float *target)
+inline static float wp_convert_to_b_motor_steps (float *target)
 {
     float xpos = machine.width_mm - target[A_MOTOR];
-    return (int32_t)lroundf(sqrtf(xpos * xpos + target[B_MOTOR] * target[B_MOTOR]) * settings.axis[B_MOTOR].steps_per_mm);
+
+    return sqrtf(xpos * xpos + target[B_MOTOR] * target[B_MOTOR]);
 }
 
-// Transform absolute position from cartesian coordinate system (mm) to wall plotter coordinate system (step)
-static void wp_plan_target_to_steps (int32_t *target_steps, float *target)
+// Transform absolute position from cartesian coordinate system to wall plotter coordinate system
+static float *transform_from_cartesian (float *target, float *position)
 {
     uint_fast8_t idx = N_AXIS - 1;
 
     do {
-        target_steps[idx] = lroundf(target[idx] * settings.axis[idx].steps_per_mm);
+        target[idx] = position[idx];
     } while(--idx > Y_AXIS);
 
-    target_steps[A_MOTOR] = wp_convert_to_a_motor_steps(target);
-    target_steps[B_MOTOR] = wp_convert_to_b_motor_steps(target);
+    target[A_MOTOR] = wp_convert_to_a_motor_steps(position);
+    target[B_MOTOR] = wp_convert_to_b_motor_steps(position);
+
+    return target;
+}
+
+
+static inline float get_distance (float *p0, float *p1)
+{
+    uint_fast8_t idx = Z_AXIS;
+    float distance = 0.0f;
+
+    do {
+        idx--;
+        distance += (p0[idx] - p1[idx]) * (p0[idx] - p1[idx]);
+    } while(idx);
+
+    return sqrtf(distance);
 }
 
 // Wall plotter is circular in motion, so long lines must be divided up
-static bool wp_segment_line (float *target, plan_line_data_t *pl_data, bool init)
+static float *wp_segment_line (float *target, float *position, plan_line_data_t *pl_data, bool init)
 {
     static uint_fast16_t iterations;
     static bool segmented;
-    static float delta[N_AXIS], segment_target[N_AXIS];
+    static coord_data_t delta, segment_target, final_target, cpos;
 //    static plan_line_data_t plan;
 
     uint_fast8_t idx = N_AXIS;
 
     if(init) {
 
-        float max_delta = 0.0f;
+        jog_cancel = false;
 
-        do {
-            idx--;
-            delta[idx] = target[idx] - gc_state.position[idx];
-            max_delta = max(max_delta, fabsf(delta[idx]));
-        } while(idx);
+        memcpy(final_target.values, target, sizeof(final_target));
 
-        if((segmented = !(pl_data->condition.rapid_motion || pl_data->condition.jog_motion) &&
-                           max_delta > MAX_SEG_LENGTH_MM && !(delta[X_AXIS] == 0.0f && delta[Y_AXIS] == 0.0f))) {
+        transform_to_cartesian(segment_target.values, position);
+
+        delta.x = target[X_AXIS] - segment_target.x;
+        delta.y = target[Y_AXIS] - segment_target.y;
+        delta.z = target[Z_AXIS] - segment_target.z;
+
+        float distance = sqrtf(delta.x * delta.x + delta.y * delta.y);
+
+        if((segmented = !pl_data->condition.rapid_motion && distance > MAX_SEG_LENGTH_MM && !(delta.x == 0.0f && delta.y == 0.0f))) {
 
             idx = N_AXIS;
-            iterations = (uint_fast16_t)ceilf(max_delta / MAX_SEG_LENGTH_MM);
-
-            memcpy(segment_target, gc_state.position, sizeof(segment_target));
-//            memcpy(&plan, pl_data, sizeof(plan_line_data_t));
+            iterations = (uint_fast16_t)ceilf(distance / MAX_SEG_LENGTH_MM);
 
             do {
-                delta[--idx] /= (float)iterations;
-                target[idx] = gc_state.position[idx];
+                --idx;
+                delta.values[idx] = delta.values[idx] / (float)iterations;
             } while(idx);
 
-        } else
+        } else {
             iterations = 1;
+            memcpy(&segment_target, &final_target, sizeof(coord_data_t));
+        }
 
         iterations++; // return at least one iteration
 
@@ -139,16 +182,19 @@ static bool wp_segment_line (float *target, plan_line_data_t *pl_data, bool init
 
         iterations--;
 
-        if(segmented && iterations) do {
-            idx--;
-            segment_target[idx] += delta[idx];
-            target[idx] = segment_target[idx];
-//            memcpy(pl_data, &plan, sizeof(plan_line_data_t));
-        } while(idx);
+        if(segmented && iterations > 1) {
+            do {
+                idx--;
+                segment_target.values[idx] += delta.values[idx];
+            } while(idx);
 
+        } else
+            memcpy(&segment_target, &final_target, sizeof(coord_data_t));
+
+        transform_from_cartesian(cpos.values, segment_target.values);
     }
 
-    return iterations != 0;
+    return iterations == 0 || jog_cancel ? NULL : cpos.values;
 }
 
 
@@ -233,6 +279,10 @@ static void wp_limits_set_machine_positions (axes_signals_t cycle)
     } while(idx);
 }
 
+static void cancel_jog (sys_state_t state)
+{
+    jog_cancel = true;
+}
 
 // Initialize API pointers for Wall Plotter kinematics
 void wall_plotter_init (void)
@@ -253,9 +303,11 @@ void wall_plotter_init (void)
     kinematics.limits_set_target_pos = wp_limits_set_target_pos;
     kinematics.limits_get_axis_mask = wp_limits_get_axis_mask;
     kinematics.limits_set_machine_positions = wp_limits_set_machine_positions;
-    kinematics.plan_target_to_steps = wp_plan_target_to_steps;
-    kinematics.convert_array_steps_to_mpos = wp_convert_array_steps_to_mpos;
+    kinematics.transform_from_cartesian = transform_from_cartesian;
+    kinematics.transform_steps_to_cartesian = wp_convert_array_steps_to_mpos;
     kinematics.segment_line = wp_segment_line;
+
+    grbl.on_jog_cancel = cancel_jog;
 }
 
 #endif

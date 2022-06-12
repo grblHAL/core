@@ -1,5 +1,25 @@
 ## grblHAL changelog
 
+20220612:
+
+Core:
+
+* Changed kinematics API and implementations (corexy and wallplotter) to allow backlash compensation. Ref [ESP32 issue 25](https://github.com/grblHAL/ESP32/issues/25).
+
+* Fixed feed rate handling for corexy kinematics. Ref issue #147.
+
+* Fixed tool table/tool change bugs. Ref. [ioSender issue 228](https://github.com/terjeio/ioSender/issues/228).
+
+Drivers:
+
+* iMXRT1062 : Fix for issue #38.
+
+* STM32F4xx : Added missing code guard for boards not having a spindle direction pin. Improved UART channel assignment handling.
+
+* STM32F7xx : Improved UART channel assignment handling.
+
+* ESP32 : Added missing file \(corexy.c\) to filelist, fixed incorrect URL in readme.
+
 20220416:
 
 Drivers:

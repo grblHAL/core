@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2019 Terje Io
+  Copyright (c) 2019-2022 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -23,12 +23,14 @@
 #define _KINEMATICS_H_
 
 typedef struct {
-    void (*convert_array_steps_to_mpos)(float *position, int32_t *steps);
-    void (*plan_target_to_steps) (int32_t *target_steps, float *target);
-    bool (*segment_line) (float *target, plan_line_data_t *pl_data, bool init);
+    float *(*transform_steps_to_cartesian)(float *position, int32_t *steps);
+    float *(*transform_from_cartesian) (float *target, float *position);
+    float *(*segment_line) (float *target, float *position, plan_line_data_t *pl_data, bool init); // target is cartesian, position transformed
     uint_fast8_t (*limits_get_axis_mask)(uint_fast8_t idx);
     void (*limits_set_target_pos)(uint_fast8_t idx);
     void (*limits_set_machine_positions)(axes_signals_t cycle);
+    bool (*homing_cycle_validate)(axes_signals_t cycle);
+    float (*homing_cycle_get_feedrate)(float feedrate, axes_signals_t cycle);
 } kinematics_t;
 
 extern kinematics_t kinematics;

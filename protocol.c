@@ -805,6 +805,8 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(char c)
             if (state_get() & STATE_JOG) // Block all other states from invoking motion cancel.
                 system_set_exec_state_flag(EXEC_MOTION_CANCEL);
 #endif
+            if(grbl.on_jog_cancel)
+                grbl.on_jog_cancel(state_get());
             break;
 
         case CMD_GCODE_REPORT:

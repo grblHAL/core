@@ -74,7 +74,7 @@ __NOTE:__ if switching to a level > 1 please reset non-volatile storage with \a 
 
 // Enable CoreXY kinematics. Use ONLY with CoreXY machines.
 // IMPORTANT: If homing is enabled, you must reconfigure the homing cycle #defines above to
-// #define HOMING_CYCLE_0 X_AXIS_BIT and #define HOMING_CYCLE_1 Y_AXIS_BIT
+//#define HOMING_CYCLE_0 X_AXIS_BIT and #define HOMING_CYCLE_1 Y_AXIS_BIT
 // NOTE: This configuration option alters the motion of the X and Y axes to principle of operation
 // defined at (http://corexy.com/theory.html). Motors are assumed to positioned and wired exactly as
 // described, if not, motions may move in strange directions. Grbl requires the CoreXY A and B motors
@@ -113,8 +113,8 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 // ADVANCED CONFIGURATION OPTIONS:
 
 // Enables code for debugging purposes. Not for general use and always in constant flux.
-// #define DEBUG // Uncomment to enable. Default disabled.
-// #define DEBUGOUT 0 // Uncomment to claim serial port with given instance number and add HAL entry point for debug output.
+//#define DEBUG // Uncomment to enable. Default disabled.
+//#define DEBUGOUT 0 // Uncomment to claim serial port with given instance number and add HAL entry point for debug output.
 
 // Some status report data isn't necessary for realtime, only intermittently, because the values don't
 // change often. The following macros configures how many times a status report needs to be called before
@@ -172,7 +172,7 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 // value. This also ensures that a planned motion always completes and accounts for any floating-point
 // round-off errors. Although not recommended, a lower value than 1.0 mm/min will likely work in smaller
 // machines, perhaps to 0.1mm/min, but your success may vary based on multiple factors.
-// #define MINIMUM_FEED_RATE 1.0f // (mm/min)
+//#define MINIMUM_FEED_RATE 1.0f // (mm/min)
 
 // Number of arc generation iterations by small angle approximation before exact arc trajectory
 // correction with expensive sin() and cos() calculations. This parameter maybe decreased if there
@@ -208,7 +208,7 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 // available RAM, like when re-compiling for MCU with ample amounts of RAM. Or decrease if the MCU begins to
 // crash due to the lack of available RAM or if the CPU is having trouble keeping up with planning
 // new incoming motions as they are executed.
-// #define BLOCK_BUFFER_SIZE 36 // Uncomment to override default in planner.h.
+//#define BLOCK_BUFFER_SIZE 36 // Uncomment to override default in planner.h.
 
 // Governs the size of the intermediary step segment buffer between the step execution algorithm
 // and the planner blocks. Each segment is set of steps executed at a constant velocity over a
@@ -216,11 +216,11 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 // block velocity profile is traced exactly. The size of this buffer governs how much step
 // execution lead time there is for other Grbl processes have to compute and do their thing
 // before having to come back and refill this buffer, currently at ~50msec of step moves.
-// #define SEGMENT_BUFFER_SIZE 10 // Uncomment to override default in stepper.h.
+//#define SEGMENT_BUFFER_SIZE 10 // Uncomment to override default in stepper.h.
 
 // Configures the position after a probing cycle during Grbl's check mode. Disabled sets
 // the position to the probe target, when enabled sets the position to the start position.
-// #define SET_CHECK_MODE_PROBE_TO_START // Default disabled. Uncomment to enable.
+//#define SET_CHECK_MODE_PROBE_TO_START // Default disabled. Uncomment to enable.
 
 // Force Grbl to check the state of the hard limit switches when the processor detects a pin
 // change inside the hard limit ISR routine. By default, Grbl will trigger the hard limits
@@ -230,7 +230,7 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 // that the switches don't bounce, we recommend enabling this option. This will help prevent
 // triggering a hard limit when the machine disengages from the switch.
 // NOTE: This option has no effect if SOFTWARE_DEBOUNCE is enabled.
-// #define HARD_LIMIT_FORCE_STATE_CHECK // Default disabled. Uncomment to enable.
+//#define HARD_LIMIT_FORCE_STATE_CHECK // Default disabled. Uncomment to enable.
 
 // Adjusts homing cycle search and locate scalars. These are the multipliers used by Grbl's
 // homing cycle to ensure the limit switches are engaged and cleared through each phase of
@@ -239,8 +239,8 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 // uses the homing pull-off distance setting times the LOCATE_SCALAR to pull-off and re-engage
 // the limit switch.
 // NOTE: Both of these values must be greater than 1.0 to ensure proper function.
-// #define HOMING_AXIS_SEARCH_SCALAR  1.5f // Uncomment to override defaults in limits.c.
-// #define HOMING_AXIS_LOCATE_SCALAR  10.0f // Uncomment to override defaults in limits.c.
+//#define HOMING_AXIS_SEARCH_SCALAR  1.5f // Uncomment to override defaults in limits.c.
+//#define HOMING_AXIS_LOCATE_SCALAR  10.0f // Uncomment to override defaults in limits.c.
 
 // Enable the '$RST=*', '$RST=$', and '$RST=#' non-volatile storage restore commands. There are cases where
 // these commands may be undesirable. Simply comment the desired macro to disable it.
@@ -268,7 +268,7 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 // NOTE: If disabled and to ensure Grbl can never alter the build info line, you'll also need to enable
 // the SETTING_RESTORE_ALL macro above and remove SETTINGS_RESTORE_BUILD_INFO from the mask.
 // NOTE: See the included grblWrite_BuildInfo.ino example file to write this string seperately.
-// #define DISABLE_BUILD_INFO_WRITE_COMMAND // '$I=' Default enabled. Uncomment to disable.
+//#define DISABLE_BUILD_INFO_WRITE_COMMAND // '$I=' Default enabled. Uncomment to disable.
 
 // Enables and configures Grbl's sleep mode feature. If the spindle or coolant are powered and Grbl
 // is not actively moving or receiving any commands, a sleep timer will start. If any data or commands
@@ -372,11 +372,11 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 // instead of ground.
 // WARNING: When the pull-ups are disabled, this might require additional wiring with pull-down resistors!
 //          Please check driver code and/or documentation.
-// #define DISABLE_LIMIT_BITS_PULL_UP_MASK AXES_BITMASK
-// #define DISABLE_LIMIT_BITS_PULL_UP_MASK (X_AXIS_BIT|Y_AXIS_BIT)
-// #define DISABLE_CONTROL_PINS_PULL_UP_MASK SIGNALS_BITMASK
-// #define DISABLE_CONTROL_PINS_PULL_UP_MASK (SIGNALS_SAFETYDOOR_BIT|SIGNALS_RESET_BIT)
-// #define DISABLE_PROBE_BIT_PULL_UP
+//#define DISABLE_LIMIT_BITS_PULL_UP_MASK AXES_BITMASK
+//#define DISABLE_LIMIT_BITS_PULL_UP_MASK (X_AXIS_BIT|Y_AXIS_BIT)
+//#define DISABLE_CONTROL_PINS_PULL_UP_MASK SIGNALS_BITMASK
+//#define DISABLE_CONTROL_PINS_PULL_UP_MASK (SIGNALS_SAFETYDOOR_BIT|SIGNALS_RESET_BIT)
+//#define DISABLE_PROBE_BIT_PULL_UP
 
 // If your machine has two limits switches wired in parallel to one axis, you will need to enable
 // this feature. Since the two switches are sharing a single pin, there is no way for Grbl to tell
@@ -394,9 +394,13 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 //#define ALLOW_FEED_OVERRIDE_DURING_PROBE_CYCLES // Default disabled. Uncomment to enable.
 
 // Inverts logic of the stepper enable signal(s).
+#if COMPATIBILITY_LEVEL <= 2
 // NOTE: Not universally available for individual axes - check driver documentation.
 //       Specify at least X_AXIS_BIT if a common enable signal is used.
-// #define INVERT_ST_ENABLE_MASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT) // Default disabled. Uncomment to enable.
+//#define INVERT_ST_ENABLE_MASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT) // Default disabled. Uncomment to enable.
+#else
+//#define INVERT_ST_ENABLE_MASK 1 // Default disabled. Uncomment to enable.
+#endif
 // Mask to be OR'ed with stepper disable signal(s). Axes configured will not be disabled.
 // NOTE: Not universally available for individual axes - check driver documentation.
 //       Specify at least X_AXIS_BIT if a common enable signal is used.
@@ -414,20 +418,20 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 // normally-open (NO) switches on the specified pins, rather than the default normally-closed (NC) switches.
 // NOTE: The first option will invert all control pins. The second option is an example of
 // inverting only a few pins. See the start of this file for other signal definitions.
-// #define INVERT_CONTROL_PIN_MASK SIGNALS_BITMASK // Default disabled. Uncomment to enable.
-// #define INVERT_CONTROL_PIN_MASK (SIGNALS_SAFETYDOOR_BIT|SIGNALS_RESET_BIT) // Default disabled. Uncomment to enable.
-// #define INVERT_LIMIT_BIT_MASK AXES_BITMASK // Default disabled. Uncomment to enable. Uncomment to enable.
-// #define INVERT_LIMIT_BIT_MASK (X_AXIS_BIT|Y_AXIS_BIT) // Default disabled. Uncomment to enable.
+//#define INVERT_CONTROL_PIN_MASK SIGNALS_BITMASK // Default disabled. Uncomment to enable.
+//#define INVERT_CONTROL_PIN_MASK (SIGNALS_SAFETYDOOR_BIT|SIGNALS_RESET_BIT) // Default disabled. Uncomment to enable.
+//#define INVERT_LIMIT_BIT_MASK AXES_BITMASK // Default disabled. Uncomment to enable. Uncomment to enable.
+//#define INVERT_LIMIT_BIT_MASK (X_AXIS_BIT|Y_AXIS_BIT) // Default disabled. Uncomment to enable.
 // For inverting the probe pin use DEFAULT_INVERT_PROBE_BIT in defaults.h
 
 // Inverts the selected spindle output signals from active high to active low. Useful for some pre-built electronic boards.
-// #define INVERT_SPINDLE_ENABLE_PIN 1 // Default disabled. Uncomment to enable.
-// #define INVERT_SPINDLE_CCW_PIN 1    // Default disabled. Uncomment to enable. NOTE: not supported by all drivers.
-// #define INVERT_SPINDLE_PWM_PIN 1    // Default disabled. Uncomment to enable. NOTE: not supported by all drivers.
+//#define INVERT_SPINDLE_ENABLE_PIN 1 // Default disabled. Uncomment to enable.
+//#define INVERT_SPINDLE_CCW_PIN 1    // Default disabled. Uncomment to enable. NOTE: not supported by all drivers.
+//#define INVERT_SPINDLE_PWM_PIN 1    // Default disabled. Uncomment to enable. NOTE: not supported by all drivers.
 
 // Inverts the selected coolant signals from active high to active low. Useful for some pre-built electronic boards.
-// #define INVERT_COOLANT_FLOOD_PIN 1 // Default disabled. Uncomment to enable.
-// #define INVERT_COOLANT_MIST_PIN 1  // Default disabled. Note: not supported by all drivers.
+//#define INVERT_COOLANT_FLOOD_PIN 1 // Default disabled. Uncomment to enable.
+//#define INVERT_COOLANT_MIST_PIN 1  // Default disabled. Note: not supported by all drivers.
 
 
 // Used by variable spindle output only. This forces the PWM output to a minimum duty cycle when enabled.

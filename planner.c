@@ -29,9 +29,7 @@
 #include "hal.h"
 #include "nuts_bolts.h"
 #include "planner.h"
-#ifdef KINEMATICS_API
-#include "kinematics.h"
-#endif
+
 #ifndef MINIMUM_JUNCTION_SPEED
 #define MINIMUM_JUNCTION_SPEED 0.0f
 #endif
@@ -394,10 +392,6 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
 
     // Compute and store initial move distance data.
 
-#ifdef KINEMATICS_API
-    kinematics.plan_target_to_steps(target_steps, target);
-#endif
-
     idx = N_AXIS;
     do {
         idx--;
@@ -405,9 +399,7 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
         // Also, compute individual axes distance for move and prep unit vector calculations.
         // NOTE: Computes true distance from converted step values.
 
-#ifndef KINEMATICS_API
         target_steps[idx] = lroundf(target[idx] * settings.axis[idx].steps_per_mm);
-#endif
         delta_steps = target_steps[idx] - position_steps[idx];
         block->steps[idx] = labs(delta_steps);
         block->step_event_count = max(block->step_event_count, block->steps[idx]);
@@ -537,6 +529,22 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
     }
 
     return true;
+}
+
+
+// Get the planner position vectors.
+float *plan_get_position (void)
+{
+    static float position[N_AXIS];
+
+    uint_fast8_t idx = N_AXIS;
+
+    do {
+        idx--;
+        position[idx] = pl.position[idx] / settings.axis[idx].steps_per_mm;
+    } while(idx);
+
+    return position;
 }
 
 

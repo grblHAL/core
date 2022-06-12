@@ -173,7 +173,12 @@ static bool limits_pull_off (axes_signals_t axis, float distance)
     plan_data.condition.coolant = gc_state.modal.coolant;
     memcpy(&plan_data.spindle, &gc_state.spindle, sizeof(spindle_t));
 
+#ifdef KINEMATICS_API
+    coord_data_t k_target;
+    plan_buffer_line(kinematics.transform_from_cartesian(k_target.values, target.values), &plan_data);    // Bypass mc_line(). Directly plan homing motion.;
+#else
     plan_buffer_line(target.values, &plan_data);    // Bypass mc_line(). Directly plan homing motion.
+#endif
 
     sys.step_control.flags = 0;                 // Clear existing flags and
     sys.step_control.execute_sys_motion = On;   // set to execute homing motion.
@@ -239,7 +244,7 @@ static bool limits_homing_cycle (axes_signals_t cycle, axes_signals_t auto_squar
     int32_t initial_trigger_position = 0, autosquare_fail_distance = 0;
     uint_fast8_t n_cycle = (2 * settings.homing.locate_cycles + 1);
     uint_fast8_t step_pin[N_AXIS], n_active_axis, dual_motor_axis = 0;
-    float target[N_AXIS];
+    coord_data_t target;
     float max_travel = 0.0f, homing_rate = settings.homing.seek_rate;
     bool approach = true, autosquare_check = false;
     axes_signals_t axislock, homing_state;
@@ -286,7 +291,7 @@ static bool limits_homing_cycle (axes_signals_t cycle, axes_signals_t auto_squar
     do {
 
         // Initialize and declare variables needed for homing routine.
-        system_convert_array_steps_to_mpos(target, sys.position);
+        system_convert_array_steps_to_mpos(target.values, sys.position);
         axislock = (axes_signals_t){0};
         n_active_axis = 0;
 
@@ -303,9 +308,9 @@ static bool limits_homing_cycle (axes_signals_t cycle, axes_signals_t auto_squar
 #endif
                 // Set target direction based on cycle mask and homing cycle approach state.
                 if (bit_istrue(settings.homing.dir_mask.value, bit(idx)))
-                    target[idx] = approach ? - max_travel : max_travel;
+                    target.values[idx] = approach ? - max_travel : max_travel;
                 else
-                    target[idx] = approach ? max_travel : - max_travel;
+                    target.values[idx] = approach ? max_travel : - max_travel;
 
                 // Apply axislock to the step port pins active in this cycle.
                 axislock.mask |= step_pin[idx];
@@ -314,6 +319,11 @@ static bool limits_homing_cycle (axes_signals_t cycle, axes_signals_t auto_squar
 
         sys.homing_axis_lock.mask = axislock.mask;
 
+#ifdef KINEMATICS_API
+        if(kinematics.homing_cycle_get_feedrate)
+            homing_rate = kinematics.homing_cycle_get_feedrate(homing_rate, cycle);
+#endif
+
         if(grbl.on_homing_rate_set)
             grbl.on_homing_rate_set(cycle, homing_rate, !approach);
 
@@ -321,7 +331,13 @@ static bool limits_homing_cycle (axes_signals_t cycle, axes_signals_t auto_squar
 
         // Perform homing cycle. Planner buffer should be empty, as required to initiate the homing cycle.
         plan_data.feed_rate = homing_rate;      // Set current homing rate.
-        plan_buffer_line(target, &plan_data);   // Bypass mc_line(). Directly plan homing motion.
+
+#ifdef KINEMATICS_API
+        coord_data_t k_target;
+        plan_buffer_line(kinematics.transform_from_cartesian(k_target.values, target.values), &plan_data);    // Bypass mc_line(). Directly plan homing motion.;
+#else
+        plan_buffer_line(target.values, &plan_data);    // Bypass mc_line(). Directly plan homing motion.
+#endif
 
         sys.step_control.flags = 0;
         sys.step_control.execute_sys_motion = On; // Set to execute homing motion and clear existing flags.

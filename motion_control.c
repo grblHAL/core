@@ -94,6 +94,11 @@ void mc_sync_backlash_position (void)
 bool mc_line (float *target, plan_line_data_t *pl_data)
 {
 
+#ifdef KINEMATICS_API
+    float feed_rate = pl_data->feed_rate;
+    target = kinematics.segment_line(target, plan_get_position(), pl_data, true);
+#endif
+
     // If enabled, check for soft limit violations. Placed here all line motions are picked up
     // from everywhere in Grbl.
     // NOTE: Block jog motions. Jogging is a special case and soft limits are handled independently.
@@ -116,6 +121,10 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
         // indicates to Grbl what is a backlash compensation motion, so that Grbl executes the move but
         // doesn't update the machine position values. Since the position values used by the g-code
         // parser and planner are separate from the system machine positions, this is doable.
+
+#ifdef KINEMATICS_API
+       while(kinematics.segment_line(target, NULL, pl_data, false)) {
+#endif
 
 #ifdef ENABLE_BACKLASH_COMPENSATION
 
@@ -169,11 +178,6 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
 
 #endif // Backlash comp
 
-#ifdef KINEMATICS_API
-     kinematics.segment_line(target, pl_data, true);
-
-     while(kinematics.segment_line(target, pl_data, false)) {
-#endif
         // If the buffer is full: good! That means we are well ahead of the robot.
         // Remain in this loop until there is room in the buffer.
          do {
@@ -192,7 +196,18 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
             // Forces a buffer sync while in M3 laser mode only.
             hal.spindle.set_state(pl_data->condition.spindle, pl_data->spindle.rpm);
         }
+
 #ifdef KINEMATICS_API
+        if(pl_data->condition.jog_motion) {
+            sys_state_t state = state_get();
+            if ((state == STATE_IDLE || state == STATE_TOOL_CHANGE) && plan_get_current_block() != NULL) { // Check if there is a block to execute.
+                state_set(STATE_JOG);
+                st_prep_buffer();
+                st_wake_up();  // NOTE: Manual start. No state machine required.
+            }
+        }
+
+        pl_data->feed_rate = feed_rate;
       }
 #endif
     }
@@ -217,7 +232,6 @@ void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *o
     float r_axis1 = -offset[plane.axis_1];
     float rt_axis0 = target[plane.axis_0] - center_axis0;
     float rt_axis1 = target[plane.axis_1] - center_axis1;
-
     // CCW angle between position and target from circle center. Only one atan2() trig computation required.
     float angular_travel = atan2f(r_axis0 * rt_axis1 - r_axis1 * rt_axis0, r_axis0 * rt_axis0 + r_axis1 * rt_axis1);
 
@@ -292,7 +306,7 @@ void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *o
         float sin_Ti;
         float cos_Ti;
         float r_axisi;
-        uint32_t i, count = 0;
+        uint_fast16_t i, count = 0;
 
         for (i = 1; i < segments; i++) { // Increment (segments-1).
 
@@ -741,12 +755,15 @@ status_code_t mc_jog_execute (plan_line_data_t *pl_data, parser_block_t *gc_bloc
 
     // Valid jog command. Plan, set state, and execute.
     mc_line(gc_block->values.xyz, pl_data);
+
+#ifndef KINEMATICS_API // kinematics may segment long jog moves triggering auto start (RUN)...
     sys_state_t state = state_get();
     if ((state == STATE_IDLE || state == STATE_TOOL_CHANGE) && plan_get_current_block() != NULL) { // Check if there is a block to execute.
         state_set(STATE_JOG);
         st_prep_buffer();
         st_wake_up();  // NOTE: Manual start. No state machine required.
     }
+#endif
 
     return Status_OK;
 }
@@ -795,6 +812,28 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
             system_set_exec_alarm(Alarm_HardLimit);
             return Status_Unhandled;
         }
+
+#ifdef KINEMATICS_API
+        if(kinematics.homing_cycle_validate) {
+
+            uint_fast8_t idx = N_AXIS;
+
+            if (!home_all) { // Perform homing cycle based on mask.
+                if(!kinematics.homing_cycle_validate(cycle)) {
+                    system_set_exec_alarm(Alarm_HomingFail);
+                    return Status_Unhandled;
+                }
+            } else do {
+                if(settings.homing.cycle[--idx].mask) {
+                    if(!kinematics.homing_cycle_validate(settings.homing.cycle[idx])) {
+                        system_set_exec_alarm(Alarm_HomingFail);
+                        return Status_Unhandled;
+                    }
+                }
+            } while(idx);
+
+        }
+#endif
 
         state_set(STATE_HOMING);                                // Set homing system state.
 #if COMPATIBILITY_LEVEL == 0

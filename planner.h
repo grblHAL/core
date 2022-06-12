@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2019-2021 Terje Io
+  Copyright (c) 2019-2022 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -131,6 +131,9 @@ float plan_get_exec_block_exit_speed_sqr();
 
 // Called by main program during planner calculations and step segment buffer during initialization.
 float plan_compute_profile_nominal_speed(plan_block_t *block);
+
+// Get the planner position vectors.
+float *plan_get_position (void);
 
 // Reset the planner position vector (in steps)
 void plan_sync_position();

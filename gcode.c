@@ -216,7 +216,9 @@ void gc_set_tool_offset (tool_offset_mode_t mode, uint_fast8_t idx, int32_t offs
                 idx--;
                 tlo_changed |= gc_state.tool_length_offset[idx] != 0.0f;
                 gc_state.tool_length_offset[idx] = 0.0f;
-                gc_state.tool->offset[idx] = 0;
+#ifndef N_TOOLS
+                gc_state.tool->offset[idx] = 0.0f;
+#endif
             } while(idx);
             break;
 
@@ -225,7 +227,9 @@ void gc_set_tool_offset (tool_offset_mode_t mode, uint_fast8_t idx, int32_t offs
                 float new_offset = offset / settings.axis[idx].steps_per_mm;
                 tlo_changed |= gc_state.tool_length_offset[idx] != new_offset;
                 gc_state.tool_length_offset[idx] = new_offset;
-                gc_state.tool->offset[idx] = offset;
+#ifndef N_TOOLS
+                gc_state.tool->offset[idx] = new_offset;
+#endif
             }
             break;
 

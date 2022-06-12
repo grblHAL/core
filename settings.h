@@ -334,7 +334,8 @@ typedef union {
                  restore_after_feed_hold         :1,
                  unused1                         :1,
                  g92_is_volatile                 :1,
-                 unassigned                      :6;
+                 compatibility_level             :4,
+                 unassigned                      :2;
     };
 } settingflags_t;
 

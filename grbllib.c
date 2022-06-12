@@ -70,22 +70,7 @@ grbl_hal_t hal;
 static driver_startup_t driver = { .ok = 0xFF };
 
 #ifdef KINEMATICS_API
-
 kinematics_t kinematics;
-
-// called from mc_line() to segment lines if not overridden, default implementation for pass-through
-static bool kinematics_segment_line (float *target, plan_line_data_t *pl_data, bool init)
-{
-    static uint_fast8_t iterations;
-
-    if(init)
-        iterations = 2;
-    else
-        iterations--;
-
-    return iterations != 0;
-}
-
 #endif
 
 void dummy_bool_handler (bool arg)
@@ -154,8 +139,6 @@ int grbl_enter (void)
 
 #ifdef KINEMATICS_API
     memset(&kinematics, 0, sizeof(kinematics_t));
-
-    kinematics.segment_line = kinematics_segment_line; // default to no segmentation
 #endif
 
     driver.init = driver_init();

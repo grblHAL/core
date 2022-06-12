@@ -77,6 +77,7 @@ PROGMEM const settings_t defaults = {
     .flags.legacy_rt_commands = DEFAULT_LEGACY_RTCOMMANDS,
     .flags.report_inches = DEFAULT_REPORT_INCHES,
     .flags.sleep_enable = DEFAULT_SLEEP_ENABLE,
+    .flags.compatibility_level = COMPATIBILITY_LEVEL,
 #if DISABLE_G92_PERSISTENCE
     .flags.g92_is_volatile = 1,
 #else
@@ -104,7 +105,13 @@ PROGMEM const settings_t defaults = {
     .steppers.step_invert.mask = DEFAULT_STEPPING_INVERT_MASK,
     .steppers.dir_invert.mask = DEFAULT_DIRECTION_INVERT_MASK,
     .steppers.ganged_dir_invert.mask = DEFAULT_GANGED_DIRECTION_INVERT_MASK,
+#if COMPATIBILITY_LEVEL <= 2
     .steppers.enable_invert.mask = INVERT_ST_ENABLE_MASK,
+#elif INVERT_ST_ENABLE_MASK
+    .steppers.enable_invert.mask = 0,
+#else
+    .steppers.enable_invert.mask = AXES_BITMASK,
+#endif
     .steppers.deenergize.mask = ST_DEENERGIZE_MASK,
 #if N_AXIS > 3
     .steppers.is_rotational.mask = (ST_ROTATIONAL_MASK & AXES_BITMASK) >> 3,
@@ -361,6 +368,9 @@ static char *get_linear_piece (setting_id_t id);
 #if N_AXIS > 3
 static status_code_t set_rotational_axes (setting_id_t id, uint_fast16_t int_value);
 #endif
+#if COMPATIBILITY_LEVEL > 2
+static status_code_t set_enable_invert_mask (setting_id_t id, uint_fast16_t int_value);
+#endif
 #if COMPATIBILITY_LEVEL > 1
 static status_code_t set_limits_invert_mask (setting_id_t id, uint_fast16_t int_value);
 #endif
@@ -384,7 +394,11 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_StepperIdleLockTime, Group_Stepper, "Step idle delay", "milliseconds", Format_Int16, "####0", NULL, "65535", Setting_IsLegacy, &settings.steppers.idle_lock_time, NULL, NULL },
      { Setting_StepInvertMask, Group_Stepper, "Step pulse invert", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsLegacy, &settings.steppers.step_invert.mask, NULL, NULL },
      { Setting_DirInvertMask, Group_Stepper, "Step direction invert", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsLegacy, &settings.steppers.dir_invert.mask, NULL, NULL },
+#if COMPATIBILITY_LEVEL <= 2
      { Setting_InvertStepperEnable, Group_Stepper, "Invert stepper enable pin(s)", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsLegacy, &settings.steppers.enable_invert.mask, NULL, NULL },
+#else
+     { Setting_InvertStepperEnable, Group_Stepper, "Invert stepper enable pins", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsLegacyFn, set_enable_invert_mask, get_int, NULL },
+#endif
 #if COMPATIBILITY_LEVEL <= 1
      { Setting_LimitPinsInvertMask, Group_Limits, "Invert limit pins", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsLegacy, &settings.limits.invert.mask, NULL, NULL },
 #else
@@ -525,9 +539,13 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_StepperIdleLockTime, "Sets a short hold delay when stopping to let dynamics settle before disabling steppers. Value 255 keeps motors enabled." },
     { Setting_StepInvertMask, "Inverts the step signals (active low)." },
     { Setting_DirInvertMask, "Inverts the direction signals (active low)." },
+#if COMPATIBILITY_LEVEL <= 2
     { Setting_InvertStepperEnable, "Inverts the stepper driver enable signals. Most drivers uses active low enable requiring inversion.\\n\\n"
                                    "NOTE: If the stepper drivers shares the same enable signal only X is used."
     },
+#else
+    { Setting_InvertStepperEnable, "Inverts the stepper driver enable signals. Drivers using active high enable require inversion.\\n\\n" },
+#endif
     { Setting_LimitPinsInvertMask, "Inverts the axis limit input signals." },
     { Setting_InvertProbePin, "Inverts the probe input pin signal." },
     { Setting_SpindlePWMBehaviour, "" },
@@ -737,13 +755,26 @@ setting_details_t *settings_get_details (void)
     return &setting_details;
 }
 
+#if COMPATIBILITY_LEVEL > 2
+
+static status_code_t set_enable_invert_mask (setting_id_t id, uint_fast16_t int_value)
+{
+    settings.steppers.enable_invert.mask = int_value ? 0 : AXES_BITMASK;
+
+    return Status_OK;
+}
+
+#endif
+
 #if COMPATIBILITY_LEVEL > 1
+
 static status_code_t set_limits_invert_mask (setting_id_t id, uint_fast16_t int_value)
 {
     settings.limits.invert.mask = (int_value ? ~(INVERT_LIMIT_BIT_MASK) : INVERT_LIMIT_BIT_MASK) & AXES_BITMASK;
 
     return Status_OK;
 }
+
 #endif
 
 static status_code_t set_probe_invert (setting_id_t id, uint_fast16_t int_value)
@@ -1209,6 +1240,12 @@ static uint32_t get_int (setting_id_t id)
 
     switch(id) {
 
+#if COMPATIBILITY_LEVEL > 2
+        case Setting_InvertStepperEnable:
+            value = settings.steppers.enable_invert.mask ? 0 : 1;
+            break;
+#endif
+
 #if COMPATIBILITY_LEVEL > 1
         case Setting_LimitPinsInvertMask:
             value = settings.limits.invert.mask == INVERT_LIMIT_BIT_MASK ? 0 : 1;
@@ -1620,6 +1657,11 @@ bool read_global_settings ()
     settings.flags.g92_is_volatile = On;
 #endif
 
+#if COMPATIBILITY_LEVEL > 2
+    if(settings.steppers.enable_invert.mask)
+        settings.steppers.enable_invert.mask = AXES_BITMASK;
+#endif
+
     return ok && settings.version == SETTINGS_VERSION;
 }
 
@@ -1629,6 +1671,8 @@ void settings_write_global (void)
 {
     if(override_backup.valid)
         restore_override_backup();
+
+    settings.flags.compatibility_level = COMPATIBILITY_LEVEL;
 
     if(hal.nvs.type != NVS_None)
         hal.nvs.memcpy_to_nvs(NVS_ADDR_GLOBAL, (uint8_t *)&settings, sizeof(settings_t), true);

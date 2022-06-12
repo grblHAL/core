@@ -451,8 +451,10 @@ status_code_t tc_probe_workpiece (void)
     gc_parser_flags_t flags = {0};
     plan_line_data_t plan_data = {0};
 
+#if COMPATIBILITY_LEVEL <= 1
     if(probe_fixture)
         grbl.on_probe_fixture(next_tool, system_xy_at_fixture(CoordinateSystem_G59_3, TOOLSETTER_RADIUS), true);
+#endif
 
     // Get current position.
     system_convert_array_steps_to_mpos(target.values, sys.position);

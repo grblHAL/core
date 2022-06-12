@@ -267,6 +267,10 @@ void system_command_help (void)
 #else
     hal.stream.write("$RST=# - reset offsets" ASCII_EOL);
 #endif
+    if(hal.spindle.reset_data)
+        hal.stream.write("$SR - reset spindle encoder data" ASCII_EOL);
+    if(hal.spindle.get_data)
+        hal.stream.write("$SD - output spindle encoder data" ASCII_EOL);
     hal.stream.write("$TLR - set tool offset reference" ASCII_EOL);
     hal.stream.write("$TPW - probe tool plate" ASCII_EOL);
     hal.stream.write("$EA - enumerate alarms" ASCII_EOL);
@@ -761,7 +765,7 @@ static status_code_t output_all_build_info (sys_state_t state, char *args)
     char info[sizeof(stored_line_t)];
 
     settings_read_build_info(info);
-    report_build_info(info, false);
+    report_build_info(info, true);
 
     return Status_OK;
 }
@@ -893,7 +897,7 @@ void system_flag_wco_change (void)
 void system_convert_array_steps_to_mpos (float *position, int32_t *steps)
 {
 #ifdef KINEMATICS_API
-    kinematics.convert_array_steps_to_mpos(position, steps);
+    kinematics.transform_steps_to_cartesian(position, steps);
 #else
     uint_fast8_t idx = N_AXIS;
     do {

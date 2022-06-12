@@ -573,7 +573,11 @@
 #endif
 
 #ifndef INVERT_ST_ENABLE_MASK
+#if COMPATIBILITY_LEVEL <= 2
 #define INVERT_ST_ENABLE_MASK AXES_BITMASK
+#else
+#define INVERT_ST_ENABLE_MASK 0
+#endif
 #endif
 
 #ifndef INVERT_LIMIT_BIT_MASK
