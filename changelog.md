@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+20220616:
+
+Core:
+
+* Delayed calling `hal.driver_reset` until alarm and abort states has been established.
+
+Drivers:
+
+* STM32F4xx : Fix for [issue #77](https://github.com/grblHAL/STM32F4xx/issues/77) - serial port clock selection.
+
+Plugins:
+
+* Spindle plugin: Fix for [issue #9](https://github.com/grblHAL/plugins/issues/9) - VFD spindle not stopped on STOP command.
+
+---
+
 20220612:
 
 Core:
@@ -19,6 +35,8 @@ Drivers:
 * STM32F7xx : Improved UART channel assignment handling.
 
 * ESP32 : Added missing file \(corexy.c\) to filelist, fixed incorrect URL in readme.
+
+---
 
 20220416:
 

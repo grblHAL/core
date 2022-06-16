@@ -412,14 +412,15 @@ bool protocol_exec_rt_system (void)
             killed = true;
             hal.spindle.set_state((spindle_state_t){0}, 0.0f);
             hal.coolant.set_state((coolant_state_t){0});
-            // Tell driver/plugins about reset.
-            hal.driver_reset();
         }
 
         // System alarm. Everything has shutdown by something that has gone severely wrong. Report
         // the source of the error to the user. If critical, Grbl disables by entering an infinite
         // loop until system reset/abort.
         system_raise_alarm((alarm_code_t)rt_exec);
+
+        if(killed) // Tell driver/plugins about reset.
+            hal.driver_reset();
 
         // Halt everything upon a critical event flag. Currently hard and soft limits flag this.
         if ((alarm_code_t)rt_exec == Alarm_HardLimit ||
@@ -463,12 +464,11 @@ bool protocol_exec_rt_system (void)
 
         // Execute system abort.
         if (rt_exec & EXEC_RESET) {
+
             if(!killed) {
                 // Kill spindle and coolant.
                 hal.spindle.set_state((spindle_state_t){0}, 0.0f);
                 hal.coolant.set_state((coolant_state_t){0});
-                // Tell driver/plugins about reset.
-                hal.driver_reset();
             }
 
             // Only place sys.abort is set true, when E-stop is not asserted.
@@ -482,6 +482,9 @@ bool protocol_exec_rt_system (void)
                 system_raise_alarm(Alarm_MotorFault);
                 grbl.report.feedback_message(Message_MotorFault);
             }
+
+            if(!killed) // Tell driver/plugins about reset.
+                hal.driver_reset();
 
             return !sys.abort; // Nothing else to do but exit.
         }
