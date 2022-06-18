@@ -219,5 +219,6 @@ uint8_t spindle_get_count (void);
 
 bool spindle_select (spindle_id_t spindle_id);
 spindle_cap_t spindle_get_caps (void);
+spindle_id_t spindle_get_current (void);
 
 #endif

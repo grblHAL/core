@@ -1,5 +1,18 @@
 ## grblHAL changelog
 
+20220618:
+
+Core:
+
+* Added grbl.on_reset event, new settings for VFDs++
+
+Plugins:
+
+* Spindle plugin: Added VFD manager, simplified VFD registration \(no core changes required when adding a new type\), added MODVFD VFD support, added `M104Q<n>` M-code for selecting spindle.  
+Some of these changes were adopted from [PR#9](https://github.com/grblHAL/Plugins_spindle/pull/9).
+
+---
+
 20220616:
 
 Core:

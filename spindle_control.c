@@ -34,6 +34,7 @@
 
 static uint8_t n_spindle = 0;
 static const spindle_ptrs_t *spindles[N_SPINDLE];
+static spindle_id_t current_spindle = 0;
 
 spindle_id_t spindle_register (const spindle_ptrs_t *spindle, const char *name)
 {
@@ -81,6 +82,7 @@ bool spindle_select (spindle_id_t spindle_id)
                 ok = spindles[spindle_id]->config();
 
             if(ok) {
+                current_spindle = spindle_id;
                 sys.mode = settings.mode == Mode_Laser && !hal.spindle.cap.laser ? Mode_Standard : settings.mode;
                 if(grbl.on_spindle_select)
                     grbl.on_spindle_select(spindle_id);
@@ -98,6 +100,11 @@ const spindle_ptrs_t *spindle_get (spindle_id_t spindle_id)
         return spindles[spindle_id];
 
     return NULL;
+}
+
+spindle_id_t spindle_get_current (void)
+{
+    return current_spindle;
 }
 
 spindle_cap_t spindle_get_caps (void)

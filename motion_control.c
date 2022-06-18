@@ -1072,5 +1072,8 @@ ISR_CODE void ISR_FUNC(mc_reset)(void)
             system_set_exec_alarm(Alarm_EStop);
         else if(hal.control.get_state().motor_fault)
             system_set_exec_alarm(Alarm_MotorFault);
+
+        if(grbl.on_reset)
+            grbl.on_reset();
     }
 }

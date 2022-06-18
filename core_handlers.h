@@ -84,6 +84,7 @@ typedef bool (*on_probe_fixture_ptr)(tool_data_t *tool, bool at_g59_3, bool on);
 typedef bool (*on_probe_start_ptr)(axes_signals_t axes, float *target, plan_line_data_t *pl_data);
 typedef void (*on_probe_completed_ptr)(void);
 typedef void (*on_toolchange_ack_ptr)(void);
+typedef void (*on_reset_ptr)(void);
 typedef void (*on_jog_cancel_ptr)(sys_state_t state);
 typedef bool (*on_spindle_select_ptr)(spindle_id_t spindle_id);
 typedef status_code_t (*on_unknown_sys_command_ptr)(sys_state_t state, char *line); // return Status_Unhandled.
@@ -120,6 +121,7 @@ typedef struct {
     on_jog_cancel_ptr on_jog_cancel; // Called from interrupt context.
     on_laser_ppi_enable_ptr on_laser_ppi_enable;
     on_spindle_select_ptr on_spindle_select;
+    on_reset_ptr on_reset; // Called from interrupt context.
     // core entry points - set up by core before driver_init() is called.
     enqueue_gcode_ptr enqueue_gcode;
     enqueue_realtime_command_ptr enqueue_realtime_command;

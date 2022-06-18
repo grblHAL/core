@@ -272,6 +272,21 @@ typedef enum {
     Setting_UserDefined_8 = 458,
     Setting_UserDefined_9 = 459,
 
+    Setting_VFD_ModbusAddress = 460,
+    Setting_VFD_RPM_Hz = 461,
+    Setting_VFD_10 = 462,
+    Setting_VFD_11 = 463,
+    Setting_VFD_12 = 464,
+    Setting_VFD_13 = 465,
+    Setting_VFD_14 = 466,
+    Setting_VFD_15 = 467,
+    Setting_VFD_16 = 468,
+    Setting_VFD_17 = 469,
+    Setting_VFD_18 = 470,
+    Setting_VFD_19 = 471,
+    Setting_VFD_20 = 472,
+    Setting_VFD_21 = 473,
+
     Setting_SettingsMax,
     Setting_SettingsAll = Setting_SettingsMax,
 
@@ -427,8 +442,8 @@ typedef union {
     uint8_t mask;
     struct {
         uint8_t pwm_action :2,
-                type       :3,
-                unassigned :3;
+                type       :5,
+                unassigned :1;
     };
 } spindle_settings_flags_t;
 
@@ -621,6 +636,7 @@ typedef enum {
     Group_UserSettings,
     Group_Stepper,
     Group_MotorDriver,
+    Group_VFD,
     Group_Axis,
 // NOTE: axis groups MUST be sequential AND last
     Group_Axis0,

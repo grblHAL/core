@@ -34,14 +34,13 @@
 #endif
 
 #if VFD_ENABLE
-#if VFD_ENABLE == 1 || VFD_ENABLE == 2 || VFD_ENABLE == -1
-    extern void vfd_huanyang_init (void);
-    vfd_huanyang_init();
+    extern void vfd_init (void);
+    vfd_init();
 #endif
+
 #if N_SPINDLE > 1
     extern void spindle_select_init(void);
     spindle_select_init();
-#endif
 #endif
 
 #ifndef GRBL_ESP32 // ESP32 has its own bluetooth_init
