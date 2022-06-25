@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+20220625:
+
+Core:
+
+* Reverted config.h change that enabled COREXY as default. ESP32 issue [#31](https://github.com/grblHAL/ESP32/issues/31).
+
+Drivers:
+
+* ESP32: Updated CMakeLists.txt for spindle plugin changes.
+
+Plugins:
+
+* Spindle plugin: Added H100 VFD driver \(untested\).
+
+---
+
 20220618:
 
 Core:

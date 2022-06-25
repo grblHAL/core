@@ -79,7 +79,7 @@ __NOTE:__ if switching to a level > 1 please reset non-volatile storage with \a 
 // defined at (http://corexy.com/theory.html). Motors are assumed to positioned and wired exactly as
 // described, if not, motions may move in strange directions. Grbl requires the CoreXY A and B motors
 // have the same steps per mm internally.
-#define COREXY // Default disabled. Uncomment to enable.
+//#define COREXY // Default disabled. Uncomment to enable.
 
 // Add a short delay for each block processed in Check Mode to
 // avoid overwhelming the sender with fast reply messages.
