@@ -1,5 +1,28 @@
 ## grblHAL changelog
 
+20220703:
+
+Core:
+
+* Deprecated setting `$7` \(can be set as before but is no longer reported\). Added setting `$9` for PWM spindle options:
+```
+$9: PWM Spindle as bitfield where setting bit 0 enables the rest:
+    0 - Enable (1)
+    1 - RPM controls spindle enable signal (2)
+```
+Bit 1 in this setting replaces setting `$7`, bit 0 controls the PWM output.  
+__NOTE:__ M3 and M4 with S0 will now set the spindle enable output if `$9` is `1`. Ref issue #156.  
+__NOTE:__ the change is not backwards compatible with current 3rd party drivers, these has to be updated to match changes in the core.
+
+
+Drivers:
+
+* All: Updated for core changes related to the new `$9` setting.
+
+* ESP32: Prepared driver for ethernet interface.
+
+---
+
 20220625:
 
 Core:

@@ -219,6 +219,7 @@ uint8_t spindle_get_count (void);
 
 bool spindle_select (spindle_id_t spindle_id);
 spindle_cap_t spindle_get_caps (void);
+void spindle_update_caps (bool laser_cap);
 spindle_id_t spindle_get_current (void);
 
 #endif

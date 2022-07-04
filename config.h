@@ -525,7 +525,7 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 //#define DEFAULT_SPINDLE_AT_SPEED_TOLERANCE 0.0f // Percent - 0 means not checked
 //#define DEFAULT_SPINDLE_RPM_MAX 1000.0 // rpm
 //#define DEFAULT_SPINDLE_RPM_MIN 0.0 // rpm
-//#define DEFAULT_SPINDLE_PWM_ACTION 0 // 0 = NONE, 1 = ENABLE_OFF_WITH_ZERO_SPEED, 2 =
+//#define DEFAULT_SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED 0
 //#define DEFAULT_STEP_PULSE_MICROSECONDS 10.0f
 //#define DEFAULT_STEP_PULSE_DELAY 5.0f // uncomment to set default > 0.0f
 //#define DEFAULT_STEPPER_IDLE_LOCK_TIME 25 // msec (0-65535, 255 keeps steppers enabled)

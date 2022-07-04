@@ -885,7 +885,7 @@ void report_build_info (char *line, bool extended)
     if(settings.probe.allow_feed_override)
         *append++ = 'A';
 
-    if(settings.spindle.flags.pwm_action == SpindleAction_DisableWithZeroSPeed)
+    if(settings.spindle.flags.enable_rpm_controlled)
         *append++ = '0';
 
     if(hal.driver_cap.software_debounce)

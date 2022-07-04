@@ -50,8 +50,9 @@ typedef enum {
     Setting_InvertStepperEnable = 4,
     Setting_LimitPinsInvertMask = 5,
     Setting_InvertProbePin = 6,
-    Setting_SpindlePWMBehaviour = 7,
+    Setting_SpindlePWMBehaviour = 7, // Deprecated - replaced by Setting_SpindlePWMOptions flag
     Setting_GangedDirInvertMask = 8,
+    Setting_SpindlePWMOptions = 9,
     Setting_StatusReportMask = 10,
     Setting_JunctionDeviation = 11,
     Setting_ArcTolerance = 12,
@@ -431,19 +432,14 @@ typedef struct {
     float max_error;
 } pid_values_t;
 
-typedef enum {
-    SpindleAction_None = 0,
-    SpindleAction_DisableWithZeroSPeed,
-    SpindleAction_EnableWithAllSPeeds,
-} spindle_action_t;
-
 typedef union {
     uint8_t value;
     uint8_t mask;
     struct {
-        uint8_t pwm_action :2,
-                type       :5,
-                unassigned :1;
+        uint8_t enable_rpm_controlled :1, // PWM spindle only
+                unused                :1,
+                type                  :5,
+                pwm_disable           :1; // PWM spindle only
     };
 } spindle_settings_flags_t;
 

@@ -78,8 +78,8 @@ bool spindle_select (spindle_id_t spindle_id)
                 hal.spindle.rpm_max = settings.spindle.rpm_max;
             }
 
-            if(spindles[spindle_id]->config)
-                ok = spindles[spindle_id]->config();
+            if(hal.spindle.config)
+                ok = hal.spindle.config();
 
             if(ok) {
                 current_spindle = spindle_id;
@@ -119,6 +119,12 @@ spindle_cap_t spindle_get_caps (void)
     } while(idx);
 
     return caps;
+}
+
+void spindle_update_caps (bool laser_cap)
+{
+    hal.spindle.cap.laser = laser_cap;
+    sys.mode = settings.mode == Mode_Laser && !hal.spindle.cap.laser ? Mode_Standard : settings.mode;
 }
 
 uint8_t spindle_get_count (void)

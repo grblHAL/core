@@ -256,6 +256,10 @@
   #warning "Enabling ESTOP may not work with all senders!"
 #endif
 
+#ifndef WIFI_ENABLE
+#define WIFI_ENABLE         0
+#endif
+
 #ifndef WEBUI_ENABLE
 #define WEBUI_ENABLE        0
 #endif
@@ -265,7 +269,7 @@
 #endif
 
 #ifndef WEBUI_INFLASH
-#define WEBUI_INFLASH 0
+#define WEBUI_INFLASH       0
 #endif
 
 #if WEBUI_ENABLE && !defined(ESP_PLATFORM)
@@ -307,7 +311,7 @@
 #define FTP_ENABLE          0
 #endif
 
-#if ETHERNET_ENABLE
+#if ETHERNET_ENABLE || WIFI_ENABLE
 #ifndef NETWORK_HOSTNAME
 #define NETWORK_HOSTNAME        "grblHAL"
 #endif

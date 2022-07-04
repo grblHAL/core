@@ -164,7 +164,7 @@ PROGMEM const settings_t defaults = {
 
     .spindle.rpm_max = DEFAULT_SPINDLE_RPM_MAX,
     .spindle.rpm_min = DEFAULT_SPINDLE_RPM_MIN,
-    .spindle.flags.pwm_action = DEFAULT_SPINDLE_PWM_ACTION,
+    .spindle.flags.enable_rpm_controlled = DEFAULT_SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED,
     .spindle.invert.on = INVERT_SPINDLE_ENABLE_PIN,
     .spindle.invert.ccw = INVERT_SPINDLE_CCW_PIN,
     .spindle.invert.pwm = INVERT_SPINDLE_PWM_PIN,
@@ -340,6 +340,8 @@ static status_code_t set_report_mask (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_report_inches (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_control_invert (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_spindle_invert (setting_id_t id, uint_fast16_t int_value);
+static status_code_t set_pwm_mode (setting_id_t id, uint_fast16_t int_value);
+static status_code_t set_pwm_options (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_spindle_type (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_control_disable_pullup (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_probe_disable_pullup (setting_id_t id, uint_fast16_t int_value);
@@ -405,9 +407,9 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_LimitPinsInvertMask, Group_Limits, "Invert limit pins", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsLegacyFn, set_limits_invert_mask, get_int, NULL },
 #endif
      { Setting_InvertProbePin, Group_Probing, "Invert probe pin", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsLegacyFn, set_probe_invert, get_int, is_setting_available },
-     { Setting_SpindlePWMBehaviour, Group_Spindle, "Disable spindle with zero speed", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtended, &settings.spindle.flags.mask, NULL, is_setting_available },
-//     { Setting_SpindlePWMBehaviour, Group_Spindle, "Spindle enable vs. speed behaviour", NULL, Format_RadioButtons, "No action,Disable spindle with zero speed,Enable spindle with all speeds", NULL, NULL, Setting_IsExtended, &settings.spindle.flags.mask, NULL, NULL },
+     { Setting_SpindlePWMBehaviour, Group_Spindle, "Deprecated", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsLegacyFn, set_pwm_mode, get_int, is_setting_available },
      { Setting_GangedDirInvertMask, Group_Stepper, "Ganged axes direction invert", NULL, Format_Bitfield, ganged_axes, NULL, NULL, Setting_IsExtendedFn, set_ganged_dir_invert, get_int, is_setting_available },
+     { Setting_SpindlePWMOptions, Group_Spindle, "PWM Spindle", NULL, Format_XBitfield, "Enable,RPM controls spindle enable signal", NULL, NULL, Setting_IsExtendedFn, set_pwm_options, get_int, NULL },
 #if COMPATIBILITY_LEVEL <= 1
      { Setting_StatusReportMask, Group_General, "Status report options", NULL, Format_Bitfield, "Position in machine coordinate,Buffer state,Line numbers,Feed & speed,Pin state,Work coordinate offset,Overrides,Probe coordinates,Buffer sync on WCO change,Parser state,Alarm substatus,Run substatus", NULL, NULL, Setting_IsExtendedFn, set_report_mask, get_int, NULL },
 #else
@@ -548,7 +550,9 @@ PROGMEM static const setting_descr_t setting_descr[] = {
 #endif
     { Setting_LimitPinsInvertMask, "Inverts the axis limit input signals." },
     { Setting_InvertProbePin, "Inverts the probe input pin signal." },
-    { Setting_SpindlePWMBehaviour, "" },
+    { Setting_SpindlePWMOptions, "Enable controls PWM output availability.\\n"
+                                 "When `RPM controls spindle enable signal` is checked and M3 or M4 is active S0 switches it off and S > 0 switches it on."
+    },
     { Setting_GangedDirInvertMask, "Inverts the direction signals for the second motor used for ganged axes.\\n\\n"
                                    "NOTE: This inversion will be applied in addition to the inversion from setting $3."
     },
@@ -822,6 +826,28 @@ static status_code_t set_report_inches (setting_id_t id, uint_fast16_t int_value
 static status_code_t set_control_invert (setting_id_t id, uint_fast16_t int_value)
 {
     settings.control_invert.mask = int_value & hal.signals_cap.mask;
+
+    return Status_OK;
+}
+
+static status_code_t set_pwm_mode (setting_id_t id, uint_fast16_t int_value)
+{
+    settings.spindle.flags.enable_rpm_controlled = int_value != 0;
+
+    return Status_OK;
+}
+
+static status_code_t set_pwm_options (setting_id_t id, uint_fast16_t int_value)
+{
+    if(int_value & 0x01) {
+        if(int_value > 0b11)
+            return Status_SettingValueOutOfRange;
+        settings.spindle.flags.pwm_disable = Off;
+        settings.spindle.flags.enable_rpm_controlled = (int_value & 0b10) >> 1;
+    } else {
+        settings.spindle.flags.pwm_disable = On;
+        settings.spindle.flags.enable_rpm_controlled = Off;
+    }
 
     return Status_OK;
 }
@@ -1252,6 +1278,10 @@ static uint32_t get_int (setting_id_t id)
             break;
 #endif
 
+        case Setting_SpindlePWMOptions:
+            value = settings.spindle.flags.pwm_disable ? 0 : (settings.spindle.flags.enable_rpm_controlled ? 0b11 : 0b01);
+            break;
+
         case Setting_Mode:
             value = settings.mode;
             break;
@@ -1463,7 +1493,11 @@ static bool is_setting_available (const setting_detail_t *setting)
             break;
 
         case Setting_SpindlePWMBehaviour:
-            available = spindle_get_caps().variable;
+            available = false;
+            break;
+
+        case Setting_SpindlePWMOptions:
+            available = spindle_get_caps().laser;
             break;
 
         case Setting_InvertProbePin:
@@ -2146,8 +2180,13 @@ status_code_t settings_store_setting (setting_id_t id, char *svalue)
     setting_details_t *set;
     const setting_detail_t *setting = setting_get_details(id, &set);
 
-    if(setting == NULL)
-        return Status_SettingDisabled;
+    if(setting == NULL) {
+        if(id == Setting_SpindlePWMBehaviour) {
+            set = &setting_details;
+            setting = &setting_detail[Setting_SpindlePWMBehaviour];
+        } else
+            return Status_SettingDisabled;
+    }
 
     // Trim leading spaces
     while(*svalue == ' ')
