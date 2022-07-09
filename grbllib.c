@@ -213,6 +213,10 @@ int grbl_enter (void)
     wall_plotter_init();
 #endif
 
+#ifdef ENABLE_BACKLASH_COMPENSATION
+    mc_backlash_init((axes_signals_t){AXES_BITMASK});
+#endif
+
     sys.driver_started = sys.alarm != Alarm_SelftestFailed;
 
     // "Wire" homing switches to limit switches if not provided by the driver.

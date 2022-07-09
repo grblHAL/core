@@ -1,5 +1,28 @@
 ## grblHAL changelog
 
+20220709:
+
+Core:
+
+* Fix for incorrect sequencing of init calls when corexy and backlash compensation is enabled at the same time, [ESP32 issue #25](https://github.com/grblHAL/ESP32/issues/25).
+
+* Added call to driver to immediately set stepper enable signals when `$37` \(Stepper deenergize\) is changed.
+
+* Some minor improvements in settings handling and options reporting.
+
+Drivers:
+
+* iMXRT1062: Updated [SD card driver patch](https://github.com/grblHAL/iMXRT1062/tree/master/patches) with workaround for non word-aligned writes that caused file corruption. Fix for [WebUI issue #4](https://github.com/grblHAL/Plugin_WebUI/issues/4).
+
+* STM32F4xx: Added option for using timer 2 for spindle sync RPM timer as this allows spindle sync for low pin count MCUs.  
+Note that timer 2 is a 16 bit timer that had to be extended virtually to 32 bit - this _may_ affect spindle sync operation/performance.
+
+Templates:
+
+* Added plugin for Marlin style M17/M18 (M84) commands for enabing/disabling stepper drivers as fix for issue #184. 
+
+---
+
 20220703:
 
 Core:
@@ -11,7 +34,7 @@ $9: PWM Spindle as bitfield where setting bit 0 enables the rest:
     1 - RPM controls spindle enable signal (2)
 ```
 Bit 1 in this setting replaces setting `$7`, bit 0 controls the PWM output.  
-__NOTE:__ M3 and M4 with S0 will now set the spindle enable output if `$9` is `1`. Ref issue #156.  
+__NOTE:__ M3 and M4 with S0 will now set the spindle enable output if `$9` is `1`. Ref [issue #156](https://github.com/grblHAL/core/issues/156).  
 __NOTE:__ the change is not backwards compatible with current 3rd party drivers, these has to be updated to match changes in the core.
 
 

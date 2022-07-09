@@ -26,6 +26,7 @@
 
 #include <math.h>
 
+#include "hal.h"
 #include "settings.h"
 #include "planner.h"
 #include "kinematics.h"
@@ -34,6 +35,8 @@
 // NOTE: If the A and B motor axis bindings are changed, this effects the CoreXY equations.
 #define A_MOTOR X_AXIS // Must be X_AXIS
 #define B_MOTOR Y_AXIS // Must be Y_AXIS
+
+static on_report_options_ptr on_report_options;
 
 // Returns x or y-axis "steps" based on CoreXY motor steps.
 inline static int32_t corexy_convert_to_a_motor_steps (int32_t *steps)
@@ -195,6 +198,14 @@ static float homing_cycle_get_feedrate (float feedrate, axes_signals_t cycle)
     return feedrate * sqrtf(2.0f);
 }
 
+static void report_options (bool newopt)
+{
+    on_report_options(newopt);
+
+    if(!newopt)
+        hal.stream.write("[KINEMATICS:CoreXY v2.00]" ASCII_EOL);
+}
+
 // Initialize API pointers for CoreXY kinematics
 void corexy_init (void)
 {
@@ -206,6 +217,9 @@ void corexy_init (void)
     kinematics.segment_line = kinematics_segment_line;
     kinematics.homing_cycle_validate = homing_cycle_validate;
     kinematics.homing_cycle_get_feedrate = homing_cycle_get_feedrate;
+
+    on_report_options = grbl.on_report_options;
+    grbl.on_report_options = report_options;
 }
 
 #endif

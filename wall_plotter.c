@@ -31,10 +31,10 @@
 #include <math.h>
 #include <string.h>
 
+#include "hal.h"
 #include "settings.h"
 #include "planner.h"
 #include "kinematics.h"
-#include "hal.h"
 
 #define A_MOTOR X_AXIS // Must be X_AXIS
 #define B_MOTOR Y_AXIS // Must be Y_AXIS
@@ -58,6 +58,7 @@ typedef struct {
 
 static bool jog_cancel = false;
 static machine_t machine = {0};
+static on_report_options_ptr on_report_options;
 
 // Returns machine position in mm converted from system position steps.
 // TODO: perhaps change to double precision here - float calculation results in errors of a couple of micrometers.
@@ -284,6 +285,14 @@ static void cancel_jog (sys_state_t state)
     jog_cancel = true;
 }
 
+static void report_options (bool newopt)
+{
+    on_report_options(newopt);
+
+    if(!newopt)
+        hal.stream.write("[KINEMATICS:WallPlotter v2.00]" ASCII_EOL);
+}
+
 // Initialize API pointers for Wall Plotter kinematics
 void wall_plotter_init (void)
 {
@@ -308,6 +317,9 @@ void wall_plotter_init (void)
     kinematics.segment_line = wp_segment_line;
 
     grbl.on_jog_cancel = cancel_jog;
+
+    on_report_options = grbl.on_report_options;
+    grbl.on_report_options = report_options;
 }
 
 #endif

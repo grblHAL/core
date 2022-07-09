@@ -359,6 +359,7 @@ static status_code_t set_probe_allow_feed_override (setting_id_t id, uint_fast16
 static status_code_t set_tool_change_mode (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_tool_change_probing_distance (setting_id_t id, float value);
 static status_code_t set_ganged_dir_invert (setting_id_t id, uint_fast16_t int_value);
+static status_code_t set_stepper_deenergize_mask (setting_id_t id, uint_fast16_t int_value);
 #ifndef NO_SAFETY_DOOR_SUPPORT
 static status_code_t set_parking_enable (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_restore_overrides (setting_id_t id, uint_fast16_t int_value);
@@ -449,7 +450,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_PWMOffValue, Group_Spindle, "Spindle PWM off value", "percent", Format_Decimal, "##0.0", NULL, "100", Setting_IsExtended, &settings.spindle.pwm_off_value, NULL, is_setting_available },
      { Setting_PWMMinValue, Group_Spindle, "Spindle PWM min value", "percent", Format_Decimal, "##0.0", NULL, "100", Setting_IsExtended, &settings.spindle.pwm_min_value, NULL, is_setting_available },
      { Setting_PWMMaxValue, Group_Spindle, "Spindle PWM max value", "percent", Format_Decimal, "##0.0", NULL, "100", Setting_IsExtended, &settings.spindle.pwm_max_value, NULL, is_setting_available },
-     { Setting_StepperDeenergizeMask, Group_Stepper, "Steppers deenergize", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.steppers.deenergize.mask, NULL, NULL },
+     { Setting_StepperDeenergizeMask, Group_Stepper, "Steppers deenergize", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_stepper_deenergize_mask, get_int, NULL },
      { Setting_SpindlePPR, Group_Spindle, "Spindle pulses per revolution (PPR)", NULL, Format_Int16, "###0", NULL, NULL, Setting_IsExtended, &settings.spindle.ppr, NULL, is_setting_available },
      { Setting_EnableLegacyRTCommands, Group_General, "Enable legacy RT commands", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_enable_legacy_rt_commands, get_int, NULL },
      { Setting_JogSoftLimited, Group_Jogging, "Limit jog commands", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_jog_soft_limited, get_int, NULL },
@@ -798,6 +799,15 @@ static status_code_t set_ganged_dir_invert (setting_id_t id, uint_fast16_t int_v
         return Status_SettingDisabled;
 
     settings.steppers.ganged_dir_invert.mask = int_value & hal.stepper.get_ganged(false).mask;
+
+    return Status_OK;
+}
+
+static status_code_t set_stepper_deenergize_mask (setting_id_t id, uint_fast16_t int_value)
+{
+    settings.steppers.deenergize.mask = int_value;
+
+    hal.stepper.enable(settings.steppers.deenergize);
 
     return Status_OK;
 }
@@ -1342,6 +1352,10 @@ static uint32_t get_int (setting_id_t id)
                         (settings.homing.flags.keep_on_reset ? bit(7) : 0);
             break;
 
+        case Setting_StepperDeenergizeMask:
+            value = settings.steppers.deenergize.mask;
+            break;
+
         case Setting_EnableLegacyRTCommands:
             value = settings.flags.legacy_rt_commands;
             break;
@@ -1550,7 +1564,7 @@ static bool is_setting_available (const setting_detail_t *setting)
 #endif
 
         case Setting_SpindleAtSpeedTolerance:
-            available = hal.spindle.cap.at_speed;
+            available = hal.spindle.cap.at_speed || hal.driver_cap.spindle_sync;
             break;
 
         case Setting_SpindleOnDelay:
@@ -1733,7 +1747,8 @@ void settings_restore (settings_restore_t restore)
         settings.spindle.invert.ccw &= spindle_get_caps().direction;
         settings.spindle.invert.pwm &= spindle_get_caps().pwm_invert;
 #ifdef ENABLE_BACKLASH_COMPENSATION
-        mc_backlash_init((axes_signals_t){AXES_BITMASK});
+        if(sys.driver_started)
+            mc_backlash_init((axes_signals_t){AXES_BITMASK});
 #endif
         settings_write_global();
     }
@@ -2321,9 +2336,7 @@ void settings_init (void)
             settings_read_tool_data(idx, &tool_table[idx]);
 #endif
         report_init();
-#ifdef ENABLE_BACKLASH_COMPENSATION
-        mc_backlash_init((axes_signals_t){AXES_BITMASK});
-#endif
+
         hal.settings_changed(&settings);
 
         if(hal.probe.configure) // Initialize probe invert mask.

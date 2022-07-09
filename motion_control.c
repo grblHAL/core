@@ -58,7 +58,7 @@
 
 #ifdef ENABLE_BACKLASH_COMPENSATION
 
-static float target_prev[N_AXIS];
+static float target_prev[N_AXIS] = {0};
 static axes_signals_t dir_negative = {0}, backlash_enabled = {0};
 
 void mc_backlash_init (axes_signals_t axes)
