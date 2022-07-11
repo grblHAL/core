@@ -197,6 +197,8 @@ int grbl_enter (void)
         protocol_enqueue_rt_command(report_driver_error);
     }
 
+    hal.stepper.enable(settings.steppers.deenergize);
+
     if(hal.spindle.set_state)
         hal.spindle.set_state((spindle_state_t){0}, 0.0f);
 

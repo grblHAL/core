@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+20220710:
+
+Core:
+
+* Moved initial stepper enable call to the core (from drivers).
+
+Drivers:
+
+* Most: updated for move of stepper enable initial stepper enable call to the core.
+
+* STM32F4xx: Fix for missing code guard, updated my_machine.h options.
+
+* STM32F7xx: Fix for incorrect `$pins` report for SPI pins.
+
+---
+
 20220709:
 
 Core:
