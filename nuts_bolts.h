@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
+  Copyright (c) 2017-2022 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -130,6 +130,14 @@ typedef union {
                 v :1;
     };
 } axes_signals_t;
+
+typedef union {
+    float values[2];
+    struct {
+        float x;
+        float y;
+    };
+} point_2d;
 
 #pragma pack(push, 1)
 

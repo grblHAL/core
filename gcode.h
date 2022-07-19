@@ -65,6 +65,7 @@ typedef enum {
     MotionMode_CwArc = 2,                   //!< 2 - G2
     MotionMode_CcwArc = 3,                  //!< 3 - G3
     MotionMode_CubicSpline = 5,             //!< 5 - G5
+    MotionMode_QuadraticSpline = 51,        //!< 51 - G5.1
     MotionMode_SpindleSynchronized = 33,    //!< 33 - G33
     MotionMode_DrillChipBreak = 73,         //!< 73 - G73
     MotionMode_Threading = 76,              //!< 76 - G76
@@ -532,6 +533,7 @@ typedef struct {
     gc_values_t values;                 //!< Parameter values for block.
     parameter_words_t words;            //!< Bitfield for tracking found parameter values.
     output_command_t output_command;    //!< Details about M62-M68 output command to execute if present in block.
+    uint32_t arc_turns;                  //
 } parser_block_t;
 
 // Initialize the parser

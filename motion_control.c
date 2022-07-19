@@ -26,6 +26,7 @@
 */
 
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "hal.h"
@@ -223,8 +224,7 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
 // The arc is approximated by generating a huge number of tiny, linear segments. The chordal tolerance
 // of each segment is configured in settings.arc_tolerance, which is defined to be the maximum normal
 // distance from segment to the circle when the end points both lie on the circle.
-void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *offset, float radius,
-              plane_t plane, bool is_clockwise_arc)
+void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *offset, float radius, plane_t plane, int32_t turns)
 {
     float center_axis0 = position[plane.axis_0] + offset[plane.axis_0];
     float center_axis1 = position[plane.axis_1] + offset[plane.axis_1];
@@ -235,12 +235,49 @@ void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *o
     // CCW angle between position and target from circle center. Only one atan2() trig computation required.
     float angular_travel = atan2f(r_axis0 * rt_axis1 - r_axis1 * rt_axis0, r_axis0 * rt_axis0 + r_axis1 * rt_axis1);
 
-    if (is_clockwise_arc) { // Correct atan2 output per direction
+    if (turns > 0) { // Correct atan2 output per direction
         if (angular_travel >= -ARC_ANGULAR_TRAVEL_EPSILON)
             angular_travel -= 2.0f * M_PI;
-    } else {
-        if (angular_travel <= ARC_ANGULAR_TRAVEL_EPSILON)
-            angular_travel += 2.0f * M_PI;
+    } else if (angular_travel <= ARC_ANGULAR_TRAVEL_EPSILON)
+        angular_travel += 2.0f * M_PI;
+
+    if(labs(turns) > 1) {
+
+        uint32_t n_turns = labs(turns) - 1;
+        float arc_travel = 2.0f * M_PI * n_turns + angular_travel;
+        coord_data_t arc_target;
+#if N_AXIS > 3
+        uint_fast8_t idx = N_AXIS;
+        float linear_per_turn[N_AXIS];
+        do {
+            idx--;
+            if(!(idx == plane.axis_0 || idx == plane.axis_1))
+                linear_per_turn[idx] = (target[idx] - position[idx]) / arc_travel * 2.0f * M_PI;;
+        } while(idx);
+#else
+        float linear_per_turn = (target[plane.axis_linear] - position[plane.axis_linear]) / arc_travel * 2.0f * M_PI;
+#endif
+
+        memcpy(&arc_target, target, sizeof(coord_data_t));
+
+        arc_target.values[plane.axis_0] = position[plane.axis_0];
+        arc_target.values[plane.axis_1] = position[plane.axis_1];
+        arc_target.values[plane.axis_linear] = position[plane.axis_linear];
+
+        while(n_turns--) {
+#if N_AXIS > 3
+            idx = N_AXIS;
+            do {
+                idx--;
+                if(!(idx == plane.axis_0 || idx == plane.axis_1))
+                    arc_target.values[idx] += linear_per_turn[idx];
+            } while(idx);
+#else
+            arc_target.values[plane.axis_linear] += linear_per_turn;
+#endif
+            mc_arc(arc_target.values, pl_data, position, offset, radius, plane, turns > 0 ? 1 : -1);
+            memcpy(position, arc_target.values, sizeof(coord_data_t));
+        }
     }
 
     // NOTE: Segment end points are on the arc, which can lead to the arc diameter being smaller by up to
@@ -345,6 +382,7 @@ void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *o
                 return;
         }
     }
+
     // Ensure last segment arrives at target location.
     mc_line(target, pl_data);
 }
@@ -353,7 +391,7 @@ void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *o
 // By Giovanni Mascellani - https://github.com/giomasce/Marlin
 
 // Compute the linear interpolation between two real numbers.
-static inline float interp(const float a, const float b, const float t)
+static inline float interp (const float a, const float b, const float t)
 {
     return (1.0f - t) * a + t * b;
 }
@@ -364,7 +402,7 @@ static inline float interp(const float a, const float b, const float t)
  * easy to code and has good numerical stability (very important,
  * since Arudino works with limited precision real numbers).
  */
-static inline float eval_bezier(const float a, const float b, const float c, const float d, const float t)
+static inline float eval_bezier (const float a, const float b, const float c, const float d, const float t)
 {
     const float iab = interp(a, b, t),
                 ibc = interp(b, c, t),
@@ -379,7 +417,7 @@ static inline float eval_bezier(const float a, const float b, const float c, con
  * We approximate Euclidean distance with the sum of the coordinates
  * offset (so-called "norm 1"), which is quicker to compute.
  */
-static inline float dist1(const float x1, const float y1, const float x2, const float y2)
+static inline float dist1 (const float x1, const float y1, const float x2, const float y2)
 {
     return fabsf(x1 - x2) + fabsf(y1 - y2);
 }
@@ -424,12 +462,8 @@ static inline float dist1(const float x1, const float y1, const float x2, const 
  * power available on Arduino, I think it is not wise to implement it.
  */
 
-void mc_cubic_b_spline (float *target, plan_line_data_t *pl_data, float *position, float *offset1, float *offset2)
+void mc_cubic_b_spline (float *target, plan_line_data_t *pl_data, float *position, float *first, float *second)
 {
-    // Absolute first and second control points are recovered.
-
-    float first[2] = { position[X_AXIS] + offset1[X_AXIS], position[Y_AXIS] + offset1[Y_AXIS] };
-    float second[2] = { target[X_AXIS] + offset2[X_AXIS], target[Y_AXIS] + offset2[Y_AXIS] };
     float bez_target[N_AXIS];
 
     memcpy(bez_target, position, sizeof(float) * N_AXIS);

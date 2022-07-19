@@ -148,7 +148,7 @@ inline static float hypot_f (float x, float y)
 
 inline static bool motion_is_lasercut (motion_mode_t motion)
 {
-    return motion == MotionMode_Linear || motion == MotionMode_CwArc || motion == MotionMode_CcwArc || motion == MotionMode_CubicSpline;
+    return motion == MotionMode_Linear || motion == MotionMode_CwArc || motion == MotionMode_CcwArc || motion == MotionMode_CubicSpline || motion == MotionMode_QuadraticSpline;
 }
 
 parser_state_t *gc_get_state (void)
@@ -811,7 +811,14 @@ status_code_t gc_execute_block(char *block)
 
                     case 80:
                         word_bit.modal_group.G1 = On;
-                        gc_block.modal.motion = (motion_mode_t)int_value;
+                        if(int_value == 5 && mantissa != 0) {
+                            if(mantissa == 10) {
+                                gc_block.modal.motion = MotionMode_QuadraticSpline;
+                                mantissa = 0; // Set to zero to indicate valid non-integer G command.
+                            } else
+                                FAIL(Status_GcodeUnsupportedCommand);
+                        } else
+                            gc_block.modal.motion = (motion_mode_t)int_value;
                         gc_block.modal.canned_cycle_active = false;
                         break;
 
@@ -2184,7 +2191,7 @@ status_code_t gc_execute_block(char *block)
                     // [G2/3 Radius-Mode Errors]: No axis words in selected plane. Target point is same as current.
                     // [G2/3 Offset-Mode Errors]: No axis words and/or offsets in selected plane. The radius to the current
                     //   point and the radius to the target point differs more than 0.002mm (EMC def. 0.5mm OR 0.005mm and 0.1% radius).
-                    // [G2/3 Full-Circle-Mode Errors]: NOT SUPPORTED. Axis words exist. No offsets programmed. P must be an integer.
+                    // [G2/3 Full-Circle-Mode Errors]: Axis words exist. No offsets programmed. P must be an integer.
                     // NOTE: Both radius and offsets are required for arc tracing and are pre-computed with the error-checking.
 
                     if (!axis_words.mask)
@@ -2192,6 +2199,16 @@ status_code_t gc_execute_block(char *block)
 
                     if (!(axis_words.mask & (bit(plane.axis_0)|bit(plane.axis_1))))
                         FAIL(Status_GcodeNoAxisWordsInPlane); // [No axis words in plane]
+
+                    if (gc_block.words.p) { // Number of turns
+                        if(!isintf(gc_block.values.p))
+                            FAIL(Status_GcodeCommandValueNotInteger); // [P word is not an integer]
+                        gc_block.arc_turns = (uint32_t)truncf(gc_block.values.p);
+                        if(gc_block.arc_turns == 0)
+                            FAIL(Status_GcodeValueOutOfRange); // [P word is 0]
+                        gc_block.words.p = Off;
+                    } else
+                        gc_block.arc_turns = 1;
 
                     // Calculate the change in position along each selected axis
                     float x, y;
@@ -2395,6 +2412,37 @@ status_code_t gc_execute_block(char *block)
                     gc_state.modal.spline_pq[X_AXIS] = gc_block.values.p;
                     gc_state.modal.spline_pq[Y_AXIS] = gc_block.values.q;
                     gc_block.words.p = gc_block.words.q = gc_block.words.i = gc_block.words.j = Off;
+                    break;
+
+                case MotionMode_QuadraticSpline:
+                    // [G5.1 Errors]: Feed rate undefined.
+                    // [G5.1 Plane Errors]: The active plane is not G17.
+                    // [G5.1 Offset Errors]: Just one of I or J are specified.
+                    // [G5.1 Offset Errors]: I or J are unspecified in the first of a series of G5 commands.
+                    // [G5.1 Axisword Errors]: An axis other than X or Y is specified.
+                    if(gc_block.modal.plane_select != PlaneSelect_XY)
+                        FAIL(Status_GcodeIllegalPlane); // [The active plane is not G17]
+
+                    if (axis_words.mask & ~(bit(X_AXIS)|bit(Y_AXIS)))
+                        FAIL(Status_GcodeAxisCommandConflict); // [An axis other than X or Y is specified]
+
+                    if((gc_block.words.mask & ij_words.mask) != ij_words.mask)
+                        FAIL(Status_GcodeValueWordMissing); // [I or J are unspecified]
+
+                    if(gc_block.values.ijk[I_VALUE] == 0.0f && gc_block.values.ijk[I_VALUE] == 0.0f)
+                        FAIL(Status_GcodeValueOutOfRange); // [I or J are zero]
+
+                    // Convert I and J values to proper units.
+                    if (gc_block.modal.units_imperial) {
+                        gc_block.values.ijk[I_VALUE] *= MM_PER_INCH;
+                        gc_block.values.ijk[J_VALUE] *= MM_PER_INCH;
+                    }
+                    // Scale values if scaling active
+                    if(gc_state.modal.scaling_active) {
+                        gc_block.values.ijk[I_VALUE] *= scale_factor.ijk[X_AXIS];
+                        gc_block.values.ijk[J_VALUE] *= scale_factor.ijk[Y_AXIS];
+                    }
+                    gc_block.words.i = gc_block.words.j = Off;
                     break;
 
                 case MotionMode_ProbeTowardNoError:
@@ -2861,11 +2909,35 @@ status_code_t gc_execute_block(char *block)
             case MotionMode_CcwArc:
                 // fail if spindle synchronized motion?
                 mc_arc(gc_block.values.xyz, &plan_data, gc_state.position, gc_block.values.ijk, gc_block.values.r,
-                        plane, gc_parser_flags.arc_is_clockwise);
+                        plane, gc_parser_flags.arc_is_clockwise ? gc_block.arc_turns : - gc_block.arc_turns);
                 break;
 
             case MotionMode_CubicSpline:
-                mc_cubic_b_spline(gc_block.values.xyz, &plan_data, gc_state.position, gc_block.values.ijk, gc_state.modal.spline_pq);
+                {
+                    point_2d cp1 = {
+                        .x = gc_state.position[X_AXIS] + gc_block.values.ijk[X_AXIS],
+                        .y = gc_state.position[Y_AXIS] + gc_block.values.ijk[Y_AXIS]
+                    };
+                    point_2d cp2 = {
+                        .x = gc_block.values.xyz[X_AXIS] + gc_state.modal.spline_pq[X_AXIS],
+                        .y = gc_block.values.xyz[Y_AXIS] + gc_state.modal.spline_pq[Y_AXIS]
+                    };
+                    mc_cubic_b_spline(gc_block.values.xyz, &plan_data, gc_state.position, cp1.values, cp2.values);
+                }
+                break;
+
+            case MotionMode_QuadraticSpline:
+                {
+                    point_2d cp1 = {
+                        .x = gc_state.position[X_AXIS] + (gc_block.values.ijk[X_AXIS] * 2.0f) / 3.0f,
+                        .y = gc_state.position[Y_AXIS] + (gc_block.values.ijk[Y_AXIS] * 2.0f) / 3.0f
+                    };
+                    point_2d cp2 = {
+                        .x = gc_block.values.xyz[X_AXIS] + ((gc_state.position[X_AXIS] + gc_block.values.ijk[X_AXIS] - gc_block.values.xyz[X_AXIS]) * 2.0f) / 3.0f,
+                        .y = gc_block.values.xyz[Y_AXIS] + ((gc_state.position[Y_AXIS] + gc_block.values.ijk[Y_AXIS] - gc_block.values.xyz[Y_AXIS]) * 2.0f) / 3.0f
+                    };
+                    mc_cubic_b_spline(gc_block.values.xyz, &plan_data, gc_state.position, cp1.values, cp2.values);
+                }
                 break;
 
             case MotionMode_SpindleSynchronized:

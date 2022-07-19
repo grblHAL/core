@@ -43,7 +43,7 @@ bool mc_line(float *target, plan_line_data_t *pl_data);
 // the direction of helical travel, radius == circle radius, is_clockwise_arc boolean. Used
 // for vector transformation direction.
 void mc_arc(float *target, plan_line_data_t *pl_data, float *position, float *offset, float radius,
-  plane_t plane, bool is_clockwise_arc);
+  plane_t plane, int32_t turns);
 
 // Execute canned cycle (drill)
 void mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_data, float *position, plane_t plane, uint32_t repeats, gc_canned_t *canned);

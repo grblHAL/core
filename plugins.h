@@ -89,6 +89,15 @@ typedef enum {
 } grbl_wifi_mode_t;
 
 typedef struct {
+    bool is_ethernet;
+    bool link_up;
+    uint16_t mbps;
+    char mac[18];
+    grbl_wifi_mode_t wifi_mode;
+    network_settings_t status;
+} network_info_t;
+
+typedef struct {
     ssid_t ssid;
     password_t password;
     char country[4];

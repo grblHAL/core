@@ -1,5 +1,25 @@
 ## grblHAL changelog
 
+20220718:
+
+Core:
+
+* Added support for `G5.1` \(quadratic spline\) and multi turn arc option for `G2` and `G3` via P-word.
+* Some additions to data structures used by plugins.
+
+Plugins:
+
+* Networking: added optional function to API for querying current status of connection and running services. Required for the WebUI plugin.  
+Added support for client side ping message used by WebUI v3.
+* WebUI: added initial support for [WebUI v3](https://github.com/luc-github/ESP3D-WEBUI/discussions/94#discussioncomment-2861616) messaging.
+* SDCard: added function call for querying current job status.
+
+Drivers:
+
+* iMXRT1062, STM32F7xx, ESP32, TM4C1294 and MSP432E401Y: Implemented optional API function for querying current status of connection and running services.
+
+---
+
 20220710:
 
 Core:
@@ -8,7 +28,7 @@ Core:
 
 Drivers:
 
-* Most: updated for move of stepper enable initial stepper enable call to the core.
+* Most: Updated for move of stepper enable initial stepper enable call to the core.
 
 * STM32F4xx: Fix for missing code guard, updated my_machine.h options.
 
