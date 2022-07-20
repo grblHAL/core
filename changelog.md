@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+20220720:
+
+Plugins:
+
+* WebUI: fixed ESP701 response.
+
+Drivers:
+
+* SAM3X8E: added tentative support for MPG mode.
+
+---
+
 20220718:
 
 Core:
