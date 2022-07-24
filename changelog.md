@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+20220722:
+
+Core:
+
+* Added settings flag for reboot required \(currently unused\) and API function for getting setting group details.  
+
+Plugins:
+
+* WebUI: refactored ESP command handling, added some commands. Added [preliminary build](https://github.com/grblHAL/Plugin_WebUI) of WebUI v3 for testing. Still WIP.
+
+Drivers:
+
+* ESP32: Added board map for MKS Tinybee v1, improved I2S pin handling and secondary serial port options.
+
+* STM32F7xx: Added handling of Trinamic driver pins \(currently unused - no Trinamic support yet\).
+
+---
+
 20220720:
 
 Plugins:

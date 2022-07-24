@@ -708,6 +708,7 @@ typedef struct setting_detail {
     void *value;
     void *get_value;
     bool (*is_available)(const struct setting_detail *setting);
+    bool reboot_required;
 } setting_detail_t;
 
 typedef struct {
@@ -801,6 +802,7 @@ const setting_detail_t *setting_get_details (setting_id_t id, setting_details_t 
 const char *setting_get_description (setting_id_t id);
 setting_datatype_t setting_datatype_to_external (setting_datatype_t datatype);
 setting_group_t settings_normalize_group (setting_group_t group);
+const setting_group_detail_t *setting_get_group_details (setting_group_t id);
 char *setting_get_value (const setting_detail_t *setting, uint_fast16_t offset);
 setting_id_t settings_get_axis_base (setting_id_t id, uint_fast8_t *idx);
 bool setting_is_list (const setting_detail_t *setting);

@@ -1999,6 +1999,22 @@ const char *setting_get_description (setting_id_t id)
     return description;
 }
 
+const setting_group_detail_t *setting_get_group_details (setting_group_t id)
+{
+    uint_fast16_t idx;
+    setting_details_t *details = settings_get_details();
+    setting_group_detail_t *detail = NULL;
+
+    do {
+        for(idx = 0; idx < details->n_groups; idx++) {
+            if(details->groups[idx].id == id)
+                detail = &details->groups[idx];
+        }
+    } while(detail == NULL && (details = details->next));
+
+    return detail;
+}
+
 static status_code_t validate_value (const setting_detail_t *setting, float value)
 {
     float val;

@@ -1961,8 +1961,6 @@ status_code_t report_setting_group_details (bool by_id, char *prefix)
 
         uint_fast16_t idx;
 
-        details = settings_get_details();
-
         do {
             for(idx = 0; idx < details->n_groups; idx++)
                 *group++ = (setting_group_detail_t *)&details->groups[idx];
