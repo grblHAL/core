@@ -2003,7 +2003,7 @@ const setting_group_detail_t *setting_get_group_details (setting_group_t id)
 {
     uint_fast16_t idx;
     setting_details_t *details = settings_get_details();
-    setting_group_detail_t *detail = NULL;
+    const setting_group_detail_t *detail = NULL;
 
     do {
         for(idx = 0; idx < details->n_groups; idx++) {

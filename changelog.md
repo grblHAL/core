@@ -1,5 +1,27 @@
 ## grblHAL changelog
 
+20220724:
+
+Core:
+
+* Added authentication related error codes and messages. Added reboot required per settings to various reports.
+
+Plugins:
+
+* Networking: Various fixes/enhancements for WebUI 3 support.
+
+* WebUI: Added support for forms based authentication++ Still WIP.
+
+Drivers:
+
+* ESP32: Some minor bug fixes, added TMC2209 option to CMakeLists.txt \(untested\).
+
+* STM32F4xx: Fix for [issue #83](https://github.com/grblHAL/STM32F4xx/issues/83).
+
+* STM32F7xx: Fixed regression introduced in previous build.
+
+---
+
 20220722:
 
 Core:
@@ -13,6 +35,8 @@ Plugins:
 Drivers:
 
 * ESP32: Added board map for MKS Tinybee v1, improved I2S pin handling and secondary serial port options.
+
+* STM32F4xx: Fix for [issue #82](https://github.com/grblHAL/STM32F4xx/issues/82).
 
 * STM32F7xx: Added handling of Trinamic driver pins \(currently unused - no Trinamic support yet\).
 

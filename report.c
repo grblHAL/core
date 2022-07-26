@@ -975,6 +975,9 @@ void report_build_info (char *line, bool extended)
         if(hal.driver_cap.laser_ppi_mode)
             strcat(buf, "PPI,");
 
+        if(hal.reboot)
+            strcat(buf, "REBOOT,");
+
     #if NGC_EXPRESSIONS_ENABLE
         strcat(buf, "EXPR,");
     #endif
@@ -1492,7 +1495,11 @@ static void report_settings_detail (settings_format_t format, const setting_deta
                     hal.stream.write(setting->max_value);
                 }
             }
-#ifndef NO_SETTINGS_DESCRIPTIONS
+
+            if(setting->reboot_required)
+                hal.stream.write(", reboot required");
+
+            #ifndef NO_SETTINGS_DESCRIPTIONS
             // Add description if driver is capable of outputting it...
             if(hal.stream.write_n) {
                 const char *description = setting_get_description(setting->id);
@@ -1537,6 +1544,8 @@ static void report_settings_detail (settings_format_t format, const setting_deta
             hal.stream.write(vbar);
             if(setting->max_value)
                 hal.stream.write(setting->max_value);
+            hal.stream.write(vbar);
+            hal.stream.write(uitoa(setting->reboot_required));
             hal.stream.write("]");
             break;
 
@@ -1664,6 +1673,10 @@ static void report_settings_detail (settings_format_t format, const setting_deta
 
                 if(setting->max_value)
                     hal.stream.write(setting->max_value);
+
+                hal.stream.write("\t");
+
+                hal.stream.write(uitoa(setting->reboot_required));
             }
             break;
     }

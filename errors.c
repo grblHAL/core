@@ -88,9 +88,11 @@ PROGMEM static const status_detail_t status_detail[] = {
     { Status_ExpressionArgumentOutOfRange, "Too large or too small argrument provided." },
     { Status_ExpressionInvalidArgument, "Argument is not valid for the operation" },
     { Status_ExpressionSyntaxError, "Expression is not valid." },
-    { Status_ExpressionInvalidResult, "Either NAN (not a number) or infinity was returned from expression." }
+    { Status_ExpressionInvalidResult, "Either NAN (not a number) or infinity was returned from expression." },
 #endif
- };
+    { Status_AuthenticationRequired, "Authentication required." },
+    { Status_AccessDenied, "Access denied." },
+};
 
 static error_details_t details = {
     .errors = status_detail,

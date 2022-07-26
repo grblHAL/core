@@ -102,6 +102,9 @@ typedef enum {
     Status_ExpressionSyntaxError = 75,
     Status_ExpressionInvalidResult = 76,
 
+    Status_AuthenticationRequired = 77,
+    Status_AccessDenied = 78,
+
     Status_Unhandled, // For internal use only
     Status_StatusMax = Status_Unhandled
 } status_code_t;
