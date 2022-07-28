@@ -1,10 +1,22 @@
 ## grblHAL changelog
 
+20220728:
+
+Plugins:
+
+* WebUI: "Hardened" code, a bit of cleanup. Still WIP.
+
+Drivers:
+
+* ESP32: Attempted fix for TMC2209 UART comms [ESP32 issue #33](https://github.com/grblHAL/ESP32/issues/33). Still not 100% reliable.
+
+---
+
 20220724:
 
 Core:
 
-* Added authentication related error codes and messages. Added reboot required per settings to various reports.
+* Added authentication related error codes and messages. Added reboot required per setting to various reports.
 
 Plugins:
 
