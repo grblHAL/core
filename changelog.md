@@ -8,7 +8,7 @@ Plugins:
 
 Drivers:
 
-* ESP32: Attempted fix for TMC2209 UART comms [ESP32 issue #33](https://github.com/grblHAL/ESP32/issues/33). Still not 100% reliable.
+* ESP32: Attempted fix for TMC2209 UART comms, [ESP32 issue #33](https://github.com/grblHAL/ESP32/issues/33). Still not 100% reliable.
 
 ---
 
