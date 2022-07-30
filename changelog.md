@@ -1,5 +1,24 @@
 ## grblHAL changelog
 
+20220729:
+
+Core:
+
+* Updated for issue #169 - extend range of axis auto square offsets.
+
+Plugins:
+
+* WebUI: moved SD card handling to separate file for sharing with the ESP32 driver. Still WIP.
+
+Drivers:
+
+* ESP32: Switched to plugin code for WebUI login and SD card handling. Still WIP.  
+__NOTE:__ Settings for WebUI passwords has been moved to the WebUI plugin, this will trigger a reset of the network settings.
+
+* SAM3X8E: Fix for issue [#11](https://github.com/grblHAL/SAM3X8E/issues/11).
+
+---
+
 20220728:
 
 Plugins:
