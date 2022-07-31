@@ -934,9 +934,14 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
 
     sys.report.homed = On;
 
-    return settings.limits.flags.hard_enabled && settings.limits.flags.check_at_init && limit_signals_merge(hal.limits.get_state()).value
-            ? Status_LimitsEngaged
-            : Status_OK;
+    status_code_t status = settings.limits.flags.hard_enabled && settings.limits.flags.check_at_init && limit_signals_merge(hal.limits.get_state()).value
+                            ? Status_LimitsEngaged
+                            : Status_OK;
+
+    if(status == Status_OK && grbl.on_homing_completed)
+        grbl.on_homing_completed();
+
+    return status;
 }
 
 // Perform tool length probe cycle. Requires probe switch.

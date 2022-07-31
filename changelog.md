@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+20220731:
+
+Core:
+
+* Added core event `on_homing_completed`, some sanity checks on MPG stream registration.
+
+Drivers:
+
+* ESP32: Added IP address to "WIFI STA ACTIVE" message published on startup when IP address has been assigned.
+
+* STM32Fxx: Fixed _Release_ build settings, added _.bin_ output.
+
+---
+
 20220729:
 
 Core:
@@ -13,7 +27,7 @@ Plugins:
 Drivers:
 
 * ESP32: Switched to plugin code for WebUI login and SD card handling. Still WIP.  
-__NOTE:__ Settings for WebUI passwords has been moved to the WebUI plugin, this will trigger a reset of the network settings.
+__NOTE:__ Settings for WebUI passwords has been moved to the WebUI plugin, this will trigger a reset of the network settings!
 
 * SAM3X8E: Fix for issue [#11](https://github.com/grblHAL/SAM3X8E/issues/11).
 

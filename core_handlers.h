@@ -80,6 +80,7 @@ typedef void (*on_unknown_feedback_message_ptr)(stream_write_ptr stream_write);
 typedef void (*on_stream_changed_ptr)(stream_type_t type);
 typedef bool (*on_laser_ppi_enable_ptr)(uint_fast16_t ppi, uint_fast16_t pulse_length);
 typedef void (*on_homing_rate_set_ptr)(axes_signals_t axes, float rate, bool pulloff);
+typedef void (*on_homing_completed_ptr)(void);
 typedef bool (*on_probe_fixture_ptr)(tool_data_t *tool, bool at_g59_3, bool on);
 typedef bool (*on_probe_start_ptr)(axes_signals_t axes, float *target, plan_line_data_t *pl_data);
 typedef void (*on_probe_completed_ptr)(void);
@@ -114,6 +115,7 @@ typedef struct {
     on_user_command_ptr on_user_command;
     on_stream_changed_ptr on_stream_changed;
     on_homing_rate_set_ptr on_homing_rate_set;
+    on_homing_completed_ptr on_homing_completed;
     on_probe_fixture_ptr on_probe_fixture;
     on_probe_start_ptr on_probe_start;
     on_probe_completed_ptr on_probe_completed;

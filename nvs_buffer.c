@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
+  Copyright (c) 2017-2022 Terje Io
   Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -360,8 +360,9 @@ void nvs_buffer_sync_physical (void)
                                        settings_dirty.build_info;
 
     } else if(physical_nvs.memcpy_to_flash) {
-        physical_nvs.memcpy_to_flash(nvsbuffer);
-        settings_dirty.is_dirty = false;
+        if(!physical_nvs.memcpy_to_flash(nvsbuffer))
+            report_message("Settings write failed!", Message_Warning);
+        memset(&settings_dirty, 0, sizeof(settings_dirty_t));
     }
 }
 
