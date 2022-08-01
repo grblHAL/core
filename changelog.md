@@ -4,13 +4,34 @@
 
 Core:
 
+* Added MCU frequency variable to the HAL struct - to be set by the various drivers later on. 
+
+Plugins:
+
+* Networking: fixed some include files dependencies that caused issues in some configurations.
+
+* WebUI: added missing guards for SD card enabled and new compile time option. Added missing status message to file listings.
+
+Drivers:
+
+* ESP32: .
+
+* STM32Fxx: Fixed _Release_ build settings, added _.bin_ output.
+
+---
+
+
+20220731:
+
+Core:
+
 * Added core event `on_homing_completed`, some sanity checks on MPG stream registration.
 
 Drivers:
 
 * ESP32: Added IP address to "WIFI STA ACTIVE" message published on startup when IP address has been assigned.
 
-* STM32Fxx: Fixed _Release_ build settings, added _.bin_ output.
+* STM32F7xx: Fixed _Release_ build settings, added _.bin_ output.
 
 ---
 

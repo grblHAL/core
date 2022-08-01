@@ -486,6 +486,7 @@ typedef struct {
     char *driver_options;           //!< Pointer to optional comma separated string with driver options.
     char *board;                    //!< Pointer to optional board name string.
     uint32_t f_step_timer;          //!< Frequency of main stepper timer in Hz.
+    uint32_t f_mcu;                 //!< Frequency of MCU in MHz.
     uint32_t rx_buffer_size;        //!< Input stream buffer size in bytes.
     uint32_t max_step_rate;         //!< Currently unused.
     uint8_t driver_axis_settings;   //!< Currently unused.
