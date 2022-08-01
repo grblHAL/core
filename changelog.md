@@ -1,6 +1,6 @@
 ## grblHAL changelog
 
-20220731:
+20220801:
 
 Core:
 
@@ -8,15 +8,15 @@ Core:
 
 Plugins:
 
-* Networking: fixed some include files dependencies that caused issues in some configurations.
+* Networking: fixed some include files dependencies that caused issues in some configurations.  
+
 
 * WebUI: added missing guards for SD card enabled and new compile time option. Added missing status message to file listings.
 
 Drivers:
 
-* ESP32: .
-
-* STM32Fxx: Fixed _Release_ build settings, added _.bin_ output.
+* ESP32: added missing guards that caused compilation errors if WebUI option was enabled without SD card enabled and/or authentication enabled.  
+Added option for auto push the real time status report.
 
 ---
 
