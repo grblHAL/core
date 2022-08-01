@@ -42,6 +42,8 @@
 
 #define SETTINGS_HARD_RESET_REQUIRED "\\n\\nNOTE: A hard reset of the controller is required after changing this setting."
 
+#define PASSWORD_MASK "********"
+
 typedef enum {
     Setting_PulseMicroseconds = 0,
     Setting_StepperIdleLockTime = 1,

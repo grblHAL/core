@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+20220801 \(2\):
+
+Core:
+
+* Added masking of password settings values for WebUI clients.
+
+Plugins:
+
+* Networking: more include file fixes.  
+
+* WebUI: Fixed incorrect type mapping for password settings.
+
+Drivers:
+
+* ESP32, STM32F7xx, iMXRT1062: added actual MCU frequency to new HAL struct field \(used by WebUI for reporting system information\).  
+
+---
+
 20220801:
 
 Core:
@@ -9,7 +27,6 @@ Core:
 Plugins:
 
 * Networking: fixed some include files dependencies that caused issues in some configurations.  
-
 
 * WebUI: added missing guards for SD card enabled and new compile time option. Added missing status message to file listings.
 

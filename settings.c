@@ -1459,8 +1459,11 @@ char *setting_get_value (const setting_detail_t *setting, uint_fast16_t offset)
                     value = uitoa(*((uint32_t *)(setting->value)));
                     break;
 
-                case Format_String:
                 case Format_Password:
+                    value = hal.stream.state.webui_connected ? PASSWORD_MASK : ((char *)(setting->value));
+                    break;
+
+                case Format_String:
                 case Format_IPv4:
                     value = ((char *)(setting->value));
                     break;
@@ -1480,8 +1483,11 @@ char *setting_get_value (const setting_detail_t *setting, uint_fast16_t offset)
                     value = ftoa(((setting_get_float_ptr)(setting->get_value))(id), get_decimal_places(setting->format));
                     break;
 
-                case Format_String:
                 case Format_Password:
+                    value = hal.stream.state.webui_connected ? "********" : ((setting_get_string_ptr)(setting->get_value))(id);
+                    break;
+
+                case Format_String:
                 case Format_IPv4:
                     value = ((setting_get_string_ptr)(setting->get_value))(id);
                     break;
@@ -2178,8 +2184,17 @@ status_code_t setting_validate_me (const setting_detail_t *setting, float value,
                 status = Status_BadNumberFormat;
             break;
 
-        case Format_String:
         case Format_Password:
+            {
+                uint_fast16_t len = strlen(svalue);
+                if(hal.stream.state.webui_connected && len == strlen(PASSWORD_MASK) && !strcmp(PASSWORD_MASK, svalue))
+                    status = Status_InvalidStatement;
+                else
+                    status = validate_value(setting, (float)len);
+            }
+            break;
+
+        case Format_String:
             {
                 uint_fast16_t len = strlen(svalue);
                 status = validate_value(setting, (float)len);
