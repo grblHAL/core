@@ -399,9 +399,9 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
            #endif
          #endif
 
-            if(st.exec_segment->update_pwm)
+            if(st.exec_segment->update_pwm && hal.spindle.update_pwm)
                 hal.spindle.update_pwm(st.exec_segment->spindle_pwm);
-            else if(st.exec_segment->update_rpm)
+            else if(st.exec_segment->update_rpm && hal.spindle.update_rpm)
                 hal.spindle.update_rpm(st.exec_segment->spindle_rpm);
         } else {
             // Segment buffer empty. Shutdown.
