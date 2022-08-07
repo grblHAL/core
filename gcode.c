@@ -434,7 +434,7 @@ char *gc_normalize_block (char *block, char **message)
                 break;
 
             case '(':
-                // TODO: generate error if a left paranthesis is found inside a comment...
+                // TODO: generate error if a left parenthesis is found inside a comment...
                 comment = s1;
                 break;
 
@@ -724,7 +724,7 @@ status_code_t gc_execute_block(char *block)
         // NOTE: Mantissa is multiplied by 100 to catch non-integer command values. This is more
         // accurate than the NIST gcode requirement of x10 when used for commands, but not quite
         // accurate enough for value words that require integers to within 0.0001. This should be
-        // a good enough comprimise and catch most all non-integer errors. To make it compliant,
+        // a good enough compromise and catch most all non-integer errors. To make it compliant,
         // we would simply need to change the mantissa to int16, but this add compiled flash space.
         // Maybe update this later.
         if(isnan(value))
@@ -1911,7 +1911,7 @@ status_code_t gc_execute_block(char *block)
                 case NonModal_GoHome_0: // G28
                 case NonModal_GoHome_1: // G30
                     // [G28/30 Errors]: Cutter compensation is enabled.
-                    // Retreive G28/30 go-home position data (in machine coordinates) from non-volatile storage
+                    // Retrieve G28/30 go-home position data (in machine coordinates) from non-volatile storage
 
                     if (!settings_read_coord_data(gc_block.non_modal_command == NonModal_GoHome_0 ? CoordinateSystem_G28 : CoordinateSystem_G30, &gc_block.values.coord_data.xyz))
                         FAIL(Status_SettingReadFail);

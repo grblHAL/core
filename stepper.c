@@ -92,7 +92,7 @@ static amass_t amass;
 // Message to be output by foreground process
 static char *message = NULL; // TODO: do we need a queue for this?
 
-// Used for blocking new segments beeing added to the seqment buffer until deceleration starts
+// Used for blocking new segments being added to the seqment buffer until deceleration starts
 // after probe signal has been asserted.
 static volatile bool probe_asserted = false;
 
@@ -253,7 +253,7 @@ ISR_CODE void ISR_FUNC(st_go_idle)(void)
    AMASS artificially increases the Bresenham resolution without effecting the algorithm's
    innate exactness. AMASS adapts its resolution levels automatically depending on the step
    frequency to be executed, meaning that for even lower step frequencies the step smoothing
-   level increases. Algorithmically, AMASS is acheived by a simple bit-shifting of the Bresenham
+   level increases. Algorithmically, AMASS is achieved by a simple bit-shifting of the Bresenham
    step count for each AMASS level. For example, for a Level 1 step smoothing, we bit shift
    the Bresenham step event count, effectively multiplying it by 2, while the axis step counts
    remain the same, and then double the stepper ISR frequency. In effect, we are allowing the
@@ -331,7 +331,7 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
                 if(st.exec_block->overrides.sync)
                     sys.override.control = st.exec_block->overrides;
 
-                // Execute output commands to be syncronized with motion
+                // Execute output commands to be synchronized with motion
                 while(st.exec_block->output_commands) {
                     output_command_t *cmd = st.exec_block->output_commands;
                     cmd->is_executed = true;

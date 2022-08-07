@@ -192,7 +192,7 @@ Note that timer 2 is a 16 bit timer that had to be extended virtually to 32 bit 
 
 Templates:
 
-* Added plugin for Marlin style M17/M18 (M84) commands for enabing/disabling stepper drivers as fix for issue #184. 
+* Added plugin for Marlin style M17/M18 (M84) commands for enabling/disabling stepper drivers as fix for issue #184. 
 
 ---
 
@@ -908,7 +908,7 @@ Build 20210726:
 Core:
 * Added encapsulation in stream handlers for realtime processing. This allows more flexible use of additional streams.
 * Added optional debug stream to the HAL. Currently only used by the iMXRT1062 driver.
-* Position will now be recalulated on steps/mm setting changes.
+* Position will now be recalculated on steps/mm setting changes.
 * Limited final `$TPW` retract on tool changes to Z home to avoid triggering Z-limit.
 * Moved some common driver code snippets to the core to avoid duplication.
 
@@ -931,25 +931,25 @@ Core:
 Drivers:
 * Updated a number of drivers for new style pin handling (allows `$pins` report and simpler pin mapping files).
 * Updated and verified driver for RP2040, mainly to support the PicoCNC board.
-* Added/improved interrupt support for auxillary inputs for both plugin code (via API) and for `M66`.
+* Added/improved interrupt support for auxiliary inputs for both plugin code (via API) and for `M66`.
 * Bug fixes.
 
 Build 20210626:
 * Standardized handling of motors for ABC- and ganged/squared axes, configuration moved to _my_machine.h_.  
 First number of motors required is calculated, then ABC axes are added from bottom up and then ganged/squared axes from top down.  
 E.g if the board map supports six motors then the following allocations will be made:  
-A-axis and auto-squared Y axis: A-axis -> motor 4 and second Y-axis -> motor 5. Motor 6 pins may then be assigned to auxillary I/O.  
-A-axis, B-axis and ganged X-axis: A-axis -> motor 4 and, B-axis -> motor 5 and second X-axis -> motor 6. Motor 6 limit pin\(s\) if available may be assigned to auxillary I/O.  
-Auto-squared X and Y-axis: second X-axis -> motor 4 and second Y-axis -> motor 5. Motor 6 pins may then be assigned to auxillary I/O.  
+A-axis and auto-squared Y axis: A-axis -> motor 4 and second Y-axis -> motor 5. Motor 6 pins may then be assigned to auxiliary I/O.  
+A-axis, B-axis and ganged X-axis: A-axis -> motor 4 and, B-axis -> motor 5 and second X-axis -> motor 6. Motor 6 limit pin\(s\) if available may be assigned to auxiliary I/O.  
+Auto-squared X and Y-axis: second X-axis -> motor 4 and second Y-axis -> motor 5. Motor 6 pins may then be assigned to auxiliary I/O.  
 etc...  
 __IMPORTANT:__ For those who have used auto-squared/ganged axes with previous builds be sure to check that the motors allocated matches the current wiring.
-Tip: use the `$pins` system command to list the pin allocations when checking. Rewire as neccesary. 
+Tip: use the `$pins` system command to list the pin allocations when checking. Rewire as necessary. 
 * Added ganged axis/auto-squaring support to some board maps for the [LPC176x](https://github.com/grblHAL/LPC176x) driver.
 * Expanded on HAL entry points for stream communication and added [initial documentation](http://svn.io-engineering.com/grblHAL/html/hal_8h.html) for the HAL and parts of the core.
-* Encapsulated UART/USB CDC code for many drivers, for most only the init function is now available for direct acccess from the outside. Simplified main driver code and plugins using streams.  
+* Encapsulated UART/USB CDC code for many drivers, for most only the init function is now available for direct access from the outside. Simplified main driver code and plugins using streams.  
 __NOTE:__ For driver developers: `hal.stream.get_rx_buffer_available` has been renamed to `hal.stream.get_rx_buffer_free` as it was ambiguous \(free space vs. available characters\).
 * Added preview version of [Bluetooth plugin](https://github.com/grblHAL/Plugins_Bluetooth/) - allows auto configuration and auto stream switching for drivers/boards that supports it.
-* Added number of auxillary I/O ports available to `$I` command response.
+* Added number of auxiliary I/O ports available to `$I` command response.
 * Added value read from last `M66` to the first real-time report following the read. The element `|In:<value>` is used for the report. If the value reported is `-1` the read failed.
 
 ---
@@ -1000,7 +1000,7 @@ Added `$LEV` command for outputting report containing which limit or control swi
 Report format:  
 `[LASTEVENTS:<control signals>,<min>,<max>,<min2>,<max2)]`  
 Where `<control signals>` field may contain controls signal letters (`H`, `S` etc.) and the rest axis letters for the corresponding limit switches inputs.
-* More settings susbsystem changes and refactored $-system commands parser.  
+* More settings subsystem changes and refactored $-system commands parser.  
 There are some API changes related to this that may affect user defined plugins.
 * Added $7 setting for option "Spindle off with zero speed".
 * Added `|FW:grblHAL` element to full real-time report requested by sending `0x87`. 
@@ -1042,8 +1042,8 @@ Currently only the iMXRT1062 \(Teensy 4.x\) driver has support for this, for now
 __NOTE:__ A override will _not_ affect handling of homing and limit switch events elsewhere.
 * Now adds `ODO` to `NEWOPT` tag values if odometer data is available.
 * Updated _[my_plugin.c](templates/my_plugin.c)_ [template](templates/README.md) with settings details for `$HELP` and `$ES`/`$EG` enumerations.
-* Settings/setting groups handling enhanced, moved some to plugins and added sorting (requres enough heap).
-* Removed external dependecies by adding driver source/USB blob to LPC176x driver.
+* Settings/setting groups handling enhanced, moved some to plugins and added sorting (requires enough heap).
+* Removed external dependencies by adding driver source/USB blob to LPC176x driver.
 * Enhanced and improved ModBus support code for VFD spindle, added settings for baud rate and receive timeout.
 * Added support for enumeration of and help for driver and plugin provided settings and setting groups.
 * Moved board selection etc. to [CMakeLists.txt](drivers/ESP32/CMakeLists.txt) for [ESP32 driver](drivers/ESP32/README.md) for simpler configuration.
@@ -1132,7 +1132,7 @@ Build 20200923:
 * Initial changes to ESP32 driver to allow compilation with PlatformIO, added my_machine.h for this. Note that my_machine.h is not used if compiling with idf.py.
 * Added home position to `$#` ngc report, e.g. `[HOME,0.000,0.000,0.000:7]` - means all axes are homed. Position is reported in machine coordinates. `:7` in the example is an axis bitfield, the reported value is for which axes are homed: bit 0 is Z, 1 is X etc. `:0` = no axes homed.
 * "Hardened" the new tool change functionality even more. Initial changes for multi-axis tool reference offset made.  
-An empy message will now be sent when tool change is complete, this to clear any tool change related message in the sender.
+An empty message will now be sent when tool change is complete, this to clear any tool change related message in the sender.
 * Added call to [weak](https://en.wikipedia.org/wiki/Weak_symbol) `my_plugin_init()` function at startup, name your [plugin](https://github.com/terjeio/grblHAL/tree/master/plugins) init function `void my_plugin_init (void)` and there is no need to change any grblHAL source files to bring it alive.  
 Use this feature for your private plugin only, multiple public plugins using this name cannot coexist!
 * Some changes to improve code readability and added strict check for `G59.x` gcodes.
@@ -1210,7 +1210,7 @@ Build 20200722:
 * New plugin for [quadrature encoder input](https://github.com/terjeio/grblHAL/issues/73#issuecomment-659222664) for up to 5 encoders \(driver dependent\). Can be used to adjust overrides and has rudimentary support for MPG functionality. Work in progress and the iMXRT1062 \(Teensy 4\) driver is currently the only driver with low-level support for this (one encoder).
 * New plugin for [ModBus VFD](https://github.com/terjeio/grblHAL/issues/68) spindle controllers. Untested and with limited driver support in this build.
 * Added setting, `$340` for spindle at speed tolerance \(percent\). If spindle fails to reach speed within limits in 4 seconds alarm 14 will be raised. Set to 0 to disable. Availability driver dependent.
-* All [new settings](https://github.com/terjeio/grblHAL/wiki/Additional-or-extended-settings) are now possibly to set independent of the [compatibility level](https://github.com/terjeio/grblHAL/wiki/Changes-from-grbl-1.1#workaround) except some settings that has flags added to them. The added flags will not be available at all compatibilty levels. A new command, `$+`, can be used to list all settings independent of compatibilty level.
+* All [new settings](https://github.com/terjeio/grblHAL/wiki/Additional-or-extended-settings) are now possibly to set independent of the [compatibility level](https://github.com/terjeio/grblHAL/wiki/Changes-from-grbl-1.1#workaround) except some settings that has flags added to them. The added flags will not be available at all compatibility levels. A new command, `$+`, can be used to list all settings independent of compatibility level.
 * Internal changes to settings data in order to simplify automatic migration on changes. Automatic migration is on the roadmap.
 
 <sup>1</sup> Note that several factors may affect the accuracy of these settings such as step output mode, number of axes defined and compiler optimization settings.
@@ -1276,5 +1276,5 @@ G76 threading support added to grblHAL in combination with the [MSP432 driver](d
 
 **WARNING!** This is a potentially dangerous addition. Do NOT use if you do not understand the risks. A proper E-Stop is a must, it should cut power to the steppers and if possible engage any spindle brake. The implementation is based on the [linuxcnc specification](http://linuxcnc.org/docs/2.6/html/gcode/gcode.html#sec:G76-Threading-Canned). Please note that I am not a machinist so my interpretation and implementation may be wrong!
 
-G76 availablity requires a spindle encoder with index pulse, grblHAL configured to [lathe mode](doc/markdown/settings.md#opmode) and tuning of the spindle sync PID loop.  
+G76 availability requires a spindle encoder with index pulse, grblHAL configured to [lathe mode](doc/markdown/settings.md#opmode) and tuning of the spindle sync PID loop.  
 __NOTE:__ Feed hold is delayed until spindle synced cut is complete, spindle RPM overrides and CSS mode disabled through the whole cycle. 

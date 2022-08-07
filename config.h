@@ -121,7 +121,7 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 // the associated data is refreshed and included in the status report. However, if one of these value
 // changes, Grbl will automatically include this data in the next status report, regardless of what the
 // count is at the time. This helps reduce the communication overhead involved with high frequency reporting
-// and agressive streaming. There is also a busy and an idle refresh count, which sets up Grbl to send
+// and aggressive streaming. There is also a busy and an idle refresh count, which sets up Grbl to send
 // refreshes more often when its not doing anything important. With a good GUI, this data doesn't need
 // to be refreshed very often, on the order of a several seconds.
 // NOTE: WCO refresh must be 2 or greater. OVERRIDE refresh must be 1 or greater.
@@ -253,7 +253,7 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 // Defines the non-volatile data restored upon a settings version change and `$RST=*` command. Whenever the
 // the settings or other non-volatile data structure changes between Grbl versions, Grbl will automatically
 // wipe and restore the non-volatile data. These macros controls what data is wiped and restored. This is useful
-// particularily for OEMs that need to retain certain data. For example, the BUILD_INFO string can be
+// particularly for OEMs that need to retain certain data. For example, the BUILD_INFO string can be
 // written into non-volatile storage via a separate program to contain product data. Altering these
 // macros to not restore the build info non-volatile storage will ensure this data is retained after firmware upgrades.
 //#define SETTINGS_RESTORE_DEFAULTS          0 // Default enabled, uncomment to disable
@@ -267,7 +267,7 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 // to prevent this data from being over-written by a user, when used to store OEM product data.
 // NOTE: If disabled and to ensure Grbl can never alter the build info line, you'll also need to enable
 // the SETTING_RESTORE_ALL macro above and remove SETTINGS_RESTORE_BUILD_INFO from the mask.
-// NOTE: See the included grblWrite_BuildInfo.ino example file to write this string seperately.
+// NOTE: See the included grblWrite_BuildInfo.ino example file to write this string separately.
 //#define DISABLE_BUILD_INFO_WRITE_COMMAND // '$I=' Default enabled. Uncomment to disable.
 
 // Enables and configures Grbl's sleep mode feature. If the spindle or coolant are powered and Grbl
@@ -293,14 +293,14 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 
 // When the HAL driver supports spindle sync then this option sets the number of pulses per revolution
 // for the spindle encoder. Depending on the driver this may lead to the "spindle at speed" detection
-// beeing enabled. When this is enabled grbl will wait for the spindle to reach the programmed speed
+// being enabled. When this is enabled grbl will wait for the spindle to reach the programmed speed
 // before continue processing. NOTE: Currently there is no timeout for this wait.
 // Default value is 0, meaning spindle sync is disabled
 //#define DEFAULT_SPINDLE_PPR 0 // Pulses per revolution. Default 0.
 
 // This option will automatically disable the laser during a feed hold by invoking a spindle stop
 // override immediately after coming to a stop. However, this also means that the laser still may
-// be reenabled by disabling the spindle stop override, if needed. This is purely a safety feature
+// be re-enabled by disabling the spindle stop override, if needed. This is purely a safety feature
 // to ensure the laser doesn't inadvertently remain powered while at a stop and cause a fire.
 //#define DEFAULT_ENABLE_LASER_DURING_HOLD // Default enabled. Uncomment to disable.
 
@@ -486,7 +486,7 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 //#define DISABLE_G92_PERSISTENCE 0
 
 #if COMPATIBILITY_LEVEL == 0
-// Number of tools in tool table, uncomment and edit if neccesary to enable (max. 16 allowed)
+// Number of tools in tool table, uncomment and edit if necessary to enable (max. 16 allowed)
 //#define N_TOOLS 8
 #endif
 
@@ -591,7 +591,7 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 // cycle, but this requires some pin settings changes in cpu_map.h file. For example, the default homing
 // cycle can share the Z limit pin with either X or Y limit pins, since they are on different cycles.
 // By sharing a pin, this frees up a precious IO pin for other purposes. In theory, all axes limit pins
-// may be reduced to one pin, if all axes are homed with seperate cycles, or vice versa, all three axes
+// may be reduced to one pin, if all axes are homed with separate cycles, or vice versa, all three axes
 // on separate pin, but homed in one cycle. Also, it should be noted that the function of hard limits
 // will not be affected by pin sharing.
 // NOTE: Defaults are set for a traditional 3-axis CNC machine. Z-axis first to clear, followed by X & Y.

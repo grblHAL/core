@@ -39,7 +39,7 @@
 #define MAX_SEG_LENGTH_MM 2.0f /* long lines must be segmented due to circular motion */
 
   // PID position loop factors              X: Kp = 25000 Ki = 15000 Kd = 22000 Imax = 5000
-  // 14.000 fixed point arithmatic S13.10
+  // 14.000 fixed point arithmetic S13.10
 #ifdef DRIVER_TLE5206
     #define MASLOW_A_KP     10.0f
     #define MASLOW_A_KI     21.0f

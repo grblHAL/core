@@ -99,7 +99,7 @@
 // NOTE: If changed, manually update help message in report.c.
 
 #define CMD_EXIT 0x03 // ctrl-C (ETX)
-#define CMD_REBOOT 0x14 // ctrl-T (DC4) - only acted upon if preceeded by 0x1B (ESC)
+#define CMD_REBOOT 0x14 // ctrl-T (DC4) - only acted upon if preceded by 0x1B (ESC)
 #define CMD_RESET 0x18 // ctrl-X (CAN)
 #define CMD_STOP 0x19 // ctrl-Y (EM)
 #define CMD_STATUS_REPORT_LEGACY '?'
@@ -110,7 +110,7 @@
 // NOTE: All override realtime commands must be in the extended ASCII character set, starting
 // at character value 128 (0x80) and up to 255 (0xFF). If the normal set of realtime commands,
 // such as status reports, feed hold, reset, and cycle start, are moved to the extended set
-// space, protocol.c's protocol_process_realtime() will need to be modified to accomodate the change.
+// space, protocol.c's protocol_process_realtime() will need to be modified to accommodate the change.
 #define CMD_STATUS_REPORT 0x80 // TODO: use 0x05 ctrl-E ENQ instead?
 #define CMD_CYCLE_START 0x81   // TODO: use 0x06 ctrl-F ACK instead? or SYN/DC2/DC3?
 #define CMD_FEED_HOLD 0x82     // TODO: use 0x15 ctrl-U NAK instead?
@@ -199,7 +199,7 @@
 // the associated data is refreshed and included in the status report. However, if one of these value
 // changes, Grbl will automatically include this data in the next status report, regardless of what the
 // count is at the time. This helps reduce the communication overhead involved with high frequency reporting
-// and agressive streaming. There is also a busy and an idle refresh count, which sets up Grbl to send
+// and aggressive streaming. There is also a busy and an idle refresh count, which sets up Grbl to send
 // refreshes more often when its not doing anything important. With a good GUI, this data doesn't need
 // to be refreshed very often, on the order of a several seconds.
 // NOTE: WCO refresh must be 2 or greater. OVERRIDE refresh must be 1 or greater.
