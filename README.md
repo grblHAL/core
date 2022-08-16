@@ -18,7 +18,7 @@ I have only bench tested this for a couple of drivers, correct function should b
 More details in the [changelog](changelog.md).
 
 ---
-Updated for lates core changes.
+Updated for latest core changes.
 __NOTE:__ Arduino drivers has now been converted to Arduino libraries, [installation and compilation procedure](https://github.com/grblHAL/core/wiki/Compiling-GrblHAL) has been changed!
 
 ---

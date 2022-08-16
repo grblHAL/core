@@ -266,7 +266,7 @@ typedef void (*stepper_cycles_per_tick_ptr)(uint32_t cycles_per_tick);
 For plain drivers the most of the information pointed to by the \a stepper argument can be ignored.
 The most used fields are these:
 <br>\ref stepper.step_outbits
-<br>\ref stepper.dir_outbits - these are only necessary to ouput to the drivers when \ref stepper.dir_change is true.
+<br>\ref stepper.dir_outbits - these are only necessary to output to the drivers when \ref stepper.dir_change is true.
 
 If the driver is to support spindle synced motion many more needs to be referenced...
 
@@ -494,7 +494,7 @@ typedef struct {
     /*! \brief Driver setup handler.
     Called once by the core after settings has been loaded. The driver should enable MCU peripherals in the provided function.
     \param settings pointer to settings_t structure.
-    \returns true if completed sucessfully and the driver supports the _settings->version_ number, false otherwise.
+    \returns true if completed successfully and the driver supports the _settings->version_ number, false otherwise.
     */
     driver_setup_ptr driver_setup;
 
@@ -596,7 +596,7 @@ Then _hal.driver_setup()_ will be called so that the driver can configure the re
 
 __NOTE__: This is the only driver function that is called directly from the core, all others are called via HAL function pointers.
 
-\returns true if completed sucessfully and the driver matches the _hal.version number_, false otherwise.
+\returns true if completed successfully and the driver matches the _hal.version number_, false otherwise.
 */
 extern bool driver_init (void);
 

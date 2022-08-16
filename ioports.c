@@ -23,7 +23,7 @@
  * @file
  *
  * Some wrapper functions for the #io_port_t API.
- * They perform the neccesary checks for both availablity of ports
+ * They perform the necessary checks for both availability of ports
  * and advanced functionality simplifying plugin code that uses them.
  */
 

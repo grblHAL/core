@@ -1,7 +1,7 @@
 /*
   spindle_sync.h - An embedded CNC Controller with rs274/ngc (g-code) support
 
-  Spindle sync data strucures
+  Spindle sync data structures
 
   NOTE: not referenced in the core grbl code
 
@@ -66,7 +66,7 @@ typedef struct {
     float steps_per_mm;             // Steps per mm for current block
     float programmed_rate;          // Programmed feed in mm/rev for current block
     int32_t min_cycles_per_tick;    // Minimum cycles per tick for PID loop
-    uint_fast8_t segment_id;        // Used for detecing start of new segment
+    uint_fast8_t segment_id;        // Used for detecting start of new segment
     pidf_t pid;                     // PID data for position
     stepper_pulse_start_ptr stepper_pulse_start_normal; // Driver pulse function to restore after spindle sync move is completed
 #ifdef PID_LOG

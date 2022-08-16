@@ -105,7 +105,7 @@ typedef struct stepper {
     uint_fast16_t step_count;       //!< Steps remaining in line segment motion.
     uint32_t step_event_count;      //!< Number of step pulse events to be output by this segment.
     st_block_t *exec_block;         //!< Pointer to the block data for the segment being executed.
-    segment_t *exec_segment;        //!< Pointer to the segment beeing executed.
+    segment_t *exec_segment;        //!< Pointer to the segment being executed.
 } stepper_t;
 
 // Initialize and setup the stepper motor subsystem

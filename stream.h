@@ -127,7 +127,7 @@ typedef bool (*enqueue_realtime_command_ptr)(char c);
 
 /*! \brief Optional, but recommended, pointer to function for enqueueing realtime command characters.
 \param c character to enqueue.
-\returns \a true if sucessfully enqueued, \a false otherwise.
+\returns \a true if successfully enqueued, \a false otherwise.
 
 __NOTE:__ Stream implementations should pass the character over the current handler registered by the set_enqueue_rt_handler().
 
@@ -169,7 +169,7 @@ This function is called with the _await_ parameter true on executing a tool chan
 The core function stream_rx_suspend() can be called with the _await_ parameter to do this,
 it will replace the _hal.stream.read_ handler with a pointer to the dummy function stream_get_null().
 
-Reading from the input is blocked until a tool change aknowledge character #CMD_TOOL_ACK is received,
+Reading from the input is blocked until a tool change acknowledge character #CMD_TOOL_ACK is received,
  when the driver receives this the input buffer is to be saved away and reading from the input resumed by
  restoring the _hal.stream.read_ handler with its own read character function.
 Driver code can do this by calling the core function stream_rx_backup().

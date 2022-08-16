@@ -30,7 +30,7 @@ static void fall_asleep()
     slumber = false;
 }
 
-// Starts sleep timer if running conditions are satified. When elapsed, sleep mode is executed.
+// Starts sleep timer if running conditions are satisfied. When elapsed, sleep mode is executed.
 static void sleep_execute()
 {
     // Enable sleep timeout

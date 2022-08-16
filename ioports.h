@@ -1,5 +1,5 @@
 /*
-  ioports.h - typedefs, API structure and functions for auxillary I/O
+  ioports.h - typedefs, API structure and functions for auxiliary I/O
 
   Part of grblHAL
 
@@ -33,7 +33,7 @@ typedef enum {
 
 /*! \brief Pointer to function for setting a digital output.
 \param port port number
-\param on true to set ouput high, false to set it low
+\param on true to set output high, false to set it low
 */
 typedef void (*digital_out_ptr)(uint8_t port, bool on);
 
@@ -103,7 +103,7 @@ typedef void (*ioport_interrupt_callback_ptr)(uint8_t port, bool state);
 */
 typedef bool (*ioport_register_interrupt_handler_ptr)(uint8_t port, pin_irq_mode_t irq_mode, ioport_interrupt_callback_ptr interrupt_callback);
 
-//! Properties and handlers for auxillary digital and analog I/O.
+//! Properties and handlers for auxiliary digital and analog I/O.
 typedef struct {
     uint8_t num_digital_in;                         //!< Number of digital inputs available.
     uint8_t num_digital_out;                        //!< Number of digital outputs available.
@@ -112,9 +112,9 @@ typedef struct {
     digital_out_ptr digital_out;                    //!< Optional handler for setting a digital output.
     analog_out_ptr analog_out;                      //!< Optional handler for setting an analog output.
     wait_on_input_ptr wait_on_input;                //!< Optional handler for reading a digital or analog input.
-    set_pin_description_ptr set_pin_description;    //!< Optional handler for setting a description of an auxillary pin.
-    get_pin_info_ptr get_pin_info;                  //!< Optional handler for getting information about an auxillary pin.
-    claim_port_ptr claim;                           //!< Optional handler for claiming an auxillary pin for exclusive use.
+    set_pin_description_ptr set_pin_description;    //!< Optional handler for setting a description of an auxiliary pin.
+    get_pin_info_ptr get_pin_info;                  //!< Optional handler for getting information about an auxiliary pin.
+    claim_port_ptr claim;                           //!< Optional handler for claiming an auxiliary pin for exclusive use.
     swap_pins_ptr swap_pins;                        //!< Optional handler for swapping pins.
     ioport_register_interrupt_handler_ptr register_interrupt_handler;
 } io_port_t;

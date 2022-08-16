@@ -1,7 +1,7 @@
 /*
   plugins_init.h - An embedded CNC Controller with rs274/ngc (g-code) support
 
-  Calls the init function of enabled plugins, may be included at the end of the drivers driver_init() inmplementation.
+  Calls the init function of enabled plugins, may be included at the end of the drivers driver_init() implementation.
 
   These are NOT referenced in the core grbl code
 
