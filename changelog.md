@@ -1,5 +1,38 @@
 ## grblHAL changelog
 
+20220825:
+
+Core:
+
+* Addded virtual file system \(VFS\) handler, Linux/Unix style with mount directories.
+* Now raises alarm if homed state becomes invalid on settings changes when homing on startup is required. Issue #173.
+
+Plugins:
+
+* Networking: added optional \(and initial\) support for WebDAV protocol to http daemon.  
+Added virtual file systems \(VFS\) for temporary RAM storage, direct or via `hal.stream.write` output.  
+__Note:__ Saving files with WebDAV for Windows mounts does not work, some weird things going on like initial save beeing for a zero sized file.  
+Tested ok with WinSCP.
+
+* WebUI: Swithed to use virtual file system \(VFS\) for file handling.
+
+* SDCard: Swithed to use virtual file system \(VFS\) for file handling. Added VFS implementation for FatFS, mounted as root \(/\).
+
+* Spindle: Added GS20 and YL620 VDF spindles from [PR#9](https://github.com/grblHAL/Plugins_spindle/pull/9) by @andrewmarles.  
+Added option for extending VFD spindle functionality generically. Potential fix for core issue #177.
+
+* Encoder: fixed settings registration bug, [issue #1](https://github.com/grblHAL/Plugin_encoder/issues/1).
+
+Drivers:
+
+* ESP32: Switched to grblHAL http daemon and full use of WebUI plugin. Added virtual file system mounts \(VFS\) for SPIFFS and embedded files.
+
+* iMXRT1062: additional fix for encoder plugin [issue #1](https://github.com/grblHAL/Plugin_encoder/issues/1).
+
+* ESP32, iMXRT1062, STM32F7xx: Added configuration option for WebDAV protocol to _my_machine.h_.
+
+---
+
 20220801 \(2\):
 
 Core:

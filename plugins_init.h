@@ -70,14 +70,9 @@
     openpnp_init();
 #endif
 
-// ESP32 has its own webui_init
-#ifndef GRBL_ESP32
-
 #if WEBUI_ENABLE
     extern void webui_init (void);
     webui_init();
-#endif
-
 #endif
 
     my_plugin_init();
