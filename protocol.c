@@ -68,8 +68,8 @@ static void protocol_execute_rt_commands (void);
 bool protocol_enqueue_gcode (char *gcode)
 {
     bool ok = xcommand[0] == '\0' &&
-               (state_get() == STATE_IDLE || (state_get() & (STATE_JOG|STATE_TOOL_CHANGE))) &&
-                 bit_isfalse(sys.rt_exec_state, EXEC_MOTION_CANCEL);
+               (state_get() == STATE_IDLE || state_get() == STATE_ALARM  ||
+                 (state_get() & (STATE_JOG|STATE_TOOL_CHANGE))) && bit_isfalse(sys.rt_exec_state, EXEC_MOTION_CANCEL);
 
     if(ok && gc_state.file_run)
         ok = gc_state.modal.program_flow != ProgramFlow_Running || strncmp((char *)gcode, "$J=", 3);
