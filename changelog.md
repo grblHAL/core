@@ -1,5 +1,27 @@
 ## grblHAL changelog
 
+20220903:
+
+Core:
+
+* Tuning, VFS improvements.
+
+Plugins:
+
+* Networking: improved timestamp handling, some other minor fixes. 
+
+* WebUI: reverted to stream writer for command output \(for now\). Added RP2040 \(Pi Pico W\) to supported boards.
+
+Drivers:
+
+* RP2040: Added networking and WebUI support for Pico W.  
+__Note:__ Soft AP mode is WIP and not fully functional.  
+__Note:__ NVS storage of settings has been moved to the end of flash, backup and restore!
+
+* STM32F7xx: committed missing update of .cproject file.
+
+---
+
 20220825:
 
 Core:
@@ -14,12 +36,12 @@ Added virtual file systems \(VFS\) for temporary RAM storage, direct or via `hal
 __Note:__ Saving files with WebDAV for Windows mounts does not work, some weird things going on like initial save beeing for a zero sized file.  
 Tested ok with WinSCP.
 
-* WebUI: Swithed to use virtual file system \(VFS\) for file handling.
+* WebUI: Switched to use virtual file system \(VFS\) for file handling.
 
 * SDCard: Swithed to use virtual file system \(VFS\) for file handling. Added VFS implementation for FatFS, mounted as root \(/\).
 
 * Spindle: Added GS20 and YL620 VDF spindles from [PR#9](https://github.com/grblHAL/Plugins_spindle/pull/9) by @andrewmarles.  
-Added option for extending VFD spindle functionality generically. Potential fix for core issue #177.
+Added option for extending VFD spindle functionality generically. Potential fix for core [issue #177}(https://github.com/grblHAL/core/issues/177).
 
 * Encoder: fixed settings registration bug, [issue #1](https://github.com/grblHAL/Plugin_encoder/issues/1).
 
@@ -29,7 +51,7 @@ Drivers:
 
 * iMXRT1062: additional fix for encoder plugin [issue #1](https://github.com/grblHAL/Plugin_encoder/issues/1).
 
-* ESP32, iMXRT1062, STM32F7xx: Added configuration option for WebDAV protocol to _my_machine.h_.
+* ESP32, iMXRT1062, STM32F7xx:* ESP32, iMXRT1062, STM32F7xx: Added configuration option for WebDAV protocol to _my_machine.h_.
 
 ---
 

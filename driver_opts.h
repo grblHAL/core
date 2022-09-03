@@ -272,12 +272,14 @@
 #define WEBUI_INFLASH       0
 #endif
 
-#if WEBUI_ENABLE && !defined(ESP_PLATFORM)
+#if WEBUI_ENABLE && !defined(ESP_PLATFORM) 
 
+#if !WIFI_ENABLE
 #ifdef ETHERNET_ENABLE
 #undef ETHERNET_ENABLE
 #endif
 #define ETHERNET_ENABLE     1
+#endif
 #ifdef HTTP_ENABLE
 #undef HTTP_ENABLE
 #endif
@@ -348,6 +350,29 @@
 #endif
 #if HTTP_ENABLE && NETWORK_WEBSOCKET_PORT == NETWORK_HTTP_PORT
 #warning "HTTP and WebSocket protocols cannot share the same port!"
+#endif
+#if WIFI_SOFTAP > 0
+#ifndef NETWORK_AP_SSID
+#define NETWORK_AP_SSID            "grblHAL_AP"
+#endif
+#ifndef NETWORK_AP_PASSWORD
+#define NETWORK_AP_PASSWORD        "grblHAL"
+#endif
+#ifndef NETWORK_AP_HOSTNAME
+#define NETWORK_AP_HOSTNAME        "grblHAL_AP"
+#endif
+#ifndef NETWORK_AP_IPMODE
+#define NETWORK_AP_IPMODE          0 // 0 = static, 1 = DHCP, 2 = AutoIP
+#endif
+#ifndef NETWORK_AP_IP
+#define NETWORK_AP_IP              "192.168.5.1"
+#endif
+#ifndef NETWORK_AP_GATEWAYs
+#define NETWORK_AP_GATEWAY         "192.168.5.1"
+#endif
+#ifndef NETWORK_AP_MASK
+#define NETWORK_AP_MASK            "255.255.255.0"
+#endif
 #endif
 #endif
 

@@ -88,6 +88,16 @@ static int fs_stat (const char *filename, vfs_stat_t *st)
     return -1;
 }
 
+static int fs_chdir (const char *path)
+{
+    return !strcmp(path, "/") ? 0 : -1;
+}
+
+static char *fs_getcwd (char *buf, size_t size)
+{
+    return "/";
+}
+
 static const vfs_t fs_null = {
     .fopen = fs_open,
     .fclose = fs_close,
@@ -98,11 +108,12 @@ static const vfs_t fs_null = {
     .feof = fs_eof,
     .funlink = fs_unlink,
     .fmkdir = fs_dirop,
-    .fchdir = fs_dirop,
+    .fchdir = fs_chdir,
     .frmdir = fs_dirop,
     .fopendir = fs_opendir,
     .fclosedir = fs_closedir,
-    .fstat = fs_stat
+    .fstat = fs_stat,
+    .fgetcwd = fs_getcwd
 };
 
 // End NULL file system
@@ -125,19 +136,6 @@ char *vfs_fixpath (char *path)
         *s = '\0';
 
     return path;
-}
-
-struct tm *gmtime (const time_t *c_t)
-{
-    static struct tm dummy = {
-        .tm_year = 70,
-        .tm_mon  = 0,
-        .tm_mday = 1,
-        .tm_hour = 0,
-        .tm_min  = 0
-    };
-
-    return &dummy;
 }
 
 static vfs_mount_t *get_mount (const char *filename)
@@ -327,7 +325,7 @@ char *vfs_getcwd (char *buf, size_t len)
     vfs_errno = 0;
 
     if(buf == NULL)
-        buf = malloc(strlen(cwd) + 1);
+        buf = (char *)malloc(strlen(cwd) + 1);
 
     if(buf)
         strcpy(buf, cwd);
@@ -361,7 +359,7 @@ bool vfs_mount (const char *path, const vfs_t *fs)
     if(!strcmp(path, "/"))
         root.vfs = fs;
 
-    else if((vfs = malloc(sizeof(vfs_mount_t)))) {
+    else if((vfs = (vfs_mount_t *)malloc(sizeof(vfs_mount_t)))) {
 
         strcpy(vfs->path, path);
         vfs->vfs = fs;
@@ -404,3 +402,18 @@ bool vfs_unmount (const char *path)
 
     return true;
 }
+
+/*
+struct tm *gmtime (const time_t *c_t)
+{
+    static struct tm dummy = {
+        .tm_year = 70,
+        .tm_mon  = 0,
+        .tm_mday = 1,
+        .tm_hour = 0,
+        .tm_min  = 0
+    };
+
+    return &dummy;
+}
+*/
