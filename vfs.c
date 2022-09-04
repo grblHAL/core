@@ -24,6 +24,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#ifndef ARDUINO_SAM_DUE
+
 #include "hal.h"
 #include "vfs.h"
 //#include <errno.h>
@@ -340,6 +342,13 @@ int vfs_stat (const char *filename, vfs_stat_t *st)
     return mount ? mount->vfs->fstat(get_filename(mount, filename), st) : -1;
 }
 
+int vfs_utime (const char *filename, struct tm *modified)
+{
+    vfs_mount_t *mount = get_mount(filename);
+
+    return mount && mount->vfs->futime ? mount->vfs->futime(get_filename(mount, filename), modified) : -1;
+}
+
 vfs_free_t *vfs_fgetfree (const char *path)
 {
     static vfs_free_t free;
@@ -402,6 +411,8 @@ bool vfs_unmount (const char *path)
 
     return true;
 }
+
+#endif
 
 /*
 struct tm *gmtime (const time_t *c_t)

@@ -26,6 +26,8 @@
 #ifndef _HAL_H_
 #define _HAL_H_
 
+#include <time.h>
+
 #include "grbl.h"
 #include "core_handlers.h"
 #include "gcode.h"
@@ -470,6 +472,28 @@ typedef struct {
 */
 typedef bool (*irq_claim_ptr)(irq_type_t irq, uint_fast8_t id, irq_callback_ptr callback);
 
+
+/**************************
+ *  RTC (Real Time Clock  *
+ **************************/
+
+/*! \brief Pointer to function for setting the current datetime.
+\param datetime pointer to a \a tm struct.
+\returns true if successful.
+*/
+typedef bool (*rtc_get_datetime_ptr)(struct tm *datetime);
+
+/*! \brief Pointer to function for setting the current datetime.
+\param datetime pointer to a \a tm struct.
+\returns true if successful.
+*/
+typedef bool (*rtc_set_datetime_ptr)(struct tm *datetime);
+
+typedef struct {
+    rtc_get_datetime_ptr get_datetime;  //!< Optional handler getting the current datetime.
+    rtc_set_datetime_ptr set_datetime;  //!< Optional handler setting the current datetime.
+} rtc_ptrs_t;
+
 /*! \brief HAL structure used for the driver interface.
 
 This structure contains properties and function pointers (to handlers) that the core uses to communicate with the driver.
@@ -549,6 +573,7 @@ typedef struct {
     settings_changed_ptr settings_changed;  //!< Callback handler to be called on settings loaded or settings changed events.
     probe_ptrs_t probe;                     //!< Optional handlers for probe input(s).
     tool_ptrs_t tool;                       //!< Optional handlers for tool changes.
+    rtc_ptrs_t rtc;                         //!< Optional handlers for real time clock (RTC).
     io_port_t port;                         //!< Optional handlers for axuillary I/O (adds support for M62-M66).
     periph_port_t periph_port;              //!< Optional handlers for peripheral pin registration.
     driver_reset_ptr driver_reset;          //!< Optional handler, called on soft resets. Set to a dummy handler by the core at startup.

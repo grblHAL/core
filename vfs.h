@@ -35,7 +35,7 @@
 #define vfs_load_plugin(x)
 #define bcopy(src, dest, len) memmove(dest, src, len)
 
-#ifndef __time_t_defined
+#if !(defined(__time_t_defined) || defined(__MSP432P401R__) || defined(PART_TM4C123GH6PM))
 typedef struct {
     short date;
     short time;
@@ -120,11 +120,13 @@ typedef vfs_dir_t *(*vfs_opendir_ptr)(const char *path);
 typedef char *(*vfs_readdir_ptr)(vfs_dir_t *dir, vfs_dirent_t *dirent);
 typedef void (*vfs_closedir_ptr)(vfs_dir_t *dir);
 typedef int (*vfs_stat_ptr)(const char *filename, vfs_stat_t *st);
+typedef int (*vfs_utime_ptr)(const char *filename, struct tm *modified);
 
 typedef bool (*vfs_getfree_ptr)(vfs_free_t *free);
 
 typedef struct
 {
+    const char *fs_name;
     vfs_st_mode_t mode;
     vfs_open_ptr fopen;
     vfs_close_ptr fclose;
@@ -142,6 +144,7 @@ typedef struct
     vfs_readdir_ptr readdir;
     vfs_closedir_ptr fclosedir;
     vfs_stat_ptr fstat;
+    vfs_utime_ptr futime;
     vfs_getcwd_ptr fgetcwd;
     vfs_getfree_ptr fgetfree;
 } vfs_t;
@@ -177,6 +180,7 @@ vfs_dirent_t *vfs_readdir (vfs_dir_t *dir);
 void vfs_closedir (vfs_dir_t *dir);
 char *vfs_getcwd (char *buf, size_t len);
 int vfs_stat (const char *filename, vfs_stat_t *st);
+int vfs_utime (const char *filename, struct tm *modified);
 vfs_free_t *vfs_fgetfree (const char *path);
 
 #endif

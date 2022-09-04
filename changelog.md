@@ -1,5 +1,27 @@
 ## grblHAL changelog
 
+20220904:
+
+Core:
+
+* Added optional RTC (Real Time Clock) support to the HAL. VFS improvements.
+
+Plugins:
+
+* Networking: improved websocket protocol handling. 
+
+* WebUI: separated command handlers for v2 and v3 and improved detection of v3 clients. Now sets RTC from ESP800 if HAL allows.
+
+Drivers:
+
+* RP2040: Added RTC support++.  
+
+* iMXRT1062: updated uSDFS patch - needed for VFS changes.
+
+* STM32F7xx: updated FatFs options file for better VFS integration.
+
+---
+
 20220903:
 
 Core:
