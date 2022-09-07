@@ -29,7 +29,7 @@
 
 #include "hal.h"
 #include "defaults.h"
-#include "limits.h"
+#include "machine_limits.h"
 #include "nvs_buffer.h"
 #include "tool_change.h"
 #include "state_machine.h"

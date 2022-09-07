@@ -92,8 +92,8 @@ typedef struct {
 } vfs_dirent_t;
 
 typedef struct {
-    uint64_t size;
-    uint64_t used;
+    size_t size;
+    size_t used;
 } vfs_free_t;
 
 typedef struct {
@@ -123,6 +123,7 @@ typedef int (*vfs_stat_ptr)(const char *filename, vfs_stat_t *st);
 typedef int (*vfs_utime_ptr)(const char *filename, struct tm *modified);
 
 typedef bool (*vfs_getfree_ptr)(vfs_free_t *free);
+typedef int (*vfs_format_ptr)(void);
 
 typedef struct
 {
@@ -147,6 +148,7 @@ typedef struct
     vfs_utime_ptr futime;
     vfs_getcwd_ptr fgetcwd;
     vfs_getfree_ptr fgetfree;
+    vfs_format_ptr format;
 } vfs_t;
 
 typedef struct vfs_mount
@@ -155,6 +157,17 @@ typedef struct vfs_mount
     const vfs_t *vfs;
     struct vfs_mount *next;
 } vfs_mount_t;
+
+typedef struct {
+    vfs_mount_t *mount;
+} vfs_drives_t;
+
+typedef struct {
+    const char *name;
+    const char *path;
+    vfs_st_mode_t mode;
+    const void *fs;
+} vfs_drive_t;
 
 extern int vfs_errno;
 
@@ -183,4 +196,10 @@ int vfs_stat (const char *filename, vfs_stat_t *st);
 int vfs_utime (const char *filename, struct tm *modified);
 vfs_free_t *vfs_fgetfree (const char *path);
 
-#endif
+vfs_drives_t *vfs_drives_open (void);
+vfs_drive_t *vfs_drives_read (vfs_drives_t *handle);
+void vfs_drives_close (vfs_drives_t *handle);
+vfs_free_t *vfs_drive_getfree (vfs_drive_t *drive);
+int vfs_drive_format (vfs_drive_t *drive);
+
+#endif // INCLUDE_VFS_H

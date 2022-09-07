@@ -32,7 +32,7 @@
 #include "hal.h"
 #include "nuts_bolts.h"
 #include "protocol.h"
-#include "limits.h"
+#include "machine_limits.h"
 #include "state_machine.h"
 #include "motion_control.h"
 #include "tool_change.h"

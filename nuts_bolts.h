@@ -206,6 +206,9 @@ void delay_sec(float seconds, delaymode_t mode);
 
 float convert_delta_vector_to_unit_vector(float *vector);
 
+// parse ISO8601 datetime
+struct tm *get_datetime (const char *s);
+
 // calculate checksum byte for data
 uint8_t calc_checksum (uint8_t *data, uint32_t size);
 

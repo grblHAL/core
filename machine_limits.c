@@ -1,5 +1,5 @@
 /*
-  limits.c - code pertaining to limit-switches and performing the homing cycle
+  machine_limits.c - code pertaining to limit-switches and performing the homing cycle
 
   Part of grblHAL
 
@@ -29,7 +29,7 @@
 #include "nuts_bolts.h"
 #include "protocol.h"
 #include "motion_control.h"
-#include "limits.h"
+#include "machine_limits.h"
 #include "tool_change.h"
 #include "state_machine.h"
 #ifdef KINEMATICS_API

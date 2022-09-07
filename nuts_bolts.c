@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
+  Copyright (c) 2017-2022 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -24,6 +24,8 @@
 #include <math.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
+#include <ctype.h>
 
 #include "hal.h"
 #include "protocol.h"
@@ -263,6 +265,66 @@ float convert_delta_vector_to_unit_vector (float *vector)
     return magnitude;
 }
 
+// parse ISO8601 datetime: YYYY-MM-DDTHH:MM:SSZxxx
+struct tm *get_datetime (const char *s)
+{
+    static struct tm dt;
+    PROGMEM static const uint8_t mdays[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+    char *s1 = (char *)s, c;
+    uint_fast16_t idx = 0, value = 0;
+
+    memset(&dt, 0, sizeof(struct tm));
+    dt.tm_year = dt.tm_mon = dt.tm_mday = dt.tm_hour = dt.tm_min = dt.tm_sec = -1;
+
+    do {
+        c = *s1++;
+
+        if(isdigit(c))
+            value = (value * 10) + c - '0';
+
+        else if(!(c == '-' || c == ':' || c == 'T' || c == 'Z' || c == '\0'))
+            break;
+
+        else {
+            switch(idx) {
+                case 0:
+                    if(c == '-' && value >= 1970 && value <= 2099)
+                        dt.tm_year = value - 1900;
+                    break;
+
+                case 1:
+                    if(c == '-' && value >= 1 && value <= 12)
+                        dt.tm_mon = value - 1;
+                    break;
+
+                case 2:
+                    if(c == 'T' && value >= 1 && value <= (mdays[dt.tm_mon >= 0 ? dt.tm_mon : 0] + (dt.tm_mon == 1 && dt.tm_year != 100 && (dt.tm_year % 4) == 0 ? 1 : 0)))
+                        dt.tm_mday = value;
+                    break;
+
+                case 3:
+                    if(c == ':' && value <= 23)
+                        dt.tm_hour = value;
+                    break;
+
+                case 4:
+                    if(c == ':' && value <= 59)
+                        dt.tm_min = value;
+                    break;
+
+                case 5:
+                    if((c == 'Z' || c == '\0') && value <= 59)
+                        dt.tm_sec = value;
+                    break;
+            }
+            idx++;
+            value = 0;
+        }
+    } while(c);
+
+    return (dt.tm_year | dt.tm_mon | dt.tm_mday | dt.tm_hour | dt.tm_min | dt.tm_sec) > 0 ? &dt : NULL;
+}
 
 // calculate checksum byte for data
 uint8_t calc_checksum (uint8_t *data, uint32_t size) {

@@ -1,20 +1,46 @@
 ## grblHAL changelog
 
+20220905:
+
+Core:
+
+* Added `$RTC` system command for outputting or setting current real time clock date and time. Uses ISO8601 format.  
+__Driver developers:__  
+_grbl/limits.h_ has been renamed to _grbl/machine_limits.h_ (along with the _.c_ counterpart).  
+[hal.enumerate_pins](http://svn.io-engineering.com/grblHAL/html/structgrbl__hal__t.html#a661c9aa458a2e6fc5fb1657e121999a3) and the associated [callback function](http://svn.io-engineering.com/grblHAL/html/hal_8h.html#a41e902cfc3da615f9494aba956d895ba) parameter has a new signature, a void pointer has been added. Driver implementations should pass this on to the callback.  
+The HAL version number has been increased to 10 due to this, update _driver.c_ to match!
+
+Plugins:
+
+* WebUI: added many ESP commands to v3 command handler, some code refactoring. Still WIP.
+
+* Networking: some minor bug fixes.
+
+Drivers:
+
+* All: updated for _grbl/limits.h_ name change and HAL version number increase.
+
+* iMXRT1062, STM32F4xx, STM32F7xx and ESP32: Added RTC support.
+
+* ESP32: WebUI backend support improved.
+
+---
+
 20220904:
 
 Core:
 
-* Added optional RTC (Real Time Clock) support to the HAL. VFS improvements.
+* Added optional RTC \(Real Time Clock\) support to the HAL. VFS improvements.
 
 Plugins:
 
-* Networking: improved websocket protocol handling. 
+* Networking: improved websocket subprotocol handling. 
 
 * WebUI: separated command handlers for v2 and v3 and improved detection of v3 clients. Now sets RTC from ESP800 if HAL allows.
 
 Drivers:
 
-* RP2040: Added RTC support++.  
+* RP2040: Added RTC support++.
 
 * iMXRT1062: updated uSDFS patch - needed for VFS changes.
 

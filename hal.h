@@ -40,7 +40,7 @@
 #include "ioports.h"
 #include "plugins.h"
 
-#define HAL_VERSION 9
+#define HAL_VERSION 10
 
 /// Bitmap flags for driver capabilities, to be set by driver in driver_init(), flags may be cleared after to switch off option.
 typedef union {
@@ -104,14 +104,15 @@ typedef struct {
 /*! \brief Pointer to callback function for pin enumerations.
 \param pin pointer to the \a xbar_t structure holding the pin information.
 */
-typedef void (*pin_info_ptr)(xbar_t *pin);
+typedef void (*pin_info_ptr)(xbar_t *pin, void *data);
 
 /*! \brief Pointer to function for enumerate pin information.
 \param low_level true if low level information is required, false if used for reporting.
 \param callback pointer to a \a pin_info_ptr type function to receive the pin information.
 The callback function will be called for each pin.
 */
-typedef void (*enumerate_pins_ptr)(bool low_level, pin_info_ptr callback);
+typedef void (*enumerate_pins_ptr)(bool low_level, pin_info_ptr callback, void *data);
+
 
 /*************
  *  Coolant  *
@@ -359,6 +360,7 @@ typedef struct {
     probe_connected_toggle_ptr connected_toggle;    //!< Optional handler for toggling probe connected status.
 } probe_ptrs_t;
 
+
 /*******************************
  *  Tool selection and change  *
  *******************************/
@@ -384,6 +386,7 @@ typedef struct {
     tool_select_ptr select; //!< Optional handler for selecting a tool.
     tool_change_ptr change; //!< Optional handler for executing a tool change (M6).
 } tool_ptrs_t;
+
 
 /*****************
  *  User M-code  *
@@ -438,6 +441,7 @@ typedef struct {
     user_mcode_validate_ptr validate;   //!< Handler for validating parameters for a user defined M-code.
     user_mcode_execute_ptr execute;     //!< Handler for executing a user defined M-code.
 } user_mcode_ptrs_t;
+
 
 /*******************
  *  Encoder input  *

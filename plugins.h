@@ -67,6 +67,7 @@ typedef union {
 typedef char ssid_t[65];
 typedef char password_t[33];
 typedef char hostname_t[33];
+typedef char sntp_server_t[129]; // URI
 
 typedef struct {
     char ip[16];

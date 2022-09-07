@@ -30,7 +30,7 @@
 #include "tool_change.h"
 #include "override.h"
 #include "protocol.h"
-#include "limits.h"
+#include "machine_limits.h"
 #include "report.h"
 #include "state_machine.h"
 #include "nvs_buffer.h"

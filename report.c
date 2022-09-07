@@ -36,7 +36,7 @@
 #include "hal.h"
 #include "report.h"
 #include "nvs_buffer.h"
-#include "limits.h"
+#include "machine_limits.h"
 #include "state_machine.h"
 #include "regex.h"
 
@@ -842,6 +842,8 @@ void report_execute_startup_message (char *line, status_code_t status_code)
 // Prints build info line
 void report_build_info (char *line, bool extended)
 {
+    char buf[100];
+
     hal.stream.write("[VER:" GRBL_VERSION ".");
     hal.stream.write(uitoa(GRBL_BUILD));
     hal.stream.write(":");
@@ -996,6 +998,9 @@ void report_build_info (char *line, bool extended)
     #ifndef NO_SETTINGS_DESCRIPTIONS
         strcat(buf, "SED,");
     #endif
+
+        if(hal.rtc.get_datetime)
+            strcat(buf, "RTC,");
 
     #ifdef PID_LOG
         strcat(buf, "PID,");
@@ -2072,7 +2077,7 @@ static const char *get_pinname (pin_function_t function)
     return name ? name : "N/A";
 }
 
-static void report_pin (xbar_t *pin)
+static void report_pin (xbar_t *pin, void *data)
 {
     hal.stream.write("[PIN:");
     if(pin->port)
@@ -2090,9 +2095,38 @@ static void report_pin (xbar_t *pin)
 status_code_t report_pins (sys_state_t state, char *args)
 {
     if(hal.enumerate_pins)
-        hal.enumerate_pins(false, report_pin);
+        hal.enumerate_pins(false, report_pin, NULL);
 
     return Status_OK;
+}
+
+static void print_uito2a (char *prefix, uint32_t v)
+{
+    hal.stream.write(prefix);
+    if(v < 10)
+        hal.stream.write("0");
+    hal.stream.write(uitoa(v));
+}
+
+status_code_t report_time (void)
+{
+    bool ok = false;
+
+    if(hal.rtc.get_datetime) {
+        struct tm time;
+        if((ok = !!hal.rtc.get_datetime(&time))) {
+            hal.stream.write("[RTC:");
+            hal.stream.write(uitoa(time.tm_year + 1900));
+            print_uito2a("-", time.tm_mon + 1);
+            print_uito2a("-", time.tm_mday);
+            print_uito2a("T", time.tm_hour);
+            print_uito2a(":", time.tm_min);
+            print_uito2a(":", time.tm_sec);
+            hal.stream.write("]" ASCII_EOL);
+        }
+    }
+
+    return ok ? Status_OK : Status_InvalidStatement;
 }
 
 void report_pid_log (void)

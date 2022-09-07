@@ -28,7 +28,7 @@
 #include "protocol.h"
 #include "tool_change.h"
 #include "state_machine.h"
-#include "limits.h"
+#include "machine_limits.h"
 #ifdef KINEMATICS_API
 #include "kinematics.h"
 #endif
@@ -79,6 +79,7 @@ static status_code_t settings_reset (sys_state_t state, char *args);
 static status_code_t output_startup_lines (sys_state_t state, char *args);
 static status_code_t set_startup_line0 (sys_state_t state, char *args);
 static status_code_t set_startup_line1 (sys_state_t state, char *args);
+static status_code_t rtc_action (sys_state_t state, char *args);
 #ifdef DEBUGOUT
 static status_code_t output_memmap (sys_state_t state, char *args);
 #endif
@@ -232,6 +233,7 @@ PROGMEM static const sys_command_t sys_commands[] = {
     { "LIM", true, report_current_limit_state },
     { "SD", false, report_spindle_data },
     { "SR", false, spindle_reset_data },
+    { "RTC", false, rtc_action },
 #ifdef DEBUGOUT
     { "Q", true, output_memmap },
 #endif
@@ -286,6 +288,10 @@ void system_command_help (void)
         hal.stream.write("$PINS - enumerate pin bindings" ASCII_EOL);
     hal.stream.write("$LEV - output last control signal events" ASCII_EOL);
     hal.stream.write("$LIM - output current limit pins state" ASCII_EOL);
+    if(hal.rtc.get_datetime) {
+        hal.stream.write("$RTC - output current time" ASCII_EOL);
+        hal.stream.write("$RTC=<ISO8601 datetime> - set current time" ASCII_EOL);
+    }
 #ifndef NO_SETTINGS_DESCRIPTIONS
     hal.stream.write("$SED=<n> - output settings description for setting <n>" ASCII_EOL);
 #endif
@@ -867,6 +873,24 @@ static status_code_t set_startup_line0 (sys_state_t state, char *args)
 static status_code_t set_startup_line1 (sys_state_t state, char *args)
 {
     return set_startup_line(state, args, 1);
+}
+
+static status_code_t rtc_action (sys_state_t state, char *args)
+{
+    status_code_t retval = Status_OK;
+
+    if(args) {
+
+        struct tm *time = get_datetime(args);
+
+        if(time)
+            hal.rtc.set_datetime(time);
+        else
+            retval = Status_BadNumberFormat;
+    } else
+        retval = report_time();
+
+    return retval;
 }
 
 #ifdef DEBUGOUT

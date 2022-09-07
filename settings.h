@@ -197,6 +197,11 @@ typedef enum {
 
     Setting_AdminPassword = 330,
     Setting_UserPassword = 331,
+    Setting_NTPServerURI = 332,
+    Setting_NTPServerURI_2 = 333,
+    Setting_NTPServerURI_3 = 334,
+    Setting_Timezone = 335,
+    Setting_DSTActive = 336,
 
     Setting_TrinamicDriver = 338,
     Setting_TrinamicHoming = 339,
@@ -344,7 +349,7 @@ typedef union {
     struct {
         uint16_t report_inches                   :1,
                  restore_overrides               :1,
-                 unused0                         :1,
+                 dst_active                      :1, // Daylight savings time
                  sleep_enable                    :1,
                  disable_laser_during_hold       :1,
                  force_initialization_alarm      :1,

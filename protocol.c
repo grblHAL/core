@@ -32,7 +32,7 @@
 #include "motion_control.h"
 #include "sleep.h"
 #include "protocol.h"
-#include "limits.h"
+#include "machine_limits.h"
 
 #ifndef RT_QUEUE_SIZE
 #define RT_QUEUE_SIZE 8 // must be a power of 2

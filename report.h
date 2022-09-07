@@ -117,6 +117,9 @@ status_code_t report_spindle_data (sys_state_t state, char *args);
 // Prints pin assignments
 status_code_t report_pins (sys_state_t state, char *args);
 
+// Prints current RTC datetime in ISO8601 format (when available)
+status_code_t report_time (void);
+
 // Prints current PID log.
 void report_pid_log (void);
 
