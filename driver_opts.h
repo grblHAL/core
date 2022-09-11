@@ -172,6 +172,10 @@
 #define SDCARD_ENABLE       0
 #endif
 
+#ifndef LITTLEFS_ENABLE
+#define LITTLEFS_ENABLE     0
+#endif
+
 #ifndef SPI_ENABLE
 #if SDCARD_ENABLE || TRINAMIC_SPI_ENABLE
 #define SPI_ENABLE 1

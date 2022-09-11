@@ -143,23 +143,48 @@ char *vfs_fixpath (char *path)
     return path;
 }
 
-static vfs_mount_t *get_mount (const char *filename)
+static inline vfs_mount_t *path_is_mount_dir (const char *path)
+{
+    size_t plen = strlen(path);
+
+    if(*path == '/' && plen == 1)
+        return &root;
+
+    size_t mlen;
+    vfs_mount_t *mount = root.next;
+
+    if(mount) do {
+        mlen = strlen(mount->path) - 1;
+        if(mlen == plen && !strncmp(mount->path, path, mlen))
+            break;
+    } while((mount = mount->next));
+
+    return mount;
+}
+
+static vfs_mount_t *get_mount (const char *path)
 {
     vfs_errno = 0;
 
-    if(*filename == '/') {
+    if(*path != '/')
+        return cwdmount;
 
-        vfs_mount_t *mount = root.next;
+    vfs_mount_t *mount;
+
+    if((mount = path_is_mount_dir(path)) == NULL) {
+
+        mount = root.next;
 
         if(mount) do {
-            if(!strncmp(mount->path, filename, strlen(mount->path)))
+            if(!strncmp(mount->path, path, strlen(mount->path)))
                 break;
         } while((mount = mount->next));
 
-        return mount ? mount : &root;
+        if(mount == NULL)
+            mount = &root;
+    }
 
-    } else
-        return cwdmount;
+    return mount;
 }
 
 static const char *get_filename (vfs_mount_t *mount, const char *filename)
@@ -245,7 +270,7 @@ int vfs_rename (const char *from, const char *to)
 
 int vfs_unlink (const char *filename)
 {
-    vfs_mount_t *mount = get_mount(filename);
+    vfs_mount_t *mount = get_mount(filename); // TODO: test for dir?
 
     return mount ? mount->vfs->funlink(get_filename(mount, filename)) : -1;
 }
@@ -374,6 +399,9 @@ bool vfs_mount (const char *path, const vfs_t *fs)
     else if((vfs = (vfs_mount_t *)malloc(sizeof(vfs_mount_t)))) {
 
         strcpy(vfs->path, path);
+        if(vfs->path[strlen(path) - 1] != '/')
+            strcat(vfs->path, "/");
+
         vfs->vfs = fs;
         vfs->next = NULL;
 
@@ -413,6 +441,19 @@ bool vfs_unmount (const char *path)
     }
 
     return true;
+}
+
+vfs_drive_t *vfs_get_drive (const char *path)
+{
+    static vfs_drive_t drive;
+
+    vfs_mount_t *mount = get_mount(path);
+    drive.name = mount->vfs->fs_name;
+    drive.path = (const char *)mount->path;
+    drive.mode = mount->vfs->mode;
+    drive.fs = mount->vfs;
+
+    return &drive;
 }
 
 vfs_drives_t *vfs_drives_open (void)

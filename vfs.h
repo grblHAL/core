@@ -201,5 +201,6 @@ vfs_drive_t *vfs_drives_read (vfs_drives_t *handle);
 void vfs_drives_close (vfs_drives_t *handle);
 vfs_free_t *vfs_drive_getfree (vfs_drive_t *drive);
 int vfs_drive_format (vfs_drive_t *drive);
+vfs_drive_t *vfs_get_drive (const char *path);
 
 #endif // INCLUDE_VFS_H

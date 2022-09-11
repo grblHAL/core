@@ -1,6 +1,28 @@
 ## grblHAL changelog
 
-20220905:
+20220911:
+
+Core:
+
+* Minor options preprocessor change for littlefs, "hardened" VFS code. Core build date not changed.
+
+Plugins:
+
+* WebUI: Added all grblHAL settings to ESP400 response, file systems handling improvements++. Still WIP, but getting closer to final version!
+
+* Networking: some general enhancements \(for WebUI\).
+
+* SDCard: added VFS wrapper for littlefs. This plugin will be renamed late, likely to _Plugin_storage_.
+
+Drivers:
+
+* iMXRT1062, RP2040 and ESP32: Added [littlefs](https://github.com/littlefs-project/littlefs) support for flash based file storage.
+
+* STM32F7xx: Fixed [typo](https://github.com/grblHAL/core/issues/186#issuecomment-1242943739).
+
+---
+
+20220906:
 
 Core:
 
@@ -18,7 +40,7 @@ Plugins:
 
 Drivers:
 
-* All: updated for _grbl/limits.h_ name change and HAL version number increase.
+* All: updated for grbl/limits.h name change and HAL version number increase.
 
 * iMXRT1062, STM32F4xx, STM32F7xx and ESP32: Added RTC support.
 
