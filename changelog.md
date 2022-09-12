@@ -1,5 +1,13 @@
 ## grblHAL changelog
 
+20220912:
+
+Plugins:
+
+* WebUI: Improved ESP800 response, updated embedded fallback page and fixes for file listing error and AP mode handling.
+
+---
+
 20220911:
 
 Core:
@@ -8,11 +16,11 @@ Core:
 
 Plugins:
 
-* WebUI: Added all grblHAL settings to ESP400 response, file systems handling improvements++. Still WIP, but getting closer to final version!
+* WebUI: Added _all_ grblHAL settings to ESP400 response, file systems handling improvements++. Still WIP, but getting closer to final version!
 
 * Networking: some general enhancements \(for WebUI\).
 
-* SDCard: added VFS wrapper for littlefs. This plugin will be renamed late, likely to _Plugin_storage_.
+* SDCard: added VFS wrapper for littlefs. This plugin will be renamed later, likely to _Plugin_storage_.
 
 Drivers:
 
