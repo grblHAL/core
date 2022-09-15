@@ -1432,6 +1432,10 @@ inline static uint8_t get_decimal_places (const char *format)
 char *setting_get_value (const setting_detail_t *setting, uint_fast16_t offset)
 {
     char *value = NULL;
+
+    if(setting == NULL)
+        return NULL;
+
     setting_id_t id = (setting_id_t)(setting->id + offset);
 
     switch(setting->type) {

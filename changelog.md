@@ -1,5 +1,30 @@
 ## grblHAL changelog
 
+20220914:
+
+Core:
+
+* Added optional HAL entry point for getting free memory \(ideally sum of free blocks on the heap\), currently used by WebUI.
+
+Plugins:
+
+* WebUI: Sort ESP400 output by settings group, fixed ESP410 response and added free memory to ESP400 response when available from the HAL.
+Updated for websocket API changes.
+
+* Networking: removed WebUI specific code from websocket daemon, made API more flexible. Some bug fixes and a bit of code cleanup/refactoring.
+
+* SDCard: Switched to VFS file handling for the YModem protocol.
+
+Drivers:
+
+* iMXRT1062, RP2040, ESP32 and STM32F7xx: added support for free memory HAL entry point.
+
+* ESP32: improved wifi AP scanning.
+
+* MSP432E401Y: added littlefs and WebDAV support.
+
+---
+
 20220912:
 
 Plugins:

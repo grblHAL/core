@@ -76,6 +76,9 @@ typedef bool (*driver_setup_ptr)(settings_t *settings);
 /*! \brief Pointer to function to be called when a soft reset occurs. */
 typedef void (*driver_reset_ptr)(void);
 
+/*! \brief Pointer to function for getting free memory (as sum of all free blocks in the heap). */
+typedef uint32_t (*get_free_mem_ptr)(void);
+
 /*! \brief Optional pointer to function for switching between I/O streams.
 \param stream pointer to io_stream_t
 \returns true if switch was successful
@@ -103,12 +106,14 @@ typedef struct {
 
 /*! \brief Pointer to callback function for pin enumerations.
 \param pin pointer to the \a xbar_t structure holding the pin information.
+\param data pointer to \a void that may hold data data useful to the callback function.
 */
 typedef void (*pin_info_ptr)(xbar_t *pin, void *data);
 
 /*! \brief Pointer to function for enumerate pin information.
 \param low_level true if low level information is required, false if used for reporting.
 \param callback pointer to a \a pin_info_ptr type function to receive the pin information.
+\param data pointer to \a void that can be used to pass data to the callback function. May be NULL.
 The callback function will be called for each pin.
 */
 typedef void (*enumerate_pins_ptr)(bool low_level, pin_info_ptr callback, void *data);
@@ -518,6 +523,9 @@ typedef struct {
     uint32_t rx_buffer_size;        //!< Input stream buffer size in bytes.
     uint32_t max_step_rate;         //!< Currently unused.
     uint8_t driver_axis_settings;   //!< Currently unused.
+
+    /*! \brief Optional pointer to function for getting free memory (as sum of all free blocks in the heap). */
+    get_free_mem_ptr get_free_mem;
 
     /*! \brief Driver setup handler.
     Called once by the core after settings has been loaded. The driver should enable MCU peripherals in the provided function.
