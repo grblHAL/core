@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+20220916:
+
+Core:
+
+* Added setting definitions for WebUI client inactivity timeout and real time report auto interval.
+
+Plugins:
+
+* WebUI: Added support for multiple client switchover and session inactivity timeout. Updated for websocket API changes.  
+Reorganized ESP v2 and v3 protocol code for readability and added settings for client inactivity \(`$396`\) real time report auto interval \(`$397`\).  
+__NOTE:__ This will reset WebUI settings to default and possibly other plugin settings too. Backup and restore!
+
+* Networking: Enhanced websocket daemon API, now allows multiple clients - with the limitation that only one can claim the websocket "serial" stream.
+
+---
+
 20220914:
 
 Core:
@@ -8,10 +24,10 @@ Core:
 
 Plugins:
 
-* WebUI: Sort ESP400 output by settings group, fixed ESP410 response and added free memory to ESP400 response when available from the HAL.
+* WebUI: Sort ESP400 output by settings group, fixed ESP410 response and added free memory to ESP420 response when available from the HAL.
 Updated for websocket API changes.
 
-* Networking: removed WebUI specific code from websocket daemon, made API more flexible. Some bug fixes and a bit of code cleanup/refactoring.
+* Networking: Removed WebUI specific code from websocket daemon, made API more flexible. Some bug fixes and a bit of code cleanup/refactoring.
 
 * SDCard: Switched to VFS file handling for the YModem protocol.
 

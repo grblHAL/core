@@ -264,6 +264,8 @@ typedef enum {
     Setting_DoorCoolantOnDelay = 393,
     Setting_SpindleOnDelay = 394, // made available if safety door input not provided
     Setting_SpindleType = 395,
+    Setting_WebUiTimeout = 396,
+    Setting_WebUiAutoReportInterval = 397,
 
     Setting_EncoderSettingsBase = 400, // NOTE: Reserving settings values >= 400 for encoder settings. Up to 449.
     Setting_EncoderSettingsMax = 449,
@@ -811,6 +813,8 @@ setting_datatype_t setting_datatype_to_external (setting_datatype_t datatype);
 setting_group_t settings_normalize_group (setting_group_t group);
 const setting_group_detail_t *setting_get_group_details (setting_group_t id);
 char *setting_get_value (const setting_detail_t *setting, uint_fast16_t offset);
+uint32_t setting_get_int_value (const setting_detail_t *setting, uint_fast16_t offset);
+float setting_get_float_value (const setting_detail_t *setting, uint_fast16_t offset);
 setting_id_t settings_get_axis_base (setting_id_t id, uint_fast8_t *idx);
 bool setting_is_list (const setting_detail_t *setting);
 void setting_remove_elements (setting_id_t id, uint32_t mask);

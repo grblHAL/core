@@ -1436,8 +1436,6 @@ char *setting_get_value (const setting_detail_t *setting, uint_fast16_t offset)
     if(setting == NULL)
         return NULL;
 
-    setting_id_t id = (setting_id_t)(setting->id + offset);
-
     switch(setting->type) {
 
         case Setting_NonCore:
@@ -1484,7 +1482,10 @@ char *setting_get_value (const setting_detail_t *setting, uint_fast16_t offset)
         case Setting_NonCoreFn:
         case Setting_IsExtendedFn:
         case Setting_IsLegacyFn:
-        case Setting_IsExpandedFn:
+        case Setting_IsExpandedFn:;
+
+            setting_id_t id = (setting_id_t)(setting->id + offset);
+
             switch(setting->datatype) {
 
                 case Format_Decimal:
@@ -1504,6 +1505,89 @@ char *setting_get_value (const setting_detail_t *setting, uint_fast16_t offset)
                     value = uitoa(((setting_get_int_ptr)(setting->get_value))(id));
                     break;
             }
+            break;
+    }
+
+    return value;
+}
+
+uint32_t setting_get_int_value (const setting_detail_t *setting, uint_fast16_t offset)
+{
+    uint32_t value = 0;
+
+    switch(setting->type) {
+
+        case Setting_NonCore:
+        case Setting_IsExtended:
+        case Setting_IsLegacy:
+        case Setting_IsExpanded:
+            switch(setting->datatype) {
+
+                case Format_Int8:
+                case Format_Bool:
+                case Format_Bitfield:
+                case Format_XBitfield:
+                case Format_AxisMask:
+                case Format_RadioButtons:
+                    value = *((uint8_t *)(setting->value));
+                    break;
+
+                case Format_Int16:
+                    value = *((uint16_t *)(setting->value));
+                    break;
+
+                case Format_Integer:
+                    value = *((uint32_t *)(setting->value));
+                    break;
+
+                default:
+                    break;
+            }
+            break;
+
+        case Setting_NonCoreFn:
+        case Setting_IsExtendedFn:
+        case Setting_IsLegacyFn:
+        case Setting_IsExpandedFn:
+            switch(setting->datatype) {
+
+                case Format_Decimal:
+                case Format_String:
+                case Format_Password:
+                case Format_IPv4:
+                    break;
+
+                default:
+                    value = ((setting_get_int_ptr)(setting->get_value))((setting_id_t)(setting->id + offset));
+                    break;
+            }
+            break;
+    }
+
+    return value;
+}
+
+float setting_get_float_value (const setting_detail_t *setting, uint_fast16_t offset)
+{
+    float value = NAN;
+
+    if(setting->datatype == Format_Decimal) switch(setting->type) {
+
+        case Setting_NonCore:
+        case Setting_IsExtended:
+        case Setting_IsLegacy:
+        case Setting_IsExpanded:
+            value = *((float *)(setting->value));
+            break;
+
+        case Setting_NonCoreFn:
+        case Setting_IsExtendedFn:
+        case Setting_IsLegacyFn:
+        case Setting_IsExpandedFn:
+            value = ((setting_get_float_ptr)(setting->get_value))((setting_id_t)(setting->id + offset));
+            break;
+
+        default:
             break;
     }
 
