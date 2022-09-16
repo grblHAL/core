@@ -282,7 +282,6 @@ void system_command_help (void)
     hal.stream.write("$ES - enumerate settings" ASCII_EOL);
     hal.stream.write("$ESG - enumerate settings, Grbl formatted" ASCII_EOL);
     hal.stream.write("$ESH- enumerate settings, grblHAL formatted" ASCII_EOL);
-    hal.stream.write("$ESG - enumerate alarms" ASCII_EOL);
     hal.stream.write("$E* - enumerate alarms, status codes and settings" ASCII_EOL);
     if(hal.enumerate_pins)
         hal.stream.write("$PINS - enumerate pin bindings" ASCII_EOL);
