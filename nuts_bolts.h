@@ -104,7 +104,11 @@
 #define AXES_BITMASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT|A_AXIS_BIT|B_AXIS_BIT|C_AXIS_BIT|U_AXIS_BIT|V_AXIS_BIT)
 #endif
 
-#ifdef C_AXIS
+#ifdef V_AXIS
+#define N_ABC_AXIS 5
+#elif defined(U_AXIS)
+#define N_ABC_AXIS 4
+#elif defined(C_AXIS)
 #define N_ABC_AXIS 3
 #elif defined(B_AXIS)
 #define N_ABC_AXIS 2

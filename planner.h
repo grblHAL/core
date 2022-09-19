@@ -24,11 +24,6 @@
 #ifndef _PLANNER_H_
 #define _PLANNER_H_
 
-// The number of linear motions that can be in the plan at any give time
-#ifndef BLOCK_BUFFER_SIZE
-  #define BLOCK_BUFFER_SIZE 36
-#endif
-
 typedef union {
     uint32_t value;
     struct {
@@ -108,44 +103,45 @@ typedef struct {
 } planner_t;
 
 // Initialize and reset the motion plan subsystem
-void plan_reset(); // Reset all
-//void plan_reset_buffer(); // Reset buffer only.
+bool plan_reset (void); // Reset all
+
+uint_fast16_t plan_get_buffer_size (void);
 
 // Add a new linear movement to the buffer. target[N_AXIS] is the signed, absolute target position
 // in millimeters. Feed rate specifies the speed of the motion. If feed rate is inverted, the feed
 // rate is taken to mean "frequency" and would complete the operation in 1/feed_rate minutes.
-bool plan_buffer_line(float *target, plan_line_data_t *pl_data);
+bool plan_buffer_line (float *target, plan_line_data_t *pl_data);
 
 // Called when the current block is no longer needed. Discards the block and makes the memory
 // available for new blocks.
-void plan_discard_current_block();
+void plan_discard_current_block (void);
 
 // Gets the planner block for the special system motion cases. (Parking/Homing)
-plan_block_t *plan_get_system_motion_block();
+plan_block_t *plan_get_system_motion_block (void);
 
 // Gets the current block. Returns NULL if buffer empty
-plan_block_t *plan_get_current_block();
+plan_block_t *plan_get_current_block (void);
 
 // Called by step segment buffer when computing executing block velocity profile.
-float plan_get_exec_block_exit_speed_sqr();
+float plan_get_exec_block_exit_speed_sqr (void);
 
 // Called by main program during planner calculations and step segment buffer during initialization.
-float plan_compute_profile_nominal_speed(plan_block_t *block);
+float plan_compute_profile_nominal_speed (plan_block_t *block);
 
 // Get the planner position vectors.
 float *plan_get_position (void);
 
 // Reset the planner position vector (in steps)
-void plan_sync_position();
+void plan_sync_position (void);
 
 // Reinitialize plan with a partially completed block
-void plan_cycle_reinitialize();
+void plan_cycle_reinitialize (void);
 
 // Returns the number of available blocks in the planner buffer.
-uint_fast16_t plan_get_block_buffer_available();
+uint_fast16_t plan_get_block_buffer_available (void);
 
 // Returns the status of the block ring buffer. True, if buffer is full.
-bool plan_check_full_buffer();
+bool plan_check_full_buffer (void);
 
 void plan_feed_override (uint_fast8_t feed_override, uint_fast8_t rapid_override);
 

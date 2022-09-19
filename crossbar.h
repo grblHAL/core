@@ -22,6 +22,8 @@
 #ifndef _CROSSBAR_H_
 #define _CROSSBAR_H_
 
+#include "nuts_bolts.h"
+
 typedef enum {
     Input_Probe = 0,
     Input_Reset,
@@ -101,6 +103,8 @@ typedef enum {
     Output_MotorChipSelectM3,
     Output_MotorChipSelectM4,
     Output_MotorChipSelectM5,
+    Output_MotorChipSelectM6,
+    Output_MotorChipSelectM7,
     Output_StepperPower,
     Output_StepperEnable,
     Output_StepperEnableX,
@@ -137,7 +141,9 @@ typedef enum {
     Bidirectional_MotorUARTZ,
     Bidirectional_MotorUARTM3,
     Bidirectional_MotorUARTM4,
-    Bidirectional_MotorUARTM5
+    Bidirectional_MotorUARTM5,
+    Bidirectional_MotorUARTM6,
+    Bidirectional_MotorUARTM7
 } pin_function_t;
 
 #define PIN_ISINPUT(pin) (pin < Outputs)
@@ -167,16 +173,6 @@ PROGMEM static const pin_name_t pin_names[] = {
    { .function = Input_LimitZ,              .name = "Z limit min" },
    { .function = Input_LimitZ_2,            .name = "Z limit min 2" },
    { .function = Input_LimitZ_Max,          .name = "Z limit max" },
-   { .function = Input_LimitA,              .name = "A limit min" },
-   { .function = Input_LimitA_Max,          .name = "A limit max" },
-   { .function = Input_LimitB,              .name = "B limit min" },
-   { .function = Input_LimitB_Max,          .name = "B limit max" },
-   { .function = Input_LimitC,              .name = "C limit min" },
-   { .function = Input_LimitC_Max,          .name = "C limit max" },
-   { .function = Input_LimitU,              .name = "U limit min" },
-   { .function = Input_LimitU_Max,          .name = "U limit max" },
-   { .function = Input_LimitV,              .name = "V limit min" },
-   { .function = Input_LimitV_Max,          .name = "V limit max" },
    { .function = Input_MISO,                .name = "MISO" },
    { .function = Input_RX,                  .name = "RX" },
    { .function = Input_KeypadStrobe,        .name = "Keypad strobe" },
@@ -203,28 +199,54 @@ PROGMEM static const pin_name_t pin_names[] = {
    { .function = Output_StepY_2,            .name = "Y2 step" },
    { .function = Output_StepZ,              .name = "Z step" },
    { .function = Output_StepZ_2,            .name = "Z2 step" },
-   { .function = Output_StepA,              .name = "A step" },
-   { .function = Output_StepB,              .name = "B step" },
-   { .function = Output_StepC,              .name = "C step" },
    { .function = Output_DirX,               .name = "X dir" },
    { .function = Output_DirX_2,             .name = "X2 dir" },
    { .function = Output_DirY,               .name = "Y dir" },
    { .function = Output_DirY_2,             .name = "Y2 dir" },
    { .function = Output_DirZ,               .name = "Z dir" },
    { .function = Output_DirZ_2,             .name = "Z2 dir" },
-   { .function = Output_DirA,               .name = "A dir" },
-   { .function = Output_DirB,               .name = "B dir" },
-   { .function = Output_DirC,               .name = "C dir" },
    { .function = Output_StepperPower,       .name = "Stepper power" },
    { .function = Output_StepperEnable,      .name = "Steppers enable" },
    { .function = Output_StepperEnableX,     .name = "X enable" },
    { .function = Output_StepperEnableY,     .name = "Y enable" },
    { .function = Output_StepperEnableZ,     .name = "Z enable" },
-   { .function = Output_StepperEnableA,     .name = "A enable" },
-   { .function = Output_StepperEnableB,     .name = "B enable" },
-   { .function = Output_StepperEnableC,     .name = "C enable" },
    { .function = Output_StepperEnableXY,    .name = "XY enable" },
+#ifdef A_AXIS
+   { .function = Output_StepA,              .name = "A step" },
+   { .function = Output_DirA,               .name = "A dir" },
+   { .function = Output_StepperEnableA,     .name = "A enable" },
+   { .function = Input_LimitA,              .name = "A limit min" },
+   { .function = Input_LimitA_Max,          .name = "A limit max" },
+#endif
+#ifdef B_AXIS
+   { .function = Output_StepB,              .name = "B step" },
+   { .function = Output_DirB,               .name = "B dir" },
+   { .function = Output_StepperEnableB,     .name = "B enable" },
    { .function = Output_StepperEnableAB,    .name = "AB enable" },
+   { .function = Input_LimitB,              .name = "B limit min" },
+   { .function = Input_LimitB_Max,          .name = "B limit max" },
+#endif
+#ifdef C_AXIS
+   { .function = Output_StepC,              .name = "C step" },
+   { .function = Output_DirC,               .name = "C dir" },
+   { .function = Output_StepperEnableC,     .name = "C enable" },
+   { .function = Input_LimitC,              .name = "C limit min" },
+   { .function = Input_LimitC_Max,          .name = "C limit max" },
+#endif
+#ifdef U_AXIS
+   { .function = Output_StepU,              .name = "U step" },
+   { .function = Output_DirU,               .name = "U dir" },
+   { .function = Output_StepperEnableU,     .name = "U enable" },
+   { .function = Input_LimitU,              .name = "U limit min" },
+   { .function = Input_LimitU_Max,          .name = "U limit max" },
+#endif
+#ifdef V_AXIS
+   { .function = Output_StepV,              .name = "V step" },
+   { .function = Output_DirV,               .name = "V dir" },
+   { .function = Output_StepperEnableV,     .name = "V enable" },
+   { .function = Input_LimitV,              .name = "V limit min" },
+   { .function = Input_LimitV_Max,          .name = "V limit max" },
+#endif
    { .function = Output_MotorChipSelect,    .name = "Motor CS" },
    { .function = Output_MotorChipSelectX,   .name = "Motor CSX" },
    { .function = Output_MotorChipSelectY,   .name = "Motor CSY" },
@@ -232,6 +254,8 @@ PROGMEM static const pin_name_t pin_names[] = {
    { .function = Output_MotorChipSelectM3,  .name = "Motor CSM3" },
    { .function = Output_MotorChipSelectM4,  .name = "Motor CSM4" },
    { .function = Output_MotorChipSelectM5,  .name = "Motor CSM5" },
+   { .function = Output_MotorChipSelectM6,  .name = "Motor CSM6" },
+   { .function = Output_MotorChipSelectM7,  .name = "Motor CSM7" },
    { .function = Output_SpindleOn,          .name = "Spindle on" },
    { .function = Output_SpindleDir,         .name = "Spindle direction" },
    { .function = Output_SpindlePWM,         .name = "Spindle PWM" },
@@ -255,7 +279,9 @@ PROGMEM static const pin_name_t pin_names[] = {
    { .function = Bidirectional_MotorUARTZ,  .name = "UART Z" },
    { .function = Bidirectional_MotorUARTM3, .name = "UART M3" },
    { .function = Bidirectional_MotorUARTM4, .name = "UART M4" },
-   { .function = Bidirectional_MotorUARTM5, .name = "UART M5" }
+   { .function = Bidirectional_MotorUARTM5, .name = "UART M5" },
+   { .function = Bidirectional_MotorUARTM6, .name = "UART M6" },
+   { .function = Bidirectional_MotorUARTM7, .name = "UART M7" }
 };
 
 typedef enum {

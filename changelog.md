@@ -1,6 +1,37 @@
 ## grblHAL changelog
 
-20220916:
+Build 20220918:
+
+Core:
+
+* Added [configuration option](https://github.com/grblHAL/core/blob/master/config.h) `BLOCK_BUFFER_DYNAMIC` for dynamically allocate planner buffer. If enabled setting `$398` can be used to set number of blocks in the buffer.  
+__NOTE:__ A restart of the controller is required after changing `$398`.  
+__NOTE:__ If not enough free memory is available the actual allocation size will be reduced until it fits. The actual allocation can be checked with `$I`.  
+Each block requires around 100 bytes of memory.  
+__NOTE:__ All setting values will be reset when this option is changed, backup and restore!  
+__NOTE:__ In a later version this option will be removed and dynamic allocation will become standard.  
+
+* Added experimental [configuration option](https://github.com/grblHAL/core/blob/master/config.h) `AXIS_REMAP_ABC2UVW` for remapping ABC axis letters to UVW.  
+When enabled the string `ABC2UVW` will be added to the `NEWOPT` element in the `$I` response, this can be used by senders to set up the UI etc.  
+
+Drivers:
+
+* ESP32: Applied workaround for wifi/pin36/pin39 silicon bug. Reenabled HAL function for reboot.
+
+* STM32F7xx: Added support for up to 8 axes in the driver, with the reference board map only. As of now untested but it compiles and runs!  
+Are there any senders that can candle 8 axes available? [ioSender](https://github.com/terjeio/ioSender) can not but that may change.
+
+Plugins:
+
+* WebUI: added new and missing settings options for ESP400, added axisletters from configuration to ESP800 response.
+
+* SDCard: updated FatFs VFS wrapper for read-only configuration.
+
+* Some: moved reboot required message for some settings to reporting by using a settings flag.
+
+---
+
+Build 20220916:
 
 Core:
 

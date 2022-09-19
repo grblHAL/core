@@ -266,6 +266,7 @@ typedef enum {
     Setting_SpindleType = 395,
     Setting_WebUiTimeout = 396,
     Setting_WebUiAutoReportInterval = 397,
+    Setting_PlannerBlocks = 398,
 
     Setting_EncoderSettingsBase = 400, // NOTE: Reserving settings values >= 400 for encoder settings. Up to 449.
     Setting_EncoderSettingsMax = 449,
@@ -592,6 +593,9 @@ typedef struct {
     float junction_deviation;
     float arc_tolerance;
     float g73_retract;
+#ifdef BLOCK_BUFFER_DYNAMIC
+    uint16_t planner_buffer_blocks;
+#endif
     machine_mode_t mode;
     tool_change_settings_t tool_change;
     axis_settings_t axis[N_AXIS];
@@ -817,6 +821,7 @@ uint32_t setting_get_int_value (const setting_detail_t *setting, uint_fast16_t o
 float setting_get_float_value (const setting_detail_t *setting, uint_fast16_t offset);
 setting_id_t settings_get_axis_base (setting_id_t id, uint_fast8_t *idx);
 bool setting_is_list (const setting_detail_t *setting);
+bool setting_is_integer (const setting_detail_t *setting);
 void setting_remove_elements (setting_id_t id, uint32_t mask);
 bool settings_add_spindle_type (const char *type);
 

@@ -1117,29 +1117,41 @@ status_code_t gc_execute_block(char *block)
 
                 switch(letter) {
 
-                  #ifdef A_AXIS
+#ifdef A_AXIS
+  #ifndef AXIS_REMAP_ABC2UVW
                     case 'A':
+  #else
+                    case 'U':
+  #endif
                         axis_words.a = On;
                         word_bit.parameter.a = On;
                         gc_block.values.xyz[A_AXIS] = value;
                         break;
-                  #endif
+#endif
 
-                  #ifdef B_AXIS
+#ifdef B_AXIS
+  #ifndef AXIS_REMAP_ABC2UVW
                     case 'B':
+  #else
+                    case 'V':
+  #endif
                         axis_words.b = On;
                         word_bit.parameter.b = On;
                         gc_block.values.xyz[B_AXIS] = value;
                         break;
-                  #endif
+#endif
 
-                  #ifdef C_AXIS
-                    case 'C':
+#ifdef C_AXIS
+  #ifndef AXIS_REMAP_ABC2UVW
+                  case 'C':
+  #else
+                  case 'W':
+  #endif
                         axis_words.c = On;
                         word_bit.parameter.c = On;
                         gc_block.values.xyz[C_AXIS] = value;
                         break;
-                 #endif
+#endif
 
                     case 'D':
                         word_bit.parameter.d = On;
@@ -1222,21 +1234,21 @@ status_code_t gc_execute_block(char *block)
                         gc_block.values.t = isnan(value) ? 0xFFFFFFFF : int_value;
                         break;
 
-                #ifdef U_AXIS
+#ifdef U_AXIS
                   case 'U':
                       axis_words.u = On;
                       word_bit.parameter.u = On;
                       gc_block.values.xyz[U_AXIS] = value;
                       break;
-                #endif
+#endif
 
-                #ifdef V_AXIS
+#ifdef V_AXIS
                   case 'V':
                       axis_words.v = On;
                       word_bit.parameter.v = On;
                       gc_block.values.xyz[V_AXIS] = value;
                       break;
-                #endif
+#endif
 
                   case 'X':
                         axis_words.x = On;
@@ -3059,7 +3071,8 @@ status_code_t gc_execute_block(char *block)
             gc_state.modal.feed_mode = FeedMode_UnitsPerMin;
 // TODO: check           gc_state.distance_per_rev = 0.0f;
             // gc_state.modal.cutter_comp = CUTTER_COMP_DISABLE; // Not supported.
-            gc_state.modal.coord_system.id = CoordinateSystem_G54;
+            if((sys.report.gwco = gc_state.modal.coord_system.id != CoordinateSystem_G54))
+                gc_state.modal.coord_system.id = CoordinateSystem_G54;
             gc_state.modal.spindle = (spindle_state_t){0};
             gc_state.modal.coolant = (coolant_state_t){0};
             gc_state.modal.override_ctrl.feed_rate_disable = Off;

@@ -32,12 +32,29 @@
 
 // Compile time only default configuration
 
+
+// Uncomment this line to enable $398 for configuring number of blocks in the planner buffer.
+// NOTE: Changing this will usually reset the settings to default values. Backup and restore!
+// NOTE: If the  $398 value is set too high number of blocks will be reduced until
+//       a buffer can be allocated. Use $I to check if value was set too high.
+// NOTE: this compile time option will be removed in a later version and dynamic allocation
+//       will become the default.
+//#define BLOCK_BUFFER_DYNAMIC
+
 #ifndef N_AXIS
-/*! Defines number of axes supported - minimum 3, maximum 6
+/*! Defines number of axes supported - minimum 3, maximum 8
 
 If more than 3 axes are configured a compliant driver and map file is needed.
 */
 #define N_AXIS 3 // Number of axes
+#endif
+
+/*! Remap ABC axis letters to UVW
+
+Experimental: if more than 3 and less than 7 axes are configured the ABC axis letters can be remapped to UWV.
+*/
+#if N_AXIS > 3 && N_AXIS < 7
+//#define AXIS_REMAP_ABC2UVW // Default disabled. Uncomment to enable.
 #endif
 
 #ifndef N_SPINDLE

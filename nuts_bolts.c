@@ -55,18 +55,34 @@ static const float froundvalues[MAX_PRECISION + 1] =
     0.00000000005       // 10
 };
 
+#if N_AXIS > 6 && defined(AXIS_REMAP_ABC2UVW)
+#error "Illegal remapping of ABC axes!"
+#endif
+
 char const *const axis_letter[N_AXIS] = {
     "X",
     "Y",
     "Z"
 #if N_AXIS > 3
+  #ifndef AXIS_REMAP_ABC2UVW
     ,"A"
+  #else
+    ,"U"
+  #endif
 #endif
 #if N_AXIS > 4
+  #ifndef AXIS_REMAP_ABC2UVW
     ,"B"
+  #else
+    ,"V"
+  #endif
 #endif
 #if N_AXIS > 5
+ #ifndef AXIS_REMAP_ABC2UVW
     ,"C"
+  #else
+    ,"W"
+  #endif
 #endif
 #if N_AXIS > 6
     ,"U"

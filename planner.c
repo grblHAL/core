@@ -29,6 +29,7 @@
 #include "hal.h"
 #include "nuts_bolts.h"
 #include "planner.h"
+#include "protocol.h"
 
 #ifndef MINIMUM_JUNCTION_SPEED
 #define MINIMUM_JUNCTION_SPEED 0.0f
@@ -40,7 +41,13 @@
 void mc_sync_backlash_position (void);
 #endif
 
-static plan_block_t block_buffer[BLOCK_BUFFER_SIZE];    // A ring buffer for motion instructions
+// The number of linear motions that can be in the plan at any give time
+#ifndef BLOCK_BUFFER_SIZE
+  #define BLOCK_BUFFER_SIZE 35
+#endif
+
+static uint_fast16_t block_buffer_size;                 // Number of blocks in the planner buffer minus 1
+static plan_block_t *block_buffer = NULL;               // A ring buffer for motion instructions
 static plan_block_t *block_buffer_tail = NULL;          // Pointer to the block to process now
 static plan_block_t *block_buffer_head;                 // Pointer to the next block to be pushed
 static plan_block_t *next_buffer_head;                  // Pointer to the next buffer head
@@ -114,7 +121,7 @@ static planner_t pl;
   look-ahead blocks numbering up to a hundred or more.
 
 */
-static void planner_recalculate ()
+static void planner_recalculate (void)
 {
     // Initialize block pointer to the last block in the planner buffer.
     plan_block_t *block = block_buffer_head->prev;
@@ -203,7 +210,7 @@ inline static void plan_cleanup (plan_block_t *block)
 }
 
 
-inline static void plan_reset_buffer ()
+inline static void plan_reset_buffer (void)
 {
     if(block_buffer_tail) {
         // Free memory for any pending messages and output commands after soft reset
@@ -213,14 +220,58 @@ inline static void plan_reset_buffer ()
         }
     }
 
-    block_buffer_tail = block_buffer_head = &block_buffer[0];   // Empty = tail == head
-    next_buffer_head = block_buffer_head->next;                 // = next block
-    block_buffer_planned = block_buffer_tail;                   // = block_buffer_tail
+    block_buffer_tail = block_buffer_head = block_buffer;   // Empty = tail == head
+    next_buffer_head = block_buffer_head->next;             // = next block
+    block_buffer_planned = block_buffer_tail;               // = block_buffer_tail
 }
 
 
-void plan_reset ()
+#ifdef BLOCK_BUFFER_DYNAMIC
+
+static void planner_warning (sys_state_t state)
 {
+    report_message("Planner buffer size was reduced!", Message_Plain);
+}
+
+#endif
+
+
+uint_fast16_t plan_get_buffer_size (void)
+{
+    return block_buffer_size;
+}
+
+bool plan_reset (void)
+{
+#ifndef BLOCK_BUFFER_DYNAMIC
+
+    static plan_block_t block_buffer_s[BLOCK_BUFFER_SIZE + 1];
+
+    block_buffer = block_buffer_s;
+    block_buffer_size = BLOCK_BUFFER_SIZE;
+
+#else
+
+    if(block_buffer == NULL) {
+
+        block_buffer_size = settings.planner_buffer_blocks;
+
+        while((block_buffer = malloc((block_buffer_size + 1) * sizeof(plan_block_t))) == NULL) {
+            if(block_buffer_size > 40)
+                block_buffer_size -= block_buffer_size >= 250 ? 100 : 10;
+            else
+                break;
+        }
+    }
+
+    if(block_buffer_size != settings.planner_buffer_blocks)
+        protocol_enqueue_rt_command(planner_warning);
+
+    if(block_buffer == NULL)
+        return false;
+
+#endif
+
     if(block_buffer_tail) {
         // Free memory for any pending messages and output commands after soft reset
         while(block_buffer_tail != block_buffer_head) {
@@ -234,16 +285,18 @@ void plan_reset ()
 
     // Set up stepper block ringbuffer as circular doubly linked list
     uint_fast8_t idx;
-    for(idx = 0 ; idx <= BLOCK_BUFFER_SIZE - 1 ; idx++) {
-        block_buffer[idx].prev = &block_buffer[idx == 0 ? BLOCK_BUFFER_SIZE - 1 : idx - 1];
-        block_buffer[idx].next = &block_buffer[idx == BLOCK_BUFFER_SIZE - 1 ? 0 : idx + 1];
+    for(idx = 0 ; idx <= block_buffer_size ; idx++) {
+        block_buffer[idx].prev = &block_buffer[idx == 0 ? block_buffer_size : idx - 1];
+        block_buffer[idx].next = &block_buffer[idx == block_buffer_size ? 0 : idx + 1];
     }
 
     plan_reset_buffer();
+
+    return true;
 }
 
 
-void plan_discard_current_block ()
+void plan_discard_current_block (void)
 {
     if (block_buffer_tail != block_buffer_head) { // Discard non-empty buffer.
         plan_cleanup(block_buffer_tail);
@@ -256,20 +309,20 @@ void plan_discard_current_block ()
 
 
 // Returns address of planner buffer block used by system motions. Called by segment generator.
-plan_block_t *plan_get_system_motion_block ()
+plan_block_t *plan_get_system_motion_block (void)
 {
     return block_buffer_head;
 }
 
 
 // Returns address of first planner block, if available. Called by various main program functions.
-plan_block_t *plan_get_current_block ()
+plan_block_t *plan_get_current_block (void)
 {
     return block_buffer_head == block_buffer_tail ? NULL : block_buffer_tail;
 }
 
 
-inline float plan_get_exec_block_exit_speed_sqr ()
+inline float plan_get_exec_block_exit_speed_sqr (void)
 {
     plan_block_t *block = block_buffer_tail->next;
     return block == block_buffer_head ? 0.0f : block->entry_speed_sqr;
@@ -277,7 +330,7 @@ inline float plan_get_exec_block_exit_speed_sqr ()
 
 
 // Returns the availability status of the block ring buffer. True, if full.
-bool plan_check_full_buffer ()
+bool plan_check_full_buffer (void)
 {
     return block_buffer_tail == next_buffer_head;
 }
@@ -315,7 +368,7 @@ inline static float plan_compute_profile_parameters (plan_block_t *block, float 
 }
 
 // Re-calculates buffered motions profile parameters upon a motion-based override change.
-void plan_update_velocity_profile_parameters ()
+void plan_update_velocity_profile_parameters (void)
 {
     plan_block_t *block = block_buffer_tail;
     float prev_nominal_speed = SOME_LARGE_VALUE; // Set high for first block nominal speed calculation.
@@ -352,7 +405,6 @@ static inline float limit_max_rate_by_axis_maximum (float *unit_vec)
 
     return limit_value;
 }
-
 
 
 /* Add a new linear movement to the buffer. target[N_AXIS] is the signed, absolute target position
@@ -549,7 +601,7 @@ float *plan_get_position (void)
 
 
 // Reset the planner position vectors. Called by the system abort/initialization routine.
-void plan_sync_position ()
+void plan_sync_position (void)
 {
     memcpy(pl.position, sys.position, sizeof(pl.position));
 #ifdef ENABLE_BACKLASH_COMPENSATION
@@ -559,17 +611,17 @@ void plan_sync_position ()
 
 
 // Returns the number of available blocks are in the planner buffer.
-uint_fast16_t plan_get_block_buffer_available ()
+uint_fast16_t plan_get_block_buffer_available (void)
 {
     return (uint_fast16_t)(block_buffer_head >= block_buffer_tail
-                            ? ((BLOCK_BUFFER_SIZE - 1) - (block_buffer_head - block_buffer_tail))
+                            ? (block_buffer_size - (block_buffer_head - block_buffer_tail))
                             : ((block_buffer_tail - block_buffer_head) - 1));
 }
 
 
 // Re-initialize buffer plan with a partially completed block, assumed to exist at the buffer tail.
 // Called after a steppers have come to a complete stop for a feed hold and the cycle is stopped.
-void plan_cycle_reinitialize ()
+void plan_cycle_reinitialize (void)
 {
     // Re-plan from a complete stop. Reset planner entry speeds and buffer planned pointer.
     st_update_plan_block_parameters();

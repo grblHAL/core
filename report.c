@@ -193,29 +193,16 @@ static char *get_rate_value_inch (float value)
 // NOTE: returns pointer to null terminator!
 inline static char *axis_signals_tostring (char *buf, axes_signals_t signals)
 {
-    if(signals.x)
-        *buf++ = 'X';
+    uint_fast16_t idx = 0;
 
-    if(signals.y)
-        *buf++ = 'Y';
+    signals.mask &= AXES_BITMASK;
 
-    if (signals.z)
-        *buf++ = 'Z';
-
-#ifdef A_AXIS
-    if (signals.a)
-        *buf++ = 'A';
-#endif
-
-#ifdef B_AXIS
-    if (signals.b)
-        *buf++ = 'B';
-#endif
-
-#ifdef C_AXIS
-    if (signals.c)
-        *buf++ = 'C';
-#endif
+    while(signals.mask) {
+        if(signals.mask & 0x01)
+            *buf++ = *axis_letter[idx];
+        idx++;
+        signals.mask >>= 1;
+    };
 
     *buf = '\0';
 
@@ -929,7 +916,7 @@ void report_build_info (char *line, bool extended)
     hal.stream.write(buf);
 
     // NOTE: Compiled values, like override increments/max/min values, may be added at some point later.
-    hal.stream.write(uitoa((uint32_t)(BLOCK_BUFFER_SIZE - 1)));
+    hal.stream.write(uitoa((uint32_t)plan_get_buffer_size()));
     hal.stream.write(",");
     hal.stream.write(uitoa(hal.rx_buffer_size));
     if(extended) {
@@ -1001,6 +988,10 @@ void report_build_info (char *line, bool extended)
 
         if(hal.rtc.get_datetime)
             strcat(buf, "RTC,");
+
+#ifdef AXIS_REMAP_ABC2UVW
+        strcat(buf, "ABC2UVW,");
+#endif
 
     #ifdef PID_LOG
         strcat(buf, "PID,");
@@ -1504,7 +1495,7 @@ static void report_settings_detail (settings_format_t format, const setting_deta
             if(setting->reboot_required)
                 hal.stream.write(", reboot required");
 
-            #ifndef NO_SETTINGS_DESCRIPTIONS
+#ifndef NO_SETTINGS_DESCRIPTIONS
             // Add description if driver is capable of outputting it...
             if(hal.stream.write_n) {
                 const char *description = setting_get_description(setting->id);
@@ -1521,6 +1512,11 @@ static void report_settings_detail (settings_format_t format, const setting_deta
                         hal.stream.write(ASCII_EOL);
                         hal.stream.write(description);
                     }
+                }
+                if(setting->reboot_required) {
+                    if(description && *description != '\0')
+                        hal.stream.write(ASCII_EOL ASCII_EOL);
+                    hal.stream.write(SETTINGS_HARD_RESET_REQUIRED + 4);
                 }
             }
 #endif
@@ -1668,6 +1664,8 @@ static void report_settings_detail (settings_format_t format, const setting_deta
     #ifndef NO_SETTINGS_DESCRIPTIONS
                 const char *description = setting_get_description((setting_id_t)(setting->id + offset));
                 hal.stream.write(description ? description : "");
+                if(setting->reboot_required)
+                    hal.stream.write(SETTINGS_HARD_RESET_REQUIRED + (description && *description != '\0' ? 0 : 4));
     #endif
                 hal.stream.write("\t");
 
@@ -1796,6 +1794,7 @@ status_code_t report_settings_details (settings_format_t format, setting_id_t id
 
 status_code_t report_setting_description (settings_format_t format, setting_id_t id)
 {
+    const setting_detail_t *setting = setting_get_details(id, NULL);
     const char *description = setting_get_description(id);
 
     if(format == SettingsFormat_MachineReadable) {
@@ -1804,7 +1803,9 @@ status_code_t report_setting_description (settings_format_t format, setting_id_t
         hal.stream.write(vbar);
     }
 //    hal.stream.write(description == NULL ? (is_setting_available(setting_get_details(id, NULL)) ? "" : "N/A") : description); // TODO?
-    hal.stream.write(description == NULL ? (setting_get_details(id, NULL) ? "" : "N/A") : description);
+    hal.stream.write(description ? description : (setting ? "" : "N/A"));
+    if(setting && setting->reboot_required)
+        hal.stream.write(SETTINGS_HARD_RESET_REQUIRED + (description && *description != '\0' ? 0 : 4));
 
     if(format == SettingsFormat_MachineReadable)
         hal.stream.write("]" ASCII_EOL);

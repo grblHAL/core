@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021 Terje Io
+  Copyright (c) 2021-2022 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -477,6 +477,61 @@
 #endif
 #endif
 
+#ifdef U_AXIS
+#ifndef M6_AVAILABLE
+  #error "U_AXIS pins are not available"
+#endif
+#define U_STEP_PORT         M6_STEP_PORT
+#define U_STEP_PIN          M6_STEP_PIN
+#define U_STEP_BIT          (1<<M6_STEP_PIN)
+#define U_DIRECTION_PORT    M6_DIRECTION_PORT
+#define U_DIRECTION_PIN     M6_DIRECTION_PIN
+#define U_DIRECTION_BIT     (1<<M6_DIRECTION_PIN)
+#ifdef M6_LIMIT_PIN
+  #define U_LIMIT_PORT      M6_LIMIT_PORT
+  #define U_LIMIT_PIN       M6_LIMIT_PIN
+  #define U_LIMIT_BIT       (1<<M6_LIMIT_PIN)
+#endif
+#ifdef M6_LIMIT_PIN_MAX
+  #define U_LIMIT_PORT_MAX  M6_LIMIT_PORT_MAX
+  #define U_LIMIT_PIN_MAX   M6_LIMIT_PIN_MAX
+  #define U_LIMIT_BIT_MAX   (1<<M6_LIMIT_PIN_MAX)
+#endif
+#ifdef M6_ENABLE_PIN
+  #define U_ENABLE_PORT     M6_ENABLE_PORT
+  #define U_ENABLE_PIN      M6_ENABLE_PIN
+  #define U_ENABLE_BIT      (1<<M6_ENABLE_PIN)
+#endif
+#endif
+
+#ifdef V_AXIS
+#ifndef M7_AVAILABLE
+  #error "V_AXIS pins are not available"
+#endif
+#define V_STEP_PORT         M7_STEP_PORT
+#define V_STEP_PIN          M7_STEP_PIN
+#define V_STEP_BIT          (1<<M7_STEP_PIN)
+#define V_DIRECTION_PORT    M7_DIRECTION_PORT
+#define V_DIRECTION_PIN     M7_DIRECTION_PIN
+#define V_DIRECTION_BIT     (1<<M7_DIRECTION_PIN)
+#ifdef M7_LIMIT_PIN
+  #define V_LIMIT_PORT      M7_LIMIT_PORT
+  #define V_LIMIT_PIN       M7_LIMIT_PIN
+  #define V_LIMIT_BIT       (1<<M7_LIMIT_PIN)
+#endif
+#ifdef M7_LIMIT_PIN_MAX
+  #define V_LIMIT_PORT_MAX  M7_LIMIT_PORT_MAX
+  #define V_LIMIT_PIN_MAX   M7_LIMIT_PIN_MAX
+  #define V_LIMIT_BIT_MAX   (1<<M7_LIMIT_PIN_MAX)
+#endif
+#ifdef M7_ENABLE_PIN
+  #define V_ENABLE_PORT     M7_ENABLE_PORT
+  #define V_ENABLE_PIN      M7_ENABLE_PIN
+  #define V_ENABLE_BIT      (1<<M7_ENABLE_PIN)
+#endif
+#endif
+
+
 #ifdef STEP_PORT
 #ifndef X_STEP_PORT
 #define X_STEP_PORT STEP_PORT
@@ -495,6 +550,12 @@
 #endif
 #if defined(C_AXIS) && !defined(C_STEP_PORT)
 #define C_STEP_PORT STEP_PORT
+#endif
+#if defined(U_AXIS) && !defined(U_STEP_PORT)
+#define U_STEP_PORT STEP_PORT
+#endif
+#if defined(V_AXIS) && !defined(V_STEP_PORT)
+#define V_STEP_PORT STEP_PORT
 #endif
 #endif
 
@@ -527,6 +588,12 @@
 #if defined(C_AXIS) && !defined(B_DIRECTION_PORT)
 #define C_DIRECTION_PORT DIRECTION_PORT
 #endif
+#if defined(U_AXIS) && !defined(U_DIRECTION_PORT)
+#define U_DIRECTION_PORT DIRECTION_PORT
+#endif
+#if defined(V_AXIS) && !defined(V_DIRECTION_PORT)
+#define V_DIRECTION_PORT DIRECTION_PORT
+#endif
 #endif
 
 #ifndef X_DIRECTION_BIT
@@ -557,6 +624,12 @@
 #endif
 #if defined(C_AXIS) && !defined(C_LIMIT_PORT)
 #define C_LIMIT_PORT LIMIT_PORT
+#endif
+#if defined(U_AXIS) && !defined(U_LIMIT_PORT)
+#define U_LIMIT_PORT LIMIT_PORT
+#endif
+#if defined(V_AXIS) && !defined(V_LIMIT_PORT)
+#define V_LIMIT_PORT LIMIT_PORT
 #endif
 #endif
 
@@ -670,6 +743,20 @@
 #define C_LIMIT_BIT (1<<C_LIMIT_PIN)
 #else
 #define C_LIMIT_BIT 0
+#endif
+#endif
+#if N_AXIS >= 7 && !defined(U_LIMIT_BIT)
+#ifdef U_LIMIT_PIN
+#define U_LIMIT_BIT (1<<U_LIMIT_PIN)
+#else
+#define U_LIMIT_BIT 0
+#endif
+#endif
+#if N_AXIS == 8 && !defined(V_LIMIT_BIT)
+#ifdef V_LIMIT_PIN
+#define V_LIMIT_BIT (1<<V_LIMIT_PIN)
+#else
+#define V_LIMIT_BIT 0
 #endif
 #endif
 

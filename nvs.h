@@ -33,7 +33,11 @@ Minimum 1024 bytes required, more if space for driver and/or plugin data and set
 /*! \brief Number of bytes at the start of the NVS area reserved for core settings and parameters.
 Minimum 1024 bytes required.
 */
+#if N_AXIS > 6
+#define GRBL_NVS_END 1151
+#else
 #define GRBL_NVS_END 1023
+#endif
 
 //! Number of bytes used for storing CRC values. Do not change this!
 #define NVS_CRC_BYTES 1
@@ -47,7 +51,7 @@ __NOTE:__ 1024 bytes of persistent storage is the minimum required.
 ///@{
 #define NVS_ADDR_GLOBAL         1U
 #define NVS_ADDR_PARAMETERS     512U
-#define NVS_ADDR_BUILD_INFO     942U
+#define NVS_ADDR_BUILD_INFO     (GRBL_NVS_END - 81U)
 #define NVS_ADDR_STARTUP_BLOCK  (NVS_ADDR_BUILD_INFO - 1 - N_STARTUP_LINE * (sizeof(stored_line_t) + NVS_CRC_BYTES))
 #ifdef N_TOOLS
 #define NVS_ADDR_TOOL_TABLE     (GRBL_NVS_END + 1)
