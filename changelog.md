@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+20220920:
+
+Plugins:
+
+* Networking: Fix for http daemon not decoding the base URL when no URL handlers were registered.
+
+* WebUI: Fix for incorrect parsing of ESP701 action parameters.
+
+* Laser (PPI): Bug fixes.
+
+---
+
 Build 20220918:
 
 Core:
