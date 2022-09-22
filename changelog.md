@@ -1,5 +1,22 @@
 ## grblHAL changelog
 
+Build 20220922:
+
+Core:
+
+* Changed signature of [spindle_update_caps()](http://svn.io-engineering.com/grblHAL/html/spindle__control_8h.html#a3170b0136a49e0b30047e00bdf4e812c), third party developers must update _driver.c_ if used.
+
+* Removed some superfluous code, improved handling of laser mode M4 for jogging and motion complete event.  
+Bug fixes + expanded step/dir map to 8 axes.
+
+Drivers:
+
+* All: Updated for core signature change.
+
+* STM32F1xx: updated FatFs link to v0.14.
+
+---
+
 20220920:
 
 Plugins:

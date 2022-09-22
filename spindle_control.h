@@ -135,6 +135,7 @@ typedef void (*spindle_pulse_on_ptr)(uint_fast16_t pulse_length);
 //! Handlers for spindle support.
 typedef struct {
     spindle_cap_t cap;                  //!< Spindle capabilities.
+    uint_fast16_t pwm_off_value;        //!< Value for switching PWM signal off.
     float rpm_min;                      //!< Minimum spindle RPM.
     float rpm_max;                      //!< Maximum spindle RPM.
     spindle_config_ptr config;          //!< Optional handler for configuring the spindle.
@@ -219,7 +220,7 @@ uint8_t spindle_get_count (void);
 
 bool spindle_select (spindle_id_t spindle_id);
 spindle_cap_t spindle_get_caps (void);
-void spindle_update_caps (bool laser_cap);
+void spindle_update_caps (spindle_pwm_t *pwm_caps);
 spindle_id_t spindle_get_current (void);
 
 #endif

@@ -2526,7 +2526,7 @@ status_code_t gc_execute_block(char *block)
         memcpy(&plan_data.spindle, &gc_state.spindle, sizeof(spindle_t));
         plan_data.condition.spindle = gc_state.modal.spindle;
         plan_data.condition.coolant = gc_state.modal.coolant;
-        plan_data.condition.is_rpm_rate_adjusted = gc_state.is_rpm_rate_adjusted;
+        plan_data.condition.is_rpm_rate_adjusted = gc_state.is_rpm_rate_adjusted || (gc_state.modal.spindle.ccw && sys.mode == Mode_Laser);
 
         if ((status_code_t)(int_value = (uint_fast16_t)mc_jog_execute(&plan_data, &gc_block)) == Status_OK)
             memcpy(gc_state.position, gc_block.values.xyz, sizeof(gc_state.position));
@@ -2555,7 +2555,7 @@ status_code_t gc_execute_block(char *block)
                 gc_parser_flags.spindle_force_sync = On;
         }
 
-        gc_state.is_rpm_rate_adjusted = gc_state.modal.spindle.ccw && !gc_parser_flags.laser_disable && hal.spindle.cap.variable;
+        gc_state.is_rpm_rate_adjusted = gc_state.modal.spindle.ccw && !gc_parser_flags.laser_disable;
     }
 
     // [0. Non-specific/common error-checks and miscellaneous setup]:

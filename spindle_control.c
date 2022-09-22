@@ -121,9 +121,10 @@ spindle_cap_t spindle_get_caps (void)
     return caps;
 }
 
-void spindle_update_caps (bool laser_cap)
+void spindle_update_caps (spindle_pwm_t *pwm_caps)
 {
-    hal.spindle.cap.laser = laser_cap;
+    hal.spindle.cap.laser = !!pwm_caps && !!hal.spindle.update_pwm;
+    hal.spindle.pwm_off_value = pwm_caps ? pwm_caps->off_value : 0;
     sys.mode = settings.mode == Mode_Laser && !hal.spindle.cap.laser ? Mode_Standard : settings.mode;
 }
 
