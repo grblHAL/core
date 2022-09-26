@@ -33,6 +33,11 @@
     modbus_init();
 #endif
 
+#if CANBUS_ENABLE
+    extern void canbus_init (void);
+    canbus_init();
+#endif
+
 #if VFD_ENABLE
     extern void vfd_init (void);
     vfd_init();

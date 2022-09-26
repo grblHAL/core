@@ -267,6 +267,7 @@ typedef enum {
     Setting_WebUiTimeout = 396,
     Setting_WebUiAutoReportInterval = 397,
     Setting_PlannerBlocks = 398,
+    Setting_CANbus_BaudRate = 399,
 
     Setting_EncoderSettingsBase = 400, // NOTE: Reserving settings values >= 400 for encoder settings. Up to 449.
     Setting_EncoderSettingsMax = 449,
@@ -646,6 +647,7 @@ typedef enum {
     Group_Stepper,
     Group_MotorDriver,
     Group_VFD,
+    Group_CANbus,
     Group_Axis,
 // NOTE: axis groups MUST be sequential AND last
     Group_Axis0,
