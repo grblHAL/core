@@ -1,5 +1,27 @@
 ## grblHAL changelog
 
+Build 20220925:
+
+Core:
+
+* Added `[AXS:<number of axes>:<axisletters>]` line to `$I` report response, replaces the string `ABC2UVW` from the `NEWOPT` element in the `$I` response.  
+
+* Fixed `|Pn:` real time report element pin state conflict: `F` is now used for motor fault and `M` for motor warning, `U`, `V` and `W` for limit switch status.
+
+Further details can be found in the [wiki](https://github.com/grblHAL/core/wiki/Report-extensions).
+
+Plugins:
+
+* Laser: Added experimental support for LaserBurn clusters, for faster engraving.
+
+* SDCard: Minor tweak to enable plugins to modify the file stream without losing real time report extensions.
+
+Drivers:
+
+* ESP32: added directory for embedded read-only files and moved related files there.
+
+---
+
 Build 20220922:
 
 Core:
@@ -41,7 +63,6 @@ __NOTE:__ All setting values will be reset when this option is changed, backup a
 __NOTE:__ In a later version this option will be removed and dynamic allocation will become standard.  
 
 * Added experimental [configuration option](https://github.com/grblHAL/core/blob/master/config.h) `AXIS_REMAP_ABC2UVW` for remapping ABC axis letters to UVW.  
-When enabled the string `ABC2UVW` will be added to the `NEWOPT` element in the `$I` response, this can be used by senders to set up the UI etc.  
 
 Drivers:
 

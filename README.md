@@ -1,5 +1,7 @@
 ## grblHAL ##
 
+__New:__ The core now has support for up to 8 axes, and for 4-6 axes configurations ABC axis letters can be remapped to UVW.
+
 grblHAL has [many extensions](https://github.com/grblHAL/core/wiki) that may cause issues with some senders. As a workaround for these a [compile time option](https://github.com/grblHAL/core/wiki/Changes-from-grbl-1.1#workaround) has been added that disables extensions selectively. 
 
 __IMPORTANT!__ grblHAL defaults to normally closed \(NC\) switches for inputs, if none are connected when testing it is likely that the controller will start in alarm mode.  
@@ -73,9 +75,9 @@ List of Supported G-Codes:
   - Tool Change: M6* (Two modes possible: manual** - supports jogging, ATC), M61
   - Switches: M48, M49, M50, M51, M53
   - Input/uutput control***: M62, M63, M64, M65, M66, M67, M68
-  - Valid Non-Command Words: A*, B*, C*, F, H*, I, J, K, L, N, P, Q*, R, S, T, X, Y, Z
+  - Valid Non-Command Words: A*, B*, C*, D, E*, F, H*, I, J, K, L, N, P, Q*, R, S, T, U*, V*, W*, X, Y, Z
 
-  *  driver/configuration dependent.
+  * driver/configuration dependent. W axis only available when ABC axes are remapped to UVW.
   ** requires compatible GCode sender due to protocol extensions, new state and RT command.
   *** number of inputs and outputs supported dependent on driver implementation.
   **** supports multi turn arcs from build 20220718.
@@ -84,4 +86,4 @@ List of Supported G-Codes:
 Some [plugins](https://github.com/grblHAL/plugins) implements additional M-codes.
 
 ---
-2022-09-22
+2022-09-25

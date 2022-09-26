@@ -228,9 +228,9 @@ inline static char *control_signals_tostring (char *buf, control_signals_t signa
     if (hal.signals_cap.stop_disable ? signals.stop_disable : sys.flags.optional_stop_disable)
         *buf++ = 'T';
     if (signals.motor_warning)
-        *buf++ = 'W';
-    if (signals.motor_fault)
         *buf++ = 'M';
+    if (signals.motor_fault)
+        *buf++ = 'F';
 
     *buf = '\0';
 
@@ -247,6 +247,9 @@ void report_init (void)
 void report_init_fns (void)
 {
     memcpy(&grbl.report, &report_fns, sizeof(report_t));
+
+    if(grbl.on_report_handlers_init)
+        grbl.on_report_handlers_init();
 }
 
 // Handles the primary confirmation protocol response for streaming interfaces and human-feedback.
@@ -933,7 +936,20 @@ void report_build_info (char *line, bool extended)
 
     if(extended) {
 
+        uint_fast8_t idx;
         nvs_io_t *nvs = nvs_buffer_get_physical();
+
+        strcat(strcpy(buf, "[AXS:"), uitoa(N_AXIS));
+
+        append = &buf[6];
+        *append++ = ':';
+
+        for(idx = 0; idx < N_AXIS; idx++)
+            *append++ = *axis_letter[idx];
+
+        *append = '\0';
+
+        hal.stream.write(strcat(buf, "]" ASCII_EOL));
 
         strcpy(buf, "[NEWOPT:ENUMS,RT");
         strcat(buf, settings.flags.legacy_rt_commands ? "+," : "-,");
@@ -988,10 +1004,6 @@ void report_build_info (char *line, bool extended)
 
         if(hal.rtc.get_datetime)
             strcat(buf, "RTC,");
-
-#ifdef AXIS_REMAP_ABC2UVW
-        strcat(buf, "ABC2UVW,");
-#endif
 
     #ifdef PID_LOG
         strcat(buf, "PID,");

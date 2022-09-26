@@ -70,6 +70,11 @@
     openpnp_init();
 #endif
 
+#if LB_CLUSTERS_ENABLE
+    extern void lb_clusters_init (void);
+    lb_clusters_init();
+#endif
+
 #if WEBUI_ENABLE
     extern void webui_init (void);
     webui_init();

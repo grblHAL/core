@@ -220,7 +220,13 @@ uint8_t spindle_get_count (void);
 
 bool spindle_select (spindle_id_t spindle_id);
 spindle_cap_t spindle_get_caps (void);
+
+/*! \brief Update PWM spindle capabilities with run-time determined parameters.
+\param pwm_caps pointer to \a spindle_pwm_t struct, NULL if spindle if not PWM capable.
+
+ */
 void spindle_update_caps (spindle_pwm_t *pwm_caps);
+
 spindle_id_t spindle_get_current (void);
 
 #endif
