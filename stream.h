@@ -196,13 +196,14 @@ typedef bool (*disable_rx_stream_ptr)(bool disable);
 typedef union {
     uint8_t value;
     struct {
-        uint8_t connected    :1,
-                claimable    :1,
-                claimed      :1,
-                can_set_baud :1,
-                rx_only      :1,
-                modbus_ready :1,
-                unused       :2;
+        uint8_t connected     :1,
+                claimable     :1,
+                claimed       :1,
+                can_set_baud  :1,
+                rx_only       :1,
+                modbus_ready  :1,
+                rts_handshake :1,
+                unused        :1;
     };
 } io_stream_flags_t;
 
@@ -261,10 +262,8 @@ typedef struct io_stream_details {
 typedef struct {
     volatile uint_fast16_t head;
     volatile uint_fast16_t tail;
-    bool overflow;
-#ifdef SERIAL_RTS_HANDSHAKE
     volatile bool rts_state;
-#endif
+    bool overflow;
     bool backup;
     char data[RX_BUFFER_SIZE];
 } stream_rx_buffer_t;

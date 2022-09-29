@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021 Terje Io
+  Copyright (c) 2021-2022 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -77,25 +77,29 @@
 #endif
 
 #if defined(SPINDLE_ENABLE_PIN) && !defined(SPINDLE_ENABLE_BIT)
-#define SPINDLE_ENABLE_BIT      (1<<SPINDLE_ENABLE_PIN)
+#define SPINDLE_ENABLE_BIT (1<<SPINDLE_ENABLE_PIN)
 #endif
 #if defined(SPINDLE_DIRECTION_PIN) && !defined(SPINDLE_DIRECTION_BIT)
-#define SPINDLE_DIRECTION_BIT   (1<<SPINDLE_DIRECTION_PIN)
+#define SPINDLE_DIRECTION_BIT (1<<SPINDLE_DIRECTION_PIN)
 #endif
 
 #if defined(COOLANT_FLOOD_PIN) && !defined(COOLANT_FLOOD_BIT)
-#define COOLANT_FLOOD_BIT       (1<<COOLANT_FLOOD_PIN)
+#define COOLANT_FLOOD_BIT (1<<COOLANT_FLOOD_PIN)
 #endif
 #if defined(COOLANT_MIST_PIN) && !defined(COOLANT_MIST_BIT)
-#define COOLANT_MIST_BIT        (1<<COOLANT_MIST_PIN)
+#define COOLANT_MIST_BIT (1<<COOLANT_MIST_PIN)
 #endif
 
 #if defined(PROBE_PIN) && !defined(PROBE_BIT)
-#define PROBE_BIT               (1<<PROBE_PIN)
+#define PROBE_BIT (1<<PROBE_PIN)
 #endif
 
 #if defined(I2C_STROBE_PIN) && !defined(I2C_STROBE_BIT)
-#define I2C_STROBE_BIT          (1<<I2C_STROBE_PIN)
+#define I2C_STROBE_BIT (1<<I2C_STROBE_PIN)
+#endif
+
+#if defined(RTS_PIN) && !defined(RTS_BIT)
+#define RTS_BIT (1<<RTS_PIN)
 #endif
 
 #ifdef AUXINPUT0_PIN

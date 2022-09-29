@@ -1,5 +1,27 @@
 ## grblHAL changelog
 
+>Build 20220928:
+
+Core:
+
+* Added crossbar support for UART RTS handshake output signal.
+
+Drivers:
+
+* iMXRT1062: Fix for issue [#48](https://github.com/grblHAL/iMXRT1062/issues/48), coolant and mist outputs swapped.
+
+* SAM3X8E: Added SMART Ramps board map. By @MrAntza99.
+
+* RP2040: Added option to use RTS handshaking for UART comms via the primary port. Updated the _citoh_cx6000_ map to use it if UART comms is enabled.
+
+* ESP32: Added laser plugin submodule and updated CMakeLists.txt with enable options for it.
+
+Templates:
+
+* my_plugin/hpgl: Added trapping of more HP7475A \(possibly all?\) `ESC . ...` device control sequences to avoid errors/hangs.
+
+---
+
 Build 20220925:
 
 Core:
@@ -39,7 +61,7 @@ Drivers:
 
 ---
 
-20220920:
+<a name="20220920"/>20220920:
 
 Plugins:
 
