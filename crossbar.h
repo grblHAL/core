@@ -308,6 +308,7 @@ typedef enum {
     PinGroup_UART3,
     PinGroup_UART4,
     PinGroup_USB,
+    PinGroup_CAN,
 // Interrupt capable pins that may have debounce processing enabled
     PinGroup_Control       = (1<<8),
     PinGroup_Limit         = (1<<9),
