@@ -11,7 +11,7 @@ Plugins:
 * Networking: Added mDNS and SSDP protocol support.  
 __Note:__ Some drivers require manual patching before enabling.
 
-* WebUI: Fix for bugs affection settings handling. [Issue #5](https://github.com/grblHAL/Plugin_WebUI/issues/5) and [issue #6](https://github.com/grblHAL/Plugin_WebUI/issues/6).  
+* WebUI: Fix for bugs affecting settings handling. [Issue #5](https://github.com/grblHAL/Plugin_WebUI/issues/5) and [issue #6](https://github.com/grblHAL/Plugin_WebUI/issues/6).  
 __Note:__ Issue 6 was about incorrect handling spaces in string settings, these are not permitted in hostnames according to [RFC1123](https://www.rfc-editor.org/rfc/rfc1123) and I may add validation later.
 
 Drivers:
@@ -20,6 +20,8 @@ Drivers:
 __Note:__ iMXRT1062 and RP2040 require manual patching before enabling.
 
 * STM32F1xx: Added two alternatives for spindle PWM pin assignment.
+
+* STM32F4xx: Added support for PWM output on PE5 and PE6 \(for BTT SKR 2.0\).
 
 * STM32F7xx: Updated for latest STM32CubeIDE device driver HAL.
 
