@@ -517,7 +517,9 @@ typedef struct {
     char *info;                     //!< Pointer to driver info string, typically name of processor/platform.
     char *driver_version;           //!< Pointer to driver version date string in YYMMDD format.
     char *driver_options;           //!< Pointer to optional comma separated string with driver options.
+    char *driver_url;               //!< Pointer to optional URL for the driver.
     char *board;                    //!< Pointer to optional board name string.
+    char *board_url;                //!< Pointer to optional URL for the board.
     uint32_t f_step_timer;          //!< Frequency of main stepper timer in Hz.
     uint32_t f_mcu;                 //!< Frequency of MCU in MHz.
     uint32_t rx_buffer_size;        //!< Input stream buffer size in bytes.

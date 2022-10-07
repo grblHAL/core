@@ -32,6 +32,7 @@ Helper functions for saving away and restoring a stream input buffer. _Not refer
 #define ASCII_STX  0x02
 #define ASCII_ETX  0x03
 #define ASCII_EOT  0x04
+#define ASCII_ENQ  0x05
 #define ASCII_ACK  0x06
 #define ASCII_BS   0x08
 #define ASCII_TAB  0x09
@@ -332,6 +333,8 @@ bool stream_connect_instance (uint8_t instance, uint32_t baud_rate);
 void stream_disconnect (const io_stream_t *stream);
 
 const io_stream_t *stream_get_base (void);
+
+io_stream_flags_t stream_get_flags (io_stream_t stream);
 
 const io_stream_t *stream_null_init (uint32_t baud_rate);
 

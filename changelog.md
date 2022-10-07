@@ -1,6 +1,35 @@
 ## grblHAL changelog
 
->Build 20220928:
+Build 20221005
+
+Core:
+
+* Added optional string pointers to HAL for driver and board URLs. If present they are announced by the SSDP protocol.
+
+Plugins:
+
+* Networking: Added mDNS and SSDP protocol support.  
+__Note:__ Some drivers require manual patching before enabling.
+
+* WebUI: Fix for bugs affection settings handling. [Issue #5](https://github.com/grblHAL/Plugin_WebUI/issues/5) and [issue #6](https://github.com/grblHAL/Plugin_WebUI/issues/6).  
+__Note:__ Issue 6 was about incorrect handling spaces in string settings, these are not permitted in hostnames according to [RFC1123](https://www.rfc-editor.org/rfc/rfc1123) and I may add validation later.
+
+Drivers:
+
+* iMXRT1062, RP2040, ESP32, STM32F7xx and MSP432E401Y: Added options for enabling mDNS and/or SSDP protocols.  
+__Note:__ iMXRT1062 and RP2040 require manual patching before enabling.
+
+* STM32F1xx: Added two alternatives for spindle PWM pin assignment.
+
+* STM32F7xx: Updated for latest STM32CubeIDE device driver HAL.
+
+Templates:
+
+* my_plugin/hpgl: Added tentative support for most HP7475A `ESC . ...` device control sequences. _Testing required!_
+
+---
+
+Build 20220928:
 
 Core:
 

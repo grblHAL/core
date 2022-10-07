@@ -300,6 +300,25 @@ const io_stream_t *stream_get_base (void)
     return base.stream;
 }
 
+io_stream_flags_t stream_get_flags (io_stream_t stream)
+{
+    io_stream_flags_t flags = {0};
+    io_stream_details_t *details = streams;
+
+    while(details) {
+        uint_fast8_t idx;
+        for(idx = 0; idx < details->n_streams; idx++) {
+            if(stream.type == details->streams[idx].type && stream.instance == details->streams[idx].instance) {
+                flags = details->streams[idx].flags;
+                break;
+            }
+        }
+        details = details->next;
+    };
+
+    return flags;
+}
+
 bool stream_connect (const io_stream_t *stream)
 {
     bool ok = hal.stream_select ? hal.stream_select(stream) : stream_select(stream, true);

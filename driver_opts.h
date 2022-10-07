@@ -316,6 +316,12 @@
 #undef FTP_ENABLE
 #define FTP_ENABLE          0
 #endif
+#ifndef MDNS_ENABLE
+#define MDNS_ENABLE             0
+#endif
+#ifndef SSDP_ENABLE
+#define SSDP_ENABLE             0
+#endif
 
 #if ETHERNET_ENABLE || WIFI_ENABLE
 #ifndef NETWORK_HOSTNAME
@@ -357,25 +363,25 @@
 #endif
 #if WIFI_SOFTAP > 0
 #ifndef NETWORK_AP_SSID
-#define NETWORK_AP_SSID            "grblHAL_AP"
+#define NETWORK_AP_SSID         "grblHAL_AP"
 #endif
 #ifndef NETWORK_AP_PASSWORD
-#define NETWORK_AP_PASSWORD        "grblHAL"
+#define NETWORK_AP_PASSWORD     "grblHAL"
 #endif
 #ifndef NETWORK_AP_HOSTNAME
-#define NETWORK_AP_HOSTNAME        "grblHAL_AP"
+#define NETWORK_AP_HOSTNAME     "grblHAL_AP"
 #endif
 #ifndef NETWORK_AP_IPMODE
-#define NETWORK_AP_IPMODE          0 // 0 = static, 1 = DHCP, 2 = AutoIP
+#define NETWORK_AP_IPMODE       0 // 0 = static, 1 = DHCP, 2 = AutoIP
 #endif
 #ifndef NETWORK_AP_IP
-#define NETWORK_AP_IP              "192.168.5.1"
+#define NETWORK_AP_IP           "192.168.5.1"
 #endif
 #ifndef NETWORK_AP_GATEWAYs
-#define NETWORK_AP_GATEWAY         "192.168.5.1"
+#define NETWORK_AP_GATEWAY      "192.168.5.1"
 #endif
 #ifndef NETWORK_AP_MASK
-#define NETWORK_AP_MASK            "255.255.255.0"
+#define NETWORK_AP_MASK         "255.255.255.0"
 #endif
 #endif
 #endif
