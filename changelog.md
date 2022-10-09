@@ -1,5 +1,25 @@
 ## grblHAL changelog
 
+Build 20221009
+
+Core:
+
+* Fix for bug preventing some hosts (Win7) querying SSDP information.
+
+Plugins:
+
+* WebUI: Removed ESP32 dependency in WiFi SoftAP mode.
+
+Drivers:
+
+* ESP32: Updated for WebUI change.
+
+* RP2040: Fixed WiFi AP mode [issues](https://github.com/grblHAL/RP2040/issues/34), fixed bug in `$314` setting reporting.  
+__NOTE:__ AP mode IP address cannot be changed from the default `192.168.4.1` address.  
+__NOTE:__ There are limitations/bugs in the SDK preventing SSDP queries from arriving, this is likely to be fixed in a later SDK release.
+
+---
+
 Build 20221005
 
 Core:

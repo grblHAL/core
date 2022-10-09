@@ -366,7 +366,8 @@ char *strcaps (char *s)
             *s2++ = CAPS(c);
     } while(c);
 
-    *s2 = '\0';
+    if(s1 != s2)
+        *s2 = '\0';
 
     return s;
 }
