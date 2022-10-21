@@ -85,6 +85,7 @@
     webui_init();
 #endif
 
+    extern void my_plugin_init (void);
     my_plugin_init();
 
 // Third party plugin definitions.

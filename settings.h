@@ -212,6 +212,7 @@ typedef enum {
     Setting_ToolChangeFeedRate = 343,
     Setting_ToolChangeSeekRate = 344,
     Setting_ToolChangePulloffRate = 345,
+    Setting_ToolChangeRestorePosition = 346,
 
     Setting_DualAxisLengthFailPercent = 347,
     Setting_DualAxisLengthFailMin = 348,
@@ -299,6 +300,8 @@ typedef enum {
     Setting_VFD_20 = 472,
     Setting_VFD_21 = 473,
 
+    Setting_Fan0OffDelay = 480,
+
     Setting_SettingsMax,
     Setting_SettingsAll = Setting_SettingsMax,
 
@@ -362,7 +365,8 @@ typedef union {
                  unused1                         :1,
                  g92_is_volatile                 :1,
                  compatibility_level             :4,
-                 unassigned                      :2;
+                 no_restore_position_after_M6         :1,
+                 unassigned                      :1;
     };
 } settingflags_t;
 
@@ -769,6 +773,9 @@ typedef struct setting_details {
 typedef setting_details_t *(*on_get_settings_ptr)(void);
 
 extern settings_t settings;
+
+// Clear settings chain (unlinks plugin/driver settings from core settings)
+void settings_clear (void);
 
 // Initialize the configuration subsystem (load settings from persistent storage)
 void settings_init();

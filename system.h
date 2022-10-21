@@ -227,6 +227,7 @@ typedef struct system {
     bool cancel;                            //!< System cancel flag.
     bool suspend;                           //!< System suspend state flag.
     bool position_lost;                     //!< Set when mc_reset is called when machine is moving.
+    bool reset_pending;                     //!< Set when reset processing is underway.
     volatile bool steppers_deenergize;      //!< Set to true to deenergize stepperes
     axes_signals_t tlo_reference_set;       //!< Axes with tool length reference offset set
     int32_t tlo_reference[N_AXIS];          //!< Tool length reference offset

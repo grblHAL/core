@@ -372,12 +372,12 @@
 #define NETWORK_AP_HOSTNAME     "grblHAL_AP"
 #endif
 #ifndef NETWORK_AP_IPMODE
-#define NETWORK_AP_IPMODE       0 // 0 = static, 1 = DHCP, 2 = AutoIP
+#define NETWORK_AP_IPMODE       0 // static
 #endif
 #ifndef NETWORK_AP_IP
 #define NETWORK_AP_IP           "192.168.5.1"
 #endif
-#ifndef NETWORK_AP_GATEWAYs
+#ifndef NETWORK_AP_GATEWAY
 #define NETWORK_AP_GATEWAY      "192.168.5.1"
 #endif
 #ifndef NETWORK_AP_MASK

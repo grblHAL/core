@@ -122,7 +122,7 @@ PROGMEM const settings_t defaults = {
 #endif
     .steppers.deenergize.mask = ST_DEENERGIZE_MASK,
 #if N_AXIS > 3
-    .steppers.is_rotational.mask = (ST_ROTATIONAL_MASK & AXES_BITMASK) >> 3,
+    .steppers.is_rotational.mask = (ST_ROTATIONAL_MASK & AXES_BITMASK) & 0b11111000,
 #endif
 #if DEFAULT_HOMING_ENABLE
     .homing.flags.enabled = DEFAULT_HOMING_ENABLE,
@@ -378,6 +378,7 @@ static status_code_t set_force_initialization_alarm (setting_id_t id, uint_fast1
 static status_code_t set_probe_allow_feed_override (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_tool_change_mode (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_tool_change_probing_distance (setting_id_t id, float value);
+static status_code_t set_tool_restore_pos (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_ganged_dir_invert (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_stepper_deenergize_mask (setting_id_t id, uint_fast16_t int_value);
 #ifndef NO_SAFETY_DOOR_SUPPORT
@@ -532,6 +533,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_ToolChangeFeedRate, Group_Toolchange, "Tool change locate feed rate", "mm/min", Format_Decimal, "#####0.0", NULL, NULL, Setting_IsExtended, &settings.tool_change.feed_rate, NULL, NULL },
      { Setting_ToolChangeSeekRate, Group_Toolchange, "Tool change search seek rate", "mm/min", Format_Decimal, "#####0.0", NULL, NULL, Setting_IsExtended, &settings.tool_change.seek_rate, NULL, NULL },
      { Setting_ToolChangePulloffRate, Group_Toolchange, "Tool change probe pull-off rate", "mm/min", Format_Decimal, "#####0.0", NULL, NULL, Setting_IsExtended, &settings.tool_change.pulloff_rate, NULL, NULL },
+     { Setting_ToolChangeRestorePosition, Group_Toolchange, "Restore position after M6", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_tool_restore_pos, get_int, NULL },
      { Setting_DualAxisLengthFailPercent, Group_Limits_DualAxis, "Dual axis length fail", "percent", Format_Decimal, "##0.0", "0", "100", Setting_IsExtended, &settings.homing.dual_axis.fail_length_percent, NULL, is_setting_available },
      { Setting_DualAxisLengthFailMin, Group_Limits_DualAxis, "Dual axis length fail min", "mm", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsExtended, &settings.homing.dual_axis.fail_distance_min, NULL, is_setting_available },
      { Setting_DualAxisLengthFailMax, Group_Limits_DualAxis, "Dual axis length fail max", "mm", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsExtended, &settings.homing.dual_axis.fail_distance_max, NULL, is_setting_available },
@@ -703,6 +705,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_ToolChangeFeedRate, "Feed rate to slowly engage tool change sensor to determine the tool offset accurately." },
     { Setting_ToolChangeSeekRate, "Seek rate to quickly find the tool change sensor before the slower locating phase." },
     { Setting_ToolChangePulloffRate, "Pull-off rate for the retract move before the slower locating phase." },
+    { Setting_ToolChangeRestorePosition, "When set the spindle is moved so that the controlled point (tool tip) is the same as before the M6 command, if not the spindle is only moved to the Z home position." },
     { Setting_DualAxisLengthFailPercent, "Dual axis length fail in percent of axis max travel." },
     { Setting_DualAxisLengthFailMin, "Dual axis length fail minimum distance." },
     { Setting_DualAxisLengthFailMax, "Dual axis length fail minimum distance." },
@@ -1123,6 +1126,16 @@ static status_code_t set_tool_change_probing_distance (setting_id_t id, float va
     return Status_OK;
 }
 
+static status_code_t set_tool_restore_pos (setting_id_t id, uint_fast16_t int_value)
+{
+    if(hal.driver_cap.atc)
+        return Status_InvalidStatement;
+
+    settings.flags.no_restore_position_after_M6 = int_value == 0;
+
+    return Status_OK;
+}
+
 #if N_AXIS > 3
 static status_code_t set_rotational_axes (setting_id_t id, uint_fast16_t int_value)
 {
@@ -1439,6 +1452,10 @@ static uint32_t get_int (setting_id_t id)
 
         case Setting_ToolChangeMode:
             value = settings.tool_change.mode;
+            break;
+
+        case Setting_ToolChangeRestorePosition:
+            value = settings.flags.no_restore_position_after_M6 ? 0 : 1;
             break;
 
         case Setting_DisableG92Persistence:
@@ -2484,6 +2501,13 @@ bool settings_add_spindle_type (const char *type)
     }
 
     return ok;
+}
+
+// Clear settings chain
+void settings_clear (void)
+{
+    setting_details.next = NULL;
+    settingsd = &setting_details;
 }
 
 // Initialize the config subsystem

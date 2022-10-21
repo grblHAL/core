@@ -1,6 +1,6 @@
 ## grblHAL ##
 
-__New:__ The core now has support for up to 8 axes, and for 4-6 axes configurations ABC axis letters can be remapped to UVW.
+__New:__ A web app for [building for some drivers](http://svn.io-engineering.com:8080/) is now in the works, feedback will be appreciated.
 
 grblHAL has [many extensions](https://github.com/grblHAL/core/wiki) that may cause issues with some senders. As a workaround for these a [compile time option](https://github.com/grblHAL/core/wiki/Changes-from-grbl-1.1#workaround) has been added that disables extensions selectively. 
 
@@ -13,7 +13,7 @@ It has been written to complement grblHAL and has features such as proper keyboa
 
 ---
 
-Latest build date is 20221005, see the [changelog](changelog.md) for details.  
+Latest build date is 20221018, see the [changelog](changelog.md) for details.  
 __NOTE:__ A settings reset will be performed on an update for versions earlier than 20211122. Backup and restore of settings is recommended.  
 __IMPORTANT!__  A new setting has been introduced for ganged axes motors in version 20211121.  
 I have only bench tested this for a couple of drivers, correct function should be verified after updating by those who have more than three motors configured.  
@@ -86,4 +86,4 @@ List of Supported G-Codes:
 Some [plugins](https://github.com/grblHAL/plugins) implements additional M-codes.
 
 ---
-2022-10-07
+2022-10-21

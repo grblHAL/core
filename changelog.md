@@ -1,10 +1,41 @@
 ## grblHAL changelog
 
+Build 202210118
+
+Core:
+
+* Added new setting `$346` for action to take after tool change: either return controlled point \(tool tip\) back to the same position as before the M6 command \(default\) or move spindle to Z home only.
+
+* Added spindle type property to HAL, "hardened" code.
+
+* Fix for issue #191, allow homing of rotary axes with infinite rotation \(max travel = 0\).
+
+Plugins:
+
+* Spindle: Added spindle type property to registration data.
+
+* Fans: Bug fix, added off delay option for fan 0 with setting `$480` specifying number of minutes to delay. Useful for allowing an exhaust fan to clear a laser cutter enclosure before turning it off.  
+__Note:__ The new setting may cause a reset of other plugin settings to default values, backup and restore.
+
+* Laser coolant: implemented off delay and coolant lost monitoring.
+
+Drivers:
+
+* STM32F4xx: Fix for [issue #99](https://github.com/grblHAL/STM32F4xx/issues/99). Updated spindle registration.
+
+* SAM3X8E: Fix for [issue #15](https://github.com/grblHAL/SAM3X8E/issues/15).
+
+* Many: Improved driver PWM spindle code.
+
+* Some: Updated for [Web Builder](http://svn.io-engineering.com:8080/) requirements.
+
+---
+
 Build 20221009
 
 Core:
 
-* Fix for bug preventing some hosts (Win7) querying SSDP information.
+* Fix for bug preventing some hosts \(Win7\) querying SSDP information.
 
 Plugins:
 

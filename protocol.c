@@ -407,7 +407,7 @@ bool protocol_exec_rt_system (void)
 
     if (sys.rt_exec_alarm && (rt_exec = system_clear_exec_alarm())) { // Enter only if any bit flag is true
 
-        if(sys.rt_exec_state & EXEC_RESET) {
+        if((sys.reset_pending = !!(sys.rt_exec_state & EXEC_RESET))) {
             // Kill spindle and coolant.
             killed = true;
             hal.spindle.set_state((spindle_state_t){0}, 0.0f);
@@ -463,7 +463,7 @@ bool protocol_exec_rt_system (void)
     if (sys.rt_exec_state && (rt_exec = system_clear_exec_states())) { // Get and clear volatile sys.rt_exec_state atomically.
 
         // Execute system abort.
-        if (rt_exec & EXEC_RESET) {
+        if((sys.reset_pending = !!(rt_exec & EXEC_RESET))) {
 
             if(!killed) {
                 // Kill spindle and coolant.

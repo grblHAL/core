@@ -135,6 +135,7 @@ int grbl_enter (void)
     nvs_buffer_alloc(); // Allocate memory block for NVS buffer
 #endif
 
+    settings_clear();
     report_init_fns();
 
 #ifdef KINEMATICS_API

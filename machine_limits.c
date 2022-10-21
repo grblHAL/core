@@ -272,13 +272,22 @@ static bool limits_homing_cycle (axes_signals_t cycle, axes_signals_t auto_squar
         step_pin[idx] = bit(idx);
 #endif
         // Set target based on max_travel setting. Ensure homing switches engaged with search scalar.
-        // NOTE: settings.max_travel[] is stored as a negative value.
-        if (bit_istrue(cycle.mask, bit(idx))) {
-            max_travel = max(max_travel,(-HOMING_AXIS_SEARCH_SCALAR) * settings.axis[idx].max_travel);
+        // NOTE: settings.axis[].max_travel is stored as a negative value.
+        if(bit_istrue(cycle.mask, bit(idx))) {
+#if N_AXIS > 3
+            if(bit_istrue(settings.steppers.is_rotational.mask, bit(idx)))
+                max_travel = max(max_travel, (-HOMING_AXIS_SEARCH_SCALAR) * (settings.axis[idx].max_travel < -0.0f ? settings.axis[idx].max_travel : -360.0f));
+            else
+#endif
+            max_travel = max(max_travel, (-HOMING_AXIS_SEARCH_SCALAR) * settings.axis[idx].max_travel);
+
             if(bit_istrue(auto_square.mask, bit(idx)))
                 dual_motor_axis = idx;
         }
     } while(idx);
+
+    if(max_travel == 0.0f)
+        return true;
 
     if(auto_square.mask) {
         float fail_distance = (-settings.homing.dual_axis.fail_length_percent / 100.0f) * settings.axis[dual_motor_axis].max_travel;

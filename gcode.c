@@ -609,7 +609,7 @@ status_code_t gc_execute_block(char *block)
     memset(&gc_block, 0, sizeof(gc_block));                           // Initialize the parser block struct.
     memcpy(&gc_block.modal, &gc_state.modal, sizeof(gc_state.modal)); // Copy current modes
 
-    bool set_tool = false;
+    bool set_tool = false, spindle_programmed = false;
     axis_command_t axis_command = AxisCommand_None;
     uint_fast8_t port_command = 0;
     plane_t plane;
@@ -1436,6 +1436,8 @@ status_code_t gc_execute_block(char *block)
             gc_state.spindle.rpm = sys.spindle_rpm; // Is it correct to restore latest spindle RPM here?
         gc_state.modal.spindle_rpm_mode = gc_block.modal.spindle_rpm_mode;
     }
+
+    spindle_programmed = gc_block.words.s && !user_words.s;
 
     if (!gc_block.words.s)
         gc_block.values.s = gc_state.modal.spindle_rpm_mode == SpindleSpeedMode_RPM ? gc_state.spindle.rpm : gc_state.spindle.css.surface_speed;
@@ -2698,9 +2700,12 @@ status_code_t gc_execute_block(char *block)
         // Update spindle control and apply spindle speed when enabling it in this block.
         // NOTE: All spindle state changes are synced, even in laser mode. Also, plan_data,
         // rather than gc_state, is used to manage laser state for non-laser motions.
-        if(spindle_sync(0, gc_block.modal.spindle, plan_data.spindle.rpm))
+        if((spindle_programmed = spindle_sync(0, gc_block.modal.spindle, plan_data.spindle.rpm)))
             gc_state.modal.spindle = gc_block.modal.spindle;
     }
+
+    if(spindle_programmed && grbl.on_spindle_programmed)
+        grbl.on_spindle_programmed(gc_state.modal.spindle, gc_state.spindle.rpm, gc_state.modal.spindle_rpm_mode);
 
 // TODO: Recheck spindle running in CCS mode (is_rpm_pos_adjusted = On)?
 

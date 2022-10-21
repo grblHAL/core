@@ -68,6 +68,7 @@ typedef bool (*enqueue_gcode_ptr)(char *data);
 typedef bool (*protocol_enqueue_realtime_command_ptr)(char c);
 
 typedef void (*on_state_change_ptr)(sys_state_t state);
+typedef void (*on_spindle_programmed_ptr)(spindle_state_t spindle, float rpm, spindle_rpm_mode_t mode);
 typedef void (*on_program_completed_ptr)(program_flow_t program_flow, bool check_mode);
 typedef void (*on_execute_realtime_ptr)(sys_state_t state);
 typedef void (*on_unknown_accessory_override_ptr)(uint8_t cmd);
@@ -99,6 +100,7 @@ typedef struct {
     // grbl core events - may be subscribed to by drivers or by the core.
     on_state_change_ptr on_state_change;
     on_report_handlers_init_ptr on_report_handlers_init;
+    on_spindle_programmed_ptr on_spindle_programmed;
     on_program_completed_ptr on_program_completed;
     on_execute_realtime_ptr on_execute_realtime;
     on_execute_realtime_ptr on_execute_delay;

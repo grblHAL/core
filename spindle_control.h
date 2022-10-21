@@ -75,6 +75,14 @@ typedef enum {
     SpindleData_AngularPosition //!< 2
 } spindle_data_request_t;
 
+typedef enum {
+    SpindleType_PWM,        //!< 0
+    SpindleType_Basic,      //!< 1 - on/off + optional direction
+    SpindleType_VFD,        //!< 2
+    SpindleType_Solenoid,   //!< 3
+    SpindleType_Null,       //!< 4
+} spindle_type_t;
+
 /*! \brief Pointer to function for configuring the spindle.
 \returns state in a \a spindle_state_t union variable.
 */
@@ -134,6 +142,7 @@ typedef void (*spindle_pulse_on_ptr)(uint_fast16_t pulse_length);
 
 //! Handlers for spindle support.
 typedef struct {
+    spindle_type_t type;                //!< Spindle type.
     spindle_cap_t cap;                  //!< Spindle capabilities.
     uint_fast16_t pwm_off_value;        //!< Value for switching PWM signal off.
     float rpm_min;                      //!< Minimum spindle RPM.

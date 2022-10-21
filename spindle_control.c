@@ -33,13 +33,14 @@
 #endif
 
 static uint8_t n_spindle = 0;
-static const spindle_ptrs_t *spindles[N_SPINDLE];
-static spindle_id_t current_spindle = 0;
+static const spindle_ptrs_t *spindles[N_SPINDLE], *current_spindle = NULL;
 
 spindle_id_t spindle_register (const spindle_ptrs_t *spindle, const char *name)
 {
-    if(n_spindle == 0)
+    if(n_spindle == 0) {
         memcpy(&hal.spindle, spindle, sizeof(spindle_ptrs_t));
+        current_spindle = spindle;
+    }
 
     if(n_spindle < N_SPINDLE && settings_add_spindle_type(name)) {
         spindles[n_spindle++] = spindle;
@@ -56,39 +57,36 @@ bool spindle_select (spindle_id_t spindle_id)
     if(n_spindle == 0) {
 
         if(hal.spindle.set_state)
-            spindles[n_spindle++] = &hal.spindle;
+            spindles[n_spindle++] = current_spindle = &hal.spindle;
         else
             spindle_add_null();
     }
 
     if((ok = spindle_id >= 0 && spindle_id < n_spindle)) {
 
-        if(hal.spindle.set_state && hal.spindle.set_state != spindles[spindle_id]->set_state)
+        spindle_ptrs_t spindle_org;
+
+        if(hal.spindle.set_state && current_spindle != spindles[spindle_id])
             gc_spindle_off();
 
-        if(ok) {
+        memcpy(&spindle_org, &hal.spindle, offsetof(spindle_ptrs_t, get_data));
+        memcpy(&hal.spindle, spindles[spindle_id], offsetof(spindle_ptrs_t, get_data));
 
-            spindle_ptrs_t spindle_org;
-
-            memcpy(&spindle_org, &hal.spindle, offsetof(spindle_ptrs_t, get_data));
-            memcpy(&hal.spindle, spindles[spindle_id], offsetof(spindle_ptrs_t, get_data));
-
-            if(!hal.spindle.cap.rpm_range_locked) {
-                hal.spindle.rpm_min = settings.spindle.rpm_min;
-                hal.spindle.rpm_max = settings.spindle.rpm_max;
-            }
-
-            if(hal.spindle.config)
-                ok = hal.spindle.config();
-
-            if(ok) {
-                current_spindle = spindle_id;
-                sys.mode = settings.mode == Mode_Laser && !hal.spindle.cap.laser ? Mode_Standard : settings.mode;
-                if(grbl.on_spindle_select)
-                    grbl.on_spindle_select(spindle_id);
-            } else
-                memcpy(&spindle_org, &hal.spindle, offsetof(spindle_ptrs_t, get_data));
+        if(!hal.spindle.cap.rpm_range_locked) {
+            hal.spindle.rpm_min = settings.spindle.rpm_min;
+            hal.spindle.rpm_max = settings.spindle.rpm_max;
         }
+
+        if(hal.spindle.config)
+            ok = hal.spindle.config();
+
+        if(ok) {
+            current_spindle = spindles[spindle_id];
+            sys.mode = settings.mode == Mode_Laser && !hal.spindle.cap.laser ? Mode_Standard : settings.mode;
+            if(grbl.on_spindle_select)
+                grbl.on_spindle_select(spindle_id);
+        } else
+            memcpy(&spindle_org, &hal.spindle, offsetof(spindle_ptrs_t, get_data));
     }
 
     return ok;
@@ -104,7 +102,14 @@ const spindle_ptrs_t *spindle_get (spindle_id_t spindle_id)
 
 spindle_id_t spindle_get_current (void)
 {
-    return current_spindle;
+    spindle_id_t spindle_id = spindle_get_count();
+
+    do {
+        if(spindles[--spindle_id] == current_spindle)
+            break;
+    } while(spindle_id);
+
+    return spindle_id;
 }
 
 spindle_cap_t spindle_get_caps (void)
@@ -123,6 +128,7 @@ spindle_cap_t spindle_get_caps (void)
 
 void spindle_update_caps (spindle_pwm_t *pwm_caps)
 {
+    hal.spindle.type = pwm_caps ? SpindleType_PWM : SpindleType_Basic;
     hal.spindle.cap.laser = !!pwm_caps && !!hal.spindle.update_pwm;
     hal.spindle.pwm_off_value = pwm_caps ? pwm_caps->off_value : 0;
     sys.mode = settings.mode == Mode_Laser && !hal.spindle.cap.laser ? Mode_Standard : settings.mode;
@@ -172,6 +178,7 @@ static void null_update_rpm (float rpm)
 void spindle_add_null (void)
 {
     static const spindle_ptrs_t spindle = {
+        .type = SpindleType_Null,
         .cap.variable = Off,
         .cap.at_speed = Off,
         .cap.direction = Off,
@@ -203,6 +210,8 @@ void spindle_set_override (uint_fast8_t speed_override)
         else
             sys.step_control.update_spindle_rpm = On;
        sys.report.overrides = On; // Set to report change immediately
+       if(grbl.on_spindle_programmed)
+           grbl.on_spindle_programmed(gc_state.modal.spindle, spindle_set_rpm(gc_state.spindle.rpm, sys.override.spindle_rpm), gc_state.modal.spindle_rpm_mode);
     }
 }
 

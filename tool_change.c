@@ -117,9 +117,11 @@ static bool restore (void)
     target.values[plane.axis_linear] = tool_change_position;
     mc_line(target.values, &plan_data);
 
-    memcpy(&target, &previous, sizeof(coord_data_t));
-    target.values[plane.axis_linear] = tool_change_position;
-    mc_line(target.values, &plan_data);
+    if(!settings.flags.no_restore_position_after_M6) {
+        memcpy(&target, &previous, sizeof(coord_data_t));
+        target.values[plane.axis_linear] = tool_change_position;
+        mc_line(target.values, &plan_data);
+    }
 
     if(protocol_buffer_synchronize()) {
 
@@ -128,8 +130,10 @@ static bool restore (void)
         coolant_sync(gc_state.modal.coolant);
         spindle_restore(gc_state.modal.spindle, gc_state.spindle.rpm);
 
-        previous.values[plane.axis_linear] += gc_get_offset(plane.axis_linear);
-        mc_line(previous.values, &plan_data);
+        if(!settings.flags.no_restore_position_after_M6) {
+            previous.values[plane.axis_linear] += gc_get_offset(plane.axis_linear);
+            mc_line(previous.values, &plan_data);
+        }
     }
 
     if(protocol_buffer_synchronize()) {
