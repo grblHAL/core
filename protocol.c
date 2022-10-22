@@ -198,6 +198,7 @@ bool protocol_main_loop (void)
     line_flags_t line_flags = {0};
 
     xcommand[0] = '\0';
+    char_counter = 0;
     keep_rt_commands = false;
 
     while(true) {

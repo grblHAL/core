@@ -65,7 +65,8 @@ typedef union {
                  atc                       :1, //!< Automatic tool changer (ATC) is supported.
                  no_gcode_message_handling :1,
                  odometers                 :1,
-                 unassigned                :12;
+                 pwm_spindle               :1,
+                 unassigned                :11;
     };
 } driver_cap_t;
 

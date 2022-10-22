@@ -172,6 +172,7 @@ PROGMEM const settings_t defaults = {
 
     .spindle.rpm_max = DEFAULT_SPINDLE_RPM_MAX,
     .spindle.rpm_min = DEFAULT_SPINDLE_RPM_MIN,
+    .spindle.flags.pwm_disable = false,
     .spindle.flags.enable_rpm_controlled = DEFAULT_SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED,
     .spindle.invert.on = INVERT_SPINDLE_ENABLE_PIN,
     .spindle.invert.ccw = INVERT_SPINDLE_CCW_PIN,
@@ -431,7 +432,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_InvertProbePin, Group_Probing, "Invert probe pin", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsLegacyFn, set_probe_invert, get_int, is_setting_available },
      { Setting_SpindlePWMBehaviour, Group_Spindle, "Deprecated", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsLegacyFn, set_pwm_mode, get_int, is_setting_available },
      { Setting_GangedDirInvertMask, Group_Stepper, "Ganged axes direction invert", NULL, Format_Bitfield, ganged_axes, NULL, NULL, Setting_IsExtendedFn, set_ganged_dir_invert, get_int, is_setting_available },
-     { Setting_SpindlePWMOptions, Group_Spindle, "PWM Spindle", NULL, Format_XBitfield, "Enable,RPM controls spindle enable signal", NULL, NULL, Setting_IsExtendedFn, set_pwm_options, get_int, NULL },
+     { Setting_SpindlePWMOptions, Group_Spindle, "PWM Spindle", NULL, Format_XBitfield, "Enable,RPM controls spindle enable signal", NULL, NULL, Setting_IsExtendedFn, set_pwm_options, get_int, is_setting_available },
 #if COMPATIBILITY_LEVEL <= 1
      { Setting_StatusReportMask, Group_General, "Status report options", NULL, Format_Bitfield, "Position in machine coordinate,Buffer state,Line numbers,Feed & speed,Pin state,Work coordinate offset,Overrides,Probe coordinates,Buffer sync on WCO change,Parser state,Alarm substatus,Run substatus", NULL, NULL, Setting_IsExtendedFn, set_report_mask, get_int, NULL },
 #else
@@ -629,8 +630,8 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_PulseDelayMicroseconds, "Step pulse delay.\\n\\n"
                                       "Normally leave this at 0 as there is an implicit delay on direction changes when AMASS is active."
     },
-    { Setting_RpmMax, "Maximum spindle speed. Sets PWM to maximum duty cycle." },
-    { Setting_RpmMin, "Minimum spindle speed. Sets PWM to minimum duty cycle." },
+    { Setting_RpmMax, "Maximum spindle speed, can be overridden by spindle plugins." },
+    { Setting_RpmMin, "Minimum spindle speed, can be overridden by spindle plugins." },
     { Setting_Mode, "Laser mode: consecutive G1/2/3 commands will not halt when spindle speed is changed.\\n"
                     "Lathe mode: allows use of G7, G8, G96 and G97."
     },
@@ -1661,14 +1662,6 @@ static bool is_setting_available (const setting_detail_t *setting)
             available = hal.stepper.get_ganged && hal.stepper.get_ganged(false).mask != 0;
             break;
 
-        case Setting_SpindlePWMBehaviour:
-            available = false;
-            break;
-
-        case Setting_SpindlePWMOptions:
-            available = spindle_get_caps().laser;
-            break;
-
         case Setting_InvertProbePin:
         case Setting_ProbePullUpDisable:
         case Setting_ProbingFeedOverride:
@@ -1676,6 +1669,21 @@ static bool is_setting_available (const setting_detail_t *setting)
 //        case Setting_ToolChangeFeedRate:
 //        case Setting_ToolChangeSeekRate:
             available = hal.probe.get_state != NULL;
+            break;
+
+        case Setting_SpindlePWMBehaviour:
+            available = false;
+            break;
+
+        case Setting_SpindlePWMOptions:
+            available = hal.driver_cap.pwm_spindle && spindle_get_caps().laser;
+            break;
+
+        case Setting_PWMFreq:
+        case Setting_PWMOffValue:
+        case Setting_PWMMinValue:
+        case Setting_PWMMaxValue:
+            available = hal.driver_cap.pwm_spindle;
             break;
 
         case Setting_SpindleType:
@@ -1688,10 +1696,6 @@ static bool is_setting_available (const setting_detail_t *setting)
 
         case Setting_RpmMax:
         case Setting_RpmMin:
-        case Setting_PWMFreq:
-        case Setting_PWMOffValue:
-        case Setting_PWMMinValue:
-        case Setting_PWMMaxValue:
             available = spindle_get_caps().variable;
             break;
 

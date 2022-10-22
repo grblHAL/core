@@ -1,6 +1,20 @@
 ## grblHAL changelog
 
-Build 202210118
+Build 20221022
+
+Core:
+
+* Fix for old regression, issue #204.
+
+* Now hides spindle PWM related settings if no PWM spindle is available.
+
+Drivers:
+
+Many: Fixes for incorrect code related to new spindle type property introduced in build 20221018. Updated [Web Builder](http://svn.io-engineering.com:8080/) data.
+
+---
+
+Build 20221018
 
 Core:
 

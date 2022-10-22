@@ -44,6 +44,8 @@ spindle_id_t spindle_register (const spindle_ptrs_t *spindle, const char *name)
 
     if(n_spindle < N_SPINDLE && settings_add_spindle_type(name)) {
         spindles[n_spindle++] = spindle;
+        if(spindle->type == SpindleType_PWM)
+            hal.driver_cap.pwm_spindle = On;
         return n_spindle - 1;
     }
 
