@@ -27,10 +27,10 @@
 #include "nuts_bolts.h"
 
 // Perform one portion of the homing cycle based on the input settings.
-bool limits_go_home(axes_signals_t cycle);
+status_code_t limits_go_home (axes_signals_t cycle);
 
 // Check for soft limit violations
-void limits_soft_check(float *target);
+void limits_soft_check( float *target);
 
 // Check if homing is required.
 bool limits_homing_required (void);

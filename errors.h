@@ -84,6 +84,7 @@ typedef enum {
     Status_SettingValueOutOfRange = 52,
     Status_SettingDisabled = 53,
     Status_GcodeInvalidRetractPosition = 54,
+    Status_IllegalHomingConfiguration = 55,
 
 // Some error codes as defined in bdring's ESP32 port
     Status_SDMountError = 60,

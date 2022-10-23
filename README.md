@@ -13,13 +13,14 @@ It has been written to complement grblHAL and has features such as proper keyboa
 
 ---
 
-Latest build date is 20221021, see the [changelog](changelog.md) for details.  
+Latest build date is 20221023, see the [changelog](changelog.md) for details.  
 __NOTE:__ A settings reset will be performed on an update for versions earlier than 20211122. Backup and restore of settings is recommended.  
 __IMPORTANT!__  A new setting has been introduced for ganged axes motors in version 20211121.  
 I have only bench tested this for a couple of drivers, correct function should be verified after updating by those who have more than three motors configured.  
 More details in the [changelog](changelog.md).
 
 ---
+
 Updated for latest core changes.
 __NOTE:__ Arduino drivers has now been converted to Arduino libraries, [installation and compilation procedure](https://github.com/grblHAL/core/wiki/Compiling-GrblHAL) has been changed!
 
@@ -40,7 +41,7 @@ It is able to maintain up to 300kHz<sup>3</sup> of stable, jitter free control p
 
 It accepts standards-compliant g-code and has been tested with the output of several CAM tools with no problems. Arcs, circles and helical motion are fully supported, as well as, all other primary g-code commands. Macro functions, variables, and some canned cycles are not supported, but we think GUIs can do a much better job at translating them into straight g-code anyhow.
 
-Grbl includes full acceleration management with look ahead. That means the controller will look up motions into the future and plan its velocities ahead to deliver smooth acceleration and jerk-free cornering.
+grblHAL includes full acceleration management with look ahead. That means the controller will look up motions into the future and plan its velocities ahead to deliver smooth acceleration and jerk-free cornering.
 
 This is a port/rewrite of [grbl 1.1f](https://github.com/gnea/grbl) and should be compatible with GCode senders compliant with the specifications for that version. It should be possible to change default compile-time configurations if problems arise, eg. the default serial buffer sizes has been increased in some of the [drivers](https://github.com/grblHAL/drivers) provided.
 
@@ -86,4 +87,4 @@ List of Supported G-Codes:
 Some [plugins](https://github.com/grblHAL/plugins) implements additional M-codes.
 
 ---
-2022-10-21
+2022-10-23

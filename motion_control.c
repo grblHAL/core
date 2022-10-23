@@ -817,6 +817,7 @@ void mc_dwell (float seconds)
 status_code_t mc_homing_cycle (axes_signals_t cycle)
 {
     bool home_all = cycle.mask == 0;
+    status_code_t homed_status = Status_OK;
 
     memset(&sys.last_event.limits, 0, sizeof(limit_signals_t));
 
@@ -887,7 +888,7 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
         // Perform homing routine. NOTE: Special motion case. Only system reset works.
 
         if (!home_all) // Perform homing cycle based on mask.
-            limits_go_home(cycle);
+            homed_status = !limits_go_home(cycle);
         else {
 
             uint_fast8_t idx = 0;
@@ -897,7 +898,7 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
             do {
                 if(settings.homing.cycle[idx].mask) {
                     cycle.mask = settings.homing.cycle[idx].mask;
-                    if(!limits_go_home(cycle))
+                    if((homed_status = limits_go_home(cycle)) != Status_OK)
                         break;
                 }
             } while(++idx < N_AXIS);
@@ -913,6 +914,9 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
 
         if(!protocol_execute_realtime()) // Check for reset and set system abort.
             return Status_Unhandled;     // Did not complete. Alarm state set by mc_alarm.
+
+        if(homed_status != Status_OK)
+            return homed_status;
 
         if(home_all && settings.homing.flags.manual)
         {
@@ -934,14 +938,14 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
 
     sys.report.homed = On;
 
-    status_code_t status = settings.limits.flags.hard_enabled && settings.limits.flags.check_at_init && limit_signals_merge(hal.limits.get_state()).value
-                            ? Status_LimitsEngaged
-                            : Status_OK;
+    homed_status = settings.limits.flags.hard_enabled && settings.limits.flags.check_at_init && limit_signals_merge(hal.limits.get_state()).value
+                    ? Status_LimitsEngaged
+                    : Status_OK;
 
-    if(status == Status_OK && grbl.on_homing_completed)
+    if(homed_status == Status_OK && grbl.on_homing_completed)
         grbl.on_homing_completed();
 
-    return status;
+    return homed_status;
 }
 
 // Perform tool length probe cycle. Requires probe switch.

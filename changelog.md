@@ -1,5 +1,13 @@
 ## grblHAL changelog
 
+Build 20221023
+
+Core:
+
+* Fix for issue #209, incorrect handling of homing of more than one auto squared axis in each pass. Error 55 will now be returned.
+
+---
+
 Build 20221022
 
 Core:
@@ -10,7 +18,7 @@ Core:
 
 Drivers:
 
-Many: Fixes for incorrect code related to new spindle type property introduced in build 20221018. Updated [Web Builder](http://svn.io-engineering.com:8080/) data.
+* Many: Fixes for incorrect code related to new spindle type property introduced in build 20221018. Updated [Web Builder](http://svn.io-engineering.com:8080/) data.
 
 ---
 
