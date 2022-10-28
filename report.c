@@ -555,7 +555,7 @@ void report_tool_offsets (void)
 {
     hal.stream.write("[TLO:");
 #ifdef TOOL_LENGTH_OFFSET_AXIS
-    hal.stream.write(get_axis_value(gc_state.tool_length_offset[Z_AXIS]));
+    hal.stream.write(get_axis_value(gc_state.tool_length_offset[TOOL_LENGTH_OFFSET_AXIS]));
 #else
     hal.stream.write(get_axis_values(gc_state.tool_length_offset));
 #endif

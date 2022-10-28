@@ -144,17 +144,21 @@
 #endif
 
 #ifndef TRINAMIC_ENABLE
-#define TRINAMIC_ENABLE      0
+  #define TRINAMIC_ENABLE   0
 #endif
 #if TRINAMIC_ENABLE == 2209
-#define TRINAMIC_UART_ENABLE 1
+  #if !defined(TRINAMIC_UART_ENABLE)
+    #define TRINAMIC_UART_ENABLE 1
+  #endif
 #else
-#define TRINAMIC_UART_ENABLE 0
+  #define TRINAMIC_UART_ENABLE 0
 #endif
-#if TRINAMIC_ENABLE == 2130 || TRINAMIC_ENABLE == 5160
-#define TRINAMIC_SPI_ENABLE  1
+#if (TRINAMIC_ENABLE == 2130 || TRINAMIC_ENABLE == 5160)
+  #if !defined(TRINAMIC_SPI_ENABLE)
+    #define TRINAMIC_SPI_ENABLE  1
+  #endif
 #else
-#define TRINAMIC_SPI_ENABLE  0
+  #define TRINAMIC_SPI_ENABLE  0
 #endif
 #ifndef TRINAMIC_I2C
 #define TRINAMIC_I2C        0

@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+Build 20221028
+
+Core:
+
+Minor bug fix, preprocessor tuning.
+
+Drivers:
+
+LPC176x: fix for issue [#31](https://github.com/grblHAL/LPC176x/issues/31).
+
+Some: Fixed some obscure bugs, updates for Web Builder.
+
+---
+
 Build 20221023
 
 Core:
