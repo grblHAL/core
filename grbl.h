@@ -23,6 +23,10 @@
 #ifndef _GRBL_H_
 #define _GRBL_H_
 
+#ifdef __SAM3X8E__
+#define _WIRING_CONSTANTS_ // for shutting up compiler warnings due to bad framework code for Arduino Due
+#endif
+
 #include <stdint.h>
 #include <stdbool.h>
 

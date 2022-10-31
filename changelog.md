@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+20221031
+
+Core:
+
+Minor change to supress compiler warnings for SAM3X8E (Arduino Due - bad framework code).
+
+Drivers:
+
+SAM3X8E : More compiler warnings supression, added missing PWM output for Mega2560 board map.
+
+Some: Updated Web Builder definitions.
+
+---
+
 Build 20221028
 
 Core:
