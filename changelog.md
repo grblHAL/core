@@ -1,6 +1,6 @@
 ## grblHAL changelog
 
-[20221101}(#20221101)
+<a name="20221101"/>Build 20221101
 
 Core:
 
@@ -16,7 +16,7 @@ Drivers:
 
 ---
 
-<a name="20221031">20221031</a>
+<a name="20221031"/>20221031
 
 Core:
 
@@ -30,7 +30,7 @@ Drivers:
 
 ---
 
-Build 20221028
+<a name="20221028"/>Build 20221028
 
 Core:
 
@@ -44,7 +44,7 @@ Drivers:
 
 ---
 
-Build 20221023
+<a name="20221023"/>Build 20221023
 
 Core:
 
@@ -52,7 +52,7 @@ Core:
 
 ---
 
-Build 20221022
+<a name="20221022"/>Build 20221022
 
 Core:
 
@@ -66,7 +66,7 @@ Drivers:
 
 ---
 
-Build 20221018
+<a name="20221018"/>Build 20221018
 
 Core:
 
@@ -97,7 +97,7 @@ Drivers:
 
 ---
 
-Build 20221009
+<a name="20221009"/>Build 20221009
 
 Core:
 
@@ -117,7 +117,7 @@ __NOTE:__ There are limitations/bugs in the SDK preventing SSDP queries from arr
 
 ---
 
-Build 20221005
+<a name="20221005"/>Build 20221005
 
 Core:
 
@@ -148,7 +148,7 @@ Templates:
 
 ---
 
-Build 20220928:
+<a name="20220928"/>Build 20220928:
 
 Core:
 
@@ -170,7 +170,7 @@ Templates:
 
 ---
 
-Build 20220925:
+<a name="20220925"/>Build 20220925:
 
 Core:
 
@@ -192,7 +192,7 @@ Drivers:
 
 ---
 
-Build 20220922:
+<a name="20220922"/>Build 20220922:
 
 Core:
 
@@ -221,7 +221,7 @@ Plugins:
 
 ---
 
-Build 20220918:
+<a name="20220918"/>Build 20220918:
 
 Core:
 
