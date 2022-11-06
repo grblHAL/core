@@ -888,7 +888,7 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
         // Perform homing routine. NOTE: Special motion case. Only system reset works.
 
         if (!home_all) // Perform homing cycle based on mask.
-            homed_status = !limits_go_home(cycle);
+            homed_status = limits_go_home(cycle);
         else {
 
             uint_fast8_t idx = 0;
