@@ -1,16 +1,32 @@
 ## grblHAL changelog
 
-20221031
+[20221101}(#20221101)
 
 Core:
 
-Minor change to supress compiler warnings for SAM3X8E (Arduino Due - bad framework code).
+* Added single axis homing commands for U and V, remapping of ABC homing commands to UVW when configured.
+
+Plugins
+
+* WebUI and Networking: fixes for compiler warnings.
 
 Drivers:
 
-SAM3X8E : More compiler warnings supression, added missing PWM output for Mega2560 board map.
+* ESP32: fix for Web Builder failing when networking was enabled.
 
-Some: Updated Web Builder definitions.
+---
+
+<a name="20221031">20221031</a>
+
+Core:
+
+* Minor change to suppress compiler warnings for SAM3X8E (Arduino Due - bad framework code).
+
+Drivers:
+
+* SAM3X8E : More compiler warnings supression, added missing PWM output for Mega2560 board map.
+
+* Some: Updated Web Builder definitions.
 
 ---
 
@@ -18,13 +34,13 @@ Build 20221028
 
 Core:
 
-Minor bug fix, preprocessor tuning.
+* Minor bug fix, preprocessor tuning.
 
 Drivers:
 
-LPC176x: fix for issue [#31](https://github.com/grblHAL/LPC176x/issues/31).
+* LPC176x: fix for issue [#31](https://github.com/grblHAL/LPC176x/issues/31).
 
-Some: Fixed some obscure bugs, updates for Web Builder.
+* Some: Fixed some obscure bugs, updates for Web Builder.
 
 ---
 

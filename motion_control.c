@@ -915,8 +915,13 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
         if(!protocol_execute_realtime()) // Check for reset and set system abort.
             return Status_Unhandled;     // Did not complete. Alarm state set by mc_alarm.
 
-        if(homed_status != Status_OK)
+        if(homed_status != Status_OK) {
+
+            if(state_get() == STATE_HOMING)
+                state_set(STATE_IDLE);
+
             return homed_status;
+        }
 
         if(home_all && settings.homing.flags.manual)
         {

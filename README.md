@@ -13,7 +13,7 @@ It has been written to complement grblHAL and has features such as proper keyboa
 
 ---
 
-Latest build date is 20221023, see the [changelog](changelog.md) for details.  
+Latest build date is 20221101, see the [changelog](changelog.md) for details.  
 __NOTE:__ A settings reset will be performed on an update for versions earlier than 20211122. Backup and restore of settings is recommended.  
 __IMPORTANT!__  A new setting has been introduced for ganged axes motors in version 20211121.  
 I have only bench tested this for a couple of drivers, correct function should be verified after updating by those who have more than three motors configured.  

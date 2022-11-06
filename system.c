@@ -69,6 +69,12 @@ static status_code_t home_b (sys_state_t state, char *args);
 #ifdef C_AXIS
 static status_code_t home_c (sys_state_t state, char *args);
 #endif
+#ifdef U_AXIS
+static status_code_t home_u (sys_state_t state, char *args);
+#endif
+#ifdef V_AXIS
+static status_code_t home_v (sys_state_t state, char *args);
+#endif
 static status_code_t enter_sleep (sys_state_t state, char *args);
 static status_code_t set_tool_reference (sys_state_t state, char *args);
 static status_code_t tool_probe_workpiece (sys_state_t state, char *args);
@@ -199,14 +205,32 @@ PROGMEM static const sys_command_t sys_commands[] = {
     { "HX", false, home_x },
     { "HY", false, home_y },
     { "HZ", false, home_z },
-#ifdef A_AXIS
+#ifdef AXIS_REMAP_ABC2UVW
+  #ifdef A_AXIS
+    { "HU", false, home_a },
+  #endif
+  #ifdef B_AXIS
+    { "HV", false, home_b },
+  #endif
+  #ifdef C_AXIS
+    { "HW", false, home_c },
+  #endif
+#else
+  #ifdef A_AXIS
     { "HA", false, home_a },
-#endif
-#ifdef B_AXIS
+  #endif
+  #ifdef B_AXIS
     { "HB", false, home_b },
-#endif
-#ifdef C_AXIS
+  #endif
+  #ifdef C_AXIS
     { "HC", false, home_c },
+  #endif
+#endif
+#ifdef U_AXIS
+    { "HU", false, home_u },
+#endif
+#ifdef V_AXIS
+    { "HV", false, home_v },
 #endif
     { "HELP", false, output_help },
     { "SLP", true, enter_sleep },
@@ -604,6 +628,9 @@ static status_code_t output_help (sys_state_t state, char *args)
 
 static status_code_t go_home (sys_state_t state, axes_signals_t axes)
 {
+    if(axes.mask && !settings.homing.flags.single_axis_commands)
+        return Status_HomingDisabled;
+
     if(!(state_get() == STATE_IDLE || (state_get() & (STATE_ALARM|STATE_ESTOP))))
         return Status_IdleError;
 
@@ -685,6 +712,20 @@ static status_code_t home_b (sys_state_t state, char *args)
 static status_code_t home_c (sys_state_t state, char *args)
 {
     return go_home(state, (axes_signals_t){C_AXIS_BIT});
+}
+#endif
+
+#ifdef U_AXIS
+static status_code_t home_u (sys_state_t state, char *args)
+{
+    return go_home(state, (axes_signals_t){U_AXIS_BIT});
+}
+#endif
+
+#ifdef V_AXIS
+static status_code_t home_v (sys_state_t state, char *args)
+{
+    return go_home(state, (axes_signals_t){V_AXIS_BIT});
 }
 #endif
 
