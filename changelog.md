@@ -1,5 +1,24 @@
 ## grblHAL changelog
 
+<a name="20221115"/>Build 20221115
+
+Core:
+
+* Updated settings reports to output correct units and descriptions for settings related to axes configured as rotary.  
+__Note:__ Senders may have to be restarted to display these after a configuration change \($376 - rotatational axes\) and even then they might not display them correctly.
+
+* Internal change to allow flagging settings to have a minimum value or length different from 0 and still allow to them to be 0 or have length 0.
+
+Plugins:
+
+* Some: updated for core settings change.
+
+Drivers:
+
+* Some: updated for core settings change.
+
+---
+
 <a name="20221101"/>Build 20221101
 
 Core:
@@ -396,7 +415,7 @@ __Note:__ NVS storage of settings has been moved to the end of flash, backup and
 
 Core:
 
-* Addded virtual file system \(VFS\) handler, Linux/Unix style with mount directories.
+* Added virtual file system \(VFS\) handler, Linux/Unix style with mount directories.
 * Now raises alarm if homed state becomes invalid on settings changes when homing on startup is required. Issue #173.
 
 Plugins:

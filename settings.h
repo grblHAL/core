@@ -714,6 +714,15 @@ typedef union {
     float fvalue;
 } setting_limit_t;
 
+typedef union {
+    uint8_t value;
+    struct {
+        uint8_t reboot_required :1,
+                allow_null: 1,
+                unused :6;
+    };
+} setting_detail_flags_t;
+
 typedef struct setting_detail {
     setting_id_t id;
     setting_group_t group;
@@ -727,7 +736,7 @@ typedef struct setting_detail {
     void *value;
     void *get_value;
     bool (*is_available)(const struct setting_detail *setting);
-    bool reboot_required;
+    setting_detail_flags_t flags;
 } setting_detail_t;
 
 typedef struct {

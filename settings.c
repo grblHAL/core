@@ -413,6 +413,10 @@ static char spindle_signals[] = "Spindle enable,Spindle direction,PWM";
 static char coolant_signals[] = "Flood,Mist";
 static char ganged_axes[] = "X-Axis,Y-Axis,Z-Axis";
 static char spindle_types[100] = "";
+static char axis_dist[4] = "mm";
+static char axis_rate[8] = "mm/min";
+static char axis_accel[10] = "mm/sec^2";
+static char axis_steps[9] = "step/mm";
 
 PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_PulseMicroseconds, Group_Stepper, "Step pulse time", "microseconds", Format_Decimal, "#0.0", "2.0", NULL, Setting_IsLegacy, &settings.steppers.pulse_microseconds, NULL, NULL },
@@ -520,12 +524,12 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_PositionIGain, Group_Spindle_Sync, "Spindle sync I-gain", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.position.pid.i_gain, NULL, is_group_available },
      { Setting_PositionDGain, Group_Spindle_Sync, "Spindle sync D-gain", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.position.pid.d_gain, NULL, is_group_available },
      { Setting_PositionIMaxError, Group_Spindle_Sync, "Spindle sync PID max I error", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.position.pid.i_max_error, NULL, is_group_available },
-     { Setting_AxisStepsPerMM, Group_Axis0, "?-axis travel resolution", "step/mm", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL },
-     { Setting_AxisMaxRate, Group_Axis0, "?-axis maximum rate", "mm/min", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL },
-     { Setting_AxisAcceleration, Group_Axis0, "?-axis acceleration", "mm/sec^2", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL },
-     { Setting_AxisMaxTravel, Group_Axis0, "?-axis maximum travel", "mm", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL },
+     { Setting_AxisStepsPerMM, Group_Axis0, "?-axis travel resolution", axis_steps, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL },
+     { Setting_AxisMaxRate, Group_Axis0, "?-axis maximum rate", axis_rate, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL },
+     { Setting_AxisAcceleration, Group_Axis0, "?-axis acceleration", axis_accel, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL },
+     { Setting_AxisMaxTravel, Group_Axis0, "?-axis maximum travel", axis_dist, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL },
 #ifdef ENABLE_BACKLASH_COMPENSATION
-     { Setting_AxisBacklash, Group_Axis0, "?-axis backlash compensation", "mm", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsExtendedFn, set_axis_setting, get_float, NULL },
+     { Setting_AxisBacklash, Group_Axis0, "?-axis backlash compensation", axis_dist, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsExtendedFn, set_axis_setting, get_float, NULL },
 #endif
      { Setting_AxisAutoSquareOffset, Group_Axis0, "?-axis dual axis offset", "mm", Format_Decimal, "-0.000", "-10", "10", Setting_IsExtendedFn, set_axis_setting, get_float, is_setting_available },
      { Setting_SpindleAtSpeedTolerance, Group_Spindle, "Spindle at speed tolerance", "percent", Format_Decimal, "##0.0", NULL, NULL, Setting_IsExtended, &settings.spindle.at_speed_tolerance, NULL, is_setting_available },
@@ -569,7 +573,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_SpindleOnDelay, Group_Spindle, "Spindle on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.spindle_on_delay, NULL, is_setting_available },
      { Setting_SpindleType, Group_Spindle, "Default spindle", NULL, Format_RadioButtons, spindle_types, NULL, NULL, Setting_IsExtendedFn, set_spindle_type, get_int, is_setting_available },
 #ifdef BLOCK_BUFFER_DYNAMIC
-     { Setting_PlannerBlocks, Group_General, "Planner buffer blocks", NULL, Format_Int16, "####0", "30", "1000", Setting_IsExtended, &settings.planner_buffer_blocks, NULL, NULL, true },
+     { Setting_PlannerBlocks, Group_General, "Planner buffer blocks", NULL, Format_Int16, "####0", "30", "1000", Setting_IsExtended, &settings.planner_buffer_blocks, NULL, NULL, { .reboot_required = On } },
 #endif
 };
 
@@ -686,6 +690,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_PositionDGain, "" },
     { Setting_PositionIMaxError, "Spindle sync PID max integrator error." },
     { Setting_AxisStepsPerMM, "Travel resolution in steps per millimeter." },
+    { Setting_AxisStepsPerMM + 1, "Travel resolution in steps per degree." }, // "Hack" to get correct description for rotary axes
     { Setting_AxisMaxRate, "Maximum rate. Used as G0 rapid rate." },
     { Setting_AxisAcceleration, "Acceleration. Used for motion planning to not exceed motor torque and lose steps." },
     { Setting_AxisMaxTravel, "Maximum axis travel distance from homing switch. Determines valid machine space for soft-limits and homing search distances." },
@@ -2062,6 +2067,39 @@ setting_group_t settings_get_parent_group (setting_group_t group)
 }
 */
 
+static inline bool axis_is_rotary (uint_fast8_t axis_idx)
+{
+    return bit_istrue(settings.steppers.is_rotational.mask, bit(axis_idx));
+}
+
+static void set_axis_setting_unit (const setting_detail_t *setting, uint_fast8_t axis_idx)
+{
+    bool is_rotary = axis_is_rotary(axis_idx);
+
+    switch(setting->id) {
+
+        case Setting_AxisStepsPerMM:
+            strcpy((char *)setting->unit, is_rotary ? "step/deg" : "step/mm");
+            break;
+
+        case Setting_AxisMaxRate:
+            strcpy((char *)setting->unit, is_rotary ? "deg/min" : "mm/min");
+            break;
+
+        case Setting_AxisAcceleration:
+            strcpy((char *)setting->unit, is_rotary ? "deg/sec^2" : "mm/sec^2");
+            break;
+
+        case Setting_AxisMaxTravel:
+        case Setting_AxisBacklash:
+            strcpy((char *)setting->unit, is_rotary ? "deg" : "mm");
+            break;
+
+        default:
+            break;
+    }
+}
+
 bool settings_iterator (const setting_detail_t *setting, setting_output_ptr callback, void *data)
 {
     bool ok = false;
@@ -2089,6 +2127,7 @@ bool settings_iterator (const setting_detail_t *setting, setting_output_ptr call
             {
                 uint_fast8_t axis_idx = 0;
                 for(axis_idx = 0; axis_idx < N_AXIS; axis_idx++) {
+                    set_axis_setting_unit(setting, axis_idx);
                     if(callback(setting, axis_idx, data))
                         ok = true;
                 }
@@ -2126,6 +2165,8 @@ const setting_detail_t *setting_get_details (setting_id_t id, setting_details_t 
     do {
         for(idx = 0; idx < details->n_settings; idx++) {
             if(details->settings[idx].id == id && is_available(&details->settings[idx])) {
+                if(details->settings[idx].group == Group_Axis0)
+                    set_axis_setting_unit(&details->settings[idx], offset);
                 if(offset && offset >= (details->settings[idx].group == Group_Encoder0 ? hal.encoder.get_n_encoders() : N_AXIS))
                     return NULL;
                 if(set)
@@ -2152,8 +2193,11 @@ const char *setting_get_description (setting_id_t id)
         if(settings->descriptions) {
             idx = settings->n_descriptions;
             do {
-                if(settings->descriptions[--idx].id == setting->id)
+                if(settings->descriptions[--idx].id == setting->id) {
+                    if(setting->id == Setting_AxisStepsPerMM && axis_is_rotary(id - setting->id))
+                        idx++;
                     description = settings->descriptions[idx].description;
+                }
             } while(idx && description == NULL);
         }
     } while(description == NULL && (settings = settings->next));
@@ -2188,13 +2232,13 @@ static status_code_t validate_value (const setting_detail_t *setting, float valu
         if(!read_float((char *)setting->min_value, &set_idx, &val))
             return Status_BadNumberFormat;
 
-        if(value < val)
+        if(!(value >= val || (setting->flags.allow_null && value == 0.0f)))
             return Status_SettingValueOutOfRange;
 
     } else if(value < 0.0f)
         return Status_NegativeValue;
 
-    if (setting->max_value) {
+    if(setting->max_value) {
         set_idx = 0;
 
         if(!read_float((char *)setting->max_value, &set_idx, &val))
