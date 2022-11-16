@@ -1143,12 +1143,47 @@ static status_code_t set_tool_restore_pos (setting_id_t id, uint_fast16_t int_va
 }
 
 #if N_AXIS > 3
+
 static status_code_t set_rotational_axes (setting_id_t id, uint_fast16_t int_value)
 {
     settings.steppers.is_rotational.mask = (int_value << 3) & AXES_BITMASK;
 
     return Status_OK;
 }
+
+static inline bool axis_is_rotary (uint_fast8_t axis_idx)
+{
+    return bit_istrue(settings.steppers.is_rotational.mask, bit(axis_idx));
+}
+
+static void set_axis_setting_unit (const setting_detail_t *setting, uint_fast8_t axis_idx)
+{
+    bool is_rotary = axis_is_rotary(axis_idx);
+
+    switch(setting->id) {
+
+        case Setting_AxisStepsPerMM:
+            strcpy((char *)setting->unit, is_rotary ? "step/deg" : "step/mm");
+            break;
+
+        case Setting_AxisMaxRate:
+            strcpy((char *)setting->unit, is_rotary ? "deg/min" : "mm/min");
+            break;
+
+        case Setting_AxisAcceleration:
+            strcpy((char *)setting->unit, is_rotary ? "deg/sec^2" : "mm/sec^2");
+            break;
+
+        case Setting_AxisMaxTravel:
+        case Setting_AxisBacklash:
+            strcpy((char *)setting->unit, is_rotary ? "deg" : "mm");
+            break;
+
+        default:
+            break;
+    }
+}
+
 #endif
 
 #ifdef ENABLE_SPINDLE_LINEARIZATION
@@ -2067,39 +2102,6 @@ setting_group_t settings_get_parent_group (setting_group_t group)
 }
 */
 
-static inline bool axis_is_rotary (uint_fast8_t axis_idx)
-{
-    return bit_istrue(settings.steppers.is_rotational.mask, bit(axis_idx));
-}
-
-static void set_axis_setting_unit (const setting_detail_t *setting, uint_fast8_t axis_idx)
-{
-    bool is_rotary = axis_is_rotary(axis_idx);
-
-    switch(setting->id) {
-
-        case Setting_AxisStepsPerMM:
-            strcpy((char *)setting->unit, is_rotary ? "step/deg" : "step/mm");
-            break;
-
-        case Setting_AxisMaxRate:
-            strcpy((char *)setting->unit, is_rotary ? "deg/min" : "mm/min");
-            break;
-
-        case Setting_AxisAcceleration:
-            strcpy((char *)setting->unit, is_rotary ? "deg/sec^2" : "mm/sec^2");
-            break;
-
-        case Setting_AxisMaxTravel:
-        case Setting_AxisBacklash:
-            strcpy((char *)setting->unit, is_rotary ? "deg" : "mm");
-            break;
-
-        default:
-            break;
-    }
-}
-
 bool settings_iterator (const setting_detail_t *setting, setting_output_ptr callback, void *data)
 {
     bool ok = false;
@@ -2127,7 +2129,9 @@ bool settings_iterator (const setting_detail_t *setting, setting_output_ptr call
             {
                 uint_fast8_t axis_idx = 0;
                 for(axis_idx = 0; axis_idx < N_AXIS; axis_idx++) {
+#if N_AXIS > 3
                     set_axis_setting_unit(setting, axis_idx);
+#endif
                     if(callback(setting, axis_idx, data))
                         ok = true;
                 }
@@ -2165,8 +2169,10 @@ const setting_detail_t *setting_get_details (setting_id_t id, setting_details_t 
     do {
         for(idx = 0; idx < details->n_settings; idx++) {
             if(details->settings[idx].id == id && is_available(&details->settings[idx])) {
+#if N_AXIS > 3
                 if(details->settings[idx].group == Group_Axis0)
                     set_axis_setting_unit(&details->settings[idx], offset);
+#endif
                 if(offset && offset >= (details->settings[idx].group == Group_Encoder0 ? hal.encoder.get_n_encoders() : N_AXIS))
                     return NULL;
                 if(set)
@@ -2194,8 +2200,10 @@ const char *setting_get_description (setting_id_t id)
             idx = settings->n_descriptions;
             do {
                 if(settings->descriptions[--idx].id == setting->id) {
+#if N_AXIS > 3
                     if(setting->id == Setting_AxisStepsPerMM && axis_is_rotary(id - setting->id))
                         idx++;
+#endif
                     description = settings->descriptions[idx].description;
                 }
             } while(idx && description == NULL);
