@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
+  Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -124,6 +124,7 @@ typedef struct error_details {
 typedef error_details_t *(*on_get_errors_ptr)(void);
 
 error_details_t *errors_get_details (void);
+const char *errors_get_description (status_code_t id);
 void errors_register (error_details_t *details);
 
 #endif

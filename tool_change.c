@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2020-2022 Terje Io
+  Copyright (c) 2020-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -92,7 +92,7 @@ static void reset (void)
 {
     if(next_tool) { //TODO: move to gc_xxx() function?
         // Restore previous tool if reset is during change
-#ifdef N_TOOLS
+#if N_TOOLS
         if((sys.report.tool = current_tool.tool != next_tool->tool))
             memcpy(gc_state.tool, &current_tool, sizeof(tool_data_t));
 #else
@@ -305,7 +305,7 @@ static status_code_t tool_change (parser_state_t *parser_state)
         return Status_GcodeUnsupportedCommand;
 #endif
 
-#ifdef TOOL_LENGTH_OFFSET_AXIS
+#if TOOL_LENGTH_OFFSET_AXIS >= 0
     plane.axis_linear = TOOL_LENGTH_OFFSET_AXIS;
   #if TOOL_LENGTH_OFFSET_AXIS == X_AXIS
     plane.axis_0 = Y_AXIS;

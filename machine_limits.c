@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2022 Terje Io
+  Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -36,15 +36,7 @@
 #include "kinematics.h"
 #endif
 
-#include "defaults.h"
-
-// Homing axis search distance multiplier. Computed by this value times the cycle travel.
-#ifndef HOMING_AXIS_SEARCH_SCALAR
-  #define HOMING_AXIS_SEARCH_SCALAR 1.5f // Must be > 1 to ensure limit switch will be engaged.
-#endif
-#ifndef HOMING_AXIS_LOCATE_SCALAR
-  #define HOMING_AXIS_LOCATE_SCALAR 5.0f // Must be > 1 to ensure limit switch is cleared.
-#endif
+#include "config.h"
 
 // This is the Limit Pin Change Interrupt, which handles the hard limit feature. A bouncing
 // limit switch can cause a lot of problems, like false readings and multiple interrupt calls.
@@ -104,7 +96,7 @@ ISR_CODE void ISR_FUNC(limit_interrupt_handler)(limit_signals_t state) // DEFAUL
 
     if (!(state_get() & (STATE_ALARM|STATE_ESTOP)) && !sys.rt_exec_alarm) {
 
-      #ifdef HARD_LIMIT_FORCE_STATE_CHECK
+      #if HARD_LIMIT_FORCE_STATE_CHECK
         // Check limit pin state.
         if (limit_signals_merge(state).value) {
             mc_reset(); // Initiate system kill.
@@ -152,7 +144,7 @@ static bool limits_pull_off (axes_signals_t axis, float distance)
     plan_line_data_t plan_data = {
         .condition.system_motion = On,
         .condition.no_feed_override = On,
-        .line_number = HOMING_CYCLE_LINE_NUMBER
+        .line_number = DEFAULT_HOMING_CYCLE_LINE_NUMBER
     };
 
     system_convert_array_steps_to_mpos(target.values, sys.position);
@@ -257,7 +249,7 @@ static bool limits_homing_cycle (axes_signals_t cycle, axes_signals_t auto_squar
     memset(&plan_data, 0, sizeof(plan_line_data_t));
     plan_data.condition.system_motion = On;
     plan_data.condition.no_feed_override = On;
-    plan_data.line_number = HOMING_CYCLE_LINE_NUMBER;
+    plan_data.line_number = DEFAULT_HOMING_CYCLE_LINE_NUMBER;
     memcpy(&plan_data.spindle, &gc_state.spindle, sizeof(spindle_t));
     plan_data.condition.spindle = gc_state.modal.spindle;
     plan_data.condition.coolant = gc_state.modal.coolant;
@@ -478,7 +470,7 @@ static bool limits_homing_cycle (axes_signals_t cycle, axes_signals_t auto_squar
     limits_set_machine_positions(cycle, true);
 #endif
 
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
     mc_backlash_init(cycle);
 #endif
     sys.step_control.flags = 0; // Return step control to normal operation.

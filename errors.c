@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
+  Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -111,4 +111,21 @@ void errors_register (error_details_t *details)
 error_details_t *errors_get_details (void)
 {
     return &details;
+}
+
+const char *errors_get_description (status_code_t id)
+{
+    uint_fast16_t n_errors;
+    const char *description = NULL;
+    error_details_t *details = grbl.on_get_errors();
+
+    do {
+        n_errors = details->n_errors;
+        do {
+            if(details->errors[--n_errors].id == id)
+                description = details->errors[n_errors].description;
+        } while(description == NULL && n_errors);
+    } while(description == NULL && (details = details->next));
+
+    return description;
 }

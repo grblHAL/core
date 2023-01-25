@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021 Terje Io
+  Copyright (c) 2021-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -46,7 +46,7 @@ typedef bool (*analog_out_ptr)(uint8_t port, float value);
 
 /*! \brief Pointer to function for reading a digital or analog input.
 
-__NOTE:__ The latest value read is stored in \ref #sys  \ref #sys#var5399.
+__NOTE:__ The latest value read is stored in \ref #sys sys.var5399.
 
 \param type as an \a #io_port_type_t enum value.
 \param port port number.
@@ -76,6 +76,7 @@ typedef xbar_t *(*get_pin_info_ptr)(io_port_type_t type, io_port_direction_t dir
 \param type as an \a #io_port_type_t enum value.
 \param dir as an \a #io_port_direction_t enum value.
 \param port port number.
+\param description description of the pin function.
 \returns true if successful, false if not.
 */
 typedef bool (*claim_port_ptr)(io_port_type_t type, io_port_direction_t dir, uint8_t *port, const char *description);

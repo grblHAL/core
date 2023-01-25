@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
+  Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
   Grbl is free software: you can redistribute it and/or modify
@@ -33,7 +33,7 @@ typedef struct {
     bool driver_settings;
     uint8_t startup_lines;
     uint16_t coord_data;
-#ifdef N_TOOLS
+#if N_TOOLS
 #if N_TOOLS > 16
     uint32_t tool_data;
 #else

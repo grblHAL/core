@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2022 Terje Io
+  Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2011-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -35,18 +35,18 @@
 #include "state_machine.h"
 #include "nvs_buffer.h"
 #include "stream.h"
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
 #include "motion_control.h"
 #endif
 #ifdef KINEMATICS_API
 #include "kinematics.h"
 #endif
 
-#ifdef COREXY
+#if COREXY
 #include "corexy.h"
 #endif
 
-#ifdef WALL_PLOTTER
+#if WALL_PLOTTER
 #include "wall_plotter.h"
 #endif
 
@@ -68,6 +68,7 @@ struct system sys = {0}; //!< System global variable structure.
 grbl_t grbl;
 grbl_hal_t hal;
 static driver_startup_t driver = { .ok = 0xFF };
+static on_execute_realtime_ptr on_execute_realtime;
 
 #ifdef KINEMATICS_API
 kinematics_t kinematics;
@@ -93,6 +94,23 @@ static void report_driver_error (sys_state_t state)
     strcat(msg, ")");
 
     report_message(msg, Message_Plain);
+}
+
+static void auto_realtime_report (sys_state_t state)
+{
+    static uint32_t ms = 0;
+
+    if(sys.flags.auto_reporting) {
+
+        uint32_t t = hal.get_elapsed_ticks();
+
+        if(t - ms >= settings.report_interval) {
+            ms = t;
+            system_set_exec_state_flag(EXEC_STATUS_REPORT);
+        }
+    }
+
+    on_execute_realtime(state);
 }
 
 // main entry point
@@ -131,7 +149,7 @@ int grbl_enter (void)
 
     sys.cold_start = true;
 
-#ifdef BUFFER_NVSDATA
+#if NVSDATA_BUFFER_ENABLE
     nvs_buffer_alloc(); // Allocate memory block for NVS buffer
 #endif
 
@@ -156,7 +174,7 @@ int grbl_enter (void)
     hal.signals_cap.safety_door_ajar = Off;
 #endif
 
-  #ifdef BUFFER_NVSDATA
+  #if NVSDATA_BUFFER_ENABLE
     nvs_buffer_init();
   #endif
     settings_init(); // Load settings from non-volatile storage
@@ -208,15 +226,15 @@ int grbl_enter (void)
     if(hal.get_position)
         hal.get_position(&sys.position); // TODO: restore on abort when returns true?
 
-#ifdef COREXY
+#if COREXY
     corexy_init();
 #endif
 
-#ifdef WALL_PLOTTER
+#if WALL_PLOTTER
     wall_plotter_init();
 #endif
 
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
     mc_backlash_init((axes_signals_t){AXES_BITMASK});
 #endif
 
@@ -225,6 +243,11 @@ int grbl_enter (void)
     // "Wire" homing switches to limit switches if not provided by the driver.
     if(hal.homing.get_state == NULL)
         hal.homing.get_state = hal.limits.get_state;
+
+    if(settings.report_interval) {
+        on_execute_realtime = grbl.on_execute_realtime;
+        grbl.on_execute_realtime = auto_realtime_report;
+    }
 
     // Grbl initialization loop upon power-up or a system abort. For the latter, all processes
     // will return to this loop to be cleanly re-initialized.
@@ -242,6 +265,7 @@ int grbl_enter (void)
         sys.override.feed_rate = DEFAULT_FEED_OVERRIDE;          // Set to 100%
         sys.override.rapid_rate = DEFAULT_RAPID_OVERRIDE;        // Set to 100%
         sys.override.spindle_rpm = DEFAULT_SPINDLE_RPM_OVERRIDE; // Set to 100%
+        sys.flags.auto_reporting = settings.report_interval != 0;
 
         if(settings.parking.flags.enabled)
             sys.override.control.parking_disable = settings.parking.flags.deactivate_upon_init;

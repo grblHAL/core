@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
+  Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -26,25 +26,25 @@
 
 // Alarm executor codes. Valid values (1-255). Zero is reserved.
 typedef enum {
-    Alarm_None = 0,
-    Alarm_HardLimit = 1,
-    Alarm_SoftLimit = 2,
-    Alarm_AbortCycle = 3,
-    Alarm_ProbeFailInitial = 4,
-    Alarm_ProbeFailContact = 5,
-    Alarm_HomingFailReset = 6,
-    Alarm_HomingFailDoor = 7,
-    Alarm_FailPulloff = 8,
-    Alarm_HomingFailApproach = 9,
-    Alarm_EStop = 10,
-    Alarm_HomingRequried = 11,
-    Alarm_LimitsEngaged = 12,
-    Alarm_ProbeProtect = 13,
-    Alarm_Spindle = 14,
-    Alarm_HomingFailAutoSquaringApproach = 15,
-    Alarm_SelftestFailed = 16,
-    Alarm_MotorFault = 17,
-    Alarm_HomingFail = 18,
+    Alarm_None = 0,                             //!< 0
+    Alarm_HardLimit = 1,                        //!< 1
+    Alarm_SoftLimit = 2,                        //!< 2
+    Alarm_AbortCycle = 3,                       //!< 3
+    Alarm_ProbeFailInitial = 4,                 //!< 4
+    Alarm_ProbeFailContact = 5,                 //!< 5
+    Alarm_HomingFailReset = 6,                  //!< 6
+    Alarm_HomingFailDoor = 7,                   //!< 7
+    Alarm_FailPulloff = 8,                      //!< 8
+    Alarm_HomingFailApproach = 9,               //!< 9
+    Alarm_EStop = 10,                           //!< 10
+    Alarm_HomingRequried = 11,                  //!< 11
+    Alarm_LimitsEngaged = 12,                   //!< 12
+    Alarm_ProbeProtect = 13,                    //!< 13
+    Alarm_Spindle = 14,                         //!< 14
+    Alarm_HomingFailAutoSquaringApproach = 15,  //!< 15
+    Alarm_SelftestFailed = 16,                  //!< 16
+    Alarm_MotorFault = 17,                      //!< 17
+    Alarm_HomingFail = 18,                      //!< 18
     Alarm_AlarmMax = Alarm_HomingFail
 } alarm_code_t;
 

@@ -26,7 +26,7 @@
 
 #include "grbl.h"
 
-#ifdef WALL_PLOTTER
+#if WALL_PLOTTER
 
 #include <math.h>
 #include <string.h>

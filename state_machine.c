@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2022 Terje Io
+  Copyright (c) 2018-2023 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -262,6 +262,8 @@ void state_suspend_manager (void)
             sys.override.spindle_stop.value = 0; // Clear stop override state
             spindle_set_state(0, (spindle_state_t){0}, 0.0f); // De-energize
             sys.override.spindle_stop.enabled = On; // Set stop override state to enabled, if de-energized.
+            if(grbl.on_override_changed)
+                grbl.on_override_changed(OverrideChanged_SpindleState);
         }
 
         // Handles restoring of spindle state
@@ -272,6 +274,8 @@ void state_suspend_manager (void)
             else
                 spindle_set_state(0, restore_condition.spindle, restore_spindle_rpm);
             sys.override.spindle_stop.value = 0; // Clear stop override state
+            if(grbl.on_override_changed)
+                grbl.on_override_changed(OverrideChanged_SpindleState);
         }
 
     } else if (sys.step_control.update_spindle_rpm && hal.spindle.get_state().on) {
@@ -561,7 +565,9 @@ static void state_await_resume (uint_fast16_t rt_exec)
 
         // Restart cycle
         if (!(sys_state & (STATE_SLEEP|STATE_SAFETY_DOOR))) {
+            step_control_t step_control = sys.step_control;
             state_set(STATE_IDLE);
+            sys.step_control = step_control;
             state_set(STATE_CYCLE);
         }
 

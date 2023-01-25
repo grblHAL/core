@@ -28,7 +28,7 @@
 
 #include "grbl.h"
 
-#ifdef MASLOW_ROUTER
+#if MASLOW_ROUTER
 
 #include <math.h>
 

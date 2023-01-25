@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2019-2022 Terje Io
+  Copyright (c) 2019-2023 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
 
   Grbl is free software: you can redistribute it and/or modify
@@ -22,7 +22,7 @@
 
 #include "grbl.h"
 
-#ifdef COREXY
+#if COREXY
 
 #include <math.h>
 

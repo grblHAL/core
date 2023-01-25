@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2022 Terje Io
+  Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -64,21 +64,21 @@ char const *const axis_letter[N_AXIS] = {
     "Y",
     "Z"
 #if N_AXIS > 3
-  #ifndef AXIS_REMAP_ABC2UVW
+  #if !AXIS_REMAP_ABC2UVW
     ,"A"
   #else
     ,"U"
   #endif
 #endif
 #if N_AXIS > 4
-  #ifndef AXIS_REMAP_ABC2UVW
+  #if !AXIS_REMAP_ABC2UVW
     ,"B"
   #else
     ,"V"
   #endif
 #endif
 #if N_AXIS > 5
- #ifndef AXIS_REMAP_ABC2UVW
+ #if !AXIS_REMAP_ABC2UVW
     ,"C"
   #else
     ,"W"
@@ -166,6 +166,58 @@ char *ftoa (float n, uint8_t decimal_places)
     return bptr;
 }
 
+// Extracts an unsigned integer value from a string.
+status_code_t read_uint (char *line, uint_fast8_t *char_counter, uint32_t *uint_ptr)
+{
+    char *ptr = line + *char_counter;
+    int_fast8_t exp = 0;
+    uint_fast8_t ndigit = 0, c;
+    uint32_t intval = 0;
+    bool isdecimal = false, ok = false;
+
+    // Grab first character and increment pointer. No spaces assumed in line.
+    c = *ptr++;
+
+    if (c == '-')
+        return Status_NegativeValue;
+
+    // Skip initial sign character
+    if (c == '+')
+        c = *ptr++;
+
+    // Extract number into fast integer. Track decimal in terms of exponent value.
+    while(c) {
+        c -= '0';
+        if (c <= 9) {
+            ok = true;
+            if(!isdecimal && (c != 0 || intval))
+                ndigit++;
+            if (isdecimal && c != 0)
+                return Status_GcodeCommandValueNotInteger;
+
+            if ((ndigit <= 9 || c <= 4) && intval <= 429496729) {
+                intval = (((intval << 2) + intval) << 1) + c; // intval * 10 + c
+            } else if (!isdecimal)
+                exp++;  // Drop overflow digits
+        } else if (c == (uint_fast8_t)('.' - '0') && !isdecimal)
+            isdecimal = true;
+         else
+            break;
+
+        c = *ptr++;
+    }
+
+    // Return if no digits have been read.
+
+    if (!ok)
+        return Status_BadNumberFormat;
+
+    *uint_ptr = intval; // Assign value.
+    *char_counter = ptr - line - 1; // Set char_counter to next statement
+
+    return Status_OK;
+}
+
 // Extracts a floating point value from a string. The following code is based loosely on
 // the avr-libc strtod() function by Michael Stumpf and Dmitry Xmelkov and many freely
 // available conversion method examples, but has been highly optimized for Grbl. For known
@@ -179,12 +231,12 @@ bool read_float (char *line, uint_fast8_t *char_counter, float *float_ptr)
     int_fast8_t exp = 0;
     uint_fast8_t ndigit = 0, c;
     uint32_t intval = 0;
-    bool isnegative, isdecimal = false;
+    bool isnegative, isdecimal = false, ok = false;
 
     // Grab first character and increment pointer. No spaces assumed in line.
     c = *ptr++;
 
-    // Capture initial positive/minus character
+    // Capture initial sign character
     if ((isnegative = (c == '-')) || c == '+')
         c = *ptr++;
 
@@ -192,11 +244,13 @@ bool read_float (char *line, uint_fast8_t *char_counter, float *float_ptr)
     while(c) {
         c -= '0';
         if (c <= 9) {
-            ndigit++;
+            ok = true;
+            if(c != 0 || intval)
+                ndigit++;
             if (ndigit <= MAX_INT_DIGITS) {
                 if (isdecimal)
                     exp--;
-                intval = (((intval << 2) + intval) << 1) + c; // intval*10 + c
+                intval = (((intval << 2) + intval) << 1) + c; // intval * 10 + c
             } else if (!isdecimal)
                 exp++;  // Drop overflow digits
         } else if (c == (uint_fast8_t)('.' - '0') && !isdecimal)
@@ -208,7 +262,7 @@ bool read_float (char *line, uint_fast8_t *char_counter, float *float_ptr)
     }
 
     // Return if no digits have been read.
-    if (!ndigit)
+    if (!ok)
         return false;
 
     // Convert integer into floating point.

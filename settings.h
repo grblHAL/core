@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2022 Terje Io
+  Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -28,9 +28,8 @@
 #include "system.h"
 #include "plugins.h"
 
-// Version of the persistent storage data. Will be used to migrate existing data from older versions of Grbl
-// when firmware is upgraded. Always stored in byte 0 of non-volatile storage
-#define SETTINGS_VERSION 21  // NOTE: Check settings_reset() when moving to next version.
+// Version of the persistent storage data. Always stored in byte 0 of non-volatile storage.
+#define SETTINGS_VERSION 22  // NOTE: Check settings_reset() when moving to next version.
 
 // Define axis settings numbering scheme. Starts at Setting_AxisSettingsBase, every INCREMENT, over N_SETTINGS.
 #define AXIS_SETTINGS_INCREMENT  10 // Must be greater than the number of axis settings.
@@ -301,6 +300,31 @@ typedef enum {
     Setting_VFD_21 = 473,
 
     Setting_Fan0OffDelay = 480,
+    Setting_AutoReportInterval = 481,
+    Setting_TimeZoneOffset = 482,
+    Setting_FanToSpindleLink = 483,
+
+    Setting_Macro0 = 490,
+    Setting_Macro1 = 491,
+    Setting_Macro2 = 492,
+    Setting_Macro3 = 493,
+    Setting_Macro4 = 494,
+    Setting_Macro5 = 495,
+    Setting_Macro6 = 496,
+    Setting_Macro7 = 497,
+    Setting_Macro8 = 498,
+    Setting_Macro9 = 499,
+
+    Setting_MacroPort0 = 500,
+    Setting_MacroPort1 = 501,
+    Setting_MacroPort2 = 502,
+    Setting_MacroPort3 = 503,
+    Setting_MacroPort4 = 504,
+    Setting_MacroPort5 = 505,
+    Setting_MacroPort6 = 506,
+    Setting_MacroPort7 = 507,
+    Setting_MacroPort8 = 508,
+    Setting_MacroPort9 = 509,
 
     Setting_SettingsMax,
     Setting_SettingsAll = Setting_SettingsMax,
@@ -365,7 +389,7 @@ typedef union {
                  unused1                         :1,
                  g92_is_volatile                 :1,
                  compatibility_level             :4,
-                 no_restore_position_after_M6         :1,
+                 no_restore_position_after_M6    :1,
                  unassigned                      :1;
     };
 } settingflags_t;
@@ -493,9 +517,9 @@ typedef union {
 } homing_settings_flags_t;
 
 typedef struct {
-    float fail_length_percent; // DUAL_AXIS_HOMING_FAIL_AXIS_LENGTH_PERCENT
-    float fail_distance_max;   // DUAL_AXIS_HOMING_FAIL_DISTANCE_MAX
-    float fail_distance_min;   // DUAL_AXIS_HOMING_FAIL_DISTANCE_MIN
+    float fail_length_percent; // DEFAULT_DUAL_AXIS_HOMING_FAIL_AXIS_LENGTH_PERCENT
+    float fail_distance_max;   // DEFAULT_DUAL_AXIS_HOMING_FAIL_DISTANCE_MAX
+    float fail_distance_min;   // DEFAULT_DUAL_AXIS_HOMING_FAIL_DISTANCE_MIN
 } homing_dual_axis_t;
 
 typedef struct {
@@ -517,7 +541,7 @@ typedef struct {
     axes_signals_t enable_invert;
     axes_signals_t deenergize;
 #if N_AXIS > 3
-    axes_signals_t is_rotational; // rotational axes are not scaled in imperial mode
+    axes_signals_t is_rotational; // rotational axes distances are not scaled in imperial mode
 #endif
     float pulse_microseconds;
     float pulse_delay_microseconds;
@@ -530,7 +554,7 @@ typedef struct {
     float acceleration;
     float max_travel;
     float dual_axis_offset;
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
     float backlash;
 #endif
 } axis_settings_t;
@@ -598,9 +622,9 @@ typedef struct {
     float junction_deviation;
     float arc_tolerance;
     float g73_retract;
-#ifdef BLOCK_BUFFER_DYNAMIC
+    float timezone;
+    uint16_t report_interval;
     uint16_t planner_buffer_blocks;
-#endif
     machine_mode_t mode;
     tool_change_settings_t tool_change;
     axis_settings_t axis[N_AXIS];
@@ -753,7 +777,7 @@ typedef char *(*setting_get_string_ptr)(setting_id_t id);
 typedef bool (*setting_output_ptr)(const setting_detail_t *setting, uint_fast16_t offset, void *data);
 
 /*! \brief Pointer to callback function to be called when settings are loaded or changed.
-\param pointer to \a settings_t struct containing the settings.
+\param settings pointer to \a settings_t struct containing the settings.
 */
 typedef void (*settings_changed_ptr)(settings_t *settings);
 

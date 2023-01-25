@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2019-2022 Terje Io
+  Copyright (c) 2019-2023 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -25,10 +25,6 @@
 
 #ifndef _STEPPER_H_
 #define _STEPPER_H_
-
-#ifndef SEGMENT_BUFFER_SIZE
-#define SEGMENT_BUFFER_SIZE 10
-#endif
 
 typedef enum {
     SquaringMode_Both = 0,  //!< 0

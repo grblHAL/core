@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2016-2022 Terje Io
+  Copyright (c) 2016-2023 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -35,14 +35,9 @@
 
 //! \cond
 
-#ifndef ACCELERATION_TICKS_PER_SECOND
-#define ACCELERATION_TICKS_PER_SECOND 100
-#endif
-
 // Some useful constants.
-#define DT_SEGMENT (1.0f/(ACCELERATION_TICKS_PER_SECOND*60.0f)) // min/segment
+#define DT_SEGMENT (1.0f / (ACCELERATION_TICKS_PER_SECOND * 60.0f)) // min/segment
 #define REQ_MM_INCREMENT_SCALAR 1.25f
-
 
 typedef enum {
     Ramp_Accel,
@@ -289,7 +284,7 @@ ISR_CODE void ISR_FUNC(st_go_idle)(void)
 
 ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
 {
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
     static bool backlash_motion;
 #endif
 
@@ -324,7 +319,7 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
                 st.exec_block = st.exec_segment->exec_block;
                 st.step_event_count = st.exec_block->step_event_count;
                 st.new_block = true;
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
                 backlash_motion = st.exec_block->backlash_motion;
 #endif
 
@@ -446,7 +441,7 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
     if (st.counter_x > st.step_event_count) {
         step_outbits.x = On;
         st.counter_x -= st.step_event_count;
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
         if(!backlash_motion)
 #endif
             sys.position[X_AXIS] = sys.position[X_AXIS] + (st.dir_outbits.x ? -1 : 1);
@@ -456,7 +451,7 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
     if (st.counter_y > st.step_event_count) {
         step_outbits.y = On;
         st.counter_y -= st.step_event_count;
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
         if(!backlash_motion)
 #endif
             sys.position[Y_AXIS] = sys.position[Y_AXIS] + (st.dir_outbits.y ? -1 : 1);
@@ -466,7 +461,7 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
     if (st.counter_z > st.step_event_count) {
         step_outbits.z = On;
         st.counter_z -= st.step_event_count;
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
         if(!backlash_motion)
 #endif
             sys.position[Z_AXIS] = sys.position[Z_AXIS] + (st.dir_outbits.z ? -1 : 1);
@@ -477,7 +472,7 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
       if (st.counter_a > st.step_event_count) {
           step_outbits.a = On;
           st.counter_a -= st.step_event_count;
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
         if(!backlash_motion)
 #endif
               sys.position[A_AXIS] = sys.position[A_AXIS] + (st.dir_outbits.a ? -1 : 1);
@@ -489,7 +484,7 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
       if (st.counter_b > st.step_event_count) {
           step_outbits.b = On;
           st.counter_b -= st.step_event_count;
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
         if(!backlash_motion)
 #endif
               sys.position[B_AXIS] = sys.position[B_AXIS] + (st.dir_outbits.b ? -1 : 1);
@@ -501,7 +496,7 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
       if (st.counter_c > st.step_event_count) {
           step_outbits.c = On;
           st.counter_c -= st.step_event_count;
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
         if(!backlash_motion)
 #endif
               sys.position[C_AXIS] = sys.position[C_AXIS] + (st.dir_outbits.c ? -1 : 1);
@@ -513,7 +508,7 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
     if (st.counter_u > st.step_event_count) {
         step_outbits.u = On;
         st.counter_u -= st.step_event_count;
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
       if(!backlash_motion)
 #endif
             sys.position[U_AXIS] = sys.position[U_AXIS] + (st.dir_outbits.u ? -1 : 1);
@@ -525,7 +520,7 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
     if (st.counter_v > st.step_event_count) {
         step_outbits.v = On;
         st.counter_v -= st.step_event_count;
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
       if(!backlash_motion)
 #endif
             sys.position[V_AXIS] = sys.position[V_AXIS] + (st.dir_outbits.v ? -1 : 1);

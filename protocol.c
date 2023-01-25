@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2022 Terje Io
+  Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -232,7 +232,7 @@ bool protocol_main_loop (void)
 
                 line[char_counter] = '\0'; // Set string termination character.
 
-              #ifdef REPORT_ECHO_LINE_RECEIVED
+              #if REPORT_ECHO_LINE_RECEIVED
                 report_echo_line_received(line);
               #endif
 
@@ -389,7 +389,7 @@ bool protocol_execute_realtime (void)
         if (sys.suspend)
             protocol_exec_rt_suspend();
 
-      #ifdef BUFFER_NVSDATA
+      #if NVSDATA_BUFFER_ENABLE
         if((state_get() == STATE_IDLE || (state_get() & (STATE_ALARM|STATE_ESTOP))) && settings_dirty.is_dirty && !gc_state.file_run)
             nvs_buffer_sync_physical();
       #endif
@@ -677,6 +677,8 @@ bool protocol_exec_rt_system (void)
             if(coolant_state.value != gc_state.modal.coolant.value) {
                 coolant_set_state(coolant_state); // Report flag set in coolant_set_state().
                 gc_state.modal.coolant = coolant_state;
+                if(grbl.on_override_changed)
+                    grbl.on_override_changed(OverrideChanged_CoolantState);
             }
 
             if (spindle_stop && state_get() == STATE_HOLD && gc_state.modal.spindle.on) {
@@ -767,18 +769,21 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(char c)
             break;
 #endif
 
-        case CMD_STATUS_REPORT_ALL: // Add all statuses on to report
+        case CMD_STATUS_REPORT_ALL: // Add all statuses to report
             {
                 bool tlo = sys.report.tool_offset;
                 sys.report.value = (uint32_t)-1;
                 sys.report.tool_offset = tlo;
                 sys.report.m66result = sys.var5399 > -2;
             }
-            // no break
+            system_set_exec_state_flag(EXEC_STATUS_REPORT);
+            drop = true;
+            break;
 
         case CMD_STATUS_REPORT:
         case 0x05:
-            system_set_exec_state_flag(EXEC_STATUS_REPORT);
+            if(!sys.flags.auto_reporting)
+                system_set_exec_state_flag(EXEC_STATUS_REPORT);
             drop = true;
             break;
 
@@ -841,6 +846,11 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(char c)
         case CMD_MPG_MODE_TOGGLE:           // Switch off MPG mode
             if(hal.stream.type == StreamType_MPG)
                 stream_mpg_enable(false);
+            break;
+
+        case CMD_AUTO_REPORTING_TOGGLE:
+            if(settings.report_interval)
+                sys.flags.auto_reporting = !sys.flags.auto_reporting;
             break;
 
         case CMD_OVERRIDE_FEED_RESET:

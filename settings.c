@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2022 Terje Io
+  Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2011-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -28,32 +28,16 @@
 #include <assert.h>
 
 #include "hal.h"
-#include "defaults.h"
+#include "config.h"
 #include "machine_limits.h"
 #include "nvs_buffer.h"
 #include "tool_change.h"
 #include "state_machine.h"
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
 #include "motion_control.h"
 #endif
 #ifdef ENABLE_SPINDLE_LINEARIZATION
 #include <stdio.h>
-#endif
-
-#ifndef SETTINGS_RESTORE_DEFAULTS
-#define SETTINGS_RESTORE_DEFAULTS          1
-#endif
-#ifndef SETTINGS_RESTORE_PARAMETERS
-#define SETTINGS_RESTORE_PARAMETERS        1
-#endif
-#ifndef SETTINGS_RESTORE_STARTUP_LINES
-#define SETTINGS_RESTORE_STARTUP_LINES     1
-#endif
-#ifndef SETTINGS_RESTORE_BUILD_INFO
-#define SETTINGS_RESTORE_BUILD_INFO        1
-#endif
-#ifndef SETTINGS_RESTORE_DRIVER_PARAMETERS
-#define SETTINGS_RESTORE_DRIVER_PARAMETERS 1
 #endif
 
 settings_t settings;
@@ -73,20 +57,14 @@ PROGMEM const settings_t defaults = {
     .junction_deviation = DEFAULT_JUNCTION_DEVIATION,
     .arc_tolerance = DEFAULT_ARC_TOLERANCE,
     .g73_retract = DEFAULT_G73_RETRACT,
-#ifdef BLOCK_BUFFER_DYNAMIC
-  #ifdef PLANNER_BUFFER_BLOCKS
-    .planner_buffer_blocks = PLANNER_BUFFER_BLOCKS,
-  #elif defined(BLOCK_BUFFER_SIZE)
-    .planner_buffer_blocks = BLOCK_BUFFER_SIZE,
-  #else
-    .planner_buffer_blocks = 35,
-  #endif
-#endif
+    .report_interval = DEFAULT_AUTOREPORT_INTERVAL,
+    .timezone = DEFAULT_TIMEZONE_OFFSET,
+    .planner_buffer_blocks = DEFAULT_PLANNER_BUFFER_BLOCKS,
     .flags.legacy_rt_commands = DEFAULT_LEGACY_RTCOMMANDS,
     .flags.report_inches = DEFAULT_REPORT_INCHES,
     .flags.sleep_enable = DEFAULT_SLEEP_ENABLE,
     .flags.compatibility_level = COMPATIBILITY_LEVEL,
-#if DISABLE_G92_PERSISTENCE
+#if DEFAULT_DISABLE_G92_PERSISTENCE
     .flags.g92_is_volatile = 1,
 #else
     .flags.g92_is_volatile = 0,
@@ -102,27 +80,29 @@ PROGMEM const settings_t defaults = {
 #endif
     .flags.restore_after_feed_hold = DEFAULT_RESTORE_AFTER_FEED_HOLD,
     .flags.force_initialization_alarm = DEFAULT_FORCE_INITIALIZATION_ALARM,
+    .flags.restore_overrides = DEFAULT_RESET_OVERRIDES,
+    .flags.no_restore_position_after_M6 = DEFAULT_TOOLCHANGE_NO_RESTORE_POSITION,
 
-    .probe.disable_probe_pullup = DISABLE_PROBE_BIT_PULL_UP,
-    .probe.allow_feed_override = ALLOW_FEED_OVERRIDE_DURING_PROBE_CYCLES,
-    .probe.invert_probe_pin = DEFAULT_INVERT_PROBE_BIT,
+    .probe.disable_probe_pullup = DEFAULT_PROBE_SIGNAL_DISABLE_PULLUP,
+    .probe.allow_feed_override = DEFAULT_ALLOW_FEED_OVERRIDE_DURING_PROBE_CYCLES,
+    .probe.invert_probe_pin = DEFAULT_PROBE_SIGNAL_INVERT,
 
     .steppers.pulse_microseconds = DEFAULT_STEP_PULSE_MICROSECONDS,
     .steppers.pulse_delay_microseconds = DEFAULT_STEP_PULSE_DELAY,
     .steppers.idle_lock_time = DEFAULT_STEPPER_IDLE_LOCK_TIME,
-    .steppers.step_invert.mask = DEFAULT_STEPPING_INVERT_MASK,
-    .steppers.dir_invert.mask = DEFAULT_DIRECTION_INVERT_MASK,
+    .steppers.step_invert.mask = DEFAULT_STEP_SIGNALS_INVERT_MASK,
+    .steppers.dir_invert.mask = DEFAULT_DIR_SIGNALS_INVERT_MASK,
     .steppers.ganged_dir_invert.mask = DEFAULT_GANGED_DIRECTION_INVERT_MASK,
 #if COMPATIBILITY_LEVEL <= 2
-    .steppers.enable_invert.mask = INVERT_ST_ENABLE_MASK,
-#elif INVERT_ST_ENABLE_MASK
+    .steppers.enable_invert.mask = DEFAULT_ENABLE_SIGNALS_INVERT_MASK,
+#elif DEFAULT_ENABLE_SIGNALS_INVERT_MASK
     .steppers.enable_invert.mask = 0,
 #else
     .steppers.enable_invert.mask = AXES_BITMASK,
 #endif
-    .steppers.deenergize.mask = ST_DEENERGIZE_MASK,
+    .steppers.deenergize.mask = DEFAULT_STEPPER_DEENERGIZE_MASK,
 #if N_AXIS > 3
-    .steppers.is_rotational.mask = (ST_ROTATIONAL_MASK & AXES_BITMASK) & 0b11111000,
+    .steppers.is_rotational.mask = (DEFAULT_AXIS_ROTATIONAL_MASK & AXES_BITMASK) & 0b11111000,
 #endif
 #if DEFAULT_HOMING_ENABLE
     .homing.flags.enabled = DEFAULT_HOMING_ENABLE,
@@ -131,6 +111,7 @@ PROGMEM const settings_t defaults = {
     .homing.flags.force_set_origin = HOMING_FORCE_SET_ORIGIN,
     .homing.flags.manual = DEFAULT_HOMING_ALLOW_MANUAL,
     .homing.flags.override_locks = DEFAULT_HOMING_OVERRIDE_LOCKS,
+    .homing.flags.keep_on_reset = DEFAULT_HOMING_KEEP_STATUS_ON_RESET,
 #else
     .homing.flags.value = 0,
 #endif
@@ -140,14 +121,14 @@ PROGMEM const settings_t defaults = {
     .homing.debounce_delay = DEFAULT_HOMING_DEBOUNCE_DELAY,
     .homing.pulloff = DEFAULT_HOMING_PULLOFF,
     .homing.locate_cycles = DEFAULT_N_HOMING_LOCATE_CYCLE,
-    .homing.cycle[0].mask = HOMING_CYCLE_0,
-    .homing.cycle[1].mask = HOMING_CYCLE_1,
-    .homing.cycle[2].mask = HOMING_CYCLE_2,
-    .homing.dual_axis.fail_length_percent = DUAL_AXIS_HOMING_FAIL_AXIS_LENGTH_PERCENT,
-    .homing.dual_axis.fail_distance_min = DUAL_AXIS_HOMING_FAIL_DISTANCE_MIN,
-    .homing.dual_axis.fail_distance_max = DUAL_AXIS_HOMING_FAIL_DISTANCE_MAX,
+    .homing.cycle[0].mask = DEFAULT_HOMING_CYCLE_0,
+    .homing.cycle[1].mask = DEFAULT_HOMING_CYCLE_1,
+    .homing.cycle[2].mask = DEFAULT_HOMING_CYCLE_2,
+    .homing.dual_axis.fail_length_percent = DEFAULT_DUAL_AXIS_HOMING_FAIL_AXIS_LENGTH_PERCENT,
+    .homing.dual_axis.fail_distance_min = DEFAULT_DUAL_AXIS_HOMING_FAIL_DISTANCE_MIN,
+    .homing.dual_axis.fail_distance_max = DEFAULT_DUAL_AXIS_HOMING_FAIL_DISTANCE_MAX,
 
-    .status_report.machine_position = DEFAULT_REPORT_BUFFER_STATE,
+    .status_report.machine_position = DEFAULT_REPORT_MACHINE_POSITION,
     .status_report.buffer_state = DEFAULT_REPORT_BUFFER_STATE,
     .status_report.line_numbers = DEFAULT_REPORT_LINE_NUMBERS,
     .status_report.feed_speed = DEFAULT_REPORT_CURRENT_FEED_SPEED,
@@ -158,25 +139,25 @@ PROGMEM const settings_t defaults = {
     .status_report.sync_on_wco_change = DEFAULT_REPORT_SYNC_ON_WCO_CHANGE,
     .status_report.parser_state = DEFAULT_REPORT_PARSER_STATE,
     .status_report.alarm_substate = DEFAULT_REPORT_ALARM_SUBSTATE,
-
+    .status_report.run_substate = DEFAULT_REPORT_RUN_SUBSTATE,
     .limits.flags.hard_enabled = DEFAULT_HARD_LIMIT_ENABLE,
     .limits.flags.soft_enabled = DEFAULT_SOFT_LIMIT_ENABLE,
     .limits.flags.jog_soft_limited = DEFAULT_JOG_LIMIT_ENABLE,
     .limits.flags.check_at_init = DEFAULT_CHECK_LIMITS_AT_INIT,
     .limits.flags.two_switches = DEFAULT_LIMITS_TWO_SWITCHES_ON_AXES,
-    .limits.invert.mask = INVERT_LIMIT_BIT_MASK,
-    .limits.disable_pullup.mask = DISABLE_LIMIT_BITS_PULL_UP_MASK,
+    .limits.invert.mask = DEFAULT_LIMIT_SIGNALS_INVERT_MASK,
+    .limits.disable_pullup.mask = DEFAULT_LIMIT_SIGNALS_PULLUP_DISABLE_MASK,
 
-    .control_invert.mask = INVERT_CONTROL_PIN_MASK,
-    .control_disable_pullup.mask = DISABLE_CONTROL_PINS_PULL_UP_MASK,
+    .control_invert.mask = DEFAULT_CONTROL_SIGNALS_INVERT_MASK,
+    .control_disable_pullup.mask = DEFAULT_DISABLE_CONTROL_PINS_PULL_UP_MASK,
 
     .spindle.rpm_max = DEFAULT_SPINDLE_RPM_MAX,
     .spindle.rpm_min = DEFAULT_SPINDLE_RPM_MIN,
     .spindle.flags.pwm_disable = false,
     .spindle.flags.enable_rpm_controlled = DEFAULT_SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED,
-    .spindle.invert.on = INVERT_SPINDLE_ENABLE_PIN,
-    .spindle.invert.ccw = INVERT_SPINDLE_CCW_PIN,
-    .spindle.invert.pwm = INVERT_SPINDLE_PWM_PIN,
+    .spindle.invert.on = DEFAULT_INVERT_SPINDLE_ENABLE_PIN,
+    .spindle.invert.ccw = DEFAULT_INVERT_SPINDLE_CCW_PIN,
+    .spindle.invert.pwm = DEFAULT_INVERT_SPINDLE_PWM_PIN,
     .spindle.pwm_freq = DEFAULT_SPINDLE_PWM_FREQ,
     .spindle.pwm_off_value = DEFAULT_SPINDLE_PWM_OFF_VALUE,
     .spindle.pwm_min_value = DEFAULT_SPINDLE_PWM_MIN_VALUE,
@@ -200,90 +181,90 @@ PROGMEM const settings_t defaults = {
     .spindle.pwm_piece[3] = { .rpm = NAN, .start = 0.0f, .end = 0.0f },
 #endif
 
-    .coolant_invert.flood = INVERT_COOLANT_FLOOD_PIN,
-    .coolant_invert.mist = INVERT_COOLANT_MIST_PIN,
+    .coolant_invert.flood = DEFAULT_INVERT_COOLANT_FLOOD_PIN,
+    .coolant_invert.mist = DEFAULT_INVERT_COOLANT_MIST_PIN,
 
     .axis[X_AXIS].steps_per_mm = DEFAULT_X_STEPS_PER_MM,
     .axis[X_AXIS].max_rate = DEFAULT_X_MAX_RATE,
-    .axis[X_AXIS].acceleration = DEFAULT_X_ACCELERATION,
+    .axis[X_AXIS].acceleration = (DEFAULT_X_ACCELERATION * 60.0f * 60.0f),
     .axis[X_AXIS].max_travel = (-DEFAULT_X_MAX_TRAVEL),
     .axis[X_AXIS].dual_axis_offset = 0.0f,
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
     .axis[X_AXIS].backlash = 0.0f,
 #endif
 
     .axis[Y_AXIS].steps_per_mm = DEFAULT_Y_STEPS_PER_MM,
     .axis[Y_AXIS].max_rate = DEFAULT_Y_MAX_RATE,
     .axis[Y_AXIS].max_travel = (-DEFAULT_Y_MAX_TRAVEL),
-    .axis[Y_AXIS].acceleration = DEFAULT_Y_ACCELERATION,
+    .axis[Y_AXIS].acceleration = (DEFAULT_Y_ACCELERATION * 60.0f * 60.0f),
     .axis[Y_AXIS].dual_axis_offset = 0.0f,
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
     .axis[Y_AXIS].backlash = 0.0f,
 #endif
 
     .axis[Z_AXIS].steps_per_mm = DEFAULT_Z_STEPS_PER_MM,
     .axis[Z_AXIS].max_rate = DEFAULT_Z_MAX_RATE,
-    .axis[Z_AXIS].acceleration = DEFAULT_Z_ACCELERATION,
+    .axis[Z_AXIS].acceleration = (DEFAULT_Z_ACCELERATION * 60.0f * 60.0f),
     .axis[Z_AXIS].max_travel = (-DEFAULT_Z_MAX_TRAVEL),
     .axis[Z_AXIS].dual_axis_offset = 0.0f,
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
     .axis[Z_AXIS].backlash = 0.0f,
 #endif
 
 #ifdef A_AXIS
     .axis[A_AXIS].steps_per_mm = DEFAULT_A_STEPS_PER_MM,
     .axis[A_AXIS].max_rate = DEFAULT_A_MAX_RATE,
-    .axis[A_AXIS].acceleration = DEFAULT_A_ACCELERATION,
+    .axis[A_AXIS].acceleration =(DEFAULT_A_ACCELERATION * 60.0f * 60.0f),
     .axis[A_AXIS].max_travel = (-DEFAULT_A_MAX_TRAVEL),
     .axis[A_AXIS].dual_axis_offset = 0.0f,
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
     .axis[A_AXIS].backlash = 0.0f,
 #endif
-    .homing.cycle[3].mask = HOMING_CYCLE_3,
+    .homing.cycle[3].mask = DEFAULT_HOMING_CYCLE_3,
 #endif
 
 #ifdef B_AXIS
     .axis[B_AXIS].steps_per_mm = DEFAULT_B_STEPS_PER_MM,
     .axis[B_AXIS].max_rate = DEFAULT_B_MAX_RATE,
-    .axis[B_AXIS].acceleration = DEFAULT_B_ACCELERATION,
+    .axis[B_AXIS].acceleration = (DEFAULT_B_ACCELERATION * 60.0f * 60.0f),
     .axis[B_AXIS].max_travel = (-DEFAULT_B_MAX_TRAVEL),
     .axis[B_AXIS].dual_axis_offset = 0.0f,
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
     .axis[B_AXIS].backlash = 0.0f,
 #endif
-    .homing.cycle[4].mask = HOMING_CYCLE_4,
+    .homing.cycle[4].mask = DEFAULT_HOMING_CYCLE_4,
 #endif
 
 #ifdef C_AXIS
     .axis[C_AXIS].steps_per_mm = DEFAULT_C_STEPS_PER_MM,
-    .axis[C_AXIS].acceleration = DEFAULT_C_ACCELERATION,
+    .axis[C_AXIS].acceleration = (DEFAULT_C_ACCELERATION * 60.0f * 60.0f),
     .axis[C_AXIS].max_rate = DEFAULT_C_MAX_RATE,
     .axis[C_AXIS].max_travel = (-DEFAULT_C_MAX_TRAVEL),
     .axis[C_AXIS].dual_axis_offset = 0.0f,
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
     .axis[C_AXIS].backlash = 0.0f,
 #endif
-    .homing.cycle[5].mask = HOMING_CYCLE_5,
+    .homing.cycle[5].mask = DEFAULT_HOMING_CYCLE_5,
 #endif
 
 #ifdef U_AXIS
     .axis[U_AXIS].steps_per_mm = DEFAULT_U_STEPS_PER_MM,
-    .axis[U_AXIS].acceleration = DEFAULT_U_ACCELERATION,
+    .axis[U_AXIS].acceleration = (DEFAULT_U_ACCELERATION * 60.0f * 60.0f),
     .axis[U_AXIS].max_rate = DEFAULT_U_MAX_RATE,
     .axis[U_AXIS].max_travel = (-DEFAULT_U_MAX_TRAVEL),
     .axis[U_AXIS].dual_axis_offset = 0.0f,
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
     .axis[U_AXIS].backlash = 0.0f,
 #endif
 #endif
 
 #ifdef V_AXIS
     .axis[V_AXIS].steps_per_mm = DEFAULT_V_STEPS_PER_MM,
-    .axis[V_AXIS].acceleration = DEFAULT_V_ACCELERATION,
+    .axis[V_AXIS].acceleration = (DEFAULT_V_ACCELERATION * 60.0f * 60.0f),
     .axis[V_AXIS].max_rate = DEFAULT_V_MAX_RATE,
     .axis[V_AXIS].max_travel = (-DEFAULT_V_MAX_TRAVEL),
     .axis[V_AXIS].dual_axis_offset = 0.0f,
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
     .axis[V_AXIS].backlash = 0.0f,
 #endif
 #endif
@@ -303,8 +284,10 @@ PROGMEM const settings_t defaults = {
     .parking.pullout_rate = DEFAULT_PARKING_PULLOUT_RATE,
     .parking.pullout_increment = DEFAULT_PARKING_PULLOUT_INCREMENT,
 
-    .safety_door.spindle_on_delay = SAFETY_DOOR_SPINDLE_DELAY,
-    .safety_door.coolant_on_delay = SAFETY_DOOR_COOLANT_DELAY
+    .safety_door.flags.ignore_when_idle = DEFAULT_DOOR_IGNORE_WHEN_IDLE,
+    .safety_door.flags.keep_coolant_on = DEFAULT_DOOR_KEEP_COOLANT_ON,
+    .safety_door.spindle_on_delay = DEFAULT_SAFETY_DOOR_SPINDLE_DELAY,
+    .safety_door.coolant_on_delay = DEFAULT_SAFETY_DOOR_COOLANT_DELAY
 };
 
 PROGMEM static const setting_group_detail_t setting_group_detail [] = {
@@ -327,7 +310,7 @@ PROGMEM static const setting_group_detail_t setting_group_detail [] = {
      { Group_Axis, Group_XAxis, "X-axis"},
      { Group_Axis, Group_YAxis, "Y-axis"},
      { Group_Axis, Group_ZAxis, "Z-axis"},
-#ifndef AXIS_REMAP_ABC2UVW
+#if !AXIS_REMAP_ABC2UVW
   #ifdef A_AXIS
      { Group_Axis, Group_AAxis, "A-axis"},
   #endif
@@ -382,6 +365,7 @@ static status_code_t set_tool_change_probing_distance (setting_id_t id, float va
 static status_code_t set_tool_restore_pos (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_ganged_dir_invert (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_stepper_deenergize_mask (setting_id_t id, uint_fast16_t int_value);
+static status_code_t set_report_interval (setting_id_t setting, uint_fast16_t int_value);
 #ifndef NO_SAFETY_DOOR_SUPPORT
 static status_code_t set_parking_enable (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_restore_overrides (setting_id_t id, uint_fast16_t int_value);
@@ -528,7 +512,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_AxisMaxRate, Group_Axis0, "?-axis maximum rate", axis_rate, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL },
      { Setting_AxisAcceleration, Group_Axis0, "?-axis acceleration", axis_accel, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL },
      { Setting_AxisMaxTravel, Group_Axis0, "?-axis maximum travel", axis_dist, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL },
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
      { Setting_AxisBacklash, Group_Axis0, "?-axis backlash compensation", axis_dist, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsExtendedFn, set_axis_setting, get_float, NULL },
 #endif
      { Setting_AxisAutoSquareOffset, Group_Axis0, "?-axis dual axis offset", "mm", Format_Decimal, "-0.000", "-10", "10", Setting_IsExtendedFn, set_axis_setting, get_float, is_setting_available },
@@ -545,7 +529,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
 #if COMPATIBILITY_LEVEL <= 1
      { Setting_DisableG92Persistence, Group_General, "Disable G92 persistence", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_g92_disable_persistence, get_int, NULL },
 #endif
-#ifndef AXIS_REMAP_ABC2UVW
+#if !AXIS_REMAP_ABC2UVW
   #if N_AXIS == 4
    { Settings_Axis_Rotational, Group_Stepper, "Rotational axes", NULL, Format_Bitfield, "A-Axis", NULL, NULL, Setting_IsExtendedFn, set_rotational_axes, get_int, NULL },
   #elif N_AXIS == 5
@@ -572,9 +556,9 @@ PROGMEM static const setting_detail_t setting_detail[] = {
 #endif
      { Setting_SpindleOnDelay, Group_Spindle, "Spindle on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.spindle_on_delay, NULL, is_setting_available },
      { Setting_SpindleType, Group_Spindle, "Default spindle", NULL, Format_RadioButtons, spindle_types, NULL, NULL, Setting_IsExtendedFn, set_spindle_type, get_int, is_setting_available },
-#ifdef BLOCK_BUFFER_DYNAMIC
      { Setting_PlannerBlocks, Group_General, "Planner buffer blocks", NULL, Format_Int16, "####0", "30", "1000", Setting_IsExtended, &settings.planner_buffer_blocks, NULL, NULL, { .reboot_required = On } },
-#endif
+     { Setting_AutoReportInterval, Group_General, "Autoreport interval", "ms", Format_Int16, "###0", "100", "1000", Setting_IsExtendedFn, set_report_interval, get_int, NULL, { .reboot_required = On, .allow_null = On } },
+//     { Setting_TimeZoneOffset, Group_General, "Timezone offset", NULL, Format_Decimal, "-#0.00", "0", "12", Setting_IsExtended, &settings.timezone, NULL, NULL },
 };
 
 #ifndef NO_SETTINGS_DESCRIPTIONS
@@ -690,11 +674,11 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_PositionDGain, "" },
     { Setting_PositionIMaxError, "Spindle sync PID max integrator error." },
     { Setting_AxisStepsPerMM, "Travel resolution in steps per millimeter." },
-    { Setting_AxisStepsPerMM + 1, "Travel resolution in steps per degree." }, // "Hack" to get correct description for rotary axes
+    { (setting_id_t)(Setting_AxisStepsPerMM + 1), "Travel resolution in steps per degree." }, // "Hack" to get correct description for rotary axes
     { Setting_AxisMaxRate, "Maximum rate. Used as G0 rapid rate." },
     { Setting_AxisAcceleration, "Acceleration. Used for motion planning to not exceed motor torque and lose steps." },
     { Setting_AxisMaxTravel, "Maximum axis travel distance from homing switch. Determines valid machine space for soft-limits and homing search distances." },
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
     { Setting_AxisBacklash, "Backlash distance to compensate for." },
 #endif
     { Setting_AxisAutoSquareOffset, "Offset between sides to compensate for homing switches inaccuracies." },
@@ -725,9 +709,9 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_DoorSpindleOnDelay, "Delay to allow spindle to spin up when spindle at speed tolerance is > 0." },
 #endif
     { Setting_SpindleType, "Spindle selected on startup." },
-#ifdef BLOCK_BUFFER_DYNAMIC
     { Setting_PlannerBlocks, "Number of blocks in the planner buffer." },
-#endif
+    { Setting_AutoReportInterval, "Interval the real time report will be sent, set to 0 to disable." },
+    { Setting_TimeZoneOffset, "Offset in hours from UTC." }
 };
 
 #endif
@@ -857,6 +841,14 @@ static status_code_t set_stepper_deenergize_mask (setting_id_t id, uint_fast16_t
     settings.steppers.deenergize.mask = int_value;
 
     hal.stepper.enable(settings.steppers.deenergize);
+
+    return Status_OK;
+}
+
+static status_code_t set_report_interval (setting_id_t setting, uint_fast16_t int_value)
+{
+    if((settings.report_interval = int_value) == 0)
+        sys.flags.auto_reporting = Off;
 
     return Status_OK;
 }
@@ -1062,7 +1054,7 @@ static status_code_t set_parking_enable (setting_id_t id, uint_fast16_t int_valu
 
 static status_code_t set_restore_overrides (setting_id_t id, uint_fast16_t int_value)
 {
-    settings.flags.restore_overrides = int_value != 0;;
+    settings.flags.restore_overrides = int_value != 0;
 
     return Status_OK;
 }
@@ -1275,7 +1267,7 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
             break;
 
         case Setting_AxisAcceleration:
-            settings.axis[idx].acceleration = override_backup.acceleration[idx] = value * 60.0f * 60.0f; // Convert to mm/min^2 for grbl internal use.
+            settings.axis[idx].acceleration = override_backup.acceleration[idx] = value * 60.0f * 60.0f; // Convert to mm/sec^2 for grbl internal use.
             break;
 
         case Setting_AxisMaxTravel:
@@ -1289,7 +1281,7 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
             break;
 
         case Setting_AxisBacklash:
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
             if(settings.axis[idx].backlash != value) {
                 axes_signals_t axes;
                 axes.mask = bit(idx);
@@ -1342,7 +1334,7 @@ static float get_float (setting_id_t setting)
                 value = -settings.axis[idx].max_travel; // Store as negative for grbl internal use.
                 break;
 
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
             case Setting_AxisBacklash:
                 value = settings.axis[idx].backlash;
                 break;
@@ -1505,6 +1497,10 @@ static uint32_t get_int (setting_id_t id)
 
         case Setting_SpindleType:
             value = settings.spindle.flags.type;
+            break;
+
+        case Setting_AutoReportInterval:
+            value = settings.report_interval;
             break;
 
 #if N_AXIS > 3
@@ -1770,6 +1766,14 @@ static bool is_setting_available (const setting_detail_t *setting)
             available = !hal.signals_cap.safety_door_ajar && hal.spindle.cap.at_speed;
             break;
 
+        case Setting_AutoReportInterval:
+            available = hal.get_elapsed_ticks != NULL;
+            break;
+
+        case Setting_TimeZoneOffset:
+            available = hal.rtc.set_datetime != NULL;
+            break;
+
         default:
             break;
     }
@@ -1853,7 +1857,7 @@ bool settings_read_coord_data (coord_system_id_t id, float (*coord_data)[N_AXIS]
 // Write selected tool data to persistent storage.
 bool settings_write_tool_data (tool_data_t *tool_data)
 {
-#ifdef N_TOOLS
+#if N_TOOLS
     assert(tool_data->tool > 0 && tool_data->tool <= N_TOOLS); // NOTE: idx 0 is a non-persistent entry for tools not in tool table
 
     if(hal.nvs.type != NVS_None)
@@ -1868,7 +1872,7 @@ bool settings_write_tool_data (tool_data_t *tool_data)
 // Read selected tool data from persistent storage.
 bool settings_read_tool_data (uint32_t tool, tool_data_t *tool_data)
 {
-#ifdef N_TOOLS
+#if N_TOOLS
     assert(tool > 0 && tool <= N_TOOLS); // NOTE: idx 0 is a non-persistent entry for tools not in tool table
 
     if (!(hal.nvs.type != NVS_None && hal.nvs.memcpy_from_nvs((uint8_t *)tool_data, NVS_ADDR_TOOL_TABLE + (tool - 1) * (sizeof(tool_data_t) + NVS_CRC_BYTES), sizeof(tool_data_t), true) == NVS_TransferResult_OK && tool_data->tool == tool)) {
@@ -1895,17 +1899,15 @@ bool read_global_settings ()
     if(settings.spindle.flags.type >= spindle_get_count())
         settings.spindle.flags.type = 0;
 
-#ifdef BLOCK_BUFFER_DYNAMIC
     if(settings.planner_buffer_blocks < 30 || settings.planner_buffer_blocks > 1000)
         settings.planner_buffer_blocks = 35;
-#endif
 
     sys.mode = settings.mode;
 
     if(!(hal.driver_cap.spindle_sync || hal.driver_cap.spindle_pid))
         settings.spindle.ppr = 0;
 
-#if COMPATIBILITY_LEVEL > 1 && DISABLE_G92_PERSISTENCE
+#if COMPATIBILITY_LEVEL > 1 && DEFAULT_DISABLE_G92_PERSISTENCE
     settings.flags.g92_is_volatile = On;
 #endif
 
@@ -1950,7 +1952,7 @@ void settings_restore (settings_restore_t restore)
         settings.control_invert.mask &= hal.signals_cap.mask;
         settings.spindle.invert.ccw &= spindle_get_caps().direction;
         settings.spindle.invert.pwm &= spindle_get_caps().pwm_invert;
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
         if(sys.driver_started)
             mc_backlash_init((axes_signals_t){AXES_BITMASK});
 #endif
@@ -1966,7 +1968,7 @@ void settings_restore (settings_restore_t restore)
 
         settings_write_coord_data(CoordinateSystem_G92, &coord_data); // Clear G92 offsets
 
-#ifdef N_TOOLS
+#if N_TOOLS
         tool_data_t tool_data;
         memset(&tool_data, 0, sizeof(tool_data_t));
         for (idx = 1; idx <= N_TOOLS; idx++) {
@@ -2583,7 +2585,7 @@ void settings_init (void)
 #endif
     } else {
         memset(&tool_table, 0, sizeof(tool_data_t)); // First entry is for tools not in tool table
-#ifdef N_TOOLS
+#if N_TOOLS
         uint_fast8_t idx;
         for (idx = 1; idx <= N_TOOLS; idx++)
             settings_read_tool_data(idx, &tool_table[idx]);

@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2022 Terje Io
+  Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -40,24 +40,7 @@
 #include "kinematics.h"
 #endif
 
-#ifndef N_ARC_CORRECTION
-#define N_ARC_CORRECTION 12
-#endif
-#ifndef ARC_ANGULAR_TRAVEL_EPSILON // Float (radians)
-#define ARC_ANGULAR_TRAVEL_EPSILON 5E-7f // Float (radians)
-#endif
-
-#ifndef BEZIER_MIN_STEP
-#define BEZIER_MIN_STEP 0.002f
-#endif
-#ifndef BEZIER_MAX_STEP
-#define BEZIER_MAX_STEP 0.1f
-#endif
-#ifndef BEZIER_SIGMA
-#define BEZIER_SIGMA 0.1f
-#endif
-
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
 
 static float target_prev[N_AXIS] = {0};
 static axes_signals_t dir_negative = {0}, backlash_enabled = {0};
@@ -127,7 +110,7 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
        while(kinematics.segment_line(target, NULL, pl_data, false)) {
 #endif
 
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
 
         if(backlash_enabled.mask) {
 
@@ -190,11 +173,11 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
                 break;
         } while(true);
 
-        // Plan and queue motion into planner buffer
-        // bool plan_status; // Not used in normal operation.
+        // Plan and queue motion into planner buffer.
+        // While in M3 laser mode also set spindle state and force a buffer sync
+        // if there is a coincident position passed.
         if(!plan_buffer_line(target, pl_data) && sys.mode == Mode_Laser && pl_data->condition.spindle.on && !pl_data->condition.spindle.ccw) {
-            // Correctly set spindle state, if there is a coincident position passed.
-            // Forces a buffer sync while in M3 laser mode only.
+            protocol_buffer_synchronize();
             hal.spindle.set_state(pl_data->condition.spindle, pl_data->spindle.rpm);
         }
 
@@ -1041,7 +1024,7 @@ gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_f
     st_reset();             // Reset step segment buffer.
     plan_reset();           // Reset planner buffer. Zero planner positions. Ensure probing motion is cleared.
     plan_sync_position();   // Sync planner position to current machine position.
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
     mc_sync_backlash_position();
 #endif
 

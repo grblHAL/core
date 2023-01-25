@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2020 Terje Io
+  Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
   Grbl is free software: you can redistribute it and/or modify
@@ -53,7 +53,7 @@ __NOTE:__ 1024 bytes of persistent storage is the minimum required.
 #define NVS_ADDR_PARAMETERS     512U
 #define NVS_ADDR_BUILD_INFO     (GRBL_NVS_END - 81U)
 #define NVS_ADDR_STARTUP_BLOCK  (NVS_ADDR_BUILD_INFO - 1 - N_STARTUP_LINE * (sizeof(stored_line_t) + NVS_CRC_BYTES))
-#ifdef N_TOOLS
+#if N_TOOLS
 #define NVS_ADDR_TOOL_TABLE     (GRBL_NVS_END + 1)
 #define GRBL_NVS_SIZE (GRBL_NVS_END + 1 + N_TOOLS * (sizeof(tool_data_t) + NVS_CRC_BYTES))
 #else
@@ -97,7 +97,7 @@ typedef void (*put_byte_ptr)(uint32_t addr, uint8_t new_value);
 /*! \brief Pointer to function for reading a block of data from NVS storage
 \param dest pointer to destination of data.
 \param source index based address into the storage area.
-\param number of bytes to write.
+\param size number of bytes to write.
 \param with_checksum \a true calculate and verify checksum at the end of the data block, \a false do not calculate and verify checksum.
 \returns #nvs_transfer_result_t enum.
 */
@@ -106,7 +106,7 @@ typedef nvs_transfer_result_t (*memcpy_from_nvs_ptr)(uint8_t *dest, uint32_t sou
 /*! \brief Pointer to function for writing a block of data to NVS storage
 \param dest index based address into the storage area.
 \param source pointer to source data
-\param number of bytes to write
+\param size number of bytes to write
 \param with_checksum \a true calculate and add a checksum at the end of the data block, \a false do not add checksum.
 \returns #nvs_transfer_result_t enum.
 */

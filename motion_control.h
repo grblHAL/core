@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2022 Terje Io
+  Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -25,13 +25,13 @@
 #define _MOTION_CONTROL_H_
 
 // System motion commands must have a line number of zero.
-#define HOMING_CYCLE_LINE_NUMBER 0
+#define DEFAULT_HOMING_CYCLE_LINE_NUMBER 0
 #define PARKING_MOTION_LINE_NUMBER 0
 
-#define HOMING_CYCLE_ALL  0  // Must be zero.
-#define HOMING_CYCLE_X    bit(X_AXIS)
-#define HOMING_CYCLE_Y    bit(Y_AXIS)
-#define HOMING_CYCLE_Z    bit(Z_AXIS)
+#define DEFAULT_HOMING_CYCLE_ALL  0  // Must be zero.
+#define DEFAULT_HOMING_CYCLE_X    bit(X_AXIS)
+#define DEFAULT_HOMING_CYCLE_Y    bit(Y_AXIS)
+#define DEFAULT_HOMING_CYCLE_Z    bit(Z_AXIS)
 
 // Execute linear motion in absolute millimeter coordinates. Feed rate given in millimeters/second
 // unless invert_feed_rate is true. Then the feed_rate means that the motion should be completed in
@@ -74,7 +74,7 @@ void mc_cubic_b_spline(float *target, plan_line_data_t *pl_data, float *position
 // Performs system reset. If in motion state, kills all motion and sets system alarm.
 void mc_reset (void);
 
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
 void mc_backlash_init (axes_signals_t axes);
 void mc_sync_backlash_position (void);
 #endif

@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2020-2022 Terje Io
+  Copyright (c) 2020-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -75,6 +75,10 @@
 #define N_AUTO_SQUARED (X_AUTO_SQUARE + Y_AUTO_SQUARE + Z_AUTO_SQUARE)
 #define N_ABC_MOTORS (N_ABC_AXIS + N_GANGED)
 
+#ifndef PROBE_ENABLE
+#define PROBE_ENABLE        1
+#endif
+
 #ifndef USB_SERIAL_CDC
 #define USB_SERIAL_CDC      0 // for UART comms
 #endif
@@ -84,6 +88,10 @@
 
 #ifndef KEYPAD_ENABLE
 #define KEYPAD_ENABLE       0
+#endif
+
+#ifndef MACROS_ENABLE
+#define MACROS_ENABLE       0
 #endif
 
 #ifndef MPG_ENABLE
@@ -214,8 +222,10 @@
 #endif
 #endif
 
-#ifndef DUAL_SPINDLE
-#define DUAL_SPINDLE        0
+#if !VFD_SPINDLE || N_SPINDLE > 1
+#define DRIVER_SPINDLE_ENABLE  1
+#else
+#define DRIVER_SPINDLE_ENABLE  0
 #endif
 
 #ifndef QEI_ENABLE
@@ -296,10 +306,12 @@
 #undef WEBSOCKET_ENABLE
 #endif
 #define WEBSOCKET_ENABLE    1
-#ifdef SDCARD_ENABLE
+#if defined(SDCARD_ENABLE) && SDCARD_ENABLE == 0
 #undef SDCARD_ENABLE
 #endif
+#ifndef SDCARD_ENABLE
 #define SDCARD_ENABLE       1
+#endif
 #endif
 
 #ifndef ETHERNET_ENABLE

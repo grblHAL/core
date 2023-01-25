@@ -26,6 +26,7 @@
 
 typedef int8_t spindle_id_t;
 
+// if changed to > 8 bits planner_cond_t needs to be changed too
 typedef union {
     uint8_t value;
     uint8_t mask;
@@ -162,6 +163,12 @@ typedef struct {
     spindle_reset_data_ptr reset_data;  //!< Optional handler for resetting spindle data. Required for spindle sync.
 } spindle_ptrs_t;
 
+typedef struct  {
+    spindle_id_t id;
+    bool is_current;
+    const spindle_ptrs_t *hal;
+} spindle_info_t;
+
 typedef struct {
     float rpm;
     float start;
@@ -181,6 +188,8 @@ typedef struct {
     uint_fast16_t n_pieces;
     pwm_piece_t piece[SPINDLE_NPWM_PIECES];
 } spindle_pwm_t;
+
+typedef void (*spindle_enumerate_callback_ptr)(spindle_info_t *spindle);
 
 void spindle_set_override (uint_fast8_t speed_override);
 
@@ -228,6 +237,7 @@ void spindle_add_null (void);
 uint8_t spindle_get_count (void);
 
 bool spindle_select (spindle_id_t spindle_id);
+
 spindle_cap_t spindle_get_caps (void);
 
 /*! \brief Update PWM spindle capabilities with run-time determined parameters.
@@ -236,6 +246,10 @@ spindle_cap_t spindle_get_caps (void);
  */
 void spindle_update_caps (spindle_pwm_t *pwm_caps);
 
+const spindle_ptrs_t *spindle_get (spindle_id_t spindle_id);
+
 spindle_id_t spindle_get_current (void);
+
+bool spindle_enumerate_spindles (spindle_enumerate_callback_ptr callback);
 
 #endif

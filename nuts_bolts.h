@@ -25,6 +25,7 @@
 #define _NUTS_BOLTS_H_
 
 #include "grbl.h"
+#include "errors.h"
 
 #ifndef true
 #define false 0
@@ -164,7 +165,7 @@ typedef enum {
 #define MM_PER_INCH (25.40f)
 #define INCH_PER_MM (0.0393701f)
 
-#define MAX_INT_DIGITS 8 // Maximum number of digits in int32 (and float)
+#define MAX_INT_DIGITS 9 // Maximum number of digits in int32 (and float)
 #define STRLEN_COORDVALUE (MAX_INT_DIGITS + N_DECIMAL_COORDVALUE_INCH + 1) // 8.4 format - excluding terminating null
 
 // Useful macros
@@ -199,6 +200,8 @@ char *ftoa (float n, uint8_t decimal_places);
 
 // Returns true if float value is a whole number (integer)
 bool isintf (float value);
+
+status_code_t read_uint (char *line, uint_fast8_t *char_counter, uint32_t *uint_ptr);
 
 // Read a floating point value from a string. Line points to the input buffer, char_counter
 // is the indexer pointing to the current character of the line, while float_ptr is

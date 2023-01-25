@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2022 Terje Io
+  Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
   Copyright (c) 2011 Jens Geisler
@@ -31,19 +31,12 @@
 #include "planner.h"
 #include "protocol.h"
 
-#ifndef MINIMUM_JUNCTION_SPEED
-#define MINIMUM_JUNCTION_SPEED 0.0f
-#endif
-#ifndef MINIMUM_FEED_RATE
-#define MINIMUM_FEED_RATE 1.0f
-#endif
-#ifdef ENABLE_BACKLASH_COMPENSATION
-void mc_sync_backlash_position (void);
+#ifndef ROTARY_FIX
+#define ROTARY_FIX 0
 #endif
 
-// The number of linear motions that can be in the plan at any give time
-#ifndef BLOCK_BUFFER_SIZE
-  #define BLOCK_BUFFER_SIZE 35
+#if ENABLE_BACKLASH_COMPENSATION
+void mc_sync_backlash_position (void);
 #endif
 
 static uint_fast16_t block_buffer_size;                 // Number of blocks in the planner buffer minus 1
@@ -54,7 +47,6 @@ static plan_block_t *next_buffer_head;                  // Pointer to the next b
 static plan_block_t *block_buffer_planned;              // Pointer to the optimally planned block
 
 static planner_t pl;
-
 
 /*                            PLANNER SPEED DEFINITION
                                      +--------+   <- current->nominal_speed
@@ -225,16 +217,10 @@ inline static void plan_reset_buffer (void)
     block_buffer_planned = block_buffer_tail;               // = block_buffer_tail
 }
 
-
-#ifdef BLOCK_BUFFER_DYNAMIC
-
 static void planner_warning (sys_state_t state)
 {
     report_message("Planner buffer size was reduced!", Message_Plain);
 }
-
-#endif
-
 
 uint_fast16_t plan_get_buffer_size (void)
 {
@@ -243,15 +229,6 @@ uint_fast16_t plan_get_buffer_size (void)
 
 bool plan_reset (void)
 {
-#ifndef BLOCK_BUFFER_DYNAMIC
-
-    static plan_block_t block_buffer_s[BLOCK_BUFFER_SIZE + 1];
-
-    block_buffer = block_buffer_s;
-    block_buffer_size = BLOCK_BUFFER_SIZE;
-
-#else
-
     if(block_buffer == NULL) {
 
         block_buffer_size = settings.planner_buffer_blocks;
@@ -269,8 +246,6 @@ bool plan_reset (void)
 
     if(block_buffer == NULL)
         return false;
-
-#endif
 
     if(block_buffer_tail) {
         // Free memory for any pending messages and output commands after soft reset
@@ -380,6 +355,23 @@ void plan_update_velocity_profile_parameters (void)
     pl.previous_nominal_speed = prev_nominal_speed; // Update prev nominal speed for next incoming block.
 }
 
+#if N_AXIS > 3 && ROTARY_FIX
+
+static inline float convert_delta_vector_to_magnitude (float *vector)
+{
+    uint_fast8_t idx = N_AXIS;
+    float magnitude = 0.0f;
+
+    do {
+        if (vector[--idx] != 0.0f)
+            magnitude += vector[idx] * vector[idx];
+    } while(idx);
+
+    return sqrtf(magnitude);
+}
+
+#endif
+
 static inline float limit_acceleration_by_axis_maximum (float *unit_vec)
 {
     uint_fast8_t idx = N_AXIS;
@@ -428,6 +420,9 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
     int32_t target_steps[N_AXIS], position_steps[N_AXIS], delta_steps;
     uint_fast8_t idx;
     float unit_vec[N_AXIS];
+#if N_AXIS > 3 && ROTARY_FIX
+    axes_signals_t motion = {0};
+#endif
 
 //    plan_cleanup(block);
     memset(block, 0, sizeof(plan_block_t) - 2 * sizeof(plan_block_t *));    // Zero all block values (except linked list pointers).
@@ -452,10 +447,17 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
         // NOTE: Computes true distance from converted step values.
 
         target_steps[idx] = lroundf(target[idx] * settings.axis[idx].steps_per_mm);
-        delta_steps = target_steps[idx] - position_steps[idx];
-        block->steps[idx] = labs(delta_steps);
-        block->step_event_count = max(block->step_event_count, block->steps[idx]);
-        unit_vec[idx] = (float)delta_steps / settings.axis[idx].steps_per_mm; // Store unit vector numerator
+        if((delta_steps = target_steps[idx] - position_steps[idx])) {
+            block->steps[idx] = labs(delta_steps);
+            block->step_event_count = max(block->step_event_count, block->steps[idx]);
+            unit_vec[idx] = (float)delta_steps / settings.axis[idx].steps_per_mm; // Store unit vector numerator
+#if N_AXIS > 3  && ROTARY_FIX
+            motion.mask |= bit(idx);
+#endif
+        } else {
+            block->steps[idx] = 0;
+            unit_vec[idx] = 0.0f; // Store unit vector numerator
+        }
 
         // Set direction bits. Bit enabled always means direction is negative.
         if (delta_steps < 0)
@@ -486,6 +488,36 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
 
     pl_data->message = NULL;         // Indicate message is already queued for display on execution
     pl_data->output_commands = NULL; // Indicate commands are already queued for execution
+
+#if N_AXIS > 3  && ROTARY_FIX
+
+    if(!block->condition.inverse_time &&
+            /*!block->condition.rapid_motion &&*/
+        (motion.mask & settings.steppers.is_rotational.mask) &&
+         (motion.mask & ~settings.steppers.is_rotational.mask)) {
+
+        float delta_vec[N_AXIS];
+
+        idx = A_AXIS;
+        motion.mask &= settings.steppers.is_rotational.mask;
+        motion.mask >>= 3;
+        memcpy(delta_vec, unit_vec, sizeof(delta_vec));
+
+        while(motion.mask) {
+            if(motion.mask & 0x01)
+                unit_vec[idx] = delta_vec[idx] = 0.0f;
+            motion.mask >>= 1;
+            idx++;
+        }
+
+        // feed rate for laser mode has to be the actual speed of the controlled
+        // point over the surface of the object to engrave?
+//        pl_data->feed_rate = 1.0f / (convert_delta_vector_to_magnitude(delta_vec) / pl_data->feed_rate);
+        pl_data->feed_rate = 1.0f / ((block->millimeters = convert_delta_vector_to_unit_vector(unit_vec)) / pl_data->feed_rate);
+        block->condition.inverse_time = On;
+    } else
+
+#endif
 
     // Calculate the unit vector of the line move and the block maximum feed rate and acceleration scaled
     // down such that no individual axes maximum values are exceeded with respect to the line direction.
@@ -604,7 +636,7 @@ float *plan_get_position (void)
 void plan_sync_position (void)
 {
     memcpy(pl.position, sys.position, sizeof(pl.position));
-#ifdef ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
     mc_sync_backlash_position();
 #endif
 }
@@ -632,16 +664,25 @@ void plan_cycle_reinitialize (void)
 // Set feed overrides
 void plan_feed_override (uint_fast8_t feed_override, uint_fast8_t rapid_override)
 {
+    bool feedrate_changed = false, rapidrate_changed = false;
+
     if(sys.override.control.feed_rate_disable)
         return;
 
     feed_override = constrain(feed_override, MIN_FEED_RATE_OVERRIDE, MAX_FEED_RATE_OVERRIDE);
 
-    if ((feed_override != sys.override.feed_rate) || (rapid_override != sys.override.rapid_rate)) {
-      sys.override.feed_rate = (uint8_t)feed_override;
-      sys.override.rapid_rate = (uint8_t)rapid_override;
-      sys.report.overrides = On; // Set to report change immediately
-      plan_update_velocity_profile_parameters();
-      plan_cycle_reinitialize();
+    if ((feedrate_changed = feed_override != sys.override.feed_rate) ||
+         (rapidrate_changed = rapid_override != sys.override.rapid_rate)) {
+        sys.override.feed_rate = (uint8_t)feed_override;
+        sys.override.rapid_rate = (uint8_t)rapid_override;
+        sys.report.overrides = On; // Set to report change immediately
+        plan_update_velocity_profile_parameters();
+        plan_cycle_reinitialize();
+        if(grbl.on_override_changed) {
+            if(feedrate_changed)
+                grbl.on_override_changed(OverrideChanged_FeedRate);
+            if(rapidrate_changed)
+                grbl.on_override_changed(OverrideChanged_RapidRate);
+        }
     }
 }

@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2016-2022 Terje Io
+  Copyright (c) 2016-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -96,7 +96,7 @@ typedef void (*register_periph_pin_ptr)(const periph_pin_t *pin);
 /*! \brief Pointer to function for setting pin description for a peripheral pin.
 \param function as #pin_function_t enum.
 \param group as #pin_group_t enum.
-\param s pointer to null terminated description string.
+\param description pointer to null terminated description string.
 */
 typedef void (*set_periph_pin_description_ptr)(const pin_function_t function, const pin_group_t group, const char *description);
 
@@ -157,7 +157,7 @@ typedef void (*limits_enable_ptr)(bool on, bool homing);
 typedef limit_signals_t (*limits_get_state_ptr)(void);
 
 /*! \brief Pointer to callback function for reporting limit switches events (interrupts). _Set by the core on startup._
-\param switch states in a limit_signals_t struct.
+\param state input pin states in a limit_signals_t struct.
 */
 typedef void (*limit_interrupt_callback_ptr)(limit_signals_t state);
 
@@ -189,7 +189,7 @@ typedef struct {
 typedef control_signals_t (*control_signals_get_state_ptr)(void);
 
 /*! \brief Pointer to callback function for reporting control switches events (interrupts). _Set by the core on startup._
-\param switch states in a control_signals_t struct.
+\param signals input pin states in a control_signals_t struct.
 */
 typedef void (*control_signals_callback_ptr)(control_signals_t signals);
 
@@ -255,7 +255,7 @@ typedef void (*stepper_enable_ptr)(axes_signals_t enable);
 
 Used by auto squaring functionality where two motors are employed for one or more axes.
 
-\param enable a \a axes_signals_t union containing separate flags for each motor to enable/disable.
+\param axes a \a axes_signals_t union containing separate flags for each motor to enable/disable.
 \param mode a \a #squaring_mode_t enum for which side to enable/disable.
 */
 typedef void (*stepper_disable_motors_ptr)(axes_signals_t axes, squaring_mode_t mode);
@@ -290,7 +290,7 @@ typedef void (*stepper_pulse_start_ptr)(stepper_t *stepper);
 This is for an experimental implementation of plasma Torch Height Control (THC) and may be removed and/or changed.
 
 \param step_outbits a \a #axes_signals_t union containing the axes to output a step signal for.
-\param step_outbits a \a #axes_signals_t union containing the axes to output a direction signal for.
+\param dir_outbits a \a #axes_signals_t union containing the axes to output a direction signal for.
 
 __NOTE:__ this function will be called from an interrupt context
 */

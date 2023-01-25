@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2022 Terje Io
+  Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
 
   Grbl is free software: you can redistribute it and/or modify
@@ -42,34 +42,6 @@
 
 #ifdef ENABLE_SPINDLE_LINEARIZATION
 #include <stdio.h>
-#endif
-
-#ifndef REPORT_OVERRIDE_REFRESH_BUSY_COUNT
-#define REPORT_OVERRIDE_REFRESH_BUSY_COUNT 20   // (1-255)
-#endif
-#ifndef REPORT_OVERRIDE_REFRESH_IDLE_COUNT
-#define REPORT_OVERRIDE_REFRESH_IDLE_COUNT 10   // (1-255) Must be less than or equal to the busy count
-#endif
-#ifndef REPORT_WCO_REFRESH_BUSY_COUNT
-#define REPORT_WCO_REFRESH_BUSY_COUNT 30        // (2-255)
-#endif
-#ifndef REPORT_WCO_REFRESH_IDLE_COUNT
-#define REPORT_WCO_REFRESH_IDLE_COUNT 10        // (2-255) Must be less than or equal to the busy count
-#endif
-
-// Compile-time sanity check of defines
-
-#if (REPORT_WCO_REFRESH_BUSY_COUNT < REPORT_WCO_REFRESH_IDLE_COUNT)
-  #error "WCO busy refresh is less than idle refresh."
-#endif
-#if (REPORT_OVERRIDE_REFRESH_BUSY_COUNT < REPORT_OVERRIDE_REFRESH_IDLE_COUNT)
-  #error "Override busy refresh is less than idle refresh."
-#endif
-#if (REPORT_WCO_REFRESH_IDLE_COUNT < 2)
-  #error "WCO refresh must be greater than one."
-#endif
-#if (REPORT_OVERRIDE_REFRESH_IDLE_COUNT < 1)
-  #error "Override refresh must be greater than zero."
 #endif
 
 static char buf[(STRLEN_COORDVALUE + 1) * N_AXIS];
@@ -554,7 +526,7 @@ void report_home_position (void)
 void report_tool_offsets (void)
 {
     hal.stream.write("[TLO:");
-#ifdef TOOL_LENGTH_OFFSET_AXIS
+#if TOOL_LENGTH_OFFSET_AXIS >= 0
     hal.stream.write(get_axis_value(gc_state.tool_length_offset[TOOL_LENGTH_OFFSET_AXIS]));
 #else
     hal.stream.write(get_axis_values(gc_state.tool_length_offset));
@@ -648,7 +620,7 @@ void report_ngc_parameters (void)
     hal.stream.write(get_axis_values(gc_state.g92_coord_offset));
     hal.stream.write("]" ASCII_EOL);
 
-#ifdef N_TOOLS
+#if N_TOOLS
     for (idx = 1; idx <= N_TOOLS; idx++) {
         hal.stream.write("[T:");
         hal.stream.write(uitoa((uint32_t)idx));
@@ -858,7 +830,7 @@ void report_build_info (char *line, bool extended)
     if(hal.driver_cap.mist_control)
         *append++ = 'M';
 
-#ifdef COREXY
+#if COREXY
     *append++ = 'C';
 #endif
 
@@ -892,19 +864,19 @@ void report_build_info (char *line, bool extended)
     if(hal.signals_cap.safety_door_ajar)
         *append++ = '+';
 
-  #ifdef DISABLE_RESTORE_NVS_WIPE_ALL // NOTE: Shown when disabled.
+  #if !ENABLE_RESTORE_NVS_WIPE_ALL // NOTE: Shown when disabled.
     *append++ = '*';
   #endif
 
-  #ifdef DISABLE_RESTORE_NVS_DEFAULT_SETTINGS // NOTE: Shown when disabled.
+  #if !ENABLE_RESTORE_NVS_DEFAULT_SETTINGS // NOTE: Shown when disabled.
     *append++ = '$';
   #endif
 
-  #ifdef DISABLE_RESTORE_NVS_CLEAR_PARAMETERS // NOTE: Shown when disabled.
+  #if !ENABLE_RESTORE_NVS_CLEAR_PARAMETERS // NOTE: Shown when disabled.
     *append++ = '#';
   #endif
 
-  #ifdef DISABLE_BUILD_INFO_WRITE_COMMAND // NOTE: Shown when disabled.
+  #if DISABLE_BUILD_INFO_WRITE_COMMAND // NOTE: Shown when disabled.
     *append++ = 'I';
   #endif
 
@@ -926,7 +898,7 @@ void report_build_info (char *line, bool extended)
         hal.stream.write(",");
         hal.stream.write(uitoa((uint32_t)N_AXIS));
         hal.stream.write(",");
-  #ifdef N_TOOLS
+  #if N_TOOLS
         hal.stream.write(uitoa((uint32_t)N_TOOLS));
   #else
         hal.stream.write("0");
@@ -987,7 +959,7 @@ void report_build_info (char *line, bool extended)
         strcat(buf, "EXPR,");
     #endif
 
-    #ifdef N_TOOLS
+    #if N_TOOLS
         if(hal.driver_cap.atc && hal.tool.change)
             strcat(buf, "ATC,");
         else
@@ -1358,9 +1330,14 @@ void report_realtime_status (void)
         grbl.on_realtime_report(hal.stream.write_all, sys.report);
 
 #if COMPATIBILITY_LEVEL <= 1
-    if(sys.report.all)
+    if(sys.report.all) {
         hal.stream.write_all("|FW:grblHAL");
-    else
+        if(settings.report_interval) {
+            hal.stream.write_all(sys.flags.auto_reporting ? "|AR:" : "|AR");
+            if(sys.flags.auto_reporting)
+                hal.stream.write_all(uitoa(settings.report_interval));
+        }
+    } else
 #endif
     if(settings.status_report.parser_state) {
 
@@ -1510,7 +1487,7 @@ static void report_settings_detail (settings_format_t format, const setting_deta
 #ifndef NO_SETTINGS_DESCRIPTIONS
             // Add description if driver is capable of outputting it...
             if(hal.stream.write_n) {
-                const char *description = setting_get_description(setting->id + offset);
+                const char *description = setting_get_description((setting_id_t)(setting->id + offset));
                 if(description && *description != '\0') {
                     char *lf;
                     hal.stream.write(ASCII_EOL);
@@ -1559,6 +1536,8 @@ static void report_settings_detail (settings_format_t format, const setting_deta
                 hal.stream.write(setting->max_value);
             hal.stream.write(vbar);
             hal.stream.write(uitoa(setting->flags.reboot_required));
+            hal.stream.write(vbar);
+            hal.stream.write(uitoa(setting->flags.allow_null));
             hal.stream.write("]");
             break;
 
@@ -1690,8 +1669,9 @@ static void report_settings_detail (settings_format_t format, const setting_deta
                     hal.stream.write(setting->max_value);
 
                 hal.stream.write("\t");
-
                 hal.stream.write(uitoa(setting->flags.reboot_required));
+                hal.stream.write("\t");
+                hal.stream.write(uitoa(setting->flags.allow_null));
             }
             break;
     }

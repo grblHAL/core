@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2022 Terje Io
+  Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2014-2016 Sungeun K. Jeon for Gnea Research LLC
 
   Grbl is free software: you can redistribute it and/or modify
@@ -205,7 +205,7 @@ PROGMEM static const sys_command_t sys_commands[] = {
     { "HX", false, home_x },
     { "HY", false, home_y },
     { "HZ", false, home_z },
-#ifdef AXIS_REMAP_ABC2UVW
+#if AXIS_REMAP_ABC2UVW
   #ifdef A_AXIS
     { "HU", false, home_a },
   #endif
@@ -288,7 +288,7 @@ void system_command_help (void)
     hal.stream.write("$RST=$ - restore default settings" ASCII_EOL);
     if(settings_get_details()->next)
         hal.stream.write("$RST=& - restore driver and plugin default settings" ASCII_EOL);
-#ifdef N_TOOLS
+#if N_TOOLS
     hal.stream.write("$RST=# - reset offsets and tool data" ASCII_EOL);
 #else
     hal.stream.write("$RST=# - reset offsets" ASCII_EOL);
@@ -743,7 +743,7 @@ static status_code_t enter_sleep (sys_state_t state, char *args)
 
 static status_code_t set_tool_reference (sys_state_t state, char *args)
 {
-#ifdef TOOL_LENGTH_OFFSET_AXIS
+#if TOOL_LENGTH_OFFSET_AXIS >= 0
     if(sys.flags.probe_succeeded) {
         sys.tlo_reference_set.mask = bit(TOOL_LENGTH_OFFSET_AXIS);
         sys.tlo_reference[TOOL_LENGTH_OFFSET_AXIS] = sys.probe_position[TOOL_LENGTH_OFFSET_AXIS]; // - gc_state.tool_length_offset[Z_AXIS]));
@@ -796,7 +796,7 @@ static status_code_t build_info (sys_state_t state, char *args)
         settings_read_build_info(info);
         report_build_info(info, false);
     }
-  #ifndef DISABLE_BUILD_INFO_WRITE_COMMAND
+  #if !DISABLE_BUILD_INFO_WRITE_COMMAND
     else if (strlen(args) < (sizeof(stored_line_t) - 1))
         settings_write_build_info(args);
   #endif
@@ -826,25 +826,25 @@ static status_code_t settings_reset (sys_state_t state, char *args)
 
     else switch (*args) {
 
-      #ifndef DISABLE_RESTORE_NVS_DEFAULT_SETTINGS
+      #if ENABLE_RESTORE_NVS_DEFAULT_SETTINGS
         case '$':
             restore.defaults = On;
             break;
       #endif
 
-      #ifndef DISABLE_RESTORE_NVS_CLEAR_PARAMETERS
+      #if ENABLE_RESTORE_NVS_CLEAR_PARAMETERS
         case '#':
             restore.parameters = On;
             break;
       #endif
 
-      #ifndef DISABLE_RESTORE_NVS_WIPE_ALL
+      #if ENABLE_RESTORE_NVS_WIPE_ALL
         case '*':
             restore.mask = settings_all.mask;
             break;
       #endif
 
-      #ifndef DISABLE_RESTORE_DRIVER_PARAMETERS
+      #if ENABLE_RESTORE_NVS_DRIVER_PARAMETERS
         case '&':
             restore.driver_parameters = On;
             break;

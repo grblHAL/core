@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2019-2022 Terje Io
+  Copyright (c) 2019-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -108,13 +108,13 @@ typedef void (*stream_write_ptr)(const char *s);
 
 /*! \brief Pointer to function for writing a \a n character long string to the output stream.
 \param s pointer to string.
-\param c number of characters to write.
+\param len number of characters to write.
 */
 typedef void (*stream_write_n_ptr)(const char *s, uint16_t len);
 
 
 /*! \brief Pointer to function for writing a single character to the output stream.
-\param \a n characters to write.
+\param c the character to write.
 */
 typedef bool (*stream_write_char_ptr)(const char c);
 
@@ -138,13 +138,13 @@ typedef bool (*enqueue_realtime_command2_ptr)(char c);
 
 
 /*! \brief Pointer to function for setting the enqueue realtime commands handler.
-\param enqueue_realtime_command_ptr pointer to the new handler function.
+\param handler a \a enqueue_realtime_command_ptr pointer to the new handler function.
 \returns \a enqueue_realtime_command_ptr pointer to the replaced function.
 
 __NOTE:__ Stream implementations should hold a pointer to the handler in a local variable and typically
 set it to protocol_enqueue_realtime_command() on initialization.
 */
-typedef enqueue_realtime_command_ptr (*set_enqueue_rt_handler_ptr)(enqueue_realtime_command_ptr);
+typedef enqueue_realtime_command_ptr (*set_enqueue_rt_handler_ptr)(enqueue_realtime_command_ptr handler);
 
 
 /*! \brief Pointer to function for setting the stream baud rate.

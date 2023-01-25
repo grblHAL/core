@@ -1,5 +1,72 @@
 ## grblHAL changelog
 
+<a name="20230125"/>Build 20230125
+
+Core:
+
+* Added settings, updated settings version to 22:  
+`$398` - _planner buffer blocks_, default value 35.  
+`$481` - auto real time report interval. Default value 0 \(auto reporting disabled\), range 100 - 1000 ms.
+When enabled `|AR` is added to the full real time report \(requested by the real time command `0xA7`\).
+New real time command `0x8C` can be used to toggle auto reporting on/off.  
+`$482` - timezone offset. To be implemented.
+
+* Added parsing of gcode words `O` and `$`. `O` is currently not used by the core, `$` value is for selecting the spindle to address for some gcode commands,
+currently only `-1` or `0` is allowed.
+
+* Added _allow null_ flag \(0 for off, 1 for on\) to `$ES` and `$ESH` outputs. When set to 1 for range restricted values they can be set to an empty string or 0 depending on the data type.
+
+* Merged _defaults.h_ with [config.h](./config.h), deleted _defaults.h_.
+Changed some symbol/macro names for consistency, e.g. all starting with `DEFAULT_` can be changed at run time with `$` commands. Reorganized file and added doxygen [documentation](http://svn.io-engineering.com/grblHAL/html/config_8h.html).
+
+* Fix for issue [#43](https://github.com/grblHAL/RP2040/issues/43), _Laser mode spindle enable after pause_.
+
+__Note:__ Backup and restore your settings as they will be reset to default values.
+
+Plugins:
+
+* Keypad: added macros plugin, up to 8 macros can be bound to pins and/or to keypad single character commands. Added jog support for A-axis to keypad plugin, extended programming interface.
+
+* Spindle: merged [#14](https://github.com/grblHAL/Plugins_spindle/pull/14) - fix typo on GS20 driver to set RPM correctly.
+
+* Fans: added setting `$483` for linking spindle enable signal to fan\(s\) enable.
+
+Drivers:
+
+* All: updated for settings version change.
+
+* ESP32: added board map for OpenBuilds BlackBox X32, fix for issue [#48](https://github.com/grblHAL/ESP32/issues/48), [#49](https://github.com/grblHAL/ESP32/issues/49), [#50](https://github.com/grblHAL/ESP32/issues/50), [#56](https://github.com/grblHAL/ESP32/issues/56) \(needs end user testing\) and [#58](https://github.com/grblHAL/ESP32/issues/58) plus some board map updates/fixes.
+
+* iMRX1062: now maps spindle enable and spindle direction signals as aux outputs if a single VFD spindle is configured.
+
+* RP2040: fix for motor plugin issue [#7](https://github.com/grblHAL/Plugins_motor/issues/7#issuecomment-1381331011).
+
+* SAM3X8E: added probe pin assignment for Ramps 1.6 board.
+
+* STM32F1xx: some bug fixes, added board map for MACH3 breakout board.
+
+* STM32F4xx: fixed IRQ conflict for BTT SKR v1 and v2 boards by reducing max number of allowed auto squared axes.
+
+* STM32F7xx: some bug fixes, merged PR [#11](https://github.com/grblHAL/STM32F7xx/pull/11) and [#12](https://github.com/grblHAL/STM32F7xx/pull/12).
+
+---
+
+<a name="20221101"/>Build 20221101
+
+Core:
+
+* Added single axis homing commands for U and V, remapping of ABC homing commands to UVW when configured.
+
+Plugins
+
+* WebUI and Networking: fixes for compiler warnings.
+
+Drivers:
+
+* ESP32: fix for Web Builder failing when networking was enabled.
+
+---
+
 <a name="20221115"/>Build 20221115
 
 Core:

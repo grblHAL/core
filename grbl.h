@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2022 Terje Io
+  Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2015-2016 Sungeun K. Jeon for Gnea Research LLC
 
   Grbl is free software: you can redistribute it and/or modify
@@ -38,7 +38,7 @@
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_BUILD 20221115
+#define GRBL_BUILD 20230125
 
 #define GRBL_URL "https://github.com/grblHAL"
 
@@ -70,28 +70,8 @@
 #define PROGMEM
 #endif
 
-#if (defined(COREXY) || defined(WALL_PLOTTER) || defined(MASLOW_ROUTER)) && !defined(KINEMATICS_API)
+#if (COREXY || WALL_PLOTTER || MASLOW_ROUTER) && !defined(KINEMATICS_API)
 #define KINEMATICS_API
-#endif
-
-#ifndef CHECK_MODE_DELAY
-#define CHECK_MODE_DELAY 0 // ms
-#endif
-
-#ifndef SAFETY_DOOR_SPINDLE_DELAY
-#define SAFETY_DOOR_SPINDLE_DELAY 4.0f // Float (seconds)
-#endif
-
-#ifndef SAFETY_DOOR_COOLANT_DELAY
-#define SAFETY_DOOR_COOLANT_DELAY 1.0f // Float (seconds)
-#endif
-
-#ifndef SLEEP_DURATION
-#define SLEEP_DURATION 5.0f // Number of minutes before sleep mode is entered.
-#endif
-
-#ifndef BUFFER_NVSDATA_DISABLE
-#define BUFFER_NVSDATA
 #endif
 
 // The following symbols are default values that are unlikely to be changed
@@ -127,18 +107,19 @@
 #define CMD_STATUS_REPORT_ALL 0x87
 #define CMD_OPTIONAL_STOP_TOGGLE 0x88
 #define CMD_SINGLE_BLOCK_TOGGLE 0x89
-#define CMD_OVERRIDE_FAN0_TOGGLE 0x8A        // Toggle Fan 0 on/off, not implemented by the core.
-#define CMD_MPG_MODE_TOGGLE 0x8B             // Toggle MPG mode on/off, not implemented by the core.
-#define CMD_OVERRIDE_FEED_RESET 0x90         // Restores feed override value to 100%.
+#define CMD_OVERRIDE_FAN0_TOGGLE 0x8A       // Toggle Fan 0 on/off, not implemented by the core.
+#define CMD_MPG_MODE_TOGGLE 0x8B            // Toggle MPG mode on/off, not implemented by the core.
+#define CMD_AUTO_REPORTING_TOGGLE 0x8C      // Toggle auto real time reporting if configured.
+#define CMD_OVERRIDE_FEED_RESET 0x90        // Restores feed override value to 100%.
 #define CMD_OVERRIDE_FEED_COARSE_PLUS 0x91
 #define CMD_OVERRIDE_FEED_COARSE_MINUS 0x92
 #define CMD_OVERRIDE_FEED_FINE_PLUS 0x93
 #define CMD_OVERRIDE_FEED_FINE_MINUS 0x94
-#define CMD_OVERRIDE_RAPID_RESET 0x95        // Restores rapid override value to 100%.
+#define CMD_OVERRIDE_RAPID_RESET 0x95       // Restores rapid override value to 100%.
 #define CMD_OVERRIDE_RAPID_MEDIUM 0x96
 #define CMD_OVERRIDE_RAPID_LOW 0x97
 // #define CMD_OVERRIDE_RAPID_EXTRA_LOW 0x98 // *NOT SUPPORTED*
-#define CMD_OVERRIDE_SPINDLE_RESET 0x99      // Restores spindle override value to 100%.
+#define CMD_OVERRIDE_SPINDLE_RESET 0x99     // Restores spindle override value to 100%.
 #define CMD_OVERRIDE_SPINDLE_COARSE_PLUS 0x9A
 #define CMD_OVERRIDE_SPINDLE_COARSE_MINUS 0x9B
 #define CMD_OVERRIDE_SPINDLE_FINE_PLUS 0x9C
@@ -200,29 +181,6 @@
 #define SPINDLE_OVERRIDE_COARSE_INCREMENT  10 // (1-99). Usually 10%.
 #define SPINDLE_OVERRIDE_FINE_INCREMENT     1 // (1-99). Usually 1%.
 
-// Some status report data isn't necessary for realtime, only intermittently, because the values don't
-// change often. The following macros configures how many times a status report needs to be called before
-// the associated data is refreshed and included in the status report. However, if one of these value
-// changes, Grbl will automatically include this data in the next status report, regardless of what the
-// count is at the time. This helps reduce the communication overhead involved with high frequency reporting
-// and aggressive streaming. There is also a busy and an idle refresh count, which sets up Grbl to send
-// refreshes more often when its not doing anything important. With a good GUI, this data doesn't need
-// to be refreshed very often, on the order of a several seconds.
-// NOTE: WCO refresh must be 2 or greater. OVERRIDE refresh must be 1 or greater.
-//#define REPORT_OVERRIDE_REFRESH_BUSY_COUNT 20   // (1-255)
-//#define REPORT_OVERRIDE_REFRESH_IDLE_COUNT 10   // (1-255) Must be less than or equal to the busy count
-//#define REPORT_WCO_REFRESH_BUSY_COUNT 30        // (2-255)
-//#define REPORT_WCO_REFRESH_IDLE_COUNT 10        // (2-255) Must be less than or equal to the busy count
-
-// The temporal resolution of the acceleration management subsystem. A higher number gives smoother
-// acceleration, particularly noticeable on machines that run at very high feedrates, but may negatively
-// impact performance. The correct value for this parameter is machine dependent, so it's advised to
-// set this only as high as needed. Approximate successful values can widely range from 50 to 200 or more.
-// NOTE: Changing this value also changes the execution time of a segment in the step segment buffer.
-// When increasing this value, this stores less overall time in the segment buffer and vice versa. Make
-// certain the step segment buffer is increased/decreased to account for these changes.
-//#define ACCELERATION_TICKS_PER_SECOND 100
-
 // Adaptive Multi-Axis Step Smoothing (AMASS) is an advanced feature that does what its name implies,
 // smoothing the stepping of multi-axis motions. This feature smooths motion particularly at low step
 // frequencies below 10kHz, where the aliasing between axes of multi-axis motions can cause audible
@@ -248,26 +206,11 @@
   #endif
 #endif
 
-// Sets the maximum step rate allowed to be written as a Grbl setting. This option enables an error
-// check in the settings module to prevent settings values that will exceed this limitation. The maximum
-// step rate is strictly limited by the CPU speed and will change if something other than an AVR running
-// at 16MHz is used.
-// NOTE: For now disabled, will enable if flash space permits.
-// #define MAX_STEP_RATE_HZ 30000 // Hz
-
-// With this enabled, Grbl sends back an echo of the line it has received, which has been pre-parsed (spaces
-// removed, capitalized letters, no comments) and is to be immediately executed by Grbl. Echoes will not be
-// sent upon a line buffer overflow, but should for all normal lines sent to Grbl. For example, if a user
-// sendss the line 'g1 x1.032 y2.45 (test comment)', Grbl will echo back in the form '[echo: G1X1.032Y2.45]'.
-// NOTE: Only use this for debugging purposes!! When echoing, this takes up valuable resources and can effect
-// performance. If absolutely needed for normal operation, the serial write buffer should be greatly increased
-// to help minimize transmission waiting within the serial write protocol.
-// #define REPORT_ECHO_LINE_RECEIVED // Default disabled. Uncomment to enable.
-
 // Sets which axis the tool length offset is applied. Assumes the spindle is always parallel with
 // the selected axis with the tool oriented toward the negative direction. In other words, a positive
 // tool length offset value is subtracted from the current location.
-#if COMPATIBILITY_LEVEL > 2 && defined(TOOL_LENGTH_OFFSET_AXIS) == 0
+#if COMPATIBILITY_LEVEL > 2 && TOOL_LENGTH_OFFSET_AXIS == -1
+#undef TOOL_LENGTH_OFFSET_AXIS
 #define TOOL_LENGTH_OFFSET_AXIS Z_AXIS // Default z-axis. Valid values are X_AXIS, Y_AXIS, or Z_AXIS.
 #endif
 

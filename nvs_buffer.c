@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2022 Terje Io
+  Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -57,7 +57,7 @@ typedef struct {
 
 #define PARAMETER_ADDR(n) (NVS_ADDR_PARAMETERS + n * (sizeof(coord_data_t) + NVS_CRC_BYTES))
 #define STARTLINE_ADDR(n) (NVS_ADDR_STARTUP_BLOCK + n * (sizeof(stored_line_t) + NVS_CRC_BYTES))
-#ifdef N_TOOLS
+#if N_TOOLS
 #define TOOL_ADDR(n) (NVS_ADDR_TOOL_TABLE + n * (sizeof(tool_data_t) + NVS_CRC_BYTES))
 #endif
 
@@ -82,7 +82,7 @@ static const emap_t target[] = {
 #error Increase number of startup line entries!
 #endif
     {NVS_ADDR_BUILD_INFO, NVS_GROUP_BUILD, 0},
-#ifdef N_TOOLS
+#if N_TOOLS
     {TOOL_ADDR(0), NVS_GROUP_TOOLS, 0},
     {TOOL_ADDR(1), NVS_GROUP_TOOLS, 1},
     {TOOL_ADDR(2), NVS_GROUP_TOOLS, 2},
@@ -161,7 +161,7 @@ static nvs_transfer_result_t memcpy_to_ram (uint32_t destination, uint8_t *sourc
                 case NVS_GROUP_GLOBAL:
                     settings_dirty.global_settings = true;
                     break;
-#ifdef N_TOOLS
+#if N_TOOLS
                 case NVS_GROUP_TOOLS:
                     settings_dirty.tool_data |= (1 << target[idx].offset);
                     break;
@@ -339,7 +339,7 @@ void nvs_buffer_sync_physical (void)
                 settings_dirty.driver_settings = false;
         }
 
-#ifdef N_TOOLS
+#if N_TOOLS
         idx = N_TOOLS;
         if(settings_dirty.tool_data) do {
             idx--;
@@ -354,7 +354,7 @@ void nvs_buffer_sync_physical (void)
                                    settings_dirty.global_settings ||
                                     settings_dirty.driver_settings ||
                                      settings_dirty.startup_lines ||
-#ifdef N_TOOLS
+#if N_TOOLS
                                       settings_dirty.tool_data ||
 #endif
                                        settings_dirty.build_info;
@@ -405,7 +405,7 @@ void nvs_memmap (void)
     strcat(buf, uitoa(sizeof(stored_line_t) + NVS_CRC_BYTES));
     report_message(buf, Message_Plain);
 
-#ifdef N_TOOLS
+#if N_TOOLS
     strcpy(buf, "Tool table: ");
     strcat(buf, uitoa(NVS_ADDR_TOOL_TABLE));
     strcat(buf, " ");

@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2022 Terje Io
+  Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -67,6 +67,7 @@ typedef enum {
     MotionMode_CubicSpline = 5,             //!< 5 - G5
     MotionMode_QuadraticSpline = 51,        //!< 51 - G5.1
     MotionMode_SpindleSynchronized = 33,    //!< 33 - G33
+    MotionMode_RigidTapping = 331,          //!< 331 - G33.1
     MotionMode_DrillChipBreak = 73,         //!< 73 - G73
     MotionMode_Threading = 76,              //!< 76 - G76
     MotionMode_CannedCycle81 = 81,          //!< 81 - G81
@@ -212,18 +213,21 @@ typedef enum {
     OpenPNP_GetCurrentPosition = 114,   //!< 114 - M114
     OpenPNP_FirmwareInfo = 115,         //!< 115 - M115
     Trinamic_DebugReport = 122,         //!< 122 - M122, Marlin format
+    Trinamic_ReadRegister = 123,        //!< 123 - M123,
+    Trinamic_WriteRegister = 124,       //!< 124 - M124,
     LaserPPI_Enable = 126,              //!< 126 - M126
     LaserPPI_Rate = 127,                //!< 127 - M127
     LaserPPI_PulseLength = 128,         //!< 128 - M128
     OpenPNP_SetAcceleration = 204,      //!< 204 - M204
     OpenPNP_FinishMoves = 400,          //!< 400 - M400
     OpenPNP_SettingsReset = 502,        //!< 502 - M502
-    Trinamic_ModeToggle = 569,          //!< 569 - M122, Marlin format
-    Trinamic_StepperCurrent = 906,      //!< 906 - M122, Marlin format
-    Trinamic_ReportPrewarnFlags = 911,  //!< 911 - M122, Marlin format
-    Trinamic_ClearPrewarnFlags = 912,   //!< 912 - M122, Marlin format
-    Trinamic_HybridThreshold = 913,     //!< 913 - M122, Marlin format
-    Trinamic_HomingSensitivity = 914,   //!< 914 - M122, Marlin format
+    Trinamic_ModeToggle = 569,          //!< 569 - M569, Marlin format
+    Trinamic_StepperCurrent = 906,      //!< 906 - M906, Marlin format
+    Trinamic_ReportPrewarnFlags = 911,  //!< 911 - M911, Marlin format
+    Trinamic_ClearPrewarnFlags = 912,   //!< 912 - M912, Marlin format
+    Trinamic_HybridThreshold = 913,     //!< 913 - M913, Marlin format
+    Trinamic_HomingSensitivity = 914,   //!< 914 - M914, Marlin format
+    Trinamic_ChopperTiming = 919,       //!< 919 - M919, Marlin format
     Spindle_Select = UserMCode_Generic4 //!< Value to be assigned later!
 } user_mcode_t;
 
@@ -262,7 +266,7 @@ typedef enum {
     GCProbe_Abort = GCUpdatePos_None,       //!< 2
     GCProbe_FailInit = GCUpdatePos_None,    //!< 2
     GCProbe_FailEnd = GCUpdatePos_Target,   //!< 0
-  #ifdef SET_CHECK_MODE_PROBE_TO_START
+  #if SET_CHECK_MODE_PROBE_TO_START
     GCProbe_CheckMode = GCUpdatePos_None    //!< 2
   #else
     GCProbe_CheckMode = GCUpdatePos_Target  //!< 0
@@ -357,7 +361,9 @@ typedef struct {
     float s;                   //!< Spindle speed - single-meaning word
     float xyz[N_AXIS];         //!< X,Y,Z (and A,B,C,U,V when enabled) translational axes
     coord_system_t coord_data; //!< Coordinate data
+    int32_t $;                 //!< Spindle id - single-meaning word
     int32_t n;                 //!< Line number - single-meaning word
+    uint32_t o;                //!< Subroutine identifier - single-meaning word (not used by the core)
     uint32_t h;                //!< Tool number - single-meaning word
     uint32_t t;                //!< Tool selection
     uint8_t l;                 //!< G10 or canned cycles parameters
@@ -368,7 +374,8 @@ typedef union {
     uint32_t mask;      //!< All flags as a bitmap.
     uint32_t value;     //!< Synonymous with \a mask.
     struct {
-        uint32_t e :1, //!< Analog port number for M66 - M68.
+        uint32_t $ :1, //!< Spindle id
+                 e :1, //!< Analog port number for M66 - M68.
                  f :1, //!< Feedrate.
                  h :1, //!< Tool length offset index.
                  i :1, //!< X-axis offset for arcs
@@ -376,6 +383,7 @@ typedef union {
                  k :1, //!< Z-axis offset for arcs
                  l :1, //!< Number of repetitions in canned cycles, wait mode for M66.
                  n :1, //!< Line number.
+                 o :1, //!< Subroutine identifier.
                  p :1, //!< Dwell time for G4 or in canned cycles, port number for M62 - M66.
                  r :1, //!< Arc radius, canned cycle retract level.
                  s :1, //!< Spindle speed.
@@ -513,7 +521,7 @@ typedef struct {
 } scale_factor_t;
 
 extern parser_state_t gc_state;
-#ifdef N_TOOLS
+#if N_TOOLS
 extern tool_data_t tool_table[N_TOOLS + 1];
 #else
 extern tool_data_t tool_table;
@@ -534,6 +542,7 @@ typedef struct {
     parameter_words_t words;            //!< Bitfield for tracking found parameter values.
     output_command_t output_command;    //!< Details about M62-M68 output command to execute if present in block.
     uint32_t arc_turns;                  //
+    int32_t spindle_id;                 //!< Spindle to control, -1 for all
 } parser_block_t;
 
 // Initialize the parser

@@ -7,7 +7,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2022 Terje Io
+  Copyright (c) 2021-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -58,6 +58,11 @@
 #if KEYPAD_ENABLE
     extern bool keypad_init (void);
     keypad_init();
+#endif
+
+#if MACROS_ENABLE
+    extern bool macros_init (void);
+    macros_init();
 #endif
 
 #if LASER_COOLANT_ENABLE

@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2022 Terje Io
+  Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2012-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -144,6 +144,24 @@ uint8_t spindle_get_count (void)
     return n_spindle;
 }
 
+bool spindle_enumerate_spindles (spindle_enumerate_callback_ptr callback)
+{
+    if(callback == NULL || n_spindle == 0)
+        return false;
+
+    uint_fast8_t idx = n_spindle;
+    spindle_info_t spindle;
+
+    do {
+        spindle.id = --idx;
+        spindle.hal = spindles[idx];
+        spindle.is_current = spindle.hal == current_spindle;
+        callback(&spindle);
+    } while(idx);
+
+    return true;
+}
+
 //
 // Null (dummy) spindle, automatically installed if no spindles are registered.
 //
@@ -211,9 +229,14 @@ void spindle_set_override (uint_fast8_t speed_override)
             spindle_set_state(0, gc_state.modal.spindle, gc_state.spindle.rpm);
         else
             sys.step_control.update_spindle_rpm = On;
-       sys.report.overrides = On; // Set to report change immediately
+
+        sys.report.overrides = On; // Set to report change immediately
+
        if(grbl.on_spindle_programmed)
            grbl.on_spindle_programmed(gc_state.modal.spindle, spindle_set_rpm(gc_state.spindle.rpm, sys.override.spindle_rpm), gc_state.modal.spindle_rpm_mode);
+
+       if(grbl.on_override_changed)
+           grbl.on_override_changed(OverrideChanged_SpindleRPM);
     }
 }
 

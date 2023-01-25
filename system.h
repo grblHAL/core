@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2022 Terje Io
+  Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2014-2016 Sungeun K. Jeon for Gnea Research LLC
 
   Grbl is free software: you can redistribute it and/or modify
@@ -210,7 +210,8 @@ typedef union {
                  optional_stop_disable :1,
                  single_block          :1, //!< Set to true to disable M1 (optional stop), via realtime command.
                  keep_input            :1, //!< Set to true to not flush stream input buffer on executing STOP.
-                 unused                :6;
+                 auto_reporting        :1, //!< Set to true when auto real time reporting is enabled.
+                 unused                :5;
     };
 } system_flags_t;
 
