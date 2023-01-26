@@ -30,6 +30,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#ifdef ARDUINO
+#include <Arduino.h>
+#endif
+
 #include "config.h"
 
 // Grbl versioning system
@@ -38,7 +42,7 @@
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_BUILD 20230125
+#define GRBL_BUILD 20230126
 
 #define GRBL_URL "https://github.com/grblHAL"
 
@@ -60,10 +64,6 @@
 #define ISR_FUNC(fn) __not_in_flash_func(fn)
 #else
 #define ISR_FUNC(fn) fn
-#endif
-
-#ifdef ARDUINO
-#include <Arduino.h>
 #endif
 
 #ifndef PROGMEM

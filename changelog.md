@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+<a name="20230126"/>Build 20230126
+
+Core:
+
+* Fixed include file issue causing macro warnings for drivers built with the Arduino platform.
+
+Web Builder:
+
+* Added macros plugin to capable drivers, removed resizable planner buffer option as this is now always enabled and added option for rotary axes feed rate fix.
+
+---
+
 <a name="20230125"/>Build 20230125
 
 Core:
