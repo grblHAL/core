@@ -2118,6 +2118,8 @@ bool settings_iterator (const setting_detail_t *setting, setting_output_ptr call
         case Setting_AxisMicroSteps:
         case Setting_AxisBacklash:
         case Setting_AxisAutoSquareOffset:
+        case Setting_AxisHomingFeedRate:
+        case Setting_AxisHomingSeekRate:
         case Setting_AxisExtended0:
         case Setting_AxisExtended1:
         case Setting_AxisExtended2:

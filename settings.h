@@ -155,7 +155,7 @@ typedef enum {
 
 // Reserving settings in the range 100 - 299 for axis settings.
     Setting_AxisSettingsBase = 100,     // Reserved for core settings
-    Setting_AxisSettingsMax = Setting_AxisSettingsBase + AXIS_SETTINGS_INCREMENT * 7 + N_AXIS,
+    Setting_AxisSettingsMax = Setting_AxisSettingsBase + AXIS_SETTINGS_INCREMENT * 9 + N_AXIS,
     Setting_AxisSettingsBase2 = 200,    // Reserved for driver/plugin settings
     Setting_AxisSettingsMax2 = Setting_AxisSettingsBase2 + AXIS_SETTINGS_INCREMENT * 9 + N_AXIS,
 //
@@ -338,6 +338,8 @@ typedef enum {
     Setting_AxisMicroSteps       = Setting_AxisSettingsBase + 5 * AXIS_SETTINGS_INCREMENT,
     Setting_AxisBacklash         = Setting_AxisSettingsBase + 6 * AXIS_SETTINGS_INCREMENT,
     Setting_AxisAutoSquareOffset = Setting_AxisSettingsBase + 7 * AXIS_SETTINGS_INCREMENT,
+    Setting_AxisHomingFeedRate   = Setting_AxisSettingsBase + 8 * AXIS_SETTINGS_INCREMENT,
+    Setting_AxisHomingSeekRate   = Setting_AxisSettingsBase + 9 * AXIS_SETTINGS_INCREMENT,
 
     // Calculated base values for driver/plugin stepper settings
     Setting_AxisExtended0        = Setting_AxisSettingsBase2,

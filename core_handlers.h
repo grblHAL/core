@@ -32,6 +32,7 @@
 #include "settings.h"
 #include "report.h"
 #include "planner.h"
+#include "machine_limits.h"
 
 typedef enum {
     OverrideChanged_FeedRate = 0,
@@ -91,7 +92,7 @@ typedef void (*on_realtime_report_ptr)(stream_write_ptr stream_write, report_tra
 typedef void (*on_unknown_feedback_message_ptr)(stream_write_ptr stream_write);
 typedef void (*on_stream_changed_ptr)(stream_type_t type);
 typedef bool (*on_laser_ppi_enable_ptr)(uint_fast16_t ppi, uint_fast16_t pulse_length);
-typedef void (*on_homing_rate_set_ptr)(axes_signals_t axes, float rate, bool pulloff);
+typedef void (*on_homing_rate_set_ptr)(axes_signals_t axes, float rate, homing_mode_t mode);
 typedef void (*on_homing_completed_ptr)(void);
 typedef bool (*on_probe_fixture_ptr)(tool_data_t *tool, bool at_g59_3, bool on);
 typedef bool (*on_probe_start_ptr)(axes_signals_t axes, float *target, plan_line_data_t *pl_data);

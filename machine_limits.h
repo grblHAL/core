@@ -26,6 +26,13 @@
 
 #include "nuts_bolts.h"
 
+typedef enum
+{
+    HomingMode_Seek = 0,
+    HomingMode_Locate,
+    HomingMode_Pulloff
+} homing_mode_t;
+
 // Perform one portion of the homing cycle based on the input settings.
 status_code_t limits_go_home (axes_signals_t cycle);
 

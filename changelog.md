@@ -1,5 +1,24 @@
 ## grblHAL changelog
 
+<a name="20230128"/>Build 20230128
+
+Core:
+
+* Some internal changes to allow homing feed rate override from plugins, reserved setting numbers for per axis homing feedrate settings \(not used by the core\).
+
+Motors plugin:
+
+* Fix for issue [#9](https://github.com/grblHAL/Plugins_motor/issues/9), added settings for per axis homing feed rates.  
+__NOTE:__ Per axis homing feedrates will only be used for Trinamic driven axes with sensorless homing enabled, others will still use feedrates as set by the `$24` and `$25` settings.  
+__NOTE:__ If more than one axis is homed in a cycle and the homing feedrates differ the cycle will be skipped.  
+__NOTE:__ Per axis feedrates is currently for experimental use/testing - may be removed in a later build.
+
+Trinamic plugin:
+
+* Fix for issue [#41](https://github.com/grblHAL/RP2040/issues/41#issuecomment-1379449288), wrong PWM autoscale mode selected for sensorless homing.
+
+---
+
 <a name="20230126"/>Build 20230126
 
 Core:

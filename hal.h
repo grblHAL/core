@@ -173,11 +173,13 @@ typedef struct {
  *  Homing  *
  ************/
 
+typedef float (*homing_get_feedrate_ptr)(axes_signals_t axes, homing_mode_t mode);
+
 //! Limit switches handler for homing cycle.
 typedef struct {
     limits_get_state_ptr get_state;                     //!< Handler for getting limit switches status. Usually set to the same function as _hal.limits.get_state_.
+    homing_get_feedrate_ptr get_feedrate;
 } homing_ptrs_t;
-
 
 /*****************************
  *  Control signal switches  *
