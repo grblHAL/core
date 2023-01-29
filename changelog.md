@@ -1,5 +1,13 @@
 ## grblHAL changelog
 
+<a name="20230129"/>Build 20230129
+
+Core:
+
+* Fixed regression in tool change handling related to refactoring of _config.h_ in build 20230125.
+
+---
+
 <a name="20230128"/>Build 20230128
 
 Core:

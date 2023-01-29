@@ -204,7 +204,7 @@ the negative direction. In other words, a positive tool length offset value is s
 from the current location.
 */
 #if !defined TOOL_LENGTH_OFFSET_AXIS || defined __DOXYGEN__
-#define TOOL_LENGTH_OFFSET_AXIS 0 // Default is all axes.
+#define TOOL_LENGTH_OFFSET_AXIS -1 // Default is all axes.
 #endif
 
 /*! \def MINIMUM_JUNCTION_SPEED

@@ -429,7 +429,7 @@ void tc_clear_tlo_reference (axes_signals_t homing_cycle)
 
         plane_t plane;
 
-#ifdef TOOL_LENGTH_OFFSET_AXIS
+#if TOOL_LENGTH_OFFSET_AXIS >= 0
         plane.axis_linear = TOOL_LENGTH_OFFSET_AXIS;
 #else
         gc_get_plane_data(&plane, gc_state.modal.plane_select);
