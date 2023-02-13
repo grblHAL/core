@@ -65,9 +65,18 @@ typedef union {
 } network_services_t;
 
 typedef char ssid_t[65];
+typedef uint8_t bssid_t[6];
+typedef char username_t[33];
 typedef char password_t[33];
 typedef char hostname_t[33];
-typedef char sntp_server_t[129]; // URI
+typedef char uri_t[65];
+
+typedef struct {
+    char ip[16];
+    uint16_t port;
+    username_t user;
+    password_t password;
+} mqtt_settings_t;
 
 typedef struct {
     char ip[16];
@@ -80,6 +89,9 @@ typedef struct {
     uint16_t ftp_port;
     ip_mode_t ip_mode;
     network_services_t services;
+#if MQTT_ENABLE
+    mqtt_settings_t mqtt;
+#endif
 } network_settings_t;
 
 typedef enum {
@@ -94,12 +106,14 @@ typedef struct {
     bool link_up;
     uint16_t mbps;
     char mac[18];
+    char mqtt_client_id[18];
     grbl_wifi_mode_t wifi_mode;
     network_settings_t status;
 } network_info_t;
 
 typedef struct {
     ssid_t ssid;
+    bssid_t bssid;
     password_t password;
     char country[4];
     uint8_t channel;
@@ -149,11 +163,13 @@ typedef enum {
 typedef union {
     uint8_t events;
     struct {
-        uint8_t position_changed :1,
-                click            :1,
-                dbl_click        :1,
-                long_click       :1,
-                index_pulse      :1;
+        uint8_t position_changed  :1,
+                direction_changed :1,
+                click             :1,
+                dbl_click         :1,
+                long_click        :1,
+                index_pulse       :1,
+                unused            :2;
     };
 } encoder_event_t;
 

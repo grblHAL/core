@@ -180,7 +180,7 @@ bool protocol_main_loop (void)
 
     // Ensure spindle and coolant is switched off on a cold start
     if(sys.cold_start) {
-        hal.spindle.set_state((spindle_state_t){0}, 0.0f);
+        spindle_all_off();
         hal.coolant.set_state((coolant_state_t){0});
         if(realtime_queue.head != realtime_queue.tail)
             system_set_exec_state_flag(EXEC_RT_COMMAND);  // execute any boot up commands
@@ -411,7 +411,7 @@ bool protocol_exec_rt_system (void)
         if((sys.reset_pending = !!(sys.rt_exec_state & EXEC_RESET))) {
             // Kill spindle and coolant.
             killed = true;
-            hal.spindle.set_state((spindle_state_t){0}, 0.0f);
+            spindle_all_off();
             hal.coolant.set_state((coolant_state_t){0});
         }
 
@@ -468,7 +468,7 @@ bool protocol_exec_rt_system (void)
 
             if(!killed) {
                 // Kill spindle and coolant.
-                hal.spindle.set_state((spindle_state_t){0}, 0.0f);
+                spindle_all_off();
                 hal.coolant.set_state((coolant_state_t){0});
             }
 
@@ -500,11 +500,7 @@ bool protocol_exec_rt_system (void)
                 sys.override.control = gc_state.modal.override_ctrl;
 
             gc_state.tool_change = false;
-            gc_state.modal.spindle_rpm_mode = SpindleSpeedMode_RPM;
-
-            // Kill spindle and coolant. TODO: Check Mach3 behaviour?
-            gc_spindle_off();
-            gc_coolant_off();
+            gc_state.modal.spindle.rpm_mode = SpindleSpeedMode_RPM;
 
             // Tell driver/plugins about reset.
             hal.driver_reset();
@@ -523,6 +519,11 @@ bool protocol_exec_rt_system (void)
             } else*/
             st_reset();
             sync_position();
+
+            // Kill spindle and coolant. TODO: Check Mach3 behaviour?
+            gc_spindle_off();
+            gc_coolant_off();
+
             flush_override_buffers();
             if(!((state_get() == STATE_ALARM) && (sys.alarm == Alarm_LimitsEngaged || sys.alarm == Alarm_HomingRequried)))
                 state_set(hal.control.get_state().safety_door_ajar ? STATE_SAFETY_DOOR : STATE_IDLE);
@@ -567,8 +568,8 @@ bool protocol_exec_rt_system (void)
 
         if((rt_exec = get_feed_override())) {
 
-            int_fast16_t new_f_override = sys.override.feed_rate;
-            uint_fast8_t new_r_override = sys.override.rapid_rate;
+            override_t new_f_override = sys.override.feed_rate;
+            override_t new_r_override = sys.override.rapid_rate;
 
             do {
 
@@ -611,13 +612,14 @@ bool protocol_exec_rt_system (void)
 
             } while((rt_exec = get_feed_override()));
 
-            plan_feed_override((uint_fast8_t)new_f_override, new_r_override);
+            plan_feed_override(new_f_override, new_r_override);
         }
 
         if((rt_exec = get_accessory_override())) {
 
             bool spindle_stop = false;
-            int_fast16_t last_s_override = sys.override.spindle_rpm;
+            spindle_ptrs_t *spindle = gc_spindle_get();
+            override_t last_s_override = spindle->param->override_pct;
             coolant_state_t coolant_state = gc_state.modal.coolant;
 
             do {
@@ -670,7 +672,7 @@ bool protocol_exec_rt_system (void)
 
             } while((rt_exec = get_accessory_override()));
 
-            spindle_set_override((uint_fast8_t)last_s_override);
+            spindle_set_override(spindle, last_s_override);
 
           // NOTE: Since coolant state always performs a planner sync whenever it changes, the current
           // run state can be determined by checking the parser state.
@@ -681,7 +683,7 @@ bool protocol_exec_rt_system (void)
                     grbl.on_override_changed(OverrideChanged_CoolantState);
             }
 
-            if (spindle_stop && state_get() == STATE_HOLD && gc_state.modal.spindle.on) {
+            if (spindle_stop && state_get() == STATE_HOLD && gc_state.modal.spindle.state.on) {
                 // Spindle stop override allowed only while in HOLD state.
                 // NOTE: Report flag is set in spindle_set_state() when spindle stop is executed.
                 if (!sys.override.spindle_stop.value)

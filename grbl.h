@@ -42,7 +42,7 @@
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_BUILD 20230129
+#define GRBL_BUILD 20230213
 
 #define GRBL_URL "https://github.com/grblHAL"
 
@@ -163,8 +163,12 @@
 // allowable override values and the coarse and fine increments per command received. Please
 // note the allowable values in the descriptions following each define.
 #define DEFAULT_FEED_OVERRIDE           100 // 100%. Don't change this value.
-#define MAX_FEED_RATE_OVERRIDE          200 // Percent of programmed feed rate (100-255). Usually 120% or 200%
+#ifndef MAX_FEED_RATE_OVERRIDE
+#define MAX_FEED_RATE_OVERRIDE          200 // Percent of programmed feed rate (100-65535). Usually 120% or 200%
+#endif
+#ifndef MIN_FEED_RATE_OVERRIDE
 #define MIN_FEED_RATE_OVERRIDE           10 // Percent of programmed feed rate (1-100). Usually 50% or 1%
+#endif
 #define FEED_OVERRIDE_COARSE_INCREMENT   10 // (1-99). Usually 10%.
 #define FEED_OVERRIDE_FINE_INCREMENT      1 // (1-99). Usually 1%.
 
@@ -176,8 +180,12 @@
 // #define ENABLE_SPINDLE_LINEARIZATION        // Uncomment to enable spindle RPM linearization. Requires compatible driver if enabled.
 #define SPINDLE_NPWM_PIECES                 4 // Maximum number of pieces for spindle RPM linearization, do not change unless more are needed.
 #define DEFAULT_SPINDLE_RPM_OVERRIDE      100 // 100%. Don't change this value.
-#define MAX_SPINDLE_RPM_OVERRIDE          200 // Percent of programmed spindle speed (100-255). Usually 200%.
+#ifndef MAX_SPINDLE_RPM_OVERRIDE
+#define MAX_SPINDLE_RPM_OVERRIDE          200 // Percent of programmed spindle speed (100-65535). Usually 200%.
+#endif
+#ifndef MIN_SPINDLE_RPM_OVERRIDE
 #define MIN_SPINDLE_RPM_OVERRIDE           10 // Percent of programmed spindle speed (1-100). Usually 10%.
+#endif
 #define SPINDLE_OVERRIDE_COARSE_INCREMENT  10 // (1-99). Usually 10%.
 #define SPINDLE_OVERRIDE_FINE_INCREMENT     1 // (1-99). Usually 1%.
 
@@ -220,5 +228,13 @@
 #else
 #define MAX_STORED_LINE_LENGTH 70 // do not set > 70 unless less than 5 axes are enabled or COMPATIBILITY_LEVEL > 1
 #endif
+
+#if N_SPINDLE > 4
+#define N_SPINDLE_SELECTABLE 4 // Max 4. for now!
+#else
+#define N_SPINDLE_SELECTABLE N_SPINDLE
+#endif
+
+typedef uint_fast16_t override_t;
 
 #endif

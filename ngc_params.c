@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021 Terje Io
+  Copyright (c) 2021-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -424,11 +424,11 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             break;
 
         case NGCParam_spindle_rpm_mode:
-            value = gc_state.modal.spindle_rpm_mode == SpindleSpeedMode_RPM ? 1.0f : 0.0f;
+            value = gc_state.modal.spindle.rpm_mode == SpindleSpeedMode_RPM ? 1.0f : 0.0f;
             break;
 
         case NGCParam_spindle_css_mode:
-            value = gc_state.modal.spindle_rpm_mode == SpindleSpeedMode_CSS ? 1.0f : 0.0f;
+            value = gc_state.modal.spindle.rpm_mode == SpindleSpeedMode_CSS ? 1.0f : 0.0f;
             break;
 
         case NGCParam_ijk_absolute_mode:
@@ -444,11 +444,11 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             break;
 
         case NGCParam_spindle_on:
-            value = gc_state.modal.spindle.on ? 1.0f : 0.0f;
+            value = gc_state.modal.spindle.state.on ? 1.0f : 0.0f;
             break;
 
         case NGCParam_spindle_cw:
-            value = gc_state.modal.spindle.ccw ? 1.0f : 0.0f;
+            value = gc_state.modal.spindle.state.ccw ? 1.0f : 0.0f;
             break;
 
         case NGCParam_mist:

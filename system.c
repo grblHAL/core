@@ -56,6 +56,7 @@ static status_code_t toggle_optional_stop (sys_state_t state, char *args);
 static status_code_t check_mode (sys_state_t state, char *args);
 static status_code_t disable_lock (sys_state_t state, char *args);
 static status_code_t output_help (sys_state_t state, char *args);
+static status_code_t output_spindles (sys_state_t state, char *args);
 static status_code_t home (sys_state_t state, char *args);
 static status_code_t home_x (sys_state_t state, char *args);
 static status_code_t home_y (sys_state_t state, char *args);
@@ -120,8 +121,8 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
                     // NOTE: at least for lasers there should be an external interlock blocking laser power.
                     if(state_get() != STATE_IDLE && state_get() != STATE_JOG)
                         system_set_exec_state_flag(EXEC_SAFETY_DOOR);
-                    if(sys.mode == Mode_Laser) // Turn off spindle immediately (laser) when in laser mode
-                        hal.spindle.set_state((spindle_state_t){0}, 0.0f);
+                    if(settings.mode == Mode_Laser) // Turn off spindle immediately (laser) when in laser mode
+                        spindle_all_off();
                 } else
                     system_set_exec_state_flag(EXEC_SAFETY_DOOR);
             }
@@ -166,10 +167,12 @@ void system_execute_startup (void)
 // Reset spindle encoder data
 status_code_t spindle_reset_data (sys_state_t state, char *args)
 {
-    if(hal.spindle.reset_data)
-        hal.spindle.reset_data();
+    spindle_ptrs_t *spindle = gc_spindle_get();
 
-    return hal.spindle.reset_data ? Status_OK : Status_InvalidStatement;
+    if(spindle->reset_data)
+        spindle->reset_data();
+
+    return spindle->reset_data ? Status_OK : Status_InvalidStatement;
 }
 
 status_code_t read_int (char *s, int32_t *value)
@@ -233,6 +236,7 @@ PROGMEM static const sys_command_t sys_commands[] = {
     { "HV", false, home_v },
 #endif
     { "HELP", false, output_help },
+    { "SPINDLES", false, output_spindles },
     { "SLP", true, enter_sleep },
     { "TLR", true, set_tool_reference },
     { "TPW", true, tool_probe_workpiece },
@@ -284,6 +288,7 @@ void system_command_help (void)
     hal.stream.write("$SLP - enter sleep mode" ASCII_EOL);
     hal.stream.write("$HELP - output help topics" ASCII_EOL);
     hal.stream.write("$HELP <topic> - output help for <topic>" ASCII_EOL);
+    hal.stream.write("$SPINDLES - output spindle list" ASCII_EOL);
     hal.stream.write("$RST=* - restore/reset all settings" ASCII_EOL);
     hal.stream.write("$RST=$ - restore default settings" ASCII_EOL);
     if(settings_get_details()->next)
@@ -293,10 +298,13 @@ void system_command_help (void)
 #else
     hal.stream.write("$RST=# - reset offsets" ASCII_EOL);
 #endif
-    if(hal.spindle.reset_data)
+
+    spindle_ptrs_t *spindle = gc_spindle_get();
+    if(spindle->reset_data)
         hal.stream.write("$SR - reset spindle encoder data" ASCII_EOL);
-    if(hal.spindle.get_data)
+    if(spindle->get_data)
         hal.stream.write("$SD - output spindle encoder data" ASCII_EOL);
+
     hal.stream.write("$TLR - set tool offset reference" ASCII_EOL);
     hal.stream.write("$TPW - probe tool plate" ASCII_EOL);
     hal.stream.write("$EA - enumerate alarms" ASCII_EOL);
@@ -626,6 +634,11 @@ static status_code_t output_help (sys_state_t state, char *args)
     return report_help(args);
 }
 
+static status_code_t output_spindles (sys_state_t state, char *args)
+{
+    return report_spindles();
+}
+
 static status_code_t go_home (sys_state_t state, axes_signals_t axes)
 {
     if(axes.mask && !settings.homing.flags.single_axis_commands)
@@ -661,7 +674,7 @@ static status_code_t go_home (sys_state_t state, axes_signals_t axes)
     if (retval == Status_OK && !sys.abort) {
         state_set(STATE_IDLE);  // Set to IDLE when complete.
         st_go_idle();           // Set steppers to the settings idle state before returning.
-        report_feedback_message(Message_None);
+        grbl.report.feedback_message(Message_None);
         // Execute startup scripts after successful homing.
         if (sys.homing.mask && (sys.homing.mask & sys.homed.mask) == sys.homing.mask)
             system_execute_startup();

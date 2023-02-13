@@ -315,13 +315,13 @@ bool plan_check_full_buffer (void)
 // NOTE: All system motion commands, such as homing/parking, are not subject to overrides.
 float plan_compute_profile_nominal_speed (plan_block_t *block)
 {
-    float nominal_speed = block->condition.spindle.synchronized ? block->programmed_rate * hal.spindle.get_data(SpindleData_RPM)->rpm : block->programmed_rate;
+    float nominal_speed = block->spindle.state.synchronized ? block->programmed_rate * block->spindle.hal->get_data(SpindleData_RPM)->rpm : block->programmed_rate;
 
     if (block->condition.rapid_motion)
-        nominal_speed *= (0.01f * sys.override.rapid_rate);
+        nominal_speed *= (0.01f * (float)sys.override.rapid_rate);
     else {
         if (!block->condition.no_feed_override)
-            nominal_speed *= (0.01f * sys.override.feed_rate);
+            nominal_speed *= (0.01f * (float)sys.override.feed_rate);
         if (nominal_speed > block->rapid_rate)
             nominal_speed = block->rapid_rate;
     }
@@ -465,21 +465,24 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
 
     } while(idx);
 
-    // Calculate RPMs to be used for Constant Surface Speed calculations
-    if(block->condition.is_rpm_pos_adjusted) {
+    // Calculate RPMs to be used for Constant Surface Speed (CSS) calculations.
+    if(block->spindle.css) {
+
         float pos;
-        if((pos = (float)position_steps[block->spindle.css.axis] / settings.axis[block->spindle.css.axis].steps_per_mm - block->spindle.css.tool_offset) > 0.0f) {
-            block->spindle.rpm = block->spindle.css.surface_speed / (pos * (float)(2.0f * M_PI));
-            if(block->spindle.rpm > block->spindle.css.max_rpm)
-                block->spindle.rpm = block->spindle.css.max_rpm;
+
+        if((pos = (float)position_steps[block->spindle.css->axis] / settings.axis[block->spindle.css->axis].steps_per_mm - block->spindle.css->tool_offset) > 0.0f) {
+            if((block->spindle.rpm = block->spindle.css->surface_speed / (pos * (float)(2.0f * M_PI))) > block->spindle.css->max_rpm)
+                block->spindle.rpm = block->spindle.css->max_rpm;
         } else
-            block->spindle.rpm = block->spindle.css.max_rpm;
-        if((pos = target[block->spindle.css.axis] - block->spindle.css.tool_offset) > 0.0f) {
-            block->spindle.css.target_rpm = block->spindle.css.surface_speed / (pos * (float)(2.0f * M_PI));
-            if(block->spindle.css.target_rpm > block->spindle.css.max_rpm)
-                block->spindle.css.target_rpm = block->spindle.css.max_rpm;
+            block->spindle.rpm = block->spindle.css->max_rpm;
+
+        if((pos = target[block->spindle.css->axis] - block->spindle.css->tool_offset) > 0.0f) {
+            if((block->spindle.css->target_rpm = block->spindle.css->surface_speed / (pos * (float)(2.0f * M_PI))) > block->spindle.css->max_rpm)
+                block->spindle.css->target_rpm = block->spindle.css->max_rpm;
         } else
-            block->spindle.css.target_rpm = block->spindle.css.max_rpm;
+            block->spindle.css->target_rpm = block->spindle.css->max_rpm;
+
+        block->spindle.css->delta_rpm = block->spindle.css->target_rpm - block->spindle.rpm;
     }
 
     // Bail if this is a zero-length block. Highly unlikely to occur.
@@ -662,7 +665,7 @@ void plan_cycle_reinitialize (void)
 }
 
 // Set feed overrides
-void plan_feed_override (uint_fast8_t feed_override, uint_fast8_t rapid_override)
+void plan_feed_override (override_t feed_override, override_t rapid_override)
 {
     bool feedrate_changed = false, rapidrate_changed = false;
 
@@ -673,8 +676,8 @@ void plan_feed_override (uint_fast8_t feed_override, uint_fast8_t rapid_override
 
     if ((feedrate_changed = feed_override != sys.override.feed_rate) ||
          (rapidrate_changed = rapid_override != sys.override.rapid_rate)) {
-        sys.override.feed_rate = (uint8_t)feed_override;
-        sys.override.rapid_rate = (uint8_t)rapid_override;
+        sys.override.feed_rate = feed_override;
+        sys.override.rapid_rate = rapid_override;
         sys.report.overrides = On; // Set to report change immediately
         plan_update_velocity_profile_parameters();
         plan_cycle_reinitialize();

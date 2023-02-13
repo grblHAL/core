@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2021 Terje Io
+  Copyright (c) 2018-2023 Terje Io
   Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
 
   Grbl is free software: you can redistribute it and/or modify
@@ -44,17 +44,12 @@ typedef enum {
 void report_init (void);
 void report_init_fns (void);
 
-// Prints system status messages.
-status_code_t report_status_message (status_code_t status_code);
 
 // Prints system alarm messages.
 alarm_code_t report_alarm_message (alarm_code_t alarm_code);
 
 // Prints feedback message, typically from gcode.
 void report_message (const char *msg, message_type_t type);
-
-// Prints miscellaneous feedback messages.
-message_code_t report_feedback_message (message_code_t message_code);
 
 // Prints welcome message.
 void report_init_message (void);
@@ -114,8 +109,11 @@ status_code_t report_current_limit_state (sys_state_t state, char *args);
 // Prints spindle data (encoder pulse and index count, angular position).
 status_code_t report_spindle_data (sys_state_t state, char *args);
 
-// Prints pin assignments
+// Prints pin assignments.
 status_code_t report_pins (sys_state_t state, char *args);
+
+// Prints registered spindles.
+status_code_t report_spindles (void);
 
 // Prints current RTC datetime in ISO8601 format (when available)
 status_code_t report_time (void);

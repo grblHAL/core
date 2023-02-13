@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2019-2022 Terje Io
+  Copyright (c) 2019-2023 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -34,10 +34,8 @@ typedef union {
                  no_feed_override     :1,
                  inverse_time         :1,
                  is_rpm_rate_adjusted :1,
-                 is_rpm_pos_adjusted  :1,
                  is_laser_ppi_mode    :1,
-                 unassigned           :7;
-        spindle_state_t spindle;
+                 unassigned           :8;
         coolant_state_t coolant;
     };
 } planner_cond_t;
@@ -58,22 +56,22 @@ typedef struct plan_block {
 
     // Fields used by the motion planner to manage acceleration. Some of these values may be updated
     // by the stepper module during execution of special motion cases for replanning purposes.
-    float entry_speed_sqr;      // The current planned entry speed at block junction in (mm/min)^2
-    float max_entry_speed_sqr;  // Maximum allowable entry speed based on the minimum of junction limit and
-                                // neighboring nominal speeds with overrides in (mm/min)^2
-    float acceleration;         // Axis-limit adjusted line acceleration in (mm/min^2). Does not change.
-    float millimeters;          // The remaining distance for this block to be executed in (mm).
-                                // NOTE: This value may be altered by stepper algorithm during execution.
+    float entry_speed_sqr;          // The current planned entry speed at block junction in (mm/min)^2
+    float max_entry_speed_sqr;      // Maximum allowable entry speed based on the minimum of junction limit and
+                                    // neighboring nominal speeds with overrides in (mm/min)^2
+    float acceleration;             // Axis-limit adjusted line acceleration in (mm/min^2). Does not change.
+    float millimeters;              // The remaining distance for this block to be executed in (mm).
+                                    // NOTE: This value may be altered by stepper algorithm during execution.
 
     // Stored rate limiting data used by planner when changes occur.
-    float max_junction_speed_sqr; // Junction entry speed limit based on direction vectors in (mm/min)^2
-    float rapid_rate;             // Axis-limit adjusted maximum rate for this block direction in (mm/min)
-    float programmed_rate;        // Programmed rate of this block (mm/min).
+    float max_junction_speed_sqr;   // Junction entry speed limit based on direction vectors in (mm/min)^2
+    float rapid_rate;               // Axis-limit adjusted maximum rate for this block direction in (mm/min)
+    float programmed_rate;          // Programmed rate of this block (mm/min).
 
     // Stored spindle speed data used by spindle overrides and resuming methods.
-    spindle_t spindle;    // Block spindle speed. Copied from pl_line_data.
+    spindle_t spindle;              // Block spindle parameters. Copied from pl_line_data.
 
-    char *message;                // Message to be displayed when block is executed.
+    char *message;                  // Message to be displayed when block is executed.
     output_command_t *output_commands;
     struct plan_block *prev, *next; // Linked list pointers, DO NOT MOVE - these MUST be the last elements in the struct!
 } plan_block_t;
@@ -83,7 +81,7 @@ typedef struct plan_block {
 typedef struct {
     float feed_rate;                // Desired feed rate for line motion. Value is ignored, if rapid motion.
     //  float blending_tolerance;   // Motion blending tolerance
-    spindle_t spindle;              // Desired spindle speed through line motion.
+    spindle_t spindle;              // Desired spindle parameters, such as RPM, through line motion.
     planner_cond_t condition;       // Bitfield variable to indicate planner conditions. See defines above.
     gc_override_flags_t overrides;  // Block bitfield variable for overrides
     int32_t line_number;            // Desired line number to report when executing.
@@ -143,6 +141,6 @@ uint_fast16_t plan_get_block_buffer_available (void);
 // Returns the status of the block ring buffer. True, if buffer is full.
 bool plan_check_full_buffer (void);
 
-void plan_feed_override (uint_fast8_t feed_override, uint_fast8_t rapid_override);
+void plan_feed_override (override_t feed_override, override_t rapid_override);
 
 #endif

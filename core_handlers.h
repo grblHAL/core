@@ -43,7 +43,7 @@ typedef enum {
     OverrideChanged_FanState = 0
 } override_changed_t;
 
-/* TODO: add to grbl pointers so that a different formatting (xml, json etc) of reports may be implemented by driver?
+/* TODO: add to grbl pointers so that a different formatting (xml, json etc) of reports may be implemented by a plugin?
 typedef struct {
     status_code_t (*report_status_message)(status_code_t status_code);
     alarm_code_t (*report_alarm_message)(alarm_code_t alarm_code);
@@ -67,8 +67,8 @@ typedef message_code_t (*feedback_message_ptr)(message_code_t message_code);
 
 typedef struct {
     setting_output_ptr setting;
-    status_message_ptr status_message;
-    feedback_message_ptr feedback_message;
+    status_message_ptr status_message;      //<! Prints system status messages.
+    feedback_message_ptr feedback_message;  //<! Prints miscellaneous feedback messages.
 } report_t;
 
 // Core event handler and other entry points.
@@ -79,7 +79,7 @@ typedef bool (*protocol_enqueue_realtime_command_ptr)(char c);
 
 typedef void (*on_state_change_ptr)(sys_state_t state);
 typedef void (*on_override_changed_ptr)(override_changed_t override);
-typedef void (*on_spindle_programmed_ptr)(spindle_state_t spindle, float rpm, spindle_rpm_mode_t mode);
+typedef void (*on_spindle_programmed_ptr)(spindle_ptrs_t *spindle, spindle_state_t state, float rpm, spindle_rpm_mode_t mode);
 typedef void (*on_program_completed_ptr)(program_flow_t program_flow, bool check_mode);
 typedef void (*on_execute_realtime_ptr)(sys_state_t state);
 typedef void (*on_unknown_accessory_override_ptr)(uint8_t cmd);
@@ -97,10 +97,12 @@ typedef void (*on_homing_completed_ptr)(void);
 typedef bool (*on_probe_fixture_ptr)(tool_data_t *tool, bool at_g59_3, bool on);
 typedef bool (*on_probe_start_ptr)(axes_signals_t axes, float *target, plan_line_data_t *pl_data);
 typedef void (*on_probe_completed_ptr)(void);
+typedef void (*on_tool_selected_ptr)(tool_data_t *tool);
 typedef void (*on_toolchange_ack_ptr)(void);
 typedef void (*on_reset_ptr)(void);
 typedef void (*on_jog_cancel_ptr)(sys_state_t state);
-typedef bool (*on_spindle_select_ptr)(spindle_id_t spindle_id);
+typedef bool (*on_spindle_select_ptr)(spindle_ptrs_t *spindle);
+typedef void (*on_spindle_selected_ptr)(spindle_ptrs_t *spindle);
 typedef status_code_t (*on_unknown_sys_command_ptr)(sys_state_t state, char *line); // return Status_Unhandled.
 typedef status_code_t (*on_user_command_ptr)(char *line);
 typedef sys_commands_t *(*on_get_commands_ptr)(void);
@@ -126,7 +128,7 @@ typedef struct {
     on_realtime_report_ptr on_realtime_report;
     on_unknown_feedback_message_ptr on_unknown_feedback_message;
     on_unknown_realtime_cmd_ptr on_unknown_realtime_cmd;
-    on_unknown_sys_command_ptr on_unknown_sys_command; // return Status_Unhandled if not handled.
+    on_unknown_sys_command_ptr on_unknown_sys_command;  //!< return Status_Unhandled if not handled.
     on_get_commands_ptr on_get_commands;
     on_user_command_ptr on_user_command;
     on_stream_changed_ptr on_stream_changed;
@@ -135,11 +137,13 @@ typedef struct {
     on_probe_fixture_ptr on_probe_fixture;
     on_probe_start_ptr on_probe_start;
     on_probe_completed_ptr on_probe_completed;
-    on_toolchange_ack_ptr on_toolchange_ack; // Called from interrupt context.
-    on_jog_cancel_ptr on_jog_cancel; // Called from interrupt context.
+    on_tool_selected_ptr on_tool_selected;              //!< Called prior to executing M6 or after executing M61.
+    on_toolchange_ack_ptr on_toolchange_ack;            //!< Called from interrupt context.
+    on_jog_cancel_ptr on_jog_cancel;                    //!< Called from interrupt context.
     on_laser_ppi_enable_ptr on_laser_ppi_enable;
-    on_spindle_select_ptr on_spindle_select;
-    on_reset_ptr on_reset; // Called from interrupt context.
+    on_spindle_select_ptr on_spindle_select;            //!<  Called before spindle is selected, hook in HAL overrides here
+    on_spindle_selected_ptr on_spindle_selected;        //!<  Called when spindle is selected, do not change HAL pointers here!
+    on_reset_ptr on_reset;                              //!< Called from interrupt context.
     // core entry points - set up by core before driver_init() is called.
     enqueue_gcode_ptr enqueue_gcode;
     enqueue_realtime_command_ptr enqueue_realtime_command;

@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2021 Terje Io
+  Copyright (c) 2018-2023 Terje Io
   Copyright (c) 2016 Sungeun K. Jeon
 
   Grbl is free software: you can redistribute it and/or modify
@@ -67,7 +67,7 @@ void sleep_check()
     // has any powered components enabled.
     // NOTE: With overrides or in laser mode, modal spindle and coolant state are not guaranteed. Need
     // to directly monitor and record running state during parking to ensure proper function.
-    if (!sys.steppers_deenergize && (gc_state.modal.spindle.value || gc_state.modal.coolant.value)) {
+    if (!sys.steppers_deenergize && (gc_state.modal.spindle.state.value || gc_state.modal.coolant.value)) {
         switch(state_get()) {
 
             case STATE_IDLE:

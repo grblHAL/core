@@ -53,6 +53,8 @@ static uint8_t wco_counter = 0;      // Tracks when to add work coordinate offse
 static const char vbar[2] = { '|', '\0' };
 
 static bool report_setting (const setting_detail_t *setting, uint_fast16_t offset, void *data);
+static status_code_t report_status_message (status_code_t status_code);
+static message_code_t report_feedback_message (message_code_t id);
 
 static const report_t report_fns = {
     .setting = report_setting,
@@ -230,7 +232,7 @@ void report_init_fns (void)
 // operation. Errors events can originate from the g-code parser, settings module, or asynchronously
 // from a critical error, such as a triggered hard limit. Interface should always monitor for these
 // responses.
-status_code_t report_status_message (status_code_t status_code)
+static status_code_t report_status_message (status_code_t status_code)
 {
     switch(status_code) {
 
@@ -284,7 +286,7 @@ void report_message (const char *msg, message_type_t type)
 // messages such as setup warnings, switch toggling, and how to exit alarms.
 // NOTE: For interfaces, messages are always placed within brackets. And if silent mode
 // is installed, the message number codes are less than zero.
-message_code_t report_feedback_message (message_code_t id)
+static message_code_t report_feedback_message (message_code_t id)
 {
     const char *msg = NULL;
     uint_fast16_t idx = 0;
@@ -681,7 +683,7 @@ void report_gcode_modes (void)
 
 #endif
 
-    if(sys.mode == Mode_Lathe)
+    if(settings.mode == Mode_Lathe)
         hal.stream.write(gc_state.modal.diameter_mode ? " G7" : " G8");
 
     hal.stream.write(" G");
@@ -694,8 +696,8 @@ void report_gcode_modes (void)
     hal.stream.write(" G");
     hal.stream.write(uitoa((uint32_t)(94 - gc_state.modal.feed_mode)));
 
-    if(sys.mode == Mode_Lathe && hal.spindle.cap.variable)
-        hal.stream.write(gc_state.modal.spindle_rpm_mode == SpindleSpeedMode_RPM ? " G97" : " G96");
+    if(settings.mode == Mode_Lathe && gc_spindle_get()->cap.variable)
+        hal.stream.write(gc_state.modal.spindle.rpm_mode == SpindleSpeedMode_RPM ? " G97" : " G96");
 
 #if COMPATIBILITY_LEVEL < 10
 
@@ -747,7 +749,7 @@ void report_gcode_modes (void)
         }
     }
 
-    hal.stream.write(gc_state.modal.spindle.on ? (gc_state.modal.spindle.ccw ? " M4" : " M3") : " M5");
+    hal.stream.write(gc_state.modal.spindle.state.on ? (gc_state.modal.spindle.state.ccw ? " M4" : " M3") : " M5");
 
     if(gc_state.tool_change)
         hal.stream.write(" M6");
@@ -779,7 +781,7 @@ void report_gcode_modes (void)
 
     hal.stream.write(appendbuf(2, " F", get_rate_value(gc_state.feed_rate)));
 
-    if(hal.spindle.cap.variable)
+    if(gc_spindle_get()->cap.variable)
         hal.stream.write(appendbuf(2, " S", ftoa(gc_state.spindle.rpm, N_DECIMAL_RPMVALUE)));
 
     hal.stream.write("]" ASCII_EOL);
@@ -1177,18 +1179,40 @@ void report_realtime_status (void)
             hal.stream.write_all(appendbuf(2, "|Ln:", uitoa((uint32_t)cur_block->line_number)));
     }
 
-    spindle_state_t sp_state = hal.spindle.get_state();
+    spindle_ptrs_t *spindle_0;
+    spindle_state_t spindle_0_state;
+
+    spindle_0 = spindle_get(0);
+    spindle_0_state = spindle_0->get_state();
 
     // Report realtime feed speed
     if(settings.status_report.feed_speed) {
-        if(hal.spindle.cap.variable) {
+        if(spindle_0->cap.variable) {
             hal.stream.write_all(appendbuf(2, "|FS:", get_rate_value(st_get_realtime_rate())));
-            hal.stream.write_all(appendbuf(2, ",", uitoa(sp_state.on ? lroundf(sys.spindle_rpm) : 0)));
-            if(hal.spindle.get_data /* && sys.mpg_mode */)
-                hal.stream.write_all(appendbuf(2, ",", uitoa(lroundf(hal.spindle.get_data(SpindleData_RPM)->rpm))));
+            hal.stream.write_all(appendbuf(2, ",", uitoa(spindle_0_state.on ? lroundf(spindle_0->param->rpm_overridden) : 0)));
+            if(spindle_0->get_data /* && sys.mpg_mode */)
+                hal.stream.write_all(appendbuf(2, ",", uitoa(lroundf(spindle_0->get_data(SpindleData_RPM)->rpm))));
         } else
             hal.stream.write_all(appendbuf(2, "|F:", get_rate_value(st_get_realtime_rate())));
     }
+
+#if N_SYS_SPINDLE > 1
+
+    for(idx = 1; idx < N_SYS_SPINDLE; idx++) {
+
+        spindle_ptrs_t *spindle_n;
+        spindle_state_t spindle_n_state;
+
+        if((spindle_n = spindle_get(idx))) {
+            spindle_n_state = spindle_n->get_state();
+            hal.stream.write_all(appendbuf(3, "|SP", uitoa(idx), ":"));
+            hal.stream.write_all(appendbuf(3, uitoa(spindle_n_state.on ? lroundf(spindle_n->param->rpm_overridden) : 0), ",,", spindle_n_state.on ? (spindle_n_state.ccw ? "C" : "S") : ""));
+            if(settings.status_report.overrides)
+                hal.stream.write_all(appendbuf(2, ",", uitoa(spindle_n->param->override_pct)));
+        }
+    }
+
+#endif
 
     if(settings.status_report.pin_state) {
 
@@ -1236,7 +1260,7 @@ void report_realtime_status (void)
         if (override_counter > 0 && !sys.report.overrides)
             override_counter--;
         else if((sys.report.overrides = !sys.report.wco)) {
-            sys.report.spindle = sys.report.spindle || hal.spindle.get_state().on;
+            sys.report.spindle = sys.report.spindle || spindle_0_state.on;
             sys.report.coolant = sys.report.coolant || hal.coolant.get_state().value != 0;
             override_counter = state_get() & (STATE_HOMING|STATE_CYCLE|STATE_HOLD|STATE_JOG|STATE_SAFETY_DOOR)
                                  ? (REPORT_OVERRIDE_REFRESH_BUSY_COUNT - 1) // Reset counter for slow refresh
@@ -1260,7 +1284,7 @@ void report_realtime_status (void)
         if(sys.report.overrides) {
             hal.stream.write_all(appendbuf(2, "|Ov:", uitoa((uint32_t)sys.override.feed_rate)));
             hal.stream.write_all(appendbuf(2, ",", uitoa((uint32_t)sys.override.rapid_rate)));
-            hal.stream.write_all(appendbuf(2, ",", uitoa((uint32_t)sys.override.spindle_rpm)));
+            hal.stream.write_all(appendbuf(2, ",", uitoa((uint32_t)spindle_0->param->override_pct)));
         }
 
         if(sys.report.spindle || sys.report.coolant || sys.report.tool || gc_state.tool_change) {
@@ -1271,12 +1295,12 @@ void report_realtime_status (void)
 
             strcpy(buf, "|A:");
 
-            if (sp_state.on)
+            if (spindle_0_state.on)
 
-                *append++ = sp_state.ccw ? 'C' : 'S';
+                *append++ = spindle_0_state.ccw ? 'C' : 'S';
 
 #if COMPATIBILITY_LEVEL == 0
-            if(sp_state.encoder_error && hal.driver_cap.spindle_sync)
+            if(spindle_0_state.encoder_error && hal.driver_cap.spindle_sync)
                 *append++ = 'E';
 #endif
 
@@ -1309,7 +1333,7 @@ void report_realtime_status (void)
                 hal.stream.write_all(appendbuf(2, ",", uitoa(sys.homed.mask)));
         }
 
-        if(sys.report.xmode && sys.mode == Mode_Lathe)
+        if(sys.report.xmode && settings.mode == Mode_Lathe)
             hal.stream.write_all(gc_state.modal.diameter_mode ? "|D:1" : "|D:0");
 
         if(sys.report.tool)
@@ -2038,23 +2062,25 @@ status_code_t report_current_limit_state (sys_state_t state, char *args)
 // Prints spindle data (encoder pulse and index count, angular position).
 status_code_t report_spindle_data (sys_state_t state, char *args)
 {
-    if(hal.spindle.get_data) {
+    spindle_ptrs_t *spindle = gc_spindle_get();
 
-        float apos = hal.spindle.get_data(SpindleData_AngularPosition)->angular_position;
-        spindle_data_t *spindle = hal.spindle.get_data(SpindleData_Counters);
+    if(spindle->get_data) {
+
+        float apos = spindle->get_data(SpindleData_AngularPosition)->angular_position;
+        spindle_data_t *data = spindle->get_data(SpindleData_Counters);
 
         hal.stream.write("[SPINDLE:");
-        hal.stream.write(uitoa(spindle->index_count));
+        hal.stream.write(uitoa(data->index_count));
         hal.stream.write(",");
-        hal.stream.write(uitoa(spindle->pulse_count));
+        hal.stream.write(uitoa(data->pulse_count));
         hal.stream.write(",");
-        hal.stream.write(uitoa(spindle->error_count));
+        hal.stream.write(uitoa(data->error_count));
         hal.stream.write(",");
         hal.stream.write(ftoa(apos, 3));
         hal.stream.write("]" ASCII_EOL);
     }
 
-    return hal.spindle.get_data ? Status_OK : Status_InvalidStatement;
+    return spindle->get_data ? Status_OK : Status_InvalidStatement;
 }
 
 static const char *get_pinname (pin_function_t function)
@@ -2120,6 +2146,30 @@ status_code_t report_time (void)
     }
 
     return ok ? Status_OK : Status_InvalidStatement;
+}
+
+static void report_spindle (spindle_info_t *spindle)
+{
+    hal.stream.write(uitoa(spindle->id));
+    hal.stream.write(" - ");
+    hal.stream.write(spindle->name);
+    if(spindle->enabled) {
+#if N_SPINDLE > 1
+        hal.stream.write(", enabled as spindle ");
+        hal.stream.write(uitoa(spindle->num));
+#else
+        hal.stream.write(", active");
+#endif
+    }
+    hal.stream.write(ASCII_EOL);
+}
+
+status_code_t report_spindles (void)
+{
+    if(!spindle_enumerate_spindles(report_spindle))
+        hal.stream.write("No spindles registered." ASCII_EOL);
+
+    return Status_OK;
 }
 
 void report_pid_log (void)

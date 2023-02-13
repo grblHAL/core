@@ -1,10 +1,49 @@
 ## grblHAL changelog
 
+<a name="20230213"/>Build 20230213
+
+Core:
+
+* First phase of spindle handling refactoring with the aim to support multiple \(up to four\) _simultaneously_ active spindles.
+Spindle selection by tool number has also been implemented as an option. More details can be found in the [spindle plugin readme](https://github.com/grblHAL/Plugins_spindle/blob/master/README.md).  
+__NOTE:__ This change is quite large, bugs may have sneaked in. Please report any issues encountered ASAP.
+
+Drivers:
+
+* All: updated for spindle handling refactoring.
+
+* iMXRT1062: updated readme for links to updated/patched libraries for SD card \(uSDFS\) and ethernet. User should switch to the updated/patched libraries if used.
+
+* MSP432P401R: fix for missing file include and serial stream registration.
+
+* RP2040: switched to SDK v1.5.0. Added new settings for RP2040, `$78` for wifi country code and `$337` for AP BSSID of AP to connect to. Both are optional.
+
+* STMF4xx: fix for issue [#110](https://github.com/grblHAL/STM32F4xx/issues/110), incorrect NVIC grouping.
+
+Plugins:
+
+* SD Card: fixed some minor inconsistencies.
+
+* Spindle: updated for spindle handling refactoring. Improved ModBus exception handling in some.  
+New spindle select settings and improved functionality, see the [spindle plugin readme](https://github.com/grblHAL/Plugins_spindle/blob/master/README.md) for more.
+
+* Odometer and PPI: updated for spindle handling refactoring.
+
+* Networking: wifi \(ESP32 and RP2040\), changed networking settings from `$30x` range to `$32x` range for station mode.  
+Added [MQTT](https://en.wikipedia.org/wiki/MQTT) API for plugin developers, example code using this can be found [here](https://github.com/grblHAL/Templates/tree/master/my_plugin/MQTT%20example).  
+__NOTE:__ networking and other plugin settings will be reset on update for ESP32 and RP2040, backup and restore.  
+
+---
+
 <a name="20230129"/>Build 20230129
 
 Core:
 
 * Fixed regression in tool change handling related to refactoring of _config.h_ in build 20230125.
+
+Drivers:
+
+* ESP32: Added all supported VFD spindles as options in CMakeLists.txt, some code cleanup.
 
 ---
 
@@ -96,7 +135,7 @@ Core:
 
 * Added single axis homing commands for U and V, remapping of ABC homing commands to UVW when configured.
 
-Plugins
+Plugins:
 
 * WebUI and Networking: fixes for compiler warnings.
 

@@ -64,3 +64,20 @@ alarm_details_t *alarms_get_details (void)
 {
     return &details;
 }
+
+const char *alarms_get_description (alarm_code_t id)
+{
+    uint_fast16_t n_alarms;
+    const char *description = NULL;
+    alarm_details_t *details = grbl.on_get_alarms();
+
+    do {
+        n_alarms = details->n_alarms;
+        do {
+            if(details->alarms[--n_alarms].id == id)
+                description = details->alarms[n_alarms].description;
+        } while(description == NULL && n_alarms);
+    } while(description == NULL && (details = details->next));
+
+    return description;
+}

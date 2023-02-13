@@ -61,8 +61,9 @@ typedef struct alarm_details {
 
 typedef alarm_details_t *(*on_get_alarms_ptr)(void);
 
-void alarms_register (alarm_details_t *details);
 alarm_details_t *alarms_get_details (void);
+const char *alarms_get_description (alarm_code_t id);
+void alarms_register (alarm_details_t *details);
 
 #endif
 

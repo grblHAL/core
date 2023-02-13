@@ -58,6 +58,13 @@ If more than 3 axes are configured a compliant driver and board map file is need
 #define N_SPINDLE 1
 #endif
 
+/*! \def N_SYS_SPINDLE
+\brief Defines number of simultaneously active spindles supported - minimum 1 (none), maximum 8.
+*/
+#if !defined N_SYS_SPINDLE || defined __DOXYGEN__
+#define N_SYS_SPINDLE 1
+#endif
+
 /*! \def BUILD_INFO
 \brief Defines string to be output as part of the `$I` or `$I+` command response.
 */
@@ -871,19 +878,6 @@ not throw an alarm message.
 #if !defined DEFAULT_CHECK_LIMITS_AT_INIT || defined __DOXYGEN__
 #define DEFAULT_CHECK_LIMITS_AT_INIT Off
 #endif
-/*! \def DEFAULT_LIMITS_TWO_SWITCHES_ON_AXES
-\brief
-If your machine has two limits switches wired in parallel to one axis, you will need to enable
-this feature. Since the two switches are sharing a single pin, there is no way for grblHAL to tell
-which one is enabled. This option only effects homing, where if a limit is engaged, grblHAL will
-alarm out and force the user to manually disengage the limit switch. Otherwise, if you have one
-limit switch for each axis, don't enable this option. By keeping it disabled, you can perform a
-homing cycle while on the limit switch and not have to move the machine off of it.
-*/
-#if !defined DEFAULT_LIMITS_TWO_SWITCHES_ON_AXES || defined __DOXYGEN__
-#define DEFAULT_LIMITS_TWO_SWITCHES_ON_AXES Off // Default disabled. Set to \ref On or 1 to enable.
-#endif
-///@}
 
 /*! @name Group_Limits_DualAxis
 \brief Dual axis limits settings (Group_Limits_DualAxis)
@@ -1126,15 +1120,15 @@ Requires homing cycles to be defined by \ref DEFAULT_HOMING_CYCLE_0 - \ref DEFAU
 #define DEFAULT_HOMING_ENABLE Off // Default disabled. Set to \ref On or 1 to enable.
 #endif
 
-/*! /def HOMING_SINGLE_AXIS_COMMANDS
+/*! /def DEFAULT_HOMING_SINGLE_AXIS_COMMANDS
 \brief Enables single axis homing commands.
 `$HX`, `$HY`, `$HZ` etc. for homing the respective axes.The full homing
 cycle is still invoked by the `$H` command. This is disabled by default.
 If you have a two-axis machine, _DON'T USE THIS_. Instead, just alter the homing cycle for two-axes.
 \internal Bit 1 in settings.homing.flags.
 */
-#if !defined HOMING_SINGLE_AXIS_COMMANDS || defined __DOXYGEN__
-#define HOMING_SINGLE_AXIS_COMMANDS Off // Default disabled. Set to \ref On or 1 to enable.
+#if !defined DEFAULT_HOMING_SINGLE_AXIS_COMMANDS || defined __DOXYGEN__
+#define DEFAULT_HOMING_SINGLE_AXIS_COMMANDS Off // Default disabled. Set to \ref On or 1 to enable.
 #endif
 
 /*! /def DEFAULT_HOMING_INIT_LOCK
@@ -1148,16 +1142,31 @@ mainly a safety feature to remind the user to home, since position is unknown to
 #define DEFAULT_HOMING_INIT_LOCK Off // Default disabled. Set to \ref On or 1 to enable.
 #endif
 
-/*! /def HOMING_FORCE_SET_ORIGIN
+/*! /def DEFAULT_HOMING_FORCE_SET_ORIGIN
 \brief
 After homing, grblHAL will set by default the entire machine space into negative space, as is typical
 for professional CNC machines, regardless of where the limit switches are located. Set this
 define to \ref On or 1 to force grblHAL to always set the machine origin at the homed location despite switch orientation.
 \internal Bit 3 in settings.homing.flags.
 */
-#if !defined HOMING_FORCE_SET_ORIGIN || defined __DOXYGEN__
-#define HOMING_FORCE_SET_ORIGIN Off // Default disabled. Set to \ref On or 1 to enable.
+#if !defined DEFAULT_HOMING_FORCE_SET_ORIGIN || defined __DOXYGEN__
+#define DEFAULT_HOMING_FORCE_SET_ORIGIN Off // Default disabled. Set to \ref On or 1 to enable.
 #endif
+
+/*! \def DEFAULT_LIMITS_TWO_SWITCHES_ON_AXES
+\brief
+If your machine has two limits switches wired in parallel to one axis, you will need to enable
+this feature. Since the two switches are sharing a single pin, there is no way for grblHAL to tell
+which one is enabled. This option only effects homing, where if a limit is engaged, grblHAL will
+alarm out and force the user to manually disengage the limit switch. Otherwise, if you have one
+limit switch for each axis, don't enable this option. By keeping it disabled, you can perform a
+homing cycle while on the limit switch and not have to move the machine off of it.
+\internal Bit 4 in settings.limits.flags.
+*/
+#if !defined DEFAULT_LIMITS_TWO_SWITCHES_ON_AXES || defined __DOXYGEN__
+#define DEFAULT_LIMITS_TWO_SWITCHES_ON_AXES Off // Default disabled. Set to \ref On or 1 to enable.
+#endif
+///@}
 
 /*! /def DEFAULT_HOMING_ALLOW_MANUAL
 \brief
@@ -1365,7 +1374,7 @@ greater.
 // pull-out position, power-up with a time-out, and plunge back to the original position at the
 // slower pull-out rate.
 // NOTE: Still a work-in-progress. Machine coordinates must be in all negative space and
-// does not work with HOMING_FORCE_SET_ORIGIN enabled. Parking motion also moves only in
+// does not work with DEFAULT_HOMING_FORCE_SET_ORIGIN enabled. Parking motion also moves only in
 // positive direction.
  *  // Default disabled. Uncomment to enable.
 */
@@ -1571,7 +1580,7 @@ second motor for ganged/auto squared axes.
 */
 ///@{
 #if !defined DEFAULT_STEP_PULSE_DELAY || defined __DOXYGEN__
-#define DEFAULT_STEP_PULSE_DELAY 5.0f // uncomment to set default > 0.0f
+#define DEFAULT_STEP_PULSE_DELAY 0.0f
 #endif
 ///@}
 
@@ -1778,6 +1787,21 @@ __NOTE:__ Must be a positive values.
 #define N_TOOLS 16
 #endif
 
+#if N_SYS_SPINDLE > N_SPINDLE
+#undef N_SYS_SPINDLE
+#define N_SYS_SPINDLE N_SPINDLE
+#endif
+
+#if N_SYS_SPINDLE < 1
+#undef N_SYS_SPINDLE
+#define N_SYS_SPINDLE 1
+#endif
+
+#if N_SYS_SPINDLE > 8
+#undef N_SYS_SPINDLE
+#define N_SYS_SPINDLE 8
+#endif
+
 #if (REPORT_WCO_REFRESH_BUSY_COUNT < REPORT_WCO_REFRESH_IDLE_COUNT)
   #error "WCO busy refresh is less than idle refresh."
 #endif
@@ -1822,13 +1846,13 @@ __NOTE:__ Must be a positive values.
 
 #if DEFAULT_PARKING_ENABLE > 0
   #if DEFAULT_HOMING_FORCE_SET_ORIGIN > 0
-    #error "HOMING_FORCE_SET_ORIGIN is not supported with PARKING_ENABLE at this time."
+    #error "DEFAULT_HOMING_FORCE_SET_ORIGIN is not supported with DEFAULT_PARKING_ENABLE at this time."
   #endif
 #endif
 
 #if DEFAULT_ENABLE_PARKING_OVERRIDE_CONTROL > 0
   #if DEFAULT_PARKING_ENABLE < 1
-    #error "ENABLE_PARKING_OVERRIDE_CONTROL must be enabled with PARKING_ENABLE."
+    #error "DEFAULT_ENABLE_PARKING_OVERRIDE_CONTROL must be enabled with DEFAULT_PARKING_ENABLE."
   #endif
 #endif
 

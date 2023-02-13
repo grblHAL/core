@@ -196,8 +196,19 @@ typedef enum {
     Override_Parking = 56           //!< 56 - M56
 } override_mode_t;
 
-/*! Modal Group M10: User/driver/plugin defined M commands
+/*! Modal Group M10: i/o control */
 
+typedef enum {
+    IoMCode_OutputOnSynced = 62,        //!< 62 - M62
+    IoMCode_OutputOffSynced = 63,       //!< 63 - M63
+    IoMCode_OutputOnImmediate = 64,     //!< 64 - M64
+    IoMCode_OutputOffImmediate = 65,    //!< 65 - M65
+    IoMCode_WaitOnInput = 66,           //!< 66 - M66
+    IoMCode_AnalogOutSynced = 67,       //!< 67 - M67
+    IoMCode_AnalogOutImmediate = 68,    //!< 68 - M68
+} io_mcode_t;
+
+/*! Modal Group M10: User/driver/plugin defined M commands
 __NOTE:__ Not used by the core, may be used by private user code, drivers or plugins.
 */
 typedef enum {
@@ -213,8 +224,8 @@ typedef enum {
     OpenPNP_GetCurrentPosition = 114,   //!< 114 - M114
     OpenPNP_FirmwareInfo = 115,         //!< 115 - M115
     Trinamic_DebugReport = 122,         //!< 122 - M122, Marlin format
-    Trinamic_ReadRegister = 123,        //!< 123 - M123,
-    Trinamic_WriteRegister = 124,       //!< 124 - M124,
+    Trinamic_ReadRegister = 123,        //!< 123 - M123
+    Trinamic_WriteRegister = 124,       //!< 124 - M124
     LaserPPI_Enable = 126,              //!< 126 - M126
     LaserPPI_Rate = 127,                //!< 127 - M127
     LaserPPI_PulseLength = 128,         //!< 128 - M128
@@ -405,6 +416,11 @@ typedef union {
     };
 } parameter_words_t;
 
+typedef struct {
+    spindle_state_t state;          //!< {M3,M4,M5}
+    spindle_rpm_mode_t rpm_mode;    //!< {G96,G97}
+} spindle_mode_t;
+
 // NOTE: When this struct is zeroed, the above defines set the defaults for the system.
 typedef struct {
     motion_mode_t motion;                //!< {G0,G1,G2,G3,G38.2,G80}
@@ -420,9 +436,8 @@ typedef struct {
     // control_mode_t control;           //!< {G61} NOTE: Don't track. Only default supported.
     program_flow_t program_flow;         //!< {M0,M1,M2,M30,M60}
     coolant_state_t coolant;             //!< {M7,M8,M9}
-    spindle_state_t spindle;             //!< {M3,M4,M5}
+    spindle_mode_t spindle;              //!< {M3,M4,M5 and G96,G97}
     gc_override_flags_t override_ctrl;   //!< {M48,M49,M50,M51,M53,M56}
-    spindle_rpm_mode_t spindle_rpm_mode; //!< {G96,G97}
     cc_retract_mode_t retract_mode;      //!< {G98,G99}
     bool scaling_active;                 //!< {G50,G51}
     bool canned_cycle_active;
@@ -472,23 +487,14 @@ typedef struct {
     uint32_t tool;          //!< Tool number
 } tool_data_t;
 
-// Data used for Constant Surface Speed (CSS) mode calculations.
 typedef struct {
-    float surface_speed;    //!< Surface speed in millimeters/min
-    float target_rpm;       //!< Target RPM at end of movement
-    float max_rpm;          //!< Maximum spindle RPM
-    float tool_offset;      //!< Tool offset
-    uint_fast8_t axis;      //!< Linear (tool) axis
-    bool active;
-} css_data_t;
-
-typedef struct {
-    float rpm;      //!< RPM
-    css_data_t css; //!< Data used for Constant Surface Speed Mode calculations
+    float rpm;                  //!< Spindle speed
+    spindle_state_t state;
+    spindle_css_data_t *css;    //!< Data used for Constant Surface Speed Mode calculations
+    spindle_ptrs_t *hal;
 } spindle_t;
 
 /*! \brief Parser state
-
 
 */
 typedef struct {
@@ -541,8 +547,8 @@ typedef struct {
     gc_values_t values;                 //!< Parameter values for block.
     parameter_words_t words;            //!< Bitfield for tracking found parameter values.
     output_command_t output_command;    //!< Details about M62-M68 output command to execute if present in block.
-    uint32_t arc_turns;                  //
-    int32_t spindle_id;                 //!< Spindle to control, -1 for all
+    uint32_t arc_turns;                 //
+    spindle_ptrs_t *spindle;            //!< Spindle to control, NULL for all
 } parser_block_t;
 
 // Initialize the parser
@@ -571,6 +577,8 @@ float *gc_get_scaling (void);
 
 // Get current axis offset.
 float gc_get_offset (uint_fast8_t idx);
+
+spindle_ptrs_t *gc_spindle_get (void);
 
 void gc_spindle_off (void);
 void gc_coolant_off (void);

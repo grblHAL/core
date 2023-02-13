@@ -132,6 +132,13 @@
 #define I2C_STROBE_ENABLE   0
 #endif
 
+#if DISPLAY_ENABLE == 2
+#ifdef I2C_ENABLE
+#undef I2C_ENABLE
+#endif
+#define I2C_ENABLE 1
+#endif
+
 #ifndef EEPROM_ENABLE
 #define EEPROM_ENABLE       0
 #endif
@@ -333,10 +340,13 @@
 #define FTP_ENABLE          0
 #endif
 #ifndef MDNS_ENABLE
-#define MDNS_ENABLE             0
+#define MDNS_ENABLE         0
 #endif
 #ifndef SSDP_ENABLE
-#define SSDP_ENABLE             0
+#define SSDP_ENABLE         0
+#endif
+#ifndef MQTT_ENABLE
+#define MQTT_ENABLE         0
 #endif
 
 #if ETHERNET_ENABLE || WIFI_ENABLE
@@ -363,6 +373,9 @@
 #endif
 #ifndef NETWORK_HTTP_PORT
 #define NETWORK_HTTP_PORT       80
+#endif
+#ifndef NETWORK_MQTT_PORT
+#define NETWORK_MQTT_PORT       1883
 #endif
 #ifndef NETWORK_WEBSOCKET_PORT
 #if HTTP_ENABLE

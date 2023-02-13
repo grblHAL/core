@@ -162,7 +162,7 @@ typedef enum {
 
 // Optional driver implemented settings
 
-    // Normally used for Ethernet or WiFi Station
+    // Normally used for Ethernet
     Setting_Hostname = 300,
     Setting_IpMode = 301,
     Setting_IpAddress = 302,
@@ -184,6 +184,7 @@ typedef enum {
     Setting_WebSocketPort2 = 317,
     Setting_FtpPort2 = 318,
 
+    // Normally used for WiFi Station
     Setting_Hostname3 = 320,
     Setting_IpMode3 = 321,
     Setting_IpAddress3 = 322,
@@ -201,6 +202,8 @@ typedef enum {
     Setting_NTPServerURI_3 = 334,
     Setting_Timezone = 335,
     Setting_DSTActive = 336,
+
+    Setting_Wifi_AP_BSSID = 337,
 
     Setting_TrinamicDriver = 338,
     Setting_TrinamicHoming = 339,
@@ -299,6 +302,11 @@ typedef enum {
     Setting_VFD_20 = 472,
     Setting_VFD_21 = 473,
 
+    Setting_VFD_ModbusAddress0 = 476,
+    Setting_VFD_ModbusAddress1 = 477,
+    Setting_VFD_ModbusAddress2 = 478,
+    Setting_VFD_ModbusAddress3 = 479,
+
     Setting_Fan0OffDelay = 480,
     Setting_AutoReportInterval = 481,
     Setting_TimeZoneOffset = 482,
@@ -325,6 +333,29 @@ typedef enum {
     Setting_MacroPort7 = 507,
     Setting_MacroPort8 = 508,
     Setting_MacroPort9 = 509,
+
+    Setting_SpindleEnable0 = 510,
+    Setting_SpindleEnable1 = 511,
+    Setting_SpindleEnable2 = 512,
+    Setting_SpindleEnable3 = 513,
+    Setting_SpindleEnable4 = 514,
+    Setting_SpindleEnable5 = 515,
+    Setting_SpindleEnable6 = 516,
+    Setting_SpindleEnable7 = 517,
+
+    Setting_SpindleToolStart0 = 520,
+    Setting_SpindleToolStart1 = 521,
+    Setting_SpindleToolStart2 = 522,
+    Setting_SpindleToolStart3 = 523,
+    Setting_SpindleToolStart4 = 524,
+    Setting_SpindleToolStart5 = 525,
+    Setting_SpindleToolStart6 = 526,
+    Setting_SpindleToolStart7 = 527,
+
+    Setting_MQTTBrokerIpAddress = 530,
+    Setting_MQTTBrokerPort      = 531,
+    Setting_MQTTBrokerUserName  = 532,
+    Setting_MQTTBrokerPassword  = 533,
 
     Setting_SettingsMax,
     Setting_SettingsAll = Setting_SettingsMax,
@@ -770,6 +801,14 @@ typedef struct {
     const char *description;
 } setting_descr_t;
 
+typedef union {
+    uint8_t value;
+    struct {
+        uint8_t spindle    :1,
+                unassigned :7;
+    };
+} settings_changed_flags_t;
+
 typedef status_code_t (*setting_set_int_ptr)(setting_id_t id, uint_fast16_t value);
 typedef status_code_t (*setting_set_float_ptr)(setting_id_t id, float value);
 typedef status_code_t (*setting_set_string_ptr)(setting_id_t id, char *value);
@@ -780,8 +819,9 @@ typedef bool (*setting_output_ptr)(const setting_detail_t *setting, uint_fast16_
 
 /*! \brief Pointer to callback function to be called when settings are loaded or changed.
 \param settings pointer to \a settings_t struct containing the settings.
+\param changed a \a settings_changed_flags_t union containing the changed setting groups.
 */
-typedef void (*settings_changed_ptr)(settings_t *settings);
+typedef void (*settings_changed_ptr)(settings_t *settings, settings_changed_flags_t changed);
 
 typedef void (*driver_settings_load_ptr)(void);
 typedef void (*driver_settings_save_ptr)(void);

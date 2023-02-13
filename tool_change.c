@@ -128,7 +128,7 @@ static bool restore (void)
         sync_position();
 
         coolant_sync(gc_state.modal.coolant);
-        spindle_restore(gc_state.modal.spindle, gc_state.spindle.rpm);
+        spindle_restore(spindle_get(0), gc_state.modal.spindle.state, gc_state.spindle.rpm);
 
         if(!settings.flags.no_restore_position_after_M6) {
             previous.values[plane.axis_linear] += gc_get_offset(plane.axis_linear);
@@ -162,7 +162,7 @@ static void execute_restore (sys_state_t state)
 
     change_completed();
 
-    report_feedback_message(Message_None);
+    grbl.report.feedback_message(Message_None);
 
     if(ok)
         system_set_exec_state_flag(EXEC_CYCLE_START);
@@ -196,6 +196,7 @@ static void execute_probe (sys_state_t state)
 
         plan_data.feed_rate = settings.tool_change.seek_rate;
         plan_data.condition.value = 0;
+        plan_data.spindle.state.value = 0;
         target.values[plane.axis_linear] -= settings.tool_change.probing_distance;
 
         if((ok = ok && mc_probe_cycle(target.values, &plan_data, flags) == GCProbe_Found))
@@ -217,7 +218,7 @@ static void execute_probe (sys_state_t state)
                 sys.tlo_reference[plane.axis_linear] = sys.probe_position[plane.axis_linear];
                 sys.tlo_reference_set.mask |= bit(plane.axis_linear);
                 sys.report.tlo_reference = On;
-                report_feedback_message(Message_ReferenceTLOEstablished);
+                grbl.report.feedback_message(Message_ReferenceTLOEstablished);
             } else
                 gc_set_tool_offset(ToolLengthOffset_EnableDynamic, plane.axis_linear,
                                     sys.probe_position[plane.axis_linear] - sys.tlo_reference[plane.axis_linear]);
@@ -332,7 +333,7 @@ static status_code_t tool_change (parser_state_t *parser_state)
     block_cycle_start = settings.tool_change.mode != ToolChange_SemiAutomatic;
 
     // Stop spindle and coolant.
-    hal.spindle.set_state((spindle_state_t){0}, 0.0f);
+    spindle_all_off();
     hal.coolant.set_state((coolant_state_t){0});
 
     execute_posted = false;
@@ -434,7 +435,7 @@ void tc_clear_tlo_reference (axes_signals_t homing_cycle)
 #else
         gc_get_plane_data(&plane, gc_state.modal.plane_select);
 #endif
-        if(homing_cycle.mask & (sys.mode == Mode_Lathe ? (X_AXIS_BIT|Z_AXIS_BIT) : bit(plane.axis_linear))) {
+        if(homing_cycle.mask & (settings.mode == Mode_Lathe ? (X_AXIS_BIT|Z_AXIS_BIT) : bit(plane.axis_linear))) {
             sys.report.tlo_reference = sys.tlo_reference_set.mask != 0;
             sys.tlo_reference_set.mask = 0;  // Invalidate tool length offset reference
         }

@@ -50,24 +50,25 @@ typedef struct st_block {
     char *message;                     //!< Message to be displayed when block is executed
     output_command_t *output_commands; //!< Output commands (linked list) to be performed when block is executed
     bool dynamic_rpm;                  //!< Tracks motions that require dynamic RPM adjustment
+    spindle_ptrs_t *spindle;           //!< Pointer to current spindle for motions that require dynamic RPM adjustment
     bool backlash_motion;
 } st_block_t;
 
 typedef struct st_segment {
-    uint_fast8_t id;                //!< Id may be used by driver to track changes
-    struct st_segment *next;        //!< Pointer to next element in cirular list of segments
-    st_block_t *exec_block;         //!< Pointer to the block data for the segment
-    uint32_t cycles_per_tick;       //!< Step distance traveled per ISR tick, aka step rate.
+    uint_fast8_t id;                    //!< Id may be used by driver to track changes
+    struct st_segment *next;            //!< Pointer to next element in cirular list of segments
+    st_block_t *exec_block;             //!< Pointer to the block data for the segment
+    uint32_t cycles_per_tick;           //!< Step distance traveled per ISR tick, aka step rate.
     float current_rate;
-    float target_position;          //!< Target position of segment relative to block start, used by spindle sync code
-    uint_fast16_t n_step;           //!< Number of step events to be executed for this segment
-    uint_fast16_t spindle_pwm;      //!< Spindle PWM to be set at the start of segment execution
-    float spindle_rpm;              //!< Spindle RPM to be set at the start of the segment execution
-    bool update_pwm;                //!< True if set spindle speed at the start of the segment execution
-    bool update_rpm;                //!< True if set spindle speed at the start of the segment execution
-    bool spindle_sync;              //!< True if block is spindle synchronized
-    bool cruising;                  //!< True when in cruising part of profile, only set for spindle synced moves
-    uint_fast8_t amass_level;       //!< Indicates AMASS level for the ISR to execute this segment
+    float target_position;              //!< Target position of segment relative to block start, used by spindle sync code
+    uint_fast16_t n_step;               //!< Number of step events to be executed for this segment
+    uint_fast16_t spindle_pwm;          //!< Spindle PWM to be set at the start of segment execution
+    float spindle_rpm;                  //!< Spindle RPM to be set at the start of the segment execution
+    bool spindle_sync;                  //!< True if block is spindle synchronized
+    bool cruising;                      //!< True when in cruising part of profile, only set for spindle synced moves
+    uint_fast8_t amass_level;           //!< Indicates AMASS level for the ISR to execute this segment
+    spindle_update_pwm_ptr update_pwm;  //!< Valid pointer to spindle.update_pwm() if set spindle speed at the start of the segment execution
+    spindle_update_rpm_ptr update_rpm;  //!< Valid pointer to spindle.update_rmp() if set spindle speed at the start of the segment execution
 } segment_t;
 
 //! Stepper ISR data struct. Contains the running data for the main stepper ISR.

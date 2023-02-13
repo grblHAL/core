@@ -583,7 +583,7 @@ typedef struct {
     homing_ptrs_t homing;                   //!< Handlers for limit switches, used by homing cycle.
     control_signals_ptrs_t control;         //!< Handlers for control switches.
     coolant_ptrs_t coolant;                 //!< Handlers for coolant.
-    spindle_ptrs_t spindle;                 //!< Handlers for spindle.
+    spindle_data_ptrs_t spindle_data;       //!< Handlers for getting/resetting spindle data (RPM, angular position, ...).
     stepper_ptrs_t stepper;                 //!< Handlers for stepper motors.
     io_stream_t stream;                     //!< Handlers for stream I/O.
     stream_select_ptr stream_select;        //!< Optional handler for switching between I/O streams.

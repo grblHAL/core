@@ -190,9 +190,9 @@ typedef union {
 } report_tracking_flags_t;
 
 typedef struct {
-    uint8_t feed_rate;              //!< Feed rate override value in percent
-    uint8_t rapid_rate;             //!< Rapids override value in percent
-    uint8_t spindle_rpm;            //!< Spindle speed override value in percent
+    override_t feed_rate;           //!< Feed rate override value in percent
+    override_t rapid_rate;          //!< Rapids override value in percent
+// Spindle override has been moved to per spindle in spindle_param_t
     spindle_stop_t spindle_stop;    //!< Tracks spindle stop override states
     gc_override_flags_t control;    //!< Tracks override control states.
 } overrides_t;
@@ -245,7 +245,6 @@ typedef struct system {
     volatile probing_state_t probing_state; //!< Probing state value. Used to coordinate the probing cycle with stepper ISR.
     volatile rt_exec_t rt_exec_state;       //!< Realtime executor bitflag variable for state management. See EXEC bitmasks.
     volatile uint_fast16_t rt_exec_alarm;   //!< Realtime executor bitflag variable for setting various alarms.
-    float spindle_rpm;                      //!< Current spindle RPM
     int32_t var5399;                        //!< Last result from M66 - wait on input
 #ifdef PID_LOG
     pid_data_t pid_log;
@@ -261,7 +260,6 @@ typedef struct system {
     bool cold_start;                        //!< Set to true on boot, is false on subsequent soft resets.
     bool driver_started;                    //!< Set to true when driver initialization is completed.
     bool mpg_mode;                          //!< To be moved to system_flags_t
-    machine_mode_t mode;                    //!< Current machine mode, copied from settings.mode on startup.
     signal_event_t last_event;              //!< Last signal events (control and limits signal).
     int32_t position[N_AXIS];               //!< Real-time machine (aka home) position vector in steps.
 //@}

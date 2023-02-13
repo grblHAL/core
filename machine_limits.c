@@ -161,7 +161,6 @@ static bool limits_pull_off (axes_signals_t axis, float distance)
     } while(idx);
 
     plan_data.feed_rate = settings.homing.seek_rate * sqrtf(n_axis); // Adjust so individual axes all move at pull-off rate.
-    plan_data.condition.spindle = gc_state.modal.spindle;
     plan_data.condition.coolant = gc_state.modal.coolant;
     memcpy(&plan_data.spindle, &gc_state.spindle, sizeof(spindle_t));
 
@@ -250,16 +249,14 @@ static bool limits_homing_cycle (axes_signals_t cycle, axes_signals_t auto_squar
     limit_signals_t limits_state;
     squaring_mode_t squaring_mode = SquaringMode_Both;
     coord_data_t target;
-    plan_line_data_t plan_data;
+    plan_line_data_t plan_data = {
+        .condition.system_motion = On,
+        .condition.no_feed_override = On,
+        .line_number = DEFAULT_HOMING_CYCLE_LINE_NUMBER
+    };
 
     // Initialize plan data struct for homing motion.
-
-    memset(&plan_data, 0, sizeof(plan_line_data_t));
-    plan_data.condition.system_motion = On;
-    plan_data.condition.no_feed_override = On;
-    plan_data.line_number = DEFAULT_HOMING_CYCLE_LINE_NUMBER;
     memcpy(&plan_data.spindle, &gc_state.spindle, sizeof(spindle_t));
-    plan_data.condition.spindle = gc_state.modal.spindle;
     plan_data.condition.coolant = gc_state.modal.coolant;
 
     uint_fast8_t idx = N_AXIS;

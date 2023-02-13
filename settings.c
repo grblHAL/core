@@ -107,8 +107,8 @@ PROGMEM const settings_t defaults = {
 #if DEFAULT_HOMING_ENABLE
     .homing.flags.enabled = DEFAULT_HOMING_ENABLE,
     .homing.flags.init_lock = DEFAULT_HOMING_INIT_LOCK,
-    .homing.flags.single_axis_commands = HOMING_SINGLE_AXIS_COMMANDS,
-    .homing.flags.force_set_origin = HOMING_FORCE_SET_ORIGIN,
+    .homing.flags.single_axis_commands = DEFAULT_HOMING_SINGLE_AXIS_COMMANDS,
+    .homing.flags.force_set_origin = DEFAULT_HOMING_FORCE_SET_ORIGIN,
     .homing.flags.manual = DEFAULT_HOMING_ALLOW_MANUAL,
     .homing.flags.override_locks = DEFAULT_HOMING_OVERRIDE_LOCKS,
     .homing.flags.keep_on_reset = DEFAULT_HOMING_KEEP_STATUS_ON_RESET,
@@ -392,6 +392,7 @@ static uint32_t get_int (setting_id_t id);
 static bool is_setting_available (const setting_detail_t *setting);
 static bool is_group_available (const setting_detail_t *setting);
 
+static bool machine_mode_changed = false;
 static char control_signals[] = "Reset,Feed hold,Cycle start,Safety door,Block delete,Optional stop,EStop,Probe connected,Motor fault";
 static char spindle_signals[] = "Spindle enable,Spindle direction,PWM";
 static char coolant_signals[] = "Flood,Mist";
@@ -808,7 +809,7 @@ static status_code_t set_enable_invert_mask (setting_id_t id, uint_fast16_t int_
 
 static status_code_t set_limits_invert_mask (setting_id_t id, uint_fast16_t int_value)
 {
-    settings.limits.invert.mask = (int_value ? ~(INVERT_LIMIT_BIT_MASK) : INVERT_LIMIT_BIT_MASK) & AXES_BITMASK;
+    settings.limits.invert.mask = (int_value ? ~(DEFAULT_LIMIT_SIGNALS_INVERT_MASK) : DEFAULT_LIMIT_SIGNALS_INVERT_MASK) & AXES_BITMASK;
 
     return Status_OK;
 }
@@ -981,6 +982,13 @@ static status_code_t set_homing_enable (setting_id_t id, uint_fast16_t int_value
     if (bit_istrue(int_value, bit(0))) {
 #if COMPATIBILITY_LEVEL > 1
         settings.homing.flags.enabled = On;
+        settings.homing.flags.init_lock = DEFAULT_HOMING_INIT_LOCK;
+        settings.homing.flags.single_axis_commands = DEFAULT_HOMING_SINGLE_AXIS_COMMANDS;
+        settings.homing.flags.force_set_origin = DEFAULT_HOMING_FORCE_SET_ORIGIN;
+        settings.homing.flags.manual = DEFAULT_HOMING_ALLOW_MANUAL;
+        settings.homing.flags.override_locks = DEFAULT_HOMING_OVERRIDE_LOCKS;
+        settings.homing.flags.keep_on_reset = DEFAULT_HOMING_KEEP_STATUS_ON_RESET;
+        settings.limits.flags.two_switches = DEFAULT_LIMITS_TWO_SWITCHES_ON_AXES;
 #else
         settings.homing.flags.value = int_value & 0x0F;
         settings.limits.flags.two_switches = bit_istrue(int_value, bit(4));
@@ -1022,8 +1030,8 @@ static status_code_t set_mode (setting_id_t id, uint_fast16_t int_value)
            break;
 
         case Mode_Laser:
-            if(!spindle_get_caps().laser)
-                return Status_SettingDisabledLaser;
+//            if(!spindle_get_caps().laser)
+//                return Status_SettingDisabledLaser;
             if(settings.mode != Mode_Laser)
                 settings.flags.disable_laser_during_hold = DEFAULT_ENABLE_LASER_DURING_HOLD;
             gc_state.modal.diameter_mode = false;
@@ -1037,8 +1045,8 @@ static status_code_t set_mode (setting_id_t id, uint_fast16_t int_value)
             return Status_InvalidStatement;
     }
 
+    machine_mode_changed = true;
     settings.mode = (machine_mode_t)int_value;
-    sys.mode = settings.mode == Mode_Laser && !hal.spindle.cap.laser ? Mode_Standard : settings.mode;
 
     return Status_OK;
 }
@@ -1374,7 +1382,7 @@ static uint32_t get_int (setting_id_t id)
 
 #if COMPATIBILITY_LEVEL > 1
         case Setting_LimitPinsInvertMask:
-            value = settings.limits.invert.mask == INVERT_LIMIT_BIT_MASK ? 0 : 1;
+            value = settings.limits.invert.mask == DEFAULT_LIMIT_SIGNALS_INVERT_MASK ? 0 : 1;
             break;
 #endif
 
@@ -1759,11 +1767,11 @@ static bool is_setting_available (const setting_detail_t *setting)
 #endif
 
         case Setting_SpindleAtSpeedTolerance:
-            available = hal.spindle.cap.at_speed || hal.driver_cap.spindle_sync;
+            available = spindle_get_caps().at_speed || hal.driver_cap.spindle_sync;
             break;
 
         case Setting_SpindleOnDelay:
-            available = !hal.signals_cap.safety_door_ajar && hal.spindle.cap.at_speed;
+            available = !hal.signals_cap.safety_door_ajar && spindle_get_caps().at_speed;
             break;
 
         case Setting_AutoReportInterval:
@@ -1902,8 +1910,6 @@ bool read_global_settings ()
     if(settings.planner_buffer_blocks < 30 || settings.planner_buffer_blocks > 1000)
         settings.planner_buffer_blocks = 35;
 
-    sys.mode = settings.mode;
-
     if(!(hal.driver_cap.spindle_sync || hal.driver_cap.spindle_pid))
         settings.spindle.ppr = 0;
 
@@ -1948,7 +1954,6 @@ void settings_restore (settings_restore_t restore)
 
         memcpy(&settings, &defaults, sizeof(settings_t));
 
-        sys.mode = settings.mode == Mode_Laser && !hal.spindle.cap.laser ? Mode_Standard : settings.mode;
         settings.control_invert.mask &= hal.signals_cap.mask;
         settings.spindle.invert.ccw &= spindle_get_caps().direction;
         settings.spindle.invert.pwm &= spindle_get_caps().pwm_invert;
@@ -2263,6 +2268,35 @@ static status_code_t validate_value (const setting_detail_t *setting, float valu
     return Status_OK;
 }
 
+static status_code_t validate_uint_value (const setting_detail_t *setting, uint32_t value)
+{
+    uint32_t val;
+    uint_fast8_t set_idx = 0;
+    status_code_t status;
+
+    if(setting->min_value) {
+        if((status = read_uint((char *)setting->min_value, &set_idx, &val)) != Status_OK)
+            return status;
+
+        if(!(value >= val || (setting->flags.allow_null && value == 0)))
+            return Status_SettingValueOutOfRange;
+
+    } else if(value < 0.0f)
+        return Status_NegativeValue;
+
+    if(setting->max_value) {
+        set_idx = 0;
+
+        if((status = read_uint((char *)setting->max_value, &set_idx, &val)) != Status_OK)
+            return Status_BadNumberFormat;
+
+        if(value > val)
+            return Status_SettingValueOutOfRange;
+    }
+
+    return Status_OK;
+}
+
 static uint32_t strnumentries (const char *s, const char delimiter)
 {
     if(s == NULL || *s == '\0')
@@ -2362,9 +2396,54 @@ inline static bool setting_is_string (setting_datatype_t  datatype)
     return datatype == Format_String || datatype == Format_Password || datatype == Format_IPv4;
 }
 
-inline static bool setting_is_core (setting_type_t  type)
+inline static bool setting_is_core (setting_type_t type)
 {
     return !(type == Setting_NonCore || type == Setting_NonCoreFn);
+}
+
+static status_code_t setting_validate_me_uint (const setting_detail_t *setting, char *svalue)
+{
+    uint_fast8_t idx = 0;
+    uint32_t value;
+    status_code_t status;
+
+    if((status = read_uint(svalue, &idx, &value)) != Status_OK)
+        return status;
+
+    switch(setting->datatype) {
+
+        case Format_Bool:
+            if(!(value == 0 || value == 1))
+                status = Status_SettingValueOutOfRange;
+            break;
+
+        case Format_Bitfield:
+        case Format_XBitfield:;
+            if(value >= (1UL << strnumentries(setting->format, ',')))
+                status = Status_SettingValueOutOfRange;
+            break;
+
+        case Format_RadioButtons:
+            if(value >= strnumentries(setting->format, ','))
+                status = Status_SettingValueOutOfRange;
+            break;
+
+        case Format_AxisMask:
+            if(value >= (1 << N_AXIS))
+                status = Status_SettingValueOutOfRange;
+            break;
+
+        case Format_Int8:
+        case Format_Int16:
+        case Format_Integer:
+            status = validate_uint_value(setting, value);
+            break;
+
+        default:
+            break;
+    }
+
+    return status;
 }
 
 status_code_t setting_validate_me (const setting_detail_t *setting, float value, char *svalue)
@@ -2374,33 +2453,18 @@ status_code_t setting_validate_me (const setting_detail_t *setting, float value,
     switch(setting->datatype) {
 
         case Format_Bool:
-            if(!(value == 0.0f || value == 1.0f))
-                status = Status_SettingValueOutOfRange;
-            break;
-
         case Format_Bitfield:
         case Format_XBitfield:;
-            if(!(isintf(value) && ((uint32_t)value < (1UL << strnumentries(setting->format, ','))))) //)
-                status = Status_SettingValueOutOfRange;
-            break;
-
         case Format_RadioButtons:
-            if(!(isintf(value) && (uint32_t)value < strnumentries(setting->format, ',')))
-                status = Status_SettingValueOutOfRange;
-            break;
-
         case Format_AxisMask:
-            if(!(isintf(value) && (uint32_t)value < (1 << N_AXIS)))
-                status = Status_SettingValueOutOfRange;
-            break;
-
         case Format_Int8:
         case Format_Int16:
         case Format_Integer:
+            status = setting_validate_me_uint(setting, svalue);
+            break;
+
         case Format_Decimal:
             status = validate_value(setting, value);
-            if(setting->datatype == Format_Integer && status == Status_OK && !isintf(value))
-                status = Status_BadNumberFormat;
             break;
 
         case Format_Password:
@@ -2436,10 +2500,23 @@ status_code_t setting_validate (setting_id_t id, float value, char *svalue)
     return setting == NULL ? Status_OK : setting_validate_me(setting, value, svalue);
 }
 
+static bool settings_changed_spindle (void)
+{
+    static spindle_settings_t spindle_settings = {0};
+
+    bool changed;
+
+    if((changed = memcmp(&spindle_settings, &settings.spindle, sizeof(spindle_settings_t))) != 0)
+        memcpy(&spindle_settings, &settings.spindle, sizeof(spindle_settings_t));
+
+    return changed;
+}
+
 // A helper method to set settings from command line
 status_code_t settings_store_setting (setting_id_t id, char *svalue)
 {
     uint_fast8_t set_idx = 0;
+    uint32_t int_value = 0;
     float value = NAN;
     status_code_t status = Status_OK;
     setting_details_t *set;
@@ -2457,7 +2534,10 @@ status_code_t settings_store_setting (setting_id_t id, char *svalue)
     while(*svalue == ' ')
         svalue++;
 
-    if(!setting_is_string(setting->datatype) && !read_float(svalue, &set_idx, &value) && setting_is_core(setting->type))
+    if(setting->datatype == Format_Decimal)  {
+        if(!read_float(svalue, &set_idx, &value) && setting_is_core(setting->type))
+            return Status_BadNumberFormat;
+    } else if(!setting_is_string(setting->datatype) && read_uint(svalue, &set_idx, &int_value) != Status_OK && setting_is_core(setting->type))
         return Status_BadNumberFormat;
 
     if((status = setting_validate_me(setting, value, svalue)) != Status_OK) {
@@ -2485,23 +2565,23 @@ status_code_t settings_store_setting (setting_id_t id, char *svalue)
                     break;
 
                 case Format_AxisMask:
-                    *((uint8_t *)(setting->value)) = (uint8_t)truncf(value) & AXES_BITMASK;
+                    *((uint8_t *)(setting->value)) = (uint8_t)int_value & AXES_BITMASK;
                     break;
 
-                case Format_Int8:
                 case Format_Bool:
                 case Format_Bitfield:
                 case Format_XBitfield:
                 case Format_RadioButtons:
-                    *((uint8_t *)(setting->value)) = (uint8_t)truncf(value);
+                case Format_Int8:
+                    *((uint8_t *)(setting->value)) = (uint8_t)int_value;
                     break;
 
                 case Format_Int16:
-                    *((uint16_t *)(setting->value)) = (uint16_t)truncf(value);
+                    *((uint16_t *)(setting->value)) = (uint16_t)int_value;
                     break;
 
                 case Format_Integer:
-                    *((uint32_t *)(setting->value)) = (uint32_t)truncf(value);
+                    *((uint32_t *)(setting->value)) = (uint32_t)int_value;
                     break;
 
                 default:
@@ -2527,7 +2607,7 @@ status_code_t settings_store_setting (setting_id_t id, char *svalue)
                     break;
 
                 default:
-                    status = ((setting_set_int_ptr)(setting->value))(id, (uint_fast16_t)truncf(value));
+                    status = ((setting_set_int_ptr)(setting->value))(id, (uint_fast16_t)int_value);
                     break;
             }
             break;
@@ -2535,16 +2615,18 @@ status_code_t settings_store_setting (setting_id_t id, char *svalue)
 
     if(status == Status_OK) {
 
-        if(!hal.spindle.cap.rpm_range_locked) {
-            hal.spindle.rpm_min = settings.spindle.rpm_min;
-            hal.spindle.rpm_max = settings.spindle.rpm_max;
-        }
-
         if(set->save)
             set->save();
 
-        if(set->on_changed)
-            set->on_changed(&settings);
+        if(set->on_changed) {
+
+            settings_changed_flags_t changed = {0};
+
+            changed.spindle = settings_changed_spindle() || machine_mode_changed;
+            machine_mode_changed = false;
+
+            set->on_changed(&settings, changed);
+        }
     }
 
     return status;
@@ -2573,11 +2655,16 @@ void settings_clear (void)
 // Initialize the config subsystem
 void settings_init (void)
 {
+    settings_changed_flags_t changed = {0};
+
     if(!read_global_settings()) {
+
         settings_restore_t settings = settings_all;
         settings.defaults = 1; // Ensure global settings get restored
+
         if(hal.nvs.type != NVS_None)
             grbl.report.status_message(Status_SettingReadFail);
+
         settings_restore(settings); // Force restore all non-volatile storage data.
         report_init();
 #if COMPATIBILITY_LEVEL <= 1
@@ -2585,7 +2672,9 @@ void settings_init (void)
 #else
         report_grbl_settings(false, NULL);
 #endif
+        changed.spindle = settings_changed_spindle();
     } else {
+
         memset(&tool_table, 0, sizeof(tool_data_t)); // First entry is for tools not in tool table
 #if N_TOOLS
         uint_fast8_t idx;
@@ -2594,7 +2683,9 @@ void settings_init (void)
 #endif
         report_init();
 
-        hal.settings_changed(&settings);
+        changed.spindle = settings_changed_spindle();
+
+        hal.settings_changed(&settings, changed);
 
         if(hal.probe.configure) // Initialize probe invert mask.
             hal.probe.configure(false, false);
@@ -2625,7 +2716,7 @@ void settings_init (void)
         if(details->load)
             details->load();
         if(details->on_changed)
-            details->on_changed(&settings);
+            details->on_changed(&settings, changed);
     } while((details = details->next));
 
     setting_details.on_changed = hal.settings_changed;

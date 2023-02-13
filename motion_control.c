@@ -176,9 +176,9 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
         // Plan and queue motion into planner buffer.
         // While in M3 laser mode also set spindle state and force a buffer sync
         // if there is a coincident position passed.
-        if(!plan_buffer_line(target, pl_data) && sys.mode == Mode_Laser && pl_data->condition.spindle.on && !pl_data->condition.spindle.ccw) {
+        if(!plan_buffer_line(target, pl_data) && pl_data->spindle.hal->cap.laser && pl_data->spindle.state.on && !pl_data->spindle.state.ccw) {
             protocol_buffer_synchronize();
-            hal.spindle.set_state(pl_data->condition.spindle, pl_data->spindle.rpm);
+            pl_data->spindle.hal->set_state(pl_data->spindle.state, pl_data->spindle.rpm);
         }
 
 #ifdef KINEMATICS_API
@@ -582,7 +582,7 @@ void mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_
                 mc_dwell(canned->dwell);
 
             if(canned->spindle_off)
-                hal.spindle.set_state((spindle_state_t){0}, 0.0f);
+                pl_data->spindle.hal->set_state((spindle_state_t){0}, 0.0f);
 
             // rapid retract
             switch(motion) {
@@ -603,7 +603,7 @@ void mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_
                 return;
 
             if(canned->spindle_off)
-                spindle_sync(0, gc_state.modal.spindle, pl_data->spindle.rpm);
+                spindle_sync(pl_data->spindle.hal, gc_state.modal.spindle.state, pl_data->spindle.rpm);
         }
 
        // rapid move to next position if incremental mode
@@ -670,7 +670,7 @@ void mc_thread (plan_line_data_t *pl_data, float *position, gc_thread_data *thre
 
     // TODO: Add to initial move to compensate for acceleration distance?
     /*
-    float acc_distance = pl_data->feed_rate * hal.spindle.get_data(SpindleData_RPM)->rpm / settings.acceleration[Z_AXIS];
+    float acc_distance = pl_data->feed_rate * pl_data->spindle.hal->get_data(SpindleData_RPM)->rpm / settings.acceleration[Z_AXIS];
     acc_distance = acc_distance * acc_distance * settings.acceleration[Z_AXIS] * 0.5f;
      */
 
@@ -694,9 +694,9 @@ void mc_thread (plan_line_data_t *pl_data, float *position, gc_thread_data *thre
         if(!protocol_buffer_synchronize() && state_get() != STATE_IDLE) // Wait until any previous moves are finished.
             return;
 
-        pl_data->condition.rapid_motion = Off;          // Clear rapid motion condition flag,
-        pl_data->condition.spindle.synchronized = On;   // enable spindle sync for cut
-        pl_data->overrides.feed_hold_disable = On;      // and disable feed hold
+        pl_data->condition.rapid_motion = Off;      // Clear rapid motion condition flag,
+        pl_data->spindle.state.synchronized = On;   // enable spindle sync for cut
+        pl_data->overrides.feed_hold_disable = On;  // and disable feed hold
 
         // Cut thread pass
 
@@ -723,8 +723,8 @@ void mc_thread (plan_line_data_t *pl_data, float *position, gc_thread_data *thre
                 return;
         }
 
-        pl_data->condition.rapid_motion = On;           // Set rapid motion condition flag and
-        pl_data->condition.spindle.synchronized = Off;  // disable spindle sync for retract & reposition
+        pl_data->condition.rapid_motion = On;       // Set rapid motion condition flag and
+        pl_data->spindle.state.synchronized = Off;  // disable spindle sync for retract & reposition
 
         if(passes > 1) {
 
@@ -861,7 +861,7 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
         hal.limits.enable(false, true); // Disable hard limits pin change register for cycle duration
 
         // Turn off spindle and coolant (and update parser state)
-        if(hal.spindle.get_state().on)
+        if(spindle_is_on())
             gc_spindle_off();
 
         if(hal.coolant.get_state().mask)

@@ -43,8 +43,13 @@ static void state_await_resumed (uint_fast16_t rt_exec);
 
 static void (* volatile stateHandler)(uint_fast16_t rt_exec) = state_idle;
 
-static float restore_spindle_rpm;
-static planner_cond_t restore_condition;
+typedef struct {
+    coolant_state_t coolant;
+    spindle_num_t spindle_num; // Active spindle
+    spindle_t spindle[N_SYS_SPINDLE];
+} restore_condition_t;
+
+static restore_condition_t restore_condition;
 static sys_state_t pending_state = STATE_IDLE, sys_state = STATE_IDLE;
 
 typedef union {
@@ -69,17 +74,33 @@ typedef struct {
 // Declare and initialize parking local variables
 static parking_data_t park = {0};
 
-static void state_restore_conditions (planner_cond_t *condition, float rpm)
+static void state_spindle_restore (spindle_t *spindle)
+{
+    if(spindle->hal)
+        spindle_restore(spindle->hal, spindle->state, spindle->rpm);
+}
+
+static void state_spindle_set_state (spindle_t *spindle)
+{
+    if(spindle->hal)
+        spindle_set_state(spindle->hal, spindle->state, spindle->rpm);
+}
+
+static void state_restore_conditions (restore_condition_t *condition)
 {
     if (!settings.parking.flags.enabled || !park.flags.restart) {
 
+        spindle_num_t spindle_num = N_SYS_SPINDLE;
+
         park.flags.restoring = On; //
 
-        spindle_restore(condition->spindle, rpm);
+        do {
+            state_spindle_restore(&condition->spindle[--spindle_num]);
+        } while(spindle_num);
 
         // Block if safety door re-opened during prior restore actions.
         if (gc_state.modal.coolant.value != hal.coolant.get_state().value) {
-            // NOTE: Laser mode will honor this delay. An exhaust system is often controlled by this pin.
+            // NOTE: Laser mode will honor this delay. An exhaust system is often controlled by this signal.
             coolant_set_state(condition->coolant);
             delay_sec(settings.safety_door.coolant_on_delay, DelayMode_SysSuspend);
         }
@@ -92,6 +113,9 @@ static void state_restore_conditions (planner_cond_t *condition, float rpm)
 
 bool initiate_hold (uint_fast16_t new_state)
 {
+    spindle_ptrs_t *spindle;
+    spindle_num_t spindle_num = N_SYS_SPINDLE;
+
     if (settings.parking.flags.enabled) {
         memset(&park.plan_data, 0, sizeof(plan_line_data_t));
         park.plan_data.condition.system_motion = On;
@@ -101,16 +125,35 @@ bool initiate_hold (uint_fast16_t new_state)
 
     plan_block_t *block = plan_get_current_block();
 
-    if (block == NULL) {
-        restore_condition.spindle = gc_state.modal.spindle;
-        restore_condition.coolant.mask = gc_state.modal.coolant.mask | hal.coolant.get_state().mask;
-        restore_spindle_rpm = gc_state.spindle.rpm;
-    } else {
-        restore_condition = block->condition;
-        restore_spindle_rpm = block->spindle.rpm;
-    }
+    restore_condition.spindle_num = 0;
 
-    if (sys.mode == Mode_Laser && settings.flags.disable_laser_during_hold)
+    do {
+        if((spindle = spindle_get(--spindle_num))) {
+            if(block && block->spindle.hal == spindle) {
+                restore_condition.spindle_num = spindle_num;
+                restore_condition.spindle[spindle_num].hal = block->spindle.hal;
+                restore_condition.spindle[spindle_num].rpm = block->spindle.rpm;
+                restore_condition.spindle[spindle_num].state = block->spindle.state;
+            } else if(gc_state.spindle.hal == spindle) {
+                restore_condition.spindle_num = spindle_num;
+                restore_condition.spindle[spindle_num].hal = gc_state.spindle.hal;
+                restore_condition.spindle[spindle_num].rpm = gc_state.spindle.rpm;
+                restore_condition.spindle[spindle_num].state = gc_state.modal.spindle.state;
+            } else {
+                restore_condition.spindle[spindle_num].hal = spindle;
+                restore_condition.spindle[spindle_num].rpm = spindle->param->rpm;
+                restore_condition.spindle[spindle_num].state = spindle->param->state;
+            }
+        } else
+            restore_condition.spindle[spindle_num].hal = NULL;
+    } while(spindle_num);
+
+    if (block)
+        restore_condition.coolant.mask = block->condition.coolant.mask;
+    else
+        restore_condition.coolant.mask = gc_state.modal.coolant.mask | hal.coolant.get_state().mask;
+
+    if (restore_condition.spindle[restore_condition.spindle_num].hal->cap.laser && settings.flags.disable_laser_during_hold)
         enqueue_accessory_override(CMD_OVERRIDE_SPINDLE_STOP);
 
     if (sys_state & (STATE_CYCLE|STATE_JOG)) {
@@ -174,14 +217,14 @@ void state_set (sys_state_t new_state)
                         sys_state = new_state;
                         sys.steppers_deenergize = false;    // Cancel stepper deenergize if pending.
                         st_prep_buffer();                   // Initialize step segment buffer before beginning cycle.
-                        if (block->condition.spindle.synchronized) {
+                        if (block->spindle.state.synchronized) {
 
-                            if (hal.spindle.reset_data)
-                                hal.spindle.reset_data();
+                            if (block->spindle.hal->reset_data)
+                                block->spindle.hal->reset_data();
 
-                            uint32_t index = hal.spindle.get_data(SpindleData_Counters)->index_count + 2;
+                            uint32_t index = block->spindle.hal->get_data(SpindleData_Counters)->index_count + 2;
 
-                            while(index != hal.spindle.get_data(SpindleData_Counters)->index_count); // check for abort in this loop?
+                            while(index != block->spindle.hal->get_data(SpindleData_Counters)->index_count); // check for abort in this loop?
 
                         }
                         st_wake_up();
@@ -252,7 +295,7 @@ void state_set (sys_state_t new_state)
 // Suspend manager. Controls spindle overrides in hold states.
 void state_suspend_manager (void)
 {
-    if (stateHandler != state_await_resume || !gc_state.modal.spindle.on)
+    if (stateHandler != state_await_resume || !gc_state.modal.spindle.state.on)
         return;
 
     if (sys.override.spindle_stop.value) {
@@ -260,7 +303,7 @@ void state_suspend_manager (void)
         // Handles beginning of spindle stop
         if (sys.override.spindle_stop.initiate) {
             sys.override.spindle_stop.value = 0; // Clear stop override state
-            spindle_set_state(0, (spindle_state_t){0}, 0.0f); // De-energize
+            spindle_set_state(restore_condition.spindle[restore_condition.spindle_num].hal, (spindle_state_t){0}, 0.0f); // De-energize
             sys.override.spindle_stop.enabled = On; // Set stop override state to enabled, if de-energized.
             if(grbl.on_override_changed)
                 grbl.on_override_changed(OverrideChanged_SpindleState);
@@ -269,18 +312,18 @@ void state_suspend_manager (void)
         // Handles restoring of spindle state
         if (sys.override.spindle_stop.restore) {
             grbl.report.feedback_message(Message_SpindleRestore);
-            if (sys.mode == Mode_Laser) // When in laser mode, ignore spindle spin-up delay. Set to turn on laser when cycle starts.
+            if (restore_condition.spindle[restore_condition.spindle_num].hal->cap.laser) // When in laser mode, ignore spindle spin-up delay. Set to turn on laser when cycle starts.
                 sys.step_control.update_spindle_rpm = On;
             else
-                spindle_set_state(0, restore_condition.spindle, restore_spindle_rpm);
+                state_spindle_set_state(&restore_condition.spindle[restore_condition.spindle_num]);
             sys.override.spindle_stop.value = 0; // Clear stop override state
             if(grbl.on_override_changed)
                 grbl.on_override_changed(OverrideChanged_SpindleState);
         }
 
-    } else if (sys.step_control.update_spindle_rpm && hal.spindle.get_state().on) {
+    } else if (sys.step_control.update_spindle_rpm && restore_condition.spindle[0].hal->get_state().on) {
         // Handles spindle state during hold. NOTE: Spindle speed overrides may be altered during hold state.
-        spindle_set_state(0, restore_condition.spindle, restore_spindle_rpm);
+        state_spindle_set_state(&restore_condition.spindle[restore_condition.spindle_num]);;
         sys.step_control.update_spindle_rpm = Off;
     }
 }
@@ -394,7 +437,7 @@ static void state_await_hold (uint_fast16_t rt_exec)
         switch (sys_state) {
 
             case STATE_TOOL_CHANGE:
-                hal.spindle.set_state((spindle_state_t){0}, 0.0f); // De-energize
+                spindle_all_off(); // De-energize
                 hal.coolant.set_state((coolant_state_t){0}); // De-energize
                 break;
 
@@ -410,7 +453,7 @@ static void state_await_hold (uint_fast16_t rt_exec)
 
                 // Parking requires parking axis homed, the current location not exceeding the???
                 // parking target location, and laser mode disabled.
-                if (settings.parking.flags.enabled && !sys.override.control.parking_disable && sys.mode != Mode_Laser) {
+                if (settings.parking.flags.enabled && !sys.override.control.parking_disable && settings.mode != Mode_Laser) {
 
                     // Get current position and store as restore location.
                     if (!park.flags.active) {
@@ -441,8 +484,9 @@ static void state_await_hold (uint_fast16_t rt_exec)
                             park.target[settings.parking.axis] = park.retract_waypoint;
                             park.plan_data.feed_rate = settings.parking.pullout_rate;
                             park.plan_data.condition.coolant = restore_condition.coolant; // Retain coolant state
-                            park.plan_data.condition.spindle = restore_condition.spindle; // Retain spindle state
-                            park.plan_data.spindle.rpm = restore_spindle_rpm;
+                            park.plan_data.spindle.state = restore_condition.spindle[restore_condition.spindle_num].state; // Retain spindle state
+                            park.plan_data.spindle.hal = restore_condition.spindle[restore_condition.spindle_num].hal;
+                            park.plan_data.spindle.rpm = restore_condition.spindle[restore_condition.spindle_num].rpm;
                             await_motion = mc_parking_motion(park.target, &park.plan_data);
                         }
 
@@ -455,13 +499,13 @@ static void state_await_hold (uint_fast16_t rt_exec)
                     } else {
                         // Parking motion not possible. Just disable the spindle and coolant.
                         // NOTE: Laser mode does not start a parking motion to ensure the laser stops immediately.
-                        hal.spindle.set_state((spindle_state_t){0}, 0.0f); // De-energize
+                        spindle_all_off(); // De-energize
                         if (!settings.safety_door.flags.keep_coolant_on)
                             hal.coolant.set_state((coolant_state_t){0});     // De-energize
                         sys.parking_state = hal.control.get_state().safety_door_ajar ? Parking_DoorAjar : Parking_DoorClosed;
                     }
                 } else {
-                    hal.spindle.set_state((spindle_state_t){0}, 0.0f); // De-energize
+                    spindle_all_off(); // De-energize
                     if (!settings.safety_door.flags.keep_coolant_on)
                         hal.coolant.set_state((coolant_state_t){0}); // De-energize
                     sys.parking_state = hal.control.get_state().safety_door_ajar ? Parking_DoorAjar : Parking_DoorClosed;
@@ -540,14 +584,14 @@ static void state_await_resume (uint_fast16_t rt_exec)
 
             default:
                 if (!settings.flags.restore_after_feed_hold) {
-                    if (!hal.spindle.get_state().on)
+                    if (!restore_condition.spindle[restore_condition.spindle_num].hal->get_state().on)
                         gc_spindle_off();
                     sys.override.spindle_stop.value = 0; // Clear spindle stop override states
                 } else {
 
-                    if (restore_condition.spindle.on != hal.spindle.get_state().on) {
+                    if (restore_condition.spindle[restore_condition.spindle_num].state.on != restore_condition.spindle[restore_condition.spindle_num].hal->get_state().on) {
                         grbl.report.feedback_message(Message_SpindleRestore);
-                        spindle_restore(restore_condition.spindle, restore_spindle_rpm);
+                        state_spindle_restore(&restore_condition.spindle[restore_condition.spindle_num]);
                     }
 
                     if (restore_condition.coolant.value != hal.coolant.get_state().value) {
@@ -631,9 +675,9 @@ static void state_await_waypoint_retract (uint_fast16_t rt_exec)
         }
 
         // NOTE: Clear accessory state after retract and after an aborted restore motion.
-        park.plan_data.condition.spindle.value = 0;
+        park.plan_data.spindle.state.value = 0;
         park.plan_data.spindle.rpm = 0.0f;
-        hal.spindle.set_state(park.plan_data.condition.spindle, 0.0f); // De-energize
+        park.plan_data.spindle.hal->set_state(park.plan_data.spindle.state, 0.0f); // De-energize
 
         if (!settings.safety_door.flags.keep_coolant_on) {
             park.plan_data.condition.coolant.value = 0;
@@ -682,7 +726,7 @@ static void state_restore (uint_fast16_t rt_exec)
         stateHandler = state_await_resumed;
 
         // Restart spindle and coolant, delay to power-up.
-        state_restore_conditions(&restore_condition, restore_spindle_rpm);
+        state_restore_conditions(&restore_condition);
 
         if(park.flags.restart) {
             // Restart flag was set by a safety door event during
@@ -702,8 +746,8 @@ static void state_restore (uint_fast16_t rt_exec)
             // original position through valid machine space or by not moving at all.
             park.plan_data.feed_rate = settings.parking.pullout_rate;
             park.plan_data.condition.coolant = restore_condition.coolant;
-            park.plan_data.condition.spindle = restore_condition.spindle;
-            park.plan_data.spindle.rpm = restore_spindle_rpm;
+            park.plan_data.spindle.state = restore_condition.spindle[restore_condition.spindle_num].state;
+            park.plan_data.spindle.rpm = restore_condition.spindle[restore_condition.spindle_num].rpm;
             await_motion = mc_parking_motion(park.restore_target, &park.plan_data);
         }
 
