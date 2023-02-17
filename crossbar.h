@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021 Terje Io
+  Copyright (c) 2021-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -32,6 +32,10 @@ typedef enum {
     Input_SafetyDoor,
     Input_LimitsOverride,
     Input_EStop,
+    Input_BlockDelete,
+    Input_SingleBlock,
+    Input_StopDisable,
+    Input_ProbeDisconnect,
     Input_MPGSelect,
     Input_ModeSelect = Input_MPGSelect, // Deprecated
     Input_LimitX,
@@ -55,7 +59,7 @@ typedef enum {
     Input_LimitV_Max,
     Input_MISO,
     Input_RX,
-    Input_KeypadStrobe, // To be deprecated?
+    Input_KeypadStrobe, // To be deprecated? Use Input_I2CStrobe instead.
     Input_I2CStrobe,
     Input_QEI_A,
     Input_QEI_B,
@@ -164,6 +168,10 @@ PROGMEM static const pin_name_t pin_names[] = {
    { .function = Input_SafetyDoor,          .name = "Safety door" },
    { .function = Input_LimitsOverride,      .name = "Limits override" },
    { .function = Input_EStop,               .name = "Emergency stop" },
+   { .function = Input_BlockDelete,         .name = "Block delete" },
+   { .function = Input_SingleBlock,         .name = "Single block" },
+   { .function = Input_StopDisable,         .name = "Stop disable" },
+   { .function = Input_ProbeDisconnect,     .name = "Probe disconnect" },
    { .function = Input_MPGSelect,           .name = "MPG mode select" },
    { .function = Input_LimitX,              .name = "X limit min" },
    { .function = Input_LimitX_2,            .name = "X limit min 2" },

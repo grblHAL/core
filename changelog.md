@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+<a name="20230217"/>20230217
+
+Core: added compile time symbols and names for remaining control inputs, rephrased two alarm messages. No functional changes.
+
+Drivers:
+
+* STM32F1xx : added support for MPG mode and option to use UART5 \(untested\) in RC variants.  
+Added support for ioports interface \(aux I/O\) and now allows pin naming for RC variants.  
+Changed RAM allocation for Cx variants to accomodate above changes, this might also allow a larger planner buffer size.  
+Fixed some inconsistencies in BOARD_MACH3_BOB \(_mach3_bob_map.h_\) - untested.  
+__NOTE:__ Cx variants are no longer possible to debug due to limited flash, only the release version can be compiled.
+
+Plugins:
+
+* Motors and plasma: updated for spindle handling refactoring.
+
+---
+
 <a name="20230213"/>Build 20230213
 
 Core:
@@ -10,7 +28,7 @@ __NOTE:__ This change is quite large, bugs may have sneaked in. Please report an
 
 Drivers:
 
-* All: updated for spindle handling refactoring.
+* All: Updated for spindle handling refactoring.
 
 * iMXRT1062: updated readme for links to updated/patched libraries for SD card \(uSDFS\) and ethernet. User should switch to the updated/patched libraries if used.
 

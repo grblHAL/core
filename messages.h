@@ -63,11 +63,11 @@ PROGMEM static const message_t messages[] = {
     { .id = Message_RestoreDefaults, .msg = "Restoring defaults" },
     { .id = Message_SpindleRestore, .msg = "Restoring spindle" },
     { .id = Message_SleepMode, .msg = "Sleeping" },
-    { .id = Message_EStop, .msg = "Emergency stop" },
+    { .id = Message_EStop, .msg = "Emergency stop - clear, then reset to continue" },
     { .id = Message_HomingCycleRequired, .msg = "Homing cycle required" },
     { .id = Message_CycleStartToRerun, .msg = "Press cycle start to rerun job" },
     { .id = Message_ReferenceTLOEstablished, .msg = "Reference tool length offset established" },
-    { .id = Message_MotorFault, .msg = "Motor fault" }
+    { .id = Message_MotorFault, .msg = "Motor fault - clear, then reset to continue" }
 };
 
 #endif
