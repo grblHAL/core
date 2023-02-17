@@ -1,12 +1,30 @@
 ## grblHAL changelog
 
-<a name="20230217"/>20230217
+<a name="20230217"/>20230217, update 2.
 
-Core: added compile time symbols and names for remaining control inputs, rephrased two alarm messages. No functional changes.
+Core:
+
+* Fixed copy/paste "bug" that caused compilation error if compiling for 6-axes.
 
 Drivers:
 
-* STM32F1xx : added support for MPG mode and option to use UART5 \(untested\) in RC variants.  
+* STM32F1xx: updated to support up to 6-axes. Note that ganged/auto squared axes are currently not supported - to be added later.
+
+* STM32F4xx: fixed typos and compile time check for IRQ pin assignments.
+
+* STM32F7xx: fixed compile time check for IRQ pin assignments.
+
+---
+
+20230217
+
+Core:
+
+* Added compile time symbols and names for remaining control inputs, rephrased two alarm messages. No functional changes.
+
+Drivers:
+
+* STM32F1xx: added support for MPG mode and option to use UART5 \(untested\) in RC variants.  
 Added support for ioports interface \(aux I/O\) and now allows pin naming for RC variants.  
 Changed RAM allocation for Cx variants to accomodate above changes, this might also allow a larger planner buffer size.  
 Fixed some inconsistencies in BOARD_MACH3_BOB \(_mach3_bob_map.h_\) - untested.  
