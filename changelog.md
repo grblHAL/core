@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+<a name="20230218"/>Build 20230218
+
+Core:
+
+Fix for Grbl [issue #1823](https://github.com/grbl/grbl/issues/1823) - some full circle arcs beeing ignored.
+
+Drivers:
+
+* STM32F4xx: added optional support for USART6. Fixed preprossor issue.
+
+* STM32F7xx: Fixed preprossor issue.
+
+---
+
 <a name="20230217"/>20230217, update 2.
 
 Core:

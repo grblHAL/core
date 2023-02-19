@@ -209,14 +209,14 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
 // distance from segment to the circle when the end points both lie on the circle.
 void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *offset, float radius, plane_t plane, int32_t turns)
 {
-    float center_axis0 = position[plane.axis_0] + offset[plane.axis_0];
-    float center_axis1 = position[plane.axis_1] + offset[plane.axis_1];
-    float r_axis0 = -offset[plane.axis_0];  // Radius vector from center to current location
-    float r_axis1 = -offset[plane.axis_1];
-    float rt_axis0 = target[plane.axis_0] - center_axis0;
-    float rt_axis1 = target[plane.axis_1] - center_axis1;
+    double center_axis0 = (double)position[plane.axis_0] + (double)offset[plane.axis_0];
+    double center_axis1 = (double)position[plane.axis_1] + (double)offset[plane.axis_1];
+    double r_axis0 = -(double)offset[plane.axis_0];  // Radius vector from center to current location
+    double r_axis1 = -(double)offset[plane.axis_1];
+    double rt_axis0 = (double)target[plane.axis_0] - center_axis0;
+    double rt_axis1 = (double)target[plane.axis_1] - center_axis1;
     // CCW angle between position and target from circle center. Only one atan2() trig computation required.
-    float angular_travel = atan2f(r_axis0 * rt_axis1 - r_axis1 * rt_axis0, r_axis0 * rt_axis0 + r_axis1 * rt_axis1);
+    float angular_travel = (float)atan2(r_axis0 * rt_axis1 - r_axis1 * rt_axis0, r_axis0 * rt_axis0 + r_axis1 * rt_axis1);
 
     if (turns > 0) { // Correct atan2 output per direction
         if (angular_travel >= -ARC_ANGULAR_TRAVEL_EPSILON)
