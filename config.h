@@ -39,7 +39,7 @@ specific needs, i.e. performance tuning or adjusting to non-typical machines.
 If more than 3 axes are configured a compliant driver and board map file is needed.
  */
 #ifndef N_AXIS
-#define N_AXIS 3 // Number of axes
+#define N_AXIS 4 // Number of axes
 #endif
 
 /*! \def AXIS_REMAP_ABC2UVW
@@ -47,7 +47,7 @@ If more than 3 axes are configured a compliant driver and board map file is need
 <br>__NOTE:__ Experimental, if more than 3 and less than 7 axes are configured the `ABC`
               axis letters can be remapped to `UWV`.
 */
-#if (N_AXIS > 3 && N_AXIS < 7) || defined __DOXYGEN__
+#if (!defined AXIS_REMAP_ABC2UVW && (N_AXIS > 3 && N_AXIS < 7)) || defined __DOXYGEN__
 #define AXIS_REMAP_ABC2UVW Off
 #endif
 
