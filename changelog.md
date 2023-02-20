@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+<a name="20230218"/>20230220
+
+Plugins:
+
+* Trinamic: Improved handling of per axis homing feedrates.
+
+* Spindle: Fix for issue #255 - fails to compile when single VFD spindle is selected.
+
+* Initial commit of I2C display interface protocol. __NOTE:__ this is not yet available for compilation.
+
+---
+
 <a name="20230218"/>Build 20230218
 
 Core:
