@@ -7,7 +7,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2020-2021 Terje Io
+  Copyright (c) 2020-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -212,5 +212,13 @@ typedef struct {
 } nvs_transfer_t;
 
 extern nvs_transfer_result_t i2c_nvs_transfer (nvs_transfer_t *i2c, bool read);
+
+// I2C interface
+
+typedef void (*keycode_callback_ptr)(const char c);
+
+extern bool i2c_probe (uint_fast16_t i2c_address);
+extern bool i2c_send (uint_fast16_t i2c_address, uint8_t *data, size_t size, bool block);
+extern void i2c_get_keycode (uint_fast16_t i2c_address, keycode_callback_ptr callback);
 
 #endif

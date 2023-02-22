@@ -402,6 +402,17 @@ static status_code_t init_sync_motion (plan_line_data_t *pl_data, float pitch)
     return Status_OK;
 }
 
+// Output and free previously allocated message
+static void output_message (char *message)
+{
+    report_message(message, Message_Plain);
+
+    if(grbl.on_gcode_message)
+        grbl.on_gcode_message(message);
+
+    free(message);
+}
+
 // Remove whitespace, control characters, comments and if block delete is active block delete lines
 // else the block delete character. Remaining characters are converted to upper case.
 // If the driver handles message comments then the first is extracted and returned in a dynamically
@@ -446,7 +457,13 @@ char *gc_normalize_block (char *block, char **message)
                     size_t len = s1 - comment - 4;
                     if(message && *message == NULL && !strncmp(comment, "(MSG,", 5) && (*message = malloc(len))) {
                         *s1 = '\0';
-                        memcpy(*message, comment + 5, len);
+                        comment += 5;
+                        // trim leading spaces
+                        while(*comment == ' ') {
+                            comment++;
+                            len--;
+                        }
+                        memcpy(*message, comment, len);
                     }
                 }
                 comment = NULL;
@@ -581,10 +598,8 @@ status_code_t gc_execute_block (char *block)
     block = gc_normalize_block(block, &message);
 
     if(block[0] == '\0') {
-        if(message) {
-            report_message(message, Message_Plain);
-            free(message);
-        }
+        if(message)
+            output_message(message);
         return Status_OK;
     }
 
@@ -596,10 +611,8 @@ status_code_t gc_execute_block (char *block)
     // functions that empty the planner buffer to execute its task on-time.
     if (block[0] == CMD_PROGRAM_DEMARCATION && block[1] == '\0') {
         gc_state.file_run = !gc_state.file_run;
-        if(message) {
-            report_message(message, Message_Plain);
-            free(message);
-        }
+        if(message)
+            output_message(message);
         return Status_OK;
     }
 
@@ -2758,8 +2771,7 @@ status_code_t gc_execute_block (char *block)
         protocol_buffer_synchronize();
 
         if(plan_data.message) {
-            report_message(plan_data.message, Message_Plain);
-            free(plan_data.message);
+            output_message(plan_data.message);
             plan_data.message = NULL;
         }
 
@@ -3149,10 +3161,8 @@ status_code_t gc_execute_block (char *block)
         // == GCUpdatePos_None
     }
 
-    if(plan_data.message) {
-        report_message(plan_data.message, Message_Plain);
-        free(plan_data.message);
-    }
+    if(plan_data.message)
+        output_message(plan_data.message);
 
     // [21. Program flow ]:
     // M0,M1,M2,M30,M60: Perform non-running program flow actions. During a program pause, the buffer may

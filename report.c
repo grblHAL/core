@@ -248,7 +248,6 @@ static status_code_t report_status_message (status_code_t status_code)
     return status_code;
 }
 
-
 // Prints alarm messages.
 alarm_code_t report_alarm_message (alarm_code_t alarm_code)
 {
@@ -291,19 +290,18 @@ static message_code_t report_feedback_message (message_code_t id)
     const char *msg = NULL;
     uint_fast16_t idx = 0;
 
-    hal.stream.write_all("[MSG:");
-
     do {
         if(messages[idx].id == id)
             msg = messages[idx].msg;
     } while(msg == NULL && ++idx < Message_NextMessage);
 
-    hal.stream.write_all(msg ? msg : "");
-    hal.stream.write_all("]" ASCII_EOL);
+    report_message(msg ? msg : "", Message_Plain);
+
+    if(id == Message_None && grbl.on_gcode_message)
+        grbl.on_gcode_message("");
 
     return id;
 }
-
 
 // Welcome message
 void report_init_message (void)

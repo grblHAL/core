@@ -182,7 +182,12 @@ static st_prep_t prep;
 static void output_message (sys_state_t state)
 {
     if(message) {
+
         report_message(message, Message_Plain);
+
+        if(grbl.on_gcode_message)
+            grbl.on_gcode_message(message);
+
         free(message);
         message = NULL;
     }

@@ -103,6 +103,7 @@ typedef void (*on_reset_ptr)(void);
 typedef void (*on_jog_cancel_ptr)(sys_state_t state);
 typedef bool (*on_spindle_select_ptr)(spindle_ptrs_t *spindle);
 typedef void (*on_spindle_selected_ptr)(spindle_ptrs_t *spindle);
+typedef void (*on_gcode_message_ptr)(char *msg);
 typedef status_code_t (*on_unknown_sys_command_ptr)(sys_state_t state, char *line); // return Status_Unhandled.
 typedef status_code_t (*on_user_command_ptr)(char *line);
 typedef sys_commands_t *(*on_get_commands_ptr)(void);
@@ -137,6 +138,7 @@ typedef struct {
     on_probe_fixture_ptr on_probe_fixture;
     on_probe_start_ptr on_probe_start;
     on_probe_completed_ptr on_probe_completed;
+    on_gcode_message_ptr on_gcode_message;              //!< Called on output of message parsed from gcode. NOTE: string pointed to is freed after this call.
     on_tool_selected_ptr on_tool_selected;              //!< Called prior to executing M6 or after executing M61.
     on_toolchange_ack_ptr on_toolchange_ack;            //!< Called from interrupt context.
     on_jog_cancel_ptr on_jog_cancel;                    //!< Called from interrupt context.

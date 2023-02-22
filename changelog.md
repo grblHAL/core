@@ -1,6 +1,31 @@
 ## grblHAL changelog
 
-<a name="20230218"/>20230220
+20230221
+
+Core:
+
+* Added definitions for some "standard" I2C API calls, for driver/plugin use.
+
+* Added _grbl.on_gcode_message_ event, can be used by driver/plugin writers to parse the message for extending functionality etc.  
+Triggered by `(MSG, "some message")` gcode comments.
+
+Drivers:
+
+* Almost all: updated to match new core defined I2C API. Note that some drivers only has a partial implementation, to be updated on demand.
+
+* ESP32: fixed up W5500 ethernet middle layer driver code, now works in DHCP mode with telnet enabled. Other protocols may work, not extensively tested.  
+Note that board map definitions has to be adjusted \(or added\) for ethernet as a SPI port in addtion to an interrupt input is required, none is presently set up for that.
+
+* STM32F4xx: updated some board maps/[Web Builder](http://svn.io-engineering.com:8080/) definitions to allow selection of EEPROM size or disabling EEPROM support altogether.
+
+Plugins:
+
+* Keypad: I2C display plugins updated to probe for display on startup, no longer attaches themself if not present.  
+Expanded I2C display interface protocol to add gcode message, when present, by dynamically adjusting I2C message length.
+
+---
+
+<a name="20230220"/>20230220
 
 Plugins:
 
@@ -8,7 +33,7 @@ Plugins:
 
 * Spindle: Fix for issue #255 - fails to compile when single VFD spindle is selected.
 
-* Initial commit of I2C display interface protocol. __NOTE:__ this is not yet available for compilation.
+* Keypad: Initial commit of I2C display interface protocol. __NOTE:__ this is not yet available for compilation.
 
 ---
 
