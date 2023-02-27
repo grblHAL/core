@@ -26,13 +26,6 @@
 #include "system.h"
 #include "ngc_params.h"
 
-// Message types for uncoded messages
-typedef enum {
-    Message_Plain = 0,
-    Message_Info,
-    Message_Warning
-} message_type_t;
-
 typedef enum {
     SettingsFormat_MachineReadable = 0,
     SettingsFormat_HumanReadable,
@@ -44,19 +37,11 @@ typedef enum {
 void report_init (void);
 void report_init_fns (void);
 
-
-// Prints system alarm messages.
-alarm_code_t report_alarm_message (alarm_code_t alarm_code);
-
 // Prints feedback message, typically from gcode.
 void report_message (const char *msg, message_type_t type);
 
-// Prints welcome message.
-void report_init_message (void);
-
 // Prints Grbl help.
 status_code_t report_help (char *args);
-void report_grbl_help();
 
 // Prints Grbl settings
 void report_grbl_settings (bool all, void *data);

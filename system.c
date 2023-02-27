@@ -341,7 +341,7 @@ void system_command_help (void)
 status_code_t system_execute_line (char *line)
 {
     if(line[1] == '\0') {
-        report_grbl_help();
+        grbl.report.help_message();
         return Status_OK;
     }
 
@@ -1067,6 +1067,6 @@ void system_raise_alarm (alarm_code_t alarm)
         sys.alarm = alarm;
         state_set(alarm == Alarm_EStop ? STATE_ESTOP : STATE_ALARM);
         if(sys.driver_started || sys.alarm == Alarm_SelftestFailed)
-            report_alarm_message(alarm);
+            grbl.report.alarm_message(alarm);
     }
 }

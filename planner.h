@@ -50,8 +50,8 @@ typedef struct plan_block {
     axes_signals_t direction_bits;  // The direction bit set for this block (refers to *_DIRECTION_PIN in config.h)
 
     // Block condition data to ensure correct execution depending on states and overrides.
-    planner_cond_t condition;       // Block bitfield variable defining block run conditions. Copied from pl_line_data.
     gc_override_flags_t overrides;  // Block bitfield variable for overrides
+    planner_cond_t condition;       // Block bitfield variable defining block run conditions. Copied from pl_line_data.
     int32_t line_number;            // Block line number for real-time reporting. Copied from pl_line_data.
 
     // Fields used by the motion planner to manage acceleration. Some of these values may be updated

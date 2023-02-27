@@ -53,7 +53,7 @@ static control_signals_callback_ptr control_interrupt_callback = NULL;
 static void on_probe_completed (void)
 {
     if(!sys.flags.probe_succeeded)
-        report_message("Probe failed, try again.", Message_Plain);
+        grbl.report.feedback_message(Message_ProbeFailedRetry);
     else if(sys.tlo_reference_set.mask & bit(plane.axis_linear))
         gc_set_tool_offset(ToolLengthOffset_EnableDynamic, plane.axis_linear, sys.probe_position[plane.axis_linear] - sys.tlo_reference[plane.axis_linear]);
 //    else error?
@@ -148,7 +148,7 @@ static bool restore (void)
 // Used in Manual and Manual_G59_3 modes ($341=1 or $341=2). Called from the foreground process.
 static void execute_warning (sys_state_t state)
 {
-    report_message("Perform a probe with $TPW first!", Message_Plain);
+    grbl.report.feedback_message(Message_ExecuteTPW);
 }
 
 // Execute restore position after touch off (on cycle start event).
@@ -495,9 +495,9 @@ status_code_t tc_probe_workpiece (void)
     if(ok && protocol_buffer_synchronize()) {
         sync_position();
         block_cycle_start = false;
-        report_message(settings.tool_change.mode == ToolChange_Manual_G59_3
-                        ? "Press cycle start to continue."
-                        : "Remove any touch plate and press cycle start to continue.", Message_Plain);
+        grbl.report.feedback_message(settings.tool_change.mode == ToolChange_Manual_G59_3
+                                      ? Message_CycleStart2Continue
+                                      : Message_TPCycleStart2Continue);
     }
 
     return ok ? Status_OK : Status_GCodeToolError;

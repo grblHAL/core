@@ -49,9 +49,9 @@ typedef struct st_block {
     float programmed_rate;
     char *message;                     //!< Message to be displayed when block is executed
     output_command_t *output_commands; //!< Output commands (linked list) to be performed when block is executed
+    bool backlash_motion;
     bool dynamic_rpm;                  //!< Tracks motions that require dynamic RPM adjustment
     spindle_ptrs_t *spindle;           //!< Pointer to current spindle for motions that require dynamic RPM adjustment
-    bool backlash_motion;
 } st_block_t;
 
 typedef struct st_segment {

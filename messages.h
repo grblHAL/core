@@ -3,8 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
-  Copyright (c) 2014-2016 Sungeun K. Jeon for Gnea Research LLC
+  Copyright (c) 2017-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -42,32 +41,25 @@ typedef enum {
     Message_CycleStartToRerun = 14,         //!< 14
     Message_ReferenceTLOEstablished = 15,   //!< 15
     Message_MotorFault = 16,                //!< 16
-    Message_NextMessage                     //!< 17 - next unassigned message number.
+    Message_CycleStart2Continue = 17,       //!< 17
+    Message_TPCycleStart2Continue = 18,     //!< 18
+    Message_ProbeFailedRetry = 19,          //!< 19
+    Message_ExecuteTPW = 20,                //!< 20
+    Message_NextMessage                     //!< 21 - next unassigned message number.
 } message_code_t;
+
+typedef enum {
+    Message_Plain = 0,
+    Message_Info,
+    Message_Warning
+} message_type_t;
 
 typedef struct {
     message_code_t id;
-    const char *msg;
+    message_type_t type;
+    const char *text;
 } message_t;
 
-PROGMEM static const message_t messages[] = {
-    { .id = Message_None, .msg = "" },
-    { .id = Message_CriticalEvent, .msg = "Reset to continue" },
-    { .id = Message_AlarmLock, .msg = "'$H'|'$X' to unlock" },
-    { .id = Message_AlarmUnlock, .msg = "Caution: Unlocked" },
-    { .id = Message_Enabled, .msg = "Enabled" },
-    { .id = Message_Disabled, .msg = "Disabled" },
-    { .id = Message_SafetyDoorAjar, .msg = "Check Door" },
-    { .id = Message_CheckLimits, .msg = "Check Limits" },
-    { .id = Message_ProgramEnd, .msg = "Pgm End" },
-    { .id = Message_RestoreDefaults, .msg = "Restoring defaults" },
-    { .id = Message_SpindleRestore, .msg = "Restoring spindle" },
-    { .id = Message_SleepMode, .msg = "Sleeping" },
-    { .id = Message_EStop, .msg = "Emergency stop - clear, then reset to continue" },
-    { .id = Message_HomingCycleRequired, .msg = "Homing cycle required" },
-    { .id = Message_CycleStartToRerun, .msg = "Press cycle start to rerun job" },
-    { .id = Message_ReferenceTLOEstablished, .msg = "Reference tool length offset established" },
-    { .id = Message_MotorFault, .msg = "Motor fault - clear, then reset to continue" }
-};
+const message_t *message_get (message_code_t id);
 
 #endif

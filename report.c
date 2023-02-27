@@ -52,16 +52,6 @@ static uint8_t override_counter = 0; // Tracks when to add override data to stat
 static uint8_t wco_counter = 0;      // Tracks when to add work coordinate offset data to status reports.
 static const char vbar[2] = { '|', '\0' };
 
-static bool report_setting (const setting_detail_t *setting, uint_fast16_t offset, void *data);
-static status_code_t report_status_message (status_code_t status_code);
-static message_code_t report_feedback_message (message_code_t id);
-
-static const report_t report_fns = {
-    .setting = report_setting,
-    .status_message = report_status_message,
-    .feedback_message = report_feedback_message
-};
-
 // Append a number of strings to the static buffer
 // NOTE: do NOT use for several int/float conversions as these share the same underlying buffer!
 static char *appendbuf (int argc, ...)
@@ -187,24 +177,42 @@ inline static char *axis_signals_tostring (char *buf, axes_signals_t signals)
 // NOTE: returns pointer to null terminator!
 inline static char *control_signals_tostring (char *buf, control_signals_t signals)
 {
-    if (signals.safety_door_ajar && hal.signals_cap.safety_door_ajar)
-        *buf++ = 'D';
-    if (signals.reset)
-        *buf++ = 'R';
-    if (signals.feed_hold)
-        *buf++ = 'H';
-    if (signals.cycle_start)
-        *buf++ = 'S';
-    if (signals.e_stop)
-        *buf++ = 'E';
-    if (signals.block_delete && sys.flags.block_delete_enabled)
-        *buf++ = 'L';
-    if (hal.signals_cap.stop_disable ? signals.stop_disable : sys.flags.optional_stop_disable)
-        *buf++ = 'T';
-    if (signals.motor_warning)
-        *buf++ = 'M';
-    if (signals.motor_fault)
-        *buf++ = 'F';
+    static const char signals_map[] = "RHSDLTE FM    P ";
+
+    char *map = (char *)signals_map;
+
+    if(!hal.signals_cap.stop_disable)
+        signals.stop_disable = sys.flags.optional_stop_disable;
+
+    if(!signals.deasserted)
+      while(signals.mask) {
+
+        if(signals.mask & 0x01) {
+
+            switch(*map) {
+
+                case ' ':
+                    break;
+
+                case 'D':
+                    if(hal.signals_cap.safety_door_ajar)
+                        *buf++ = *map;
+                    break;
+
+                case 'L':
+                    if(sys.flags.block_delete_enabled)
+                        *buf++ = *map;
+                    break;
+
+                default:
+                    *buf++ = *map;
+                    break;
+            }
+        }
+
+        map++;
+        signals.mask >>= 1;
+    }
 
     *buf = '\0';
 
@@ -216,14 +224,6 @@ void report_init (void)
     get_axis_value = settings.flags.report_inches ? get_axis_value_inches : get_axis_value_mm;
     get_axis_values = settings.flags.report_inches ? get_axis_values_inches : get_axis_values_mm;
     get_rate_value = settings.flags.report_inches ? get_rate_value_inch : get_rate_value_mm;
-}
-
-void report_init_fns (void)
-{
-    memcpy(&grbl.report, &report_fns, sizeof(report_t));
-
-    if(grbl.on_report_handlers_init)
-        grbl.on_report_handlers_init();
 }
 
 // Handles the primary confirmation protocol response for streaming interfaces and human-feedback.
@@ -249,7 +249,7 @@ static status_code_t report_status_message (status_code_t status_code)
 }
 
 // Prints alarm messages.
-alarm_code_t report_alarm_message (alarm_code_t alarm_code)
+static alarm_code_t report_alarm_message (alarm_code_t alarm_code)
 {
     hal.stream.write_all(appendbuf(3, "ALARM:", uitoa((uint32_t)alarm_code), ASCII_EOL));
     hal.delay_ms(100, NULL); // Force delay to ensure message clears output stream buffer.
@@ -287,15 +287,9 @@ void report_message (const char *msg, message_type_t type)
 // is installed, the message number codes are less than zero.
 static message_code_t report_feedback_message (message_code_t id)
 {
-    const char *msg = NULL;
-    uint_fast16_t idx = 0;
+    const message_t *msg = message_get(id);
 
-    do {
-        if(messages[idx].id == id)
-            msg = messages[idx].msg;
-    } while(msg == NULL && ++idx < Message_NextMessage);
-
-    report_message(msg ? msg : "", Message_Plain);
+    report_message(msg ? msg->text : "", msg ? msg->type : Message_Plain);
 
     if(id == Message_None && grbl.on_gcode_message)
         grbl.on_gcode_message("");
@@ -304,7 +298,7 @@ static message_code_t report_feedback_message (message_code_t id)
 }
 
 // Welcome message
-void report_init_message (void)
+static void report_init_message (void)
 {
     override_counter = wco_counter = 0;
 #if COMPATIBILITY_LEVEL == 0
@@ -314,8 +308,8 @@ void report_init_message (void)
 #endif
 }
 
-// Grbl help message
-void report_grbl_help (void)
+// grblHAL help message
+static void report_help_message (void)
 {
     hal.stream.write("[HLP:$$ $# $G $I $N $x=val $Nx=line $J=line $SLP $C $X $H $B ~ ! ? ctrl-x]" ASCII_EOL);
 }
@@ -2195,4 +2189,21 @@ void report_pid_log (void)
 #else
     grbl.report.status_message(Status_GcodeUnsupportedCommand);
 #endif
+}
+
+static const report_t report_fns = {
+    .init_message = report_init_message,
+    .help_message = report_help_message,
+    .status_message = report_status_message,
+    .feedback_message = report_feedback_message,
+    .alarm_message = report_alarm_message,
+    .setting = report_setting
+};
+
+void report_init_fns (void)
+{
+    memcpy(&grbl.report, &report_fns, sizeof(report_t));
+
+    if(grbl.on_report_handlers_init)
+        grbl.on_report_handlers_init();
 }

@@ -295,7 +295,7 @@ int grbl_enter (void)
             tc_init();
 
         // Print welcome message. Indicates an initialization has occurred at power-up or with a reset.
-        report_init_message();
+        grbl.report.init_message();
 
         if(state_get() == STATE_ESTOP)
             state_set(STATE_ALARM);

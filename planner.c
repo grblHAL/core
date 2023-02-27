@@ -355,23 +355,6 @@ void plan_update_velocity_profile_parameters (void)
     pl.previous_nominal_speed = prev_nominal_speed; // Update prev nominal speed for next incoming block.
 }
 
-#if N_AXIS > 3 && ROTARY_FIX
-
-static inline float convert_delta_vector_to_magnitude (float *vector)
-{
-    uint_fast8_t idx = N_AXIS;
-    float magnitude = 0.0f;
-
-    do {
-        if (vector[--idx] != 0.0f)
-            magnitude += vector[idx] * vector[idx];
-    } while(idx);
-
-    return sqrtf(magnitude);
-}
-
-#endif
-
 static inline float limit_acceleration_by_axis_maximum (float *unit_vec)
 {
     uint_fast8_t idx = N_AXIS;
@@ -494,31 +477,31 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
 
 #if N_AXIS > 3  && ROTARY_FIX
 
+    // NIST RS274 (2.1.2.5 A & 2.1.2.6) states that G94 linear motion with simultaneous angular motion
+    // has the feedrate assigned to the linear axes. To accomplish this we'll change the planner block to
+    // behave as if its doing a G93 inverse time mode move.
+
     if(!block->condition.inverse_time &&
-            /*!block->condition.rapid_motion &&*/
-        (motion.mask & settings.steppers.is_rotational.mask) &&
-         (motion.mask & ~settings.steppers.is_rotational.mask)) {
+        !block->condition.rapid_motion &&
+         (motion.mask & settings.steppers.is_rotational.mask) &&
+          (motion.mask & ~settings.steppers.is_rotational.mask)) {
 
-        float delta_vec[N_AXIS];
+        float linear_magnitude = 0.0f;
 
-        idx = A_AXIS;
-        motion.mask &= settings.steppers.is_rotational.mask;
-        motion.mask >>= 3;
-        memcpy(delta_vec, unit_vec, sizeof(delta_vec));
+        idx = 0;
+        motion.mask &= ~settings.steppers.is_rotational.mask;
 
         while(motion.mask) {
             if(motion.mask & 0x01)
-                unit_vec[idx] = delta_vec[idx] = 0.0f;
+                linear_magnitude += unit_vec[idx] * unit_vec[idx];
             motion.mask >>= 1;
             idx++;
         }
 
-        // feed rate for laser mode has to be the actual speed of the controlled
-        // point over the surface of the object to engrave?
-//        pl_data->feed_rate = 1.0f / (convert_delta_vector_to_magnitude(delta_vec) / pl_data->feed_rate);
-        pl_data->feed_rate = 1.0f / ((block->millimeters = convert_delta_vector_to_unit_vector(unit_vec)) / pl_data->feed_rate);
+        pl_data->feed_rate = 1.0f / (sqrtf(linear_magnitude) / pl_data->feed_rate);
+
         block->condition.inverse_time = On;
-    } else
+    }
 
 #endif
 

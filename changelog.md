@@ -1,6 +1,26 @@
 ## grblHAL changelog
 
-20230221
+<a name="20230227"/>20230227
+
+Core:
+
+* Enhanced API, reduced planner RAM footprint. Changed rotary fix implementation.
+
+Drivers:
+
+* RP2040: Fix for [issue #13](https://github.com/grblHAL/RP2040/issues/13#issuecomment-1445217377). Fixed typo and added generic 4-axis board map.
+
+* Most networking capable: fixed incorrect MQTT setting description.
+
+* STM32F4xx: fix for incorrect compiler error beeing reported for boards that polls the Z limit switch input.
+
+Plugins:
+
+* Keypad: I2C display protocol plugin updated to utilize gaps in data packet. Gcode message handling bug fix.
+
+---
+
+<a name="20230221"/>20230221
 
 Core:
 
@@ -14,7 +34,7 @@ Drivers:
 * Almost all: updated to match new core defined I2C API. Note that some drivers only has a partial implementation, to be updated on demand.
 
 * ESP32: fixed up W5500 ethernet middle layer driver code, now works in DHCP mode with telnet enabled. Other protocols may work, not extensively tested.  
-Note that board map definitions has to be adjusted \(or added\) for ethernet as a SPI port in addtion to an interrupt input is required, none is presently set up for that.
+Note that board map definitions has to be adjusted \(or added\) for ethernet as a SPI port in addtion to an interrupt input is required, none are presently set up for that.
 
 * STM32F4xx: updated some board maps/[Web Builder](http://svn.io-engineering.com:8080/) definitions to allow selection of EEPROM size or disabling EEPROM support altogether.
 

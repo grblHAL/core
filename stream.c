@@ -248,7 +248,7 @@ static bool stream_select (const io_stream_t *stream, bool add)
                 report_message("TELNET STREAM ACTIVE", Message_Plain);
             if(add && sys.driver_started) {
                 hal.stream.write_all = stream->write;
-                report_init_message();
+                grbl.report.init_message();
             }
             break;
 
@@ -257,7 +257,7 @@ static bool stream_select (const io_stream_t *stream, bool add)
                 report_message("WEBSOCKET STREAM ACTIVE", Message_Plain);
             if(add && sys.driver_started && !hal.stream.state.webui_connected) {
                 hal.stream.write_all = stream->write;
-                report_init_message();
+                grbl.report.init_message();
             }
             break;
 
@@ -266,7 +266,7 @@ static bool stream_select (const io_stream_t *stream, bool add)
                 report_message("BLUETOOTH STREAM ACTIVE", Message_Plain);
             if(add && sys.driver_started) {
                 hal.stream.write_all = stream->write;
-                report_init_message();
+                grbl.report.init_message();
             }
             break;
 

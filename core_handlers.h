@@ -45,11 +45,6 @@ typedef enum {
 
 /* TODO: add to grbl pointers so that a different formatting (xml, json etc) of reports may be implemented by a plugin?
 typedef struct {
-    status_code_t (*report_status_message)(status_code_t status_code);
-    alarm_code_t (*report_alarm_message)(alarm_code_t alarm_code);
-    message_code_t (*report_feedback_message)(message_code_t message_code);
-    void (*report_init_message)(void);
-    void (*report_grbl_help)(void);
     void (*report_echo_line_received)(char *line);
     void (*report_realtime_status)(void);
     void (*report_probe_parameters)(void);
@@ -60,15 +55,21 @@ typedef struct {
 } grbl_report_t;
 */
 
-// Report entry points set by core at reset.
+// Report entry points set by core at startup and reset.
 
+typedef void (*init_message_ptr)(void);
+typedef void (*help_message_ptr)(void);
 typedef status_code_t (*status_message_ptr)(status_code_t status_code);
 typedef message_code_t (*feedback_message_ptr)(message_code_t message_code);
+typedef alarm_code_t (*alarm_message_ptr)(alarm_code_t alarm_code);
 
 typedef struct {
-    setting_output_ptr setting;
+    init_message_ptr init_message;          //<! Prints system welcome message.
+    help_message_ptr help_message;          //<! Prints system help message.
     status_message_ptr status_message;      //<! Prints system status messages.
     feedback_message_ptr feedback_message;  //<! Prints miscellaneous feedback messages.
+    alarm_message_ptr alarm_message;        //<! Prints alarm message.
+    setting_output_ptr setting;
 } report_t;
 
 // Core event handler and other entry points.
