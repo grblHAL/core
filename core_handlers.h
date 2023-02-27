@@ -81,6 +81,7 @@ typedef bool (*protocol_enqueue_realtime_command_ptr)(char c);
 typedef void (*on_state_change_ptr)(sys_state_t state);
 typedef void (*on_override_changed_ptr)(override_changed_t override);
 typedef void (*on_spindle_programmed_ptr)(spindle_ptrs_t *spindle, spindle_state_t state, float rpm, spindle_rpm_mode_t mode);
+typedef void (*on_wco_changed_ptr)(void);
 typedef void (*on_program_completed_ptr)(program_flow_t program_flow, bool check_mode);
 typedef void (*on_execute_realtime_ptr)(sys_state_t state);
 typedef void (*on_unknown_accessory_override_ptr)(uint8_t cmd);
@@ -117,6 +118,7 @@ typedef struct {
     on_override_changed_ptr on_override_changed;
     on_report_handlers_init_ptr on_report_handlers_init;
     on_spindle_programmed_ptr on_spindle_programmed;
+    on_wco_changed_ptr on_wco_changed;
     on_program_completed_ptr on_program_completed;
     on_execute_realtime_ptr on_execute_realtime;
     on_execute_realtime_ptr on_execute_delay;

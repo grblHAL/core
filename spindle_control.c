@@ -295,7 +295,7 @@ static spindle_num_t spindle_get_num (spindle_id_t spindle_id)
 
     do {
         idx--;
-        if((setting = setting_get_details(idx == 0 ? Setting_SpindleType : Setting_SpindleEnable0 + idx, NULL))) {
+        if((setting = setting_get_details(idx == 0 ? Setting_SpindleType : (setting_id_t)(Setting_SpindleEnable0 + idx), NULL))) {
             if(setting_get_int_value(setting, 0) == spindle_id)
                 spindle_num = idx;
         }

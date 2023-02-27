@@ -965,6 +965,9 @@ void system_flag_wco_change (void)
     if(!settings.status_report.sync_on_wco_change)
         protocol_buffer_synchronize();
 
+    if(grbl.on_wco_changed)
+        grbl.on_wco_changed();
+
     sys.report.wco = On;
 }
 

@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+<a name="20230228"/>20230228
+
+Core:
+
+* Fix for Arduino compiler issue with build 20230227. Added new core event and removed redundant code.
+
+Drivers:
+
+* STM32F4xx:  Fixed missing pullup enable for EStop input. __NOTE:__ this may trigger EStop alarm for those who have not wired a switch to this input.
+
+Plugins:
+
+* Keypad: I2C display protocol plugin updated to allow multiple message extensions, simplified code.
+
+---
+
 <a name="20230227"/>20230227
 
 Core:

@@ -1067,15 +1067,13 @@ void report_realtime_status (void)
 {
     static bool probing = false;
 
-    int32_t current_position[N_AXIS]; // Copy current state of the system position variable
     float print_position[N_AXIS];
     probe_state_t probe_state = {
         .connected = On,
         .triggered = Off
     };
 
-    memcpy(current_position, sys.position, sizeof(sys.position));
-    system_convert_array_steps_to_mpos(print_position, current_position);
+    system_convert_array_steps_to_mpos(print_position, sys.position);
 
     if(hal.probe.get_state)
         probe_state = hal.probe.get_state();

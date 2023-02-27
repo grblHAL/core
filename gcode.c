@@ -319,6 +319,11 @@ void gc_init (void)
     if (sys.cold_start && !settings.flags.g92_is_volatile && !settings_read_coord_data(CoordinateSystem_G92, &gc_state.g92_coord_offset))
         grbl.report.status_message(Status_SettingReadFail);
 
+    if(grbl.on_wco_changed && (!sys.cold_start ||
+                                !is0_position_vector(gc_state.modal.coord_system.xyz) ||
+                                 !is0_position_vector(gc_state.g92_coord_offset)))
+        grbl.on_wco_changed();
+
 //    if(settings.flags.lathe_mode)
 //        gc_state.modal.plane_select = PlaneSelect_ZX;
 }
@@ -1065,14 +1070,14 @@ status_code_t gc_execute_block (char *block)
                         if(hal.port.digital_out == NULL || hal.port.num_digital_out == 0)
                             FAIL(Status_GcodeUnsupportedCommand); // [Unsupported M command]
                         word_bit.modal_group.M10 = On;
-                        port_command = int_value;
+                        port_command = (io_mcode_t)int_value;
                         break;
 
                     case 66:
                         if(hal.port.wait_on_input == NULL || (hal.port.num_digital_in == 0 && hal.port.num_analog_in == 0))
                             FAIL(Status_GcodeUnsupportedCommand); // [Unsupported M command]
                         word_bit.modal_group.M10 = On;
-                        port_command = int_value;
+                        port_command = (io_mcode_t)int_value;
                         break;
 
                     case 67:
@@ -1080,7 +1085,7 @@ status_code_t gc_execute_block (char *block)
                         if(hal.port.analog_out == NULL || hal.port.num_analog_out == 0)
                             FAIL(Status_GcodeUnsupportedCommand); // [Unsupported M command]
                         word_bit.modal_group.M10 = On;
-                        port_command = int_value;
+                        port_command = (io_mcode_t)int_value;
                         break;
 /*
                     case 70:

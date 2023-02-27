@@ -136,9 +136,7 @@ typedef enum {
 Do not alter values!
 */
 
-typedef uint8_t coord_system_id_t;
-
-enum coord_system_id_t {
+typedef enum  {
     CoordinateSystem_G54 = 0,                       //!< 0 - G54 (G12)
     CoordinateSystem_G55,                           //!< 1 - G55 (G12)
     CoordinateSystem_G56,                           //!< 2 - G56 (G12)
@@ -155,7 +153,8 @@ enum coord_system_id_t {
     CoordinateSystem_G30,                           //!< 10 - G30 (G0) when #COMPATIBILITY_LEVEL <= 1, 7 otherwise
     CoordinateSystem_G92,                           //!< 11 - G92 (G0) when #COMPATIBILITY_LEVEL <= 1, 8 otherwise
     N_CoordinateSystems                             //!< 12 when #COMPATIBILITY_LEVEL <= 1, 9 otherwise
-};
+}  __attribute__ ((__packed__)) coord_system_id_t;
+
 
 /*!  Modal Group G13: Control mode
 

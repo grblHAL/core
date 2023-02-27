@@ -180,6 +180,7 @@ typedef enum {
 #endif
 #define clear_vector(a) memset(a, 0, sizeof(a))
 #define isequal_position_vector(a, b) !memcmp(a, b, sizeof(coord_data_t))
+#define is0_position_vector(a) !memcmp(a, &((coord_data_t){0}), sizeof(coord_data_t))
 
 // Bit field and masking macros
 #ifndef bit
