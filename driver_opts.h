@@ -390,6 +390,32 @@
 #if HTTP_ENABLE && NETWORK_WEBSOCKET_PORT == NETWORK_HTTP_PORT
 #warning "HTTP and WebSocket protocols cannot share the same port!"
 #endif
+#endif // ETHERNET_ENABLE || WIFI_ENABLE
+
+#if WIFI_ENABLE
+
+#ifndef NETWORK_STA_SSID
+#define NETWORK_STA_SSID         ""
+#endif
+#ifndef NETWORK_STA_PASSWORD
+#define NETWORK_STA_PASSWORD     ""
+#endif
+#ifndef NETWORK_STA_HOSTNAME
+#define NETWORK_STA_HOSTNAME     "grblHAL"
+#endif
+#ifndef NETWORK_STA_IPMODE
+#define NETWORK_STA_IPMODE       1 // DHCP
+#endif
+#ifndef NETWORK_STA_IP
+#define NETWORK_STA_IP           "192.168.5.1"
+#endif
+#ifndef NETWORK_STA_GATEWAY
+#define NETWORK_STA_GATEWAY      "192.168.5.1"
+#endif
+#ifndef NETWORK_STA_MASK
+#define NETWORK_STA_MASK         "255.255.255.0"
+#endif
+
 #if WIFI_SOFTAP > 0
 #ifndef NETWORK_AP_SSID
 #define NETWORK_AP_SSID         "grblHAL_AP"
@@ -412,7 +438,7 @@
 #ifndef NETWORK_AP_MASK
 #define NETWORK_AP_MASK         "255.255.255.0"
 #endif
-#endif
-#endif
+#endif // WIFI_SOFTAP
+#endif // WIFI_ENABLE
 
 /*EOF*/
