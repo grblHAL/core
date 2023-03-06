@@ -93,11 +93,15 @@ static void reset (void)
     if(next_tool) { //TODO: move to gc_xxx() function?
         // Restore previous tool if reset is during change
 #if N_TOOLS
-        if((sys.report.tool = current_tool.tool != next_tool->tool))
+        if(current_tool.tool != next_tool->tool) {
             memcpy(gc_state.tool, &current_tool, sizeof(tool_data_t));
+            system_add_rt_report(Report_Tool);
+        }
 #else
-        if((sys.report.tool = current_tool.tool != next_tool->tool))
+        if(current_tool.tool != next_tool->tool) {
             memcpy(next_tool, &current_tool, sizeof(tool_data_t));
+            system_add_rt_report(Report_Tool);
+        }
 #endif
         gc_state.tool_pending = gc_state.tool->tool;
         next_tool = NULL;
@@ -217,7 +221,7 @@ static void execute_probe (sys_state_t state)
             if(!(sys.tlo_reference_set.mask & bit(plane.axis_linear))) {
                 sys.tlo_reference[plane.axis_linear] = sys.probe_position[plane.axis_linear];
                 sys.tlo_reference_set.mask |= bit(plane.axis_linear);
-                sys.report.tlo_reference = On;
+                system_add_rt_report(Report_TLOReference);
                 grbl.report.feedback_message(Message_ReferenceTLOEstablished);
             } else
                 gc_set_tool_offset(ToolLengthOffset_EnableDynamic, plane.axis_linear,
@@ -404,10 +408,12 @@ void tc_init (void)
     if(!hal.stream.suspend_read) // Tool change requires support for suspending input stream.
         return;
 
-    sys.report.tlo_reference = sys.tlo_reference_set.mask != 0;
-    sys.tlo_reference_set.mask = 0;
+    if(sys.tlo_reference_set.mask != 0) {
+        sys.tlo_reference_set.mask = 0;
+        system_add_rt_report(Report_TLOReference);
+    }
 
-    gc_set_tool_offset(ToolLengthOffset_Cancel, 0, 0.0f);
+gc_set_tool_offset(ToolLengthOffset_Cancel, 0, 0.0f);
 
     if(settings.tool_change.mode == ToolChange_Disabled || settings.tool_change.mode == ToolChange_Ignore) {
         hal.tool.select = NULL;
@@ -436,8 +442,10 @@ void tc_clear_tlo_reference (axes_signals_t homing_cycle)
         gc_get_plane_data(&plane, gc_state.modal.plane_select);
 #endif
         if(homing_cycle.mask & (settings.mode == Mode_Lathe ? (X_AXIS_BIT|Z_AXIS_BIT) : bit(plane.axis_linear))) {
-            sys.report.tlo_reference = sys.tlo_reference_set.mask != 0;
-            sys.tlo_reference_set.mask = 0;  // Invalidate tool length offset reference
+            if(sys.tlo_reference_set.mask != 0) {
+                sys.tlo_reference_set.mask = 0;  // Invalidate tool length offset reference
+                system_add_rt_report(Report_TLOReference);
+            }
         }
     }
 }

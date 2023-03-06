@@ -1,5 +1,25 @@
 ## grblHAL changelog
 
+<a name="2023032"/>20230302
+
+Core:
+
+* Minor fix for the `grbl.on_state_changed` event - incorrect state published following stop signal when streaming gcode.
+
+Drivers:
+
+* RP2040: Added initial support for I2C display protocol, using DMA transfers. 
+
+* STM32F4xx: Fix for EEPROM issue for ST Morpho CNC board maps.
+
+* STM32F7xx: Fix for missing motor enable outputs for ganged axes and fix for IRQ conflicts for 7+ axis configurations \(reference map\).
+
+Plugins:
+
+* Keypad: Type fix for homed status field.
+
+---
+
 <a name="20230228"/>20230228
 
 Core:
@@ -8,7 +28,7 @@ Core:
 
 Drivers:
 
-* STM32F4xx:  Fixed missing pullup enable for EStop input. __NOTE:__ this may trigger EStop alarm for those who have not wired a switch to this input.
+* STM32F4xx: Fixed missing pullup enable for EStop input. __NOTE:__ this may trigger EStop alarm for those who have not wired a switch to this input.
 
 Plugins:
 

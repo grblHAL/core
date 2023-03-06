@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2022 Terje Io
+  Copyright (c) 2021-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -463,7 +463,7 @@ bool stream_mpg_enable (bool on)
     hal.stream.reset_read_buffer();
 
     sys.mpg_mode = on;
-    sys.report.mpg_mode = On;
+    system_add_rt_report(Report_MPGMode);;
 
     // Force a realtime status report, all reports when MPG mode active
     protocol_enqueue_realtime_command(on ? CMD_STATUS_REPORT_ALL : CMD_STATUS_REPORT);

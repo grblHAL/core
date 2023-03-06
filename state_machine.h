@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2021 Terje Io
+  Copyright (c) 2018-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@
 #define _STATE_MACHINE_H_
 
 sys_state_t state_get (void);
+uint8_t state_get_substate (void);
 void state_set (sys_state_t state);
 void state_update (rt_exec_t rt_exec);
 bool state_door_reopened (void);

@@ -164,6 +164,28 @@ typedef struct {
 
 #endif
 
+typedef enum {
+    Report_ClearAll = 0,
+    Report_MPGMode = (1 << 0),
+    Report_Scaling = (1 << 1),
+    Report_Homed   = (1 << 2),
+    Report_LatheXMode = (1 << 3),
+    Report_Spindle = (1 << 4),
+    Report_Coolant = (1 << 5),
+    Report_Overrides = (1 << 6),
+    Report_Tool = (1 << 7),
+    Report_WCO = (1 << 8),
+    Report_GWCO = (1 << 9),
+    Report_ToolOffset = (1 << 10),
+    Report_M66Result = (1 << 11),
+    Report_PWM = (1 << 12),
+    Report_Motor = (1 << 13),
+    Report_Encoder = (1 << 14),
+    Report_TLOReference = (1 << 15),
+    Report_Fan = (1 << 16),
+    Report_All = 0x8001FFFF
+} report_tracking_t;
+
 typedef union {
     uint32_t value;
     struct {
@@ -192,7 +214,7 @@ typedef union {
 typedef struct {
     override_t feed_rate;           //!< Feed rate override value in percent
     override_t rapid_rate;          //!< Rapids override value in percent
-// Spindle override has been moved to per spindle in spindle_param_t
+    override_t spindle_rpm;         //!< __NOTE:_ Not used by the core, it maintain per spindle override in \ref spindle_param_t
     spindle_stop_t spindle_stop;    //!< Tracks spindle stop override states
     gc_override_flags_t control;    //!< Tracks override control states.
 } overrides_t;
@@ -310,6 +332,9 @@ void system_raise_alarm (alarm_code_t alarm);
 
 //! Provide system command help
 void system_command_help (void);
+
+void system_add_rt_report (report_tracking_t report);
+report_tracking_flags_t system_get_rt_report_flags (void);
 
 // Special handlers for setting and clearing Grbl's real-time execution flags.
 #define system_set_exec_state_flag(mask) hal.set_bits_atomic(&sys.rt_exec_state, (mask))

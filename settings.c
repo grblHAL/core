@@ -1279,8 +1279,10 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
             break;
 
         case Setting_AxisMaxTravel:
-            if((sys.report.homed = settings.axis[idx].max_travel != -value))
+            if(settings.axis[idx].max_travel != -value) {
                 bit_false(sys.homed.mask, bit(idx));
+                system_add_rt_report(Report_Homed);
+            }
             settings.axis[idx].max_travel = -value; // Store as negative for grbl internal use.
             if(settings.homing.flags.init_lock && (sys.homing.mask & sys.homed.mask) != sys.homing.mask) {
                 system_raise_alarm(Alarm_HomingRequried);

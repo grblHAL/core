@@ -171,7 +171,7 @@ static void set_scaling (float factor)
     gc_state.modal.scaling_active = factor != 1.0f;
 
     if(state.value != gc_get_g51_state().value)
-        sys.report.scaling = On;
+        system_add_rt_report(Report_Scaling);
 }
 
 float *gc_get_scaling (void)
@@ -240,7 +240,7 @@ void gc_set_tool_offset (tool_offset_mode_t mode, uint_fast8_t idx, int32_t offs
     gc_state.modal.tool_offset_mode = mode;
 
     if(tlo_changed) {
-        sys.report.tool_offset = true;
+        system_add_rt_report(Report_ToolOffset);
         system_flag_wco_change();
     }
 }
@@ -345,15 +345,14 @@ void gc_spindle_off (void)
     gc_state.modal.spindle.state.value = 0;
 
     spindle_all_off();
-
-    sys.report.spindle = On;
+    system_add_rt_report(Report_Spindle);
 }
 
 void gc_coolant_off (void)
 {
     gc_state.modal.coolant.value = 0;
     hal.coolant.set_state(gc_state.modal.coolant);
-    sys.report.coolant = On;
+    system_add_rt_report(Report_Coolant);
 }
 
 spindle_ptrs_t *gc_spindle_get (void)
@@ -1696,9 +1695,9 @@ status_code_t gc_execute_block (char *block)
             gc_block.values.xyz[idx] *= MM_PER_INCH;
     } while(idx);
 
-    if (command_words.G15) {
-        sys.report.xmode |= gc_state.modal.diameter_mode != gc_block.modal.diameter_mode;
+    if (command_words.G1 && gc_state.modal.diameter_mode != gc_block.modal.diameter_mode) {
         gc_state.modal.diameter_mode = gc_block.modal.diameter_mode;
+        system_add_rt_report(Report_LatheXMode);
     }
 
     if(gc_state.modal.diameter_mode && bit_istrue(axis_words.mask, bit(X_AXIS)))
@@ -1708,6 +1707,8 @@ status_code_t gc_execute_block (char *block)
     if(axis_command == AxisCommand_Scaling) {
 
         if(gc_block.modal.scaling_active) {
+
+            bool report_scaling = false;
 
             // TODO: precheck for 0.0f and fail if found?
 
@@ -1721,9 +1722,10 @@ status_code_t gc_execute_block (char *block)
             idx = N_AXIS;
             do {
                 if(bit_istrue(axis_words.mask, bit(--idx))) {
-                    sys.report.scaling = sys.report.scaling || scale_factor.ijk[idx] != gc_block.values.xyz[idx];
+                    report_scaling |= scale_factor.ijk[idx] != gc_block.values.xyz[idx];
                     scale_factor.ijk[idx] = gc_block.values.xyz[idx];
                     bit_false(axis_words.mask, bit(idx));
+                    system_add_rt_report(Report_Scaling);
                 }
                 gc_block.modal.scaling_active = gc_block.modal.scaling_active || (scale_factor.xyz[idx] != 1.0f);
             } while(idx);
@@ -1747,10 +1749,10 @@ status_code_t gc_execute_block (char *block)
             do {
                 idx--;
                 if(gc_block.words.p) {
-                    sys.report.scaling = sys.report.scaling || scale_factor.ijk[idx] != gc_block.values.p;
+                    report_scaling |= scale_factor.ijk[idx] != gc_block.values.p;
                     scale_factor.ijk[idx] = gc_block.values.p;
                 } else if(bit_istrue(ijk_words.mask, bit(idx))) {
-                    sys.report.scaling = sys.report.scaling || scale_factor.ijk[idx] != gc_block.values.ijk[idx];
+                    report_scaling |= scale_factor.ijk[idx] != gc_block.values.ijk[idx];
                     scale_factor.ijk[idx] = gc_block.values.ijk[idx];
                 }
                 gc_block.modal.scaling_active = gc_block.modal.scaling_active || (scale_factor.ijk[idx] != 1.0f);
@@ -1761,8 +1763,11 @@ status_code_t gc_execute_block (char *block)
             else
                 gc_block.words.i = gc_block.words.j = gc_block.words.k = Off;
 #endif
-            sys.report.scaling = sys.report.scaling || gc_state.modal.scaling_active != gc_block.modal.scaling_active;
+            report_scaling |= gc_state.modal.scaling_active != gc_block.modal.scaling_active;
             gc_state.modal.scaling_active = gc_block.modal.scaling_active;
+
+            if(report_scaling)
+                system_add_rt_report(Report_Scaling);
 
         } else
             set_scaling(1.0f);
@@ -2725,7 +2730,7 @@ status_code_t gc_execute_block (char *block)
                     gc_block.modal.spindle.state = gc_state.modal.spindle.state;
             }
 
-            sys.report.tool = On;
+            system_add_rt_report(Report_Tool);
         }
 
         // Prepare tool carousel when available
@@ -2736,7 +2741,7 @@ status_code_t gc_execute_block (char *block)
             hal.tool.select(gc_state.tool, !set_tool);
 #endif
         } else
-            sys.report.tool = On;
+            system_add_rt_report(Report_Tool);
     }
 
     // [5a. HAL pin I/O ]: M62 - M68. (Modal group M10)
@@ -2757,7 +2762,7 @@ status_code_t gc_execute_block (char *block)
 
             case IoMCode_WaitOnInput:
                 sys.var5399 = hal.port.wait_on_input((io_port_type_t)gc_block.output_command.is_digital, gc_block.output_command.port, (wait_mode_t)gc_block.values.l, gc_block.values.q);
-                sys.report.m66result = On;
+                system_add_rt_report(Report_M66Result);
                 break;
 
             case IoMCode_AnalogOutSynced:
@@ -2799,7 +2804,7 @@ status_code_t gc_execute_block (char *block)
         if(hal.tool.change) { // ATC
             if((int_value = (uint_fast16_t)hal.tool.change(&gc_state)) != Status_OK)
                 FAIL((status_code_t)int_value);
-            sys.report.tool = On;
+            system_add_rt_report(Report_Tool);
         } else { // Manual
             gc_state.tool_change = true;
             system_set_exec_state_flag(EXEC_TOOL_CHANGE);   // Set up program pause for manual tool change
@@ -2938,7 +2943,7 @@ status_code_t gc_execute_block (char *block)
         } while(idx);
 
         if(tlo_changed) {
-            sys.report.tool_offset = true;
+            system_add_rt_report(Report_ToolOffset);
             system_flag_wco_change();
         }
     }
@@ -2946,7 +2951,7 @@ status_code_t gc_execute_block (char *block)
     // [15. Coordinate system selection ]:
     if (gc_state.modal.coord_system.id != gc_block.modal.coord_system.id) {
         memcpy(&gc_state.modal.coord_system, &gc_block.modal.coord_system, sizeof(gc_state.modal.coord_system));
-        sys.report.gwco = On;
+        system_add_rt_report(Report_GWCO);
         system_flag_wco_change();
     }
 
@@ -3204,8 +3209,10 @@ status_code_t gc_execute_block (char *block)
             gc_state.modal.feed_mode = FeedMode_UnitsPerMin;
 // TODO: check           gc_state.distance_per_rev = 0.0f;
             // gc_state.modal.cutter_comp = CUTTER_COMP_DISABLE; // Not supported.
-            if((sys.report.gwco = gc_state.modal.coord_system.id != CoordinateSystem_G54))
+            if(gc_state.modal.coord_system.id != CoordinateSystem_G54) {
                 gc_state.modal.coord_system.id = CoordinateSystem_G54;
+                system_add_rt_report(Report_GWCO);
+            }
             gc_state.modal.spindle.state = (spindle_state_t){0};
             gc_state.modal.coolant = (coolant_state_t){0};
             gc_state.modal.override_ctrl.feed_rate_disable = Off;
@@ -3247,7 +3254,8 @@ status_code_t gc_execute_block (char *block)
 
                 spindle_all_off();
                 hal.coolant.set_state(gc_state.modal.coolant);
-                sys.report.spindle = sys.report.coolant = On; // Set to report change immediately
+                system_add_rt_report(Report_Spindle); // Set to report change
+                system_add_rt_report(Report_Coolant); // immediately.
             }
 
             if(grbl.on_program_completed)

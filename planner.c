@@ -661,7 +661,7 @@ void plan_feed_override (override_t feed_override, override_t rapid_override)
          (rapidrate_changed = rapid_override != sys.override.rapid_rate)) {
         sys.override.feed_rate = feed_override;
         sys.override.rapid_rate = rapid_override;
-        sys.report.overrides = On; // Set to report change immediately
+        system_add_rt_report(Report_Overrides); // Set to report change immediately
         plan_update_velocity_profile_parameters();
         plan_cycle_reinitialize();
         if(grbl.on_override_changed) {

@@ -193,9 +193,41 @@ ISR_CODE sys_state_t ISR_FUNC(state_get)(void)
     return sys_state;
 }
 
+uint8_t state_get_substate (void)
+{
+    uint8_t substate = 0;
+
+    switch(sys_state) {
+
+        case STATE_CYCLE:
+            if(sys.flags.feed_hold_pending)
+                substate = 1;
+            else if(sys.probing_state == Probing_Active || (hal.probe.get_state && hal.probe.get_state().triggered))
+                substate = 2;
+            break;
+
+        case STATE_HOLD:
+            substate = sys.holding_state - 1;
+            break;
+
+        case STATE_ESTOP:
+        case STATE_ALARM:
+            substate = sys.alarm;
+            break;
+
+        case STATE_SAFETY_DOOR:
+            substate = sys.parking_state;
+            break;
+    }
+
+    return substate;
+}
+
 void state_set (sys_state_t new_state)
 {
-    if (new_state != sys_state) {
+    if(new_state != sys_state) {
+
+        sys_state_t org_state = sys_state;
 
         switch(new_state) {    // Set up new state and handler
 
@@ -284,11 +316,11 @@ void state_set (sys_state_t new_state)
                 break;
         }
 
-        if (!(sys_state & (STATE_ALARM|STATE_ESTOP)))
+        if(!(sys_state & (STATE_ALARM|STATE_ESTOP)))
             sys.alarm = Alarm_None;
 
-        if (grbl.on_state_change)
-            grbl.on_state_change(new_state);
+        if(sys_state != org_state && grbl.on_state_change)
+            grbl.on_state_change(sys_state);
     }
 }
 
@@ -390,7 +422,7 @@ static void state_await_toolchanged (uint_fast16_t rt_exec)
         if (!gc_state.tool_change) {
             if (hal.stream.suspend_read)
                 hal.stream.suspend_read(false); // Tool change complete, restore "normal" stream input.
-            sys.report.tool = On;
+            system_add_rt_report(Report_Tool);
         }
         pending_state = gc_state.tool_change ? STATE_TOOL_CHANGE : STATE_IDLE;
         state_set(STATE_IDLE);

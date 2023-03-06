@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2016-2021 Terje Io
+  Copyright (c) 2016-2023 Terje Io
   Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
 
   Grbl is free software: you can redistribute it and/or modify
@@ -36,10 +36,9 @@ void coolant_set_state (coolant_state_t mode)
 {
     if (!ABORTED) { // Block during abort.
         hal.coolant.set_state(mode);
-        sys.report.coolant = On; // Set to report change immediately
+        system_add_rt_report(Report_Coolant); // Set to report change immediately
     }
 }
-
 
 // G-code parser entry-point for setting coolant state. Forces a planner buffer sync and bails
 // if an abort or check-mode is active.

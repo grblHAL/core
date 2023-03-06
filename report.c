@@ -1068,6 +1068,7 @@ void report_realtime_status (void)
     static bool probing = false;
 
     float print_position[N_AXIS];
+    report_tracking_flags_t report = system_get_rt_report_flags();
     probe_state_t probe_state = {
         .connected = On,
         .triggered = Off
@@ -1115,7 +1116,7 @@ void report_realtime_status (void)
 
         case STATE_ESTOP:
         case STATE_ALARM:
-            if((sys.report.all || settings.status_report.alarm_substate) && sys.alarm)
+            if((report.all || settings.status_report.alarm_substate) && sys.alarm)
                 hal.stream.write_all(appendbuf(2, "Alarm:", uitoa((uint32_t)sys.alarm)));
             else
                 hal.stream.write_all("Alarm");
@@ -1140,7 +1141,7 @@ void report_realtime_status (void)
 
     uint_fast8_t idx;
     float wco[N_AXIS];
-    if (!settings.status_report.machine_position || sys.report.wco) {
+    if (!settings.status_report.machine_position || report.wco) {
         for (idx = 0; idx < N_AXIS; idx++) {
             // Apply work coordinate offsets and tool length offset to current position.
             wco[idx] = gc_get_offset(idx);
@@ -1234,7 +1235,7 @@ void report_realtime_status (void)
 
     if(settings.status_report.work_coord_offset) {
 
-        if(wco_counter > 0 && !sys.report.wco) {
+        if(wco_counter > 0 && !report.wco) {
             if(wco_counter > (REPORT_WCO_REFRESH_IDLE_COUNT - 1) && state_get() == STATE_IDLE)
                 wco_counter = REPORT_WCO_REFRESH_IDLE_COUNT - 1;
             wco_counter--;
@@ -1243,41 +1244,41 @@ void report_realtime_status (void)
                             ? (REPORT_WCO_REFRESH_BUSY_COUNT - 1) // Reset counter for slow refresh
                             : (REPORT_WCO_REFRESH_IDLE_COUNT - 1);
     } else
-        sys.report.wco = Off;
+        report.wco = Off;
 
     if(settings.status_report.overrides) {
 
-        if (override_counter > 0 && !sys.report.overrides)
+        if (override_counter > 0 && !report.overrides)
             override_counter--;
-        else if((sys.report.overrides = !sys.report.wco)) {
-            sys.report.spindle = sys.report.spindle || spindle_0_state.on;
-            sys.report.coolant = sys.report.coolant || hal.coolant.get_state().value != 0;
+        else if((report.overrides = !report.wco)) {
+            report.spindle = report.spindle || spindle_0_state.on;
+            report.coolant = report.coolant || hal.coolant.get_state().value != 0;
             override_counter = state_get() & (STATE_HOMING|STATE_CYCLE|STATE_HOLD|STATE_JOG|STATE_SAFETY_DOOR)
                                  ? (REPORT_OVERRIDE_REFRESH_BUSY_COUNT - 1) // Reset counter for slow refresh
                                  : (REPORT_OVERRIDE_REFRESH_IDLE_COUNT - 1);
         }
     } else
-        sys.report.overrides = Off;
+        report.overrides = Off;
 
-    if(sys.report.value || gc_state.tool_change) {
+    if(report.value || gc_state.tool_change) {
 
-        if(sys.report.wco) {
+        if(report.wco) {
             hal.stream.write_all("|WCO:");
             hal.stream.write_all(get_axis_values(wco));
         }
 
-        if(sys.report.gwco) {
+        if(report.gwco) {
             hal.stream.write_all("|WCS:G");
             hal.stream.write_all(map_coord_system(gc_state.modal.coord_system.id));
         }
 
-        if(sys.report.overrides) {
+        if(report.overrides) {
             hal.stream.write_all(appendbuf(2, "|Ov:", uitoa((uint32_t)sys.override.feed_rate)));
             hal.stream.write_all(appendbuf(2, ",", uitoa((uint32_t)sys.override.rapid_rate)));
             hal.stream.write_all(appendbuf(2, ",", uitoa((uint32_t)spindle_0->param->override_pct)));
         }
 
-        if(sys.report.spindle || sys.report.coolant || sys.report.tool || gc_state.tool_change) {
+        if(report.spindle || report.coolant || report.tool || gc_state.tool_change) {
 
             coolant_state_t cl_state = hal.coolant.get_state();
 
@@ -1300,39 +1301,39 @@ void report_realtime_status (void)
             if (cl_state.mist)
                 *append++ = 'M';
 
-            if(gc_state.tool_change && !sys.report.tool)
+            if(gc_state.tool_change && !report.tool)
                 *append++ = 'T';
 
             *append = '\0';
             hal.stream.write_all(buf);
         }
 
-        if(sys.report.scaling) {
+        if(report.scaling) {
             axis_signals_tostring(buf, gc_get_g51_state());
             hal.stream.write_all("|Sc:");
             hal.stream.write_all(buf);
         }
 
-        if(sys.report.mpg_mode && hal.driver_cap.mpg_mode)
+        if(report.mpg_mode && hal.driver_cap.mpg_mode)
             hal.stream.write_all(sys.mpg_mode ? "|MPG:1" : "|MPG:0");
 
-        if(sys.report.homed && (sys.homing.mask || settings.homing.flags.single_axis_commands || settings.homing.flags.manual)) {
+        if(report.homed && (sys.homing.mask || settings.homing.flags.single_axis_commands || settings.homing.flags.manual)) {
             axes_signals_t homing = {sys.homing.mask ? sys.homing.mask : AXES_BITMASK};
             hal.stream.write_all(appendbuf(2, "|H:", (homing.mask & sys.homed.mask) == homing.mask ? "1" : "0"));
             if(settings.homing.flags.single_axis_commands)
                 hal.stream.write_all(appendbuf(2, ",", uitoa(sys.homed.mask)));
         }
 
-        if(sys.report.xmode && settings.mode == Mode_Lathe)
+        if(report.xmode && settings.mode == Mode_Lathe)
             hal.stream.write_all(gc_state.modal.diameter_mode ? "|D:1" : "|D:0");
 
-        if(sys.report.tool)
+        if(report.tool)
             hal.stream.write_all(appendbuf(2, "|T:", uitoa(gc_state.tool->tool)));
 
-        if(sys.report.tlo_reference)
+        if(report.tlo_reference)
             hal.stream.write_all(appendbuf(2, "|TLR:", uitoa(sys.tlo_reference_set.mask != 0)));
 
-        if(sys.report.m66result && sys.var5399 > -2) { // M66 result
+        if(report.m66result && sys.var5399 > -2) { // M66 result
             if(sys.var5399 >= 0)
                 hal.stream.write_all(appendbuf(2, "|In:", uitoa(sys.var5399)));
             else
@@ -1344,7 +1345,7 @@ void report_realtime_status (void)
         grbl.on_realtime_report(hal.stream.write_all, sys.report);
 
 #if COMPATIBILITY_LEVEL <= 1
-    if(sys.report.all) {
+    if(report.all) {
         hal.stream.write_all("|FW:grblHAL");
         if(settings.report_interval) {
             hal.stream.write_all(sys.flags.auto_reporting ? "|AR:" : "|AR");
@@ -1376,14 +1377,15 @@ void report_realtime_status (void)
         if (is_changed)
             system_set_exec_state_flag(EXEC_GCODE_REPORT);
 
-        if(sys.report.tool_offset)
+        if(report.tool_offset)
             system_set_exec_state_flag(EXEC_TLO_REPORT);
     }
 
     hal.stream.write_all(">" ASCII_EOL);
 
-    sys.report.value = 0;
-    sys.report.wco = settings.status_report.work_coord_offset && wco_counter == 0; // Set to report on next request
+    system_add_rt_report(Report_ClearAll);
+    if(settings.status_report.work_coord_offset && wco_counter == 0)
+        system_add_rt_report(Report_WCO); // Set to report on next request
 }
 
 static void report_bitfield (const char *format, bool bitmap)

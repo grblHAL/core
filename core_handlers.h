@@ -106,6 +106,7 @@ typedef void (*on_jog_cancel_ptr)(sys_state_t state);
 typedef bool (*on_spindle_select_ptr)(spindle_ptrs_t *spindle);
 typedef void (*on_spindle_selected_ptr)(spindle_ptrs_t *spindle);
 typedef void (*on_gcode_message_ptr)(char *msg);
+typedef void (*on_rt_reports_added_ptr)(report_tracking_flags_t report);
 typedef status_code_t (*on_unknown_sys_command_ptr)(sys_state_t state, char *line); // return Status_Unhandled.
 typedef status_code_t (*on_user_command_ptr)(char *line);
 typedef sys_commands_t *(*on_get_commands_ptr)(void);
@@ -125,6 +126,7 @@ typedef struct {
     on_unknown_accessory_override_ptr on_unknown_accessory_override;
     on_report_options_ptr on_report_options;
     on_report_command_help_ptr on_report_command_help;
+    on_rt_reports_added_ptr on_rt_reports_added;
     on_global_settings_restore_ptr on_global_settings_restore;
     on_get_alarms_ptr on_get_alarms;
     on_get_errors_ptr on_get_errors;

@@ -773,10 +773,13 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(char c)
 
         case CMD_STATUS_REPORT_ALL: // Add all statuses to report
             {
-                bool tlo = sys.report.tool_offset;
-                sys.report.value = (uint32_t)-1;
-                sys.report.tool_offset = tlo;
-                sys.report.m66result = sys.var5399 > -2;
+                report_tracking_flags_t report;
+
+                report.value = (uint32_t)Report_All;
+                report.tool_offset = sys.report.tool_offset;
+                report.m66result = sys.var5399 > -2;
+
+                system_add_rt_report((report_tracking_t)report.value);
             }
             system_set_exec_state_flag(EXEC_STATUS_REPORT);
             drop = true;

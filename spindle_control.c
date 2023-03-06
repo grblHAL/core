@@ -451,7 +451,7 @@ void spindle_set_override (spindle_ptrs_t *spindle, override_t speed_override)
         else
             sys.step_control.update_spindle_rpm = On;
 
-        sys.report.overrides = On; // Set to report change immediately
+        system_add_rt_report(Report_Overrides); // Set to report change immediately
 
        if(grbl.on_spindle_programmed)
            grbl.on_spindle_programmed(spindle, gc_state.modal.spindle.state, spindle_set_rpm(spindle, gc_state.spindle.rpm, speed_override), gc_state.modal.spindle.rpm_mode);
@@ -484,7 +484,8 @@ static bool set_state (spindle_ptrs_t *spindle, spindle_state_t state, float rpm
 
             spindle->set_state(state, spindle_set_rpm(spindle, rpm, spindle->param->override_pct));
         }
-        sys.report.spindle = On; // Set to report change immediately
+
+        system_add_rt_report(Report_Spindle); // Set to report change immediately
 
         st_rpm_changed(rpm);
     }

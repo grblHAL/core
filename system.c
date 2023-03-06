@@ -549,7 +549,7 @@ static status_code_t output_all_settings (sys_state_t state, char *args)
 static status_code_t output_parser_state (sys_state_t state, char *args)
 {
     report_gcode_modes();
-    sys.report.homed = On; // Report homed state on next realtime report
+    system_add_rt_report(Report_Homed); // Report homed state on next realtime report
 
     return Status_OK;
 }
@@ -772,7 +772,7 @@ static status_code_t set_tool_reference (sys_state_t state, char *args)
     } else
         sys.tlo_reference_set.mask = 0;
 #endif
-    sys.report.tlo_reference = On;
+    system_add_rt_report(Report_TLOReference);
 
     return Status_OK;
 }
@@ -968,7 +968,7 @@ void system_flag_wco_change (void)
     if(grbl.on_wco_changed)
         grbl.on_wco_changed();
 
-    sys.report.wco = On;
+    system_add_rt_report(Report_WCO);
 }
 
 // Sets machine position. Must be sent a 'step' array.
@@ -1072,4 +1072,22 @@ void system_raise_alarm (alarm_code_t alarm)
         if(sys.driver_started || sys.alarm == Alarm_SelftestFailed)
             grbl.report.alarm_message(alarm);
     }
+}
+
+// TODO: encapsulate sys.report
+
+report_tracking_flags_t system_get_rt_report_flags (void)
+{
+    return sys.report;
+}
+
+void system_add_rt_report (report_tracking_t report)
+{
+    if(report == Report_ClearAll)
+        sys.report.value = 0;
+    else
+        sys.report.value |= (uint32_t)report;
+
+    if(sys.report.value && grbl.on_rt_reports_added)
+        grbl.on_rt_reports_added((report_tracking_flags_t)((uint32_t)report));
 }
