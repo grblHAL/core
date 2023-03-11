@@ -202,7 +202,6 @@ void st_deenergize (void)
     }
 }
 
-
 // Stepper state initialization. Cycle should only start if the st.cycle_start flag is
 // enabled. Startup init and limits call this function but shouldn't start the cycle.
 void st_wake_up (void)
@@ -230,10 +229,14 @@ ISR_CODE void ISR_FUNC(st_go_idle)(void)
 
     // Set stepper driver idle state, disabled or enabled, depending on settings and circumstances.
     if (((settings.steppers.idle_lock_time != 255) || sys.rt_exec_alarm || state == STATE_SLEEP) && state != STATE_HOMING) {
-        // Force stepper dwell to lock axes for a defined amount of time to ensure the axes come to a complete
-        // stop and not drift from residual inertial forces at the end of the last movement.
-        sys.steppers_deenergize = true;
-        hal.delay_ms(settings.steppers.idle_lock_time, st_deenergize);
+        if(state == STATE_SLEEP)
+            hal.stepper.enable((axes_signals_t){0});
+        else {
+            // Force stepper dwell to lock axes for a defined amount of time to ensure the axes come to a complete
+            // stop and not drift from residual inertial forces at the end of the last movement.
+            sys.steppers_deenergize = true;
+            hal.delay_ms(settings.steppers.idle_lock_time, st_deenergize);
+        }
     } else
         hal.stepper.enable(settings.steppers.idle_lock_time == 255 ? (axes_signals_t){AXES_BITMASK} : settings.steppers.deenergize);
 }

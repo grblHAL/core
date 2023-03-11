@@ -1695,7 +1695,7 @@ status_code_t gc_execute_block (char *block)
             gc_block.values.xyz[idx] *= MM_PER_INCH;
     } while(idx);
 
-    if (command_words.G1 && gc_state.modal.diameter_mode != gc_block.modal.diameter_mode) {
+    if (command_words.G15 && gc_state.modal.diameter_mode != gc_block.modal.diameter_mode) {
         gc_state.modal.diameter_mode = gc_block.modal.diameter_mode;
         system_add_rt_report(Report_LatheXMode);
     }

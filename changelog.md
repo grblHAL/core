@@ -1,6 +1,17 @@
 ## grblHAL changelog
 
-<a name="2023032"/>20230302
+<a name="20230311"/>20230311
+
+Core:
+
+* Fix for isisue #264, stepper motors not disabled when entering sleep mode.  
+__NOTE:__ all stepper motors will now be disabled even if the $37 setting is set to keep some enabled.
+
+* Fix for recent regression that disabled G7/G8 handling in lathe mode.
+
+---
+
+<a name="20230302"/>20230302
 
 Core:
 
@@ -16,7 +27,7 @@ Drivers:
 
 Plugins:
 
-* Keypad: Type fix for homed status field.
+* Keypad: I2C display protocol plugin, type fix for homed status field.
 
 ---
 

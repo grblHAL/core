@@ -111,7 +111,16 @@ static void state_restore_conditions (restore_condition_t *condition)
     }
 }
 
-bool initiate_hold (uint_fast16_t new_state)
+static void enter_sleep (void)
+{
+    st_go_idle();
+    spindle_all_off();
+    hal.coolant.set_state((coolant_state_t){0});
+    grbl.report.feedback_message(Message_SleepMode);
+    stateHandler = state_noop;
+}
+
+static bool initiate_hold (uint_fast16_t new_state)
 {
     spindle_ptrs_t *spindle;
     spindle_num_t spindle_num = N_SYS_SPINDLE;
@@ -304,6 +313,8 @@ void state_set (sys_state_t new_state)
                     }
                 } else
                     sys_state = new_state;
+                if(sys_state == STATE_SLEEP && stateHandler != state_await_waypoint_retract)
+                    enter_sleep();
                 break;
 
             case STATE_ALARM:
@@ -532,13 +543,13 @@ static void state_await_hold (uint_fast16_t rt_exec)
                         // Parking motion not possible. Just disable the spindle and coolant.
                         // NOTE: Laser mode does not start a parking motion to ensure the laser stops immediately.
                         spindle_all_off(); // De-energize
-                        if (!settings.safety_door.flags.keep_coolant_on)
-                            hal.coolant.set_state((coolant_state_t){0});     // De-energize
+                        if (!settings.safety_door.flags.keep_coolant_on || sys_state == STATE_SLEEP)
+                            hal.coolant.set_state((coolant_state_t){0}); // De-energize
                         sys.parking_state = hal.control.get_state().safety_door_ajar ? Parking_DoorAjar : Parking_DoorClosed;
                     }
                 } else {
                     spindle_all_off(); // De-energize
-                    if (!settings.safety_door.flags.keep_coolant_on)
+                    if (!settings.safety_door.flags.keep_coolant_on || sys_state == STATE_SLEEP)
                         hal.coolant.set_state((coolant_state_t){0}); // De-energize
                     sys.parking_state = hal.control.get_state().safety_door_ajar ? Parking_DoorAjar : Parking_DoorClosed;
                 }
@@ -565,6 +576,10 @@ static void state_await_resume (uint_fast16_t rt_exec)
             st_parking_restore_buffer(); // Restore step segment buffer to normal run state.
         }
         sys.parking_state = hal.control.get_state().safety_door_ajar ? Parking_DoorAjar : Parking_DoorClosed;
+        if(sys_state == STATE_SLEEP) {
+            enter_sleep();
+            return;
+        }
     }
 
     if (rt_exec & EXEC_SLEEP)

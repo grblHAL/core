@@ -24,7 +24,7 @@
 For the most part, users will not need to directly modify these, but they are here for
 specific needs, i.e. performance tuning or adjusting to non-typical machines.
 <br>__IMPORTANT:__ Symbol/macro names starting with `DEFAULT_` contains default values for run-time
-                   configuarble settings that can be changed with `$=<setting id>` commands.
+                   configurable settings that can be changed with `$=<setting id>` commands.
                    Any changes to these requires a full re-compiling of the source code to propagate them.
                    A reset of non-volatile storage with `$RST=*` after reflashing is also required.
 */

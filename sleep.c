@@ -52,7 +52,6 @@ static void sleep_execute()
     // If reached, sleep counter has expired. Execute sleep procedures.
     // Notify user that Grbl has timed out and will be parking.
     // To exit sleep, resume or reset. Either way, the job will not be recoverable.
-    grbl.report.feedback_message(Message_SleepMode);
     system_set_exec_state_flag(EXEC_SLEEP);
 }
 
