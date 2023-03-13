@@ -1,10 +1,27 @@
 ## grblHAL changelog
 
+<a name="20230312"/>20230312
+
+Core:
+
+* Added event definition for SD card file open, fix for issue #118.
+
+Drivers:
+
+* ESP32: Added aux I/O and cycle start/feed hold inputs to MKS DLC32 board, expanded max aux out to 4.  
+__NOTE:__ The aux input 0 port on the MKS DLC32 board does not have an internal pullup.
+
+Plugins:
+
+* SD card: added publish for file open event allowing plugins to take over stream handling. Added `$F+` command for listing all files on card.
+
+---
+
 <a name="20230311"/>20230311
 
 Core:
 
-* Fix for isisue #264, stepper motors not disabled when entering sleep mode.  
+* Fix for issue #264, stepper motors not disabled when entering sleep mode.  
 __NOTE:__ all stepper motors will now be disabled even if the $37 setting is set to keep some enabled.
 
 * Fix for recent regression that disabled G7/G8 handling in lathe mode.

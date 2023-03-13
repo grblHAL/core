@@ -220,20 +220,29 @@ typedef struct {
 } overrides_t;
 
 typedef union {
+    uint8_t flags;
+    struct {
+        uint16_t feedrate :1,
+                 coolant  :1,
+                 spindle  :1,
+                 unused   :5;
+    };
+} system_override_delay_t;
+
+typedef union {
     uint16_t value;
     struct {
-        uint16_t mpg_mode              :1, //!< MPG mode flag. Set when switched to secondary input stream. (unused for now).
-                 probe_succeeded       :1, //!< Tracks if last probing cycle was successful.
-                 soft_limit            :1, //!< Tracks soft limit errors for the state machine.
-                 exit                  :1, //!< System exit flag. Used in combination with abort to terminate main loop.
-                 block_delete_enabled  :1, //!< Set to true to enable block delete.
-                 feed_hold_pending     :1,
-                 delay_overrides       :1,
-                 optional_stop_disable :1,
-                 single_block          :1, //!< Set to true to disable M1 (optional stop), via realtime command.
-                 keep_input            :1, //!< Set to true to not flush stream input buffer on executing STOP.
-                 auto_reporting        :1, //!< Set to true when auto real time reporting is enabled.
-                 unused                :5;
+        uint16_t mpg_mode                :1, //!< MPG mode flag. Set when switched to secondary input stream. (unused for now).
+                 probe_succeeded         :1, //!< Tracks if last probing cycle was successful.
+                 soft_limit              :1, //!< Tracks soft limit errors for the state machine.
+                 exit                    :1, //!< System exit flag. Used in combination with abort to terminate main loop.
+                 block_delete_enabled    :1, //!< Set to true to enable block delete.
+                 feed_hold_pending       :1,
+                 optional_stop_disable   :1,
+                 single_block            :1, //!< Set to true to disable M1 (optional stop), via realtime command.
+                 keep_input              :1, //!< Set to true to not flush stream input buffer on executing STOP.
+                 auto_reporting          :1, //!< Set to true when auto real time reporting is enabled.
+                 unused                  :6;
     };
 } system_flags_t;
 
@@ -260,6 +269,7 @@ typedef struct system {
     axes_signals_t homing_axis_lock;        //!< Locks axes when limits engage. Used as an axis motion mask in the stepper ISR.
     axes_signals_t homing;                  //!< Axes with homing enabled.
     overrides_t override;                   //!< Override values & states
+    system_override_delay_t override_delay; //!< Flags for delayed overrides.
     report_tracking_flags_t report;         //!< Tracks when to add data to status reports.
     parking_state_t parking_state;          //!< Tracks parking state
     hold_state_t holding_state;             //!< Tracks holding state

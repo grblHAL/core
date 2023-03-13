@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2019 Terje Io
+  Copyright (c) 2017-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ typedef struct {
     uint8_t buf[OVERRIDE_BUFSIZE];
 } override_queue_t;
 
-static override_queue_t feed = {0}, accessory = {0};
+static override_queue_t feed = {0}, spindle = {0}, coolant = {0};
 
 ISR_CODE void ISR_FUNC(enqueue_feed_override)(uint8_t cmd)
 {
@@ -56,30 +56,55 @@ uint8_t get_feed_override (void)
     return data;
 }
 
-ISR_CODE void ISR_FUNC(enqueue_accessory_override)(uint8_t cmd)
+ISR_CODE void ISR_FUNC(enqueue_spindle_override)(uint8_t cmd)
 {
-    uint_fast8_t bptr = (accessory.head + 1) & (OVERRIDE_BUFSIZE - 1);    // Get next head pointer
+    uint_fast8_t bptr = (spindle.head + 1) & (OVERRIDE_BUFSIZE - 1);    // Get next head pointer
 
-    if(bptr != accessory.tail) {                // If not buffer full
-        accessory.buf[accessory.head] = cmd;    // add data to buffer
-        accessory.head = bptr;                  // and update pointer
+    if(bptr != spindle.tail) {              // If not buffer full
+        spindle.buf[spindle.head] = cmd;    // add data to buffer
+        spindle.head = bptr;                // and update pointer
     }
 }
 
 // Returns 0 if no commands enqueued
-uint8_t get_accessory_override (void)
+uint8_t get_spindle_override (void)
 {
     uint8_t data = 0;
-    uint_fast8_t bptr = accessory.tail;
+    uint_fast8_t bptr = spindle.tail;
 
-    if(bptr != accessory.head) {
-        data = accessory.buf[bptr++];                   // Get next character, increment tmp pointer
-        accessory.tail = bptr & (OVERRIDE_BUFSIZE - 1); // and update pointer
+    if(bptr != spindle.head) {
+        data = spindle.buf[bptr++];                     // Get next character, increment tmp pointer
+        spindle.tail = bptr & (OVERRIDE_BUFSIZE - 1);   // and update pointer
     }
 
     return data;
 }
 
-void flush_override_buffers () {
-    feed.head = feed.tail = accessory.head = accessory.tail = 0;
+ISR_CODE void ISR_FUNC(enqueue_coolant_override)(uint8_t cmd)
+{
+    uint_fast8_t bptr = (coolant.head + 1) & (OVERRIDE_BUFSIZE - 1);    // Get next head pointer
+
+    if(bptr != coolant.tail) {              // If not buffer full
+        coolant.buf[coolant.head] = cmd;    // add data to buffer
+        coolant.head = bptr;                // and update pointer
+    }
+}
+
+// Returns 0 if no commands enqueued
+uint8_t get_coolant_override (void)
+{
+    uint8_t data = 0;
+    uint_fast8_t bptr = coolant.tail;
+
+    if(bptr != coolant.head) {
+        data = coolant.buf[bptr++];                   // Get next character, increment tmp pointer
+        coolant.tail = bptr & (OVERRIDE_BUFSIZE - 1); // and update pointer
+    }
+
+    return data;
+}
+
+void flush_override_buffers (void)
+{
+    feed.head = feed.tail = spindle.head = spindle.tail = coolant.head = coolant.tail = 0;
 }

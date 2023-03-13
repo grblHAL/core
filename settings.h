@@ -709,6 +709,7 @@ typedef enum {
     Group_MotorDriver,
     Group_VFD,
     Group_CANbus,
+    Group_Embroidery,
     Group_Axis,
 // NOTE: axis groups MUST be sequential AND last
     Group_Axis0,

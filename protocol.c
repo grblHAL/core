@@ -495,7 +495,7 @@ bool protocol_exec_rt_system (void)
             sys.cancel = true;
             sys.step_control.flags = 0;
             sys.flags.feed_hold_pending = Off;
-            sys.flags.delay_overrides = Off;
+            sys.override_delay.flags = 0;
             if(sys.override.control.sync)
                 sys.override.control = gc_state.modal.override_ctrl;
 
@@ -562,137 +562,152 @@ bool protocol_exec_rt_system (void)
 
     grbl.on_execute_realtime(state_get());
 
-    if(!sys.flags.delay_overrides) {
+    // Execute overrides.
 
-        // Execute overrides.
+    if(!sys.override_delay.feedrate && (rt_exec = get_feed_override())) {
 
-        if((rt_exec = get_feed_override())) {
+        override_t new_f_override = sys.override.feed_rate;
+        override_t new_r_override = sys.override.rapid_rate;
 
-            override_t new_f_override = sys.override.feed_rate;
-            override_t new_r_override = sys.override.rapid_rate;
+        do {
 
-            do {
+            switch(rt_exec) {
 
-                switch(rt_exec) {
+                case CMD_OVERRIDE_FEED_RESET:
+                    new_f_override = DEFAULT_FEED_OVERRIDE;
+                    break;
 
-                    case CMD_OVERRIDE_FEED_RESET:
-                        new_f_override = DEFAULT_FEED_OVERRIDE;
-                        break;
+                case CMD_OVERRIDE_FEED_COARSE_PLUS:
+                    new_f_override += FEED_OVERRIDE_COARSE_INCREMENT;
+                    break;
 
-                    case CMD_OVERRIDE_FEED_COARSE_PLUS:
-                        new_f_override += FEED_OVERRIDE_COARSE_INCREMENT;
-                        break;
+                case CMD_OVERRIDE_FEED_COARSE_MINUS:
+                    new_f_override -= FEED_OVERRIDE_COARSE_INCREMENT;
+                    break;
 
-                    case CMD_OVERRIDE_FEED_COARSE_MINUS:
-                        new_f_override -= FEED_OVERRIDE_COARSE_INCREMENT;
-                        break;
+                case CMD_OVERRIDE_FEED_FINE_PLUS:
+                    new_f_override += FEED_OVERRIDE_FINE_INCREMENT;
+                    break;
 
-                    case CMD_OVERRIDE_FEED_FINE_PLUS:
-                        new_f_override += FEED_OVERRIDE_FINE_INCREMENT;
-                        break;
+                case CMD_OVERRIDE_FEED_FINE_MINUS:
+                    new_f_override -= FEED_OVERRIDE_FINE_INCREMENT;
+                    break;
 
-                    case CMD_OVERRIDE_FEED_FINE_MINUS:
-                        new_f_override -= FEED_OVERRIDE_FINE_INCREMENT;
-                        break;
+                case CMD_OVERRIDE_RAPID_RESET:
+                    new_r_override = DEFAULT_RAPID_OVERRIDE;
+                    break;
 
-                    case CMD_OVERRIDE_RAPID_RESET:
-                        new_r_override = DEFAULT_RAPID_OVERRIDE;
-                        break;
+                case CMD_OVERRIDE_RAPID_MEDIUM:
+                    new_r_override = RAPID_OVERRIDE_MEDIUM;
+                    break;
 
-                    case CMD_OVERRIDE_RAPID_MEDIUM:
-                        new_r_override = RAPID_OVERRIDE_MEDIUM;
-                        break;
-
-                    case CMD_OVERRIDE_RAPID_LOW:
-                        new_r_override = RAPID_OVERRIDE_LOW;
-                        break;
-                }
-
-                new_f_override = constrain(new_f_override, MIN_FEED_RATE_OVERRIDE, MAX_FEED_RATE_OVERRIDE);
-
-            } while((rt_exec = get_feed_override()));
-
-            plan_feed_override(new_f_override, new_r_override);
-        }
-
-        if((rt_exec = get_accessory_override())) {
-
-            bool spindle_stop = false;
-            spindle_ptrs_t *spindle = gc_spindle_get();
-            override_t last_s_override = spindle->param->override_pct;
-            coolant_state_t coolant_state = gc_state.modal.coolant;
-
-            do {
-
-                switch(rt_exec) {
-
-                    case CMD_OVERRIDE_SPINDLE_RESET:
-                        last_s_override = DEFAULT_SPINDLE_RPM_OVERRIDE;
-                        break;
-
-                    case CMD_OVERRIDE_SPINDLE_COARSE_PLUS:
-                        last_s_override += SPINDLE_OVERRIDE_COARSE_INCREMENT;
-                        break;
-
-                    case CMD_OVERRIDE_SPINDLE_COARSE_MINUS:
-                        last_s_override -= SPINDLE_OVERRIDE_COARSE_INCREMENT;
-                        break;
-
-                    case CMD_OVERRIDE_SPINDLE_FINE_PLUS:
-                        last_s_override += SPINDLE_OVERRIDE_FINE_INCREMENT;
-                        break;
-
-                    case CMD_OVERRIDE_SPINDLE_FINE_MINUS:
-                        last_s_override -= SPINDLE_OVERRIDE_FINE_INCREMENT;
-                        break;
-
-                    case CMD_OVERRIDE_SPINDLE_STOP:
-                        spindle_stop = !spindle_stop;
-                        break;
-
-                    case CMD_OVERRIDE_COOLANT_MIST_TOGGLE:
-                        if (hal.driver_cap.mist_control && ((state_get() == STATE_IDLE) || (state_get() & (STATE_CYCLE | STATE_HOLD)))) {
-                            coolant_state.mist = !coolant_state.mist;
-                        }
-                        break;
-
-                    case CMD_OVERRIDE_COOLANT_FLOOD_TOGGLE:
-                        if ((state_get() == STATE_IDLE) || (state_get() & (STATE_CYCLE | STATE_HOLD))) {
-                            coolant_state.flood = !coolant_state.flood;
-                        }
-                        break;
-
-                    default:
-                        if(grbl.on_unknown_accessory_override)
-                            grbl.on_unknown_accessory_override(rt_exec);
-                        break;
-                }
-
-                last_s_override = constrain(last_s_override, MIN_SPINDLE_RPM_OVERRIDE, MAX_SPINDLE_RPM_OVERRIDE);
-
-            } while((rt_exec = get_accessory_override()));
-
-            spindle_set_override(spindle, last_s_override);
-
-          // NOTE: Since coolant state always performs a planner sync whenever it changes, the current
-          // run state can be determined by checking the parser state.
-            if(coolant_state.value != gc_state.modal.coolant.value) {
-                coolant_set_state(coolant_state); // Report flag set in coolant_set_state().
-                gc_state.modal.coolant = coolant_state;
-                if(grbl.on_override_changed)
-                    grbl.on_override_changed(OverrideChanged_CoolantState);
+                case CMD_OVERRIDE_RAPID_LOW:
+                    new_r_override = RAPID_OVERRIDE_LOW;
+                    break;
             }
 
-            if (spindle_stop && state_get() == STATE_HOLD && gc_state.modal.spindle.state.on) {
-                // Spindle stop override allowed only while in HOLD state.
-                // NOTE: Report flag is set in spindle_set_state() when spindle stop is executed.
-                if (!sys.override.spindle_stop.value)
-                    sys.override.spindle_stop.initiate = On;
-                else if (sys.override.spindle_stop.enabled)
-                    sys.override.spindle_stop.restore = On;
+            new_f_override = constrain(new_f_override, MIN_FEED_RATE_OVERRIDE, MAX_FEED_RATE_OVERRIDE);
+
+        } while((rt_exec = get_feed_override()));
+
+        plan_feed_override(new_f_override, new_r_override);
+    }
+
+    if(!sys.override_delay.spindle && (rt_exec = get_spindle_override())) {
+
+        bool spindle_stop = false;
+        spindle_ptrs_t *spindle = gc_spindle_get();
+        override_t last_s_override = spindle->param->override_pct;
+
+        do {
+
+            switch(rt_exec) {
+
+                case CMD_OVERRIDE_SPINDLE_RESET:
+                    last_s_override = DEFAULT_SPINDLE_RPM_OVERRIDE;
+                    break;
+
+                case CMD_OVERRIDE_SPINDLE_COARSE_PLUS:
+                    last_s_override += SPINDLE_OVERRIDE_COARSE_INCREMENT;
+                    break;
+
+                case CMD_OVERRIDE_SPINDLE_COARSE_MINUS:
+                    last_s_override -= SPINDLE_OVERRIDE_COARSE_INCREMENT;
+                    break;
+
+                case CMD_OVERRIDE_SPINDLE_FINE_PLUS:
+                    last_s_override += SPINDLE_OVERRIDE_FINE_INCREMENT;
+                    break;
+
+                case CMD_OVERRIDE_SPINDLE_FINE_MINUS:
+                    last_s_override -= SPINDLE_OVERRIDE_FINE_INCREMENT;
+                    break;
+
+                case CMD_OVERRIDE_SPINDLE_STOP:
+                    spindle_stop = !spindle_stop;
+                    break;
+
+                default:
+                    if(grbl.on_unknown_accessory_override)
+                        grbl.on_unknown_accessory_override(rt_exec);
+                    break;
             }
+
+            last_s_override = constrain(last_s_override, MIN_SPINDLE_RPM_OVERRIDE, MAX_SPINDLE_RPM_OVERRIDE);
+
+        } while((rt_exec = get_spindle_override()));
+
+        spindle_set_override(spindle, last_s_override);
+
+        if (spindle_stop && state_get() == STATE_HOLD && gc_state.modal.spindle.state.on) {
+            // Spindle stop override allowed only while in HOLD state.
+            // NOTE: Report flag is set in spindle_set_state() when spindle stop is executed.
+            if (!sys.override.spindle_stop.value)
+                sys.override.spindle_stop.initiate = On;
+            else if (sys.override.spindle_stop.enabled)
+                sys.override.spindle_stop.restore = On;
         }
-    } // End execute overrides.
+    }
+
+    if(!sys.override_delay.coolant && (rt_exec = get_coolant_override())) {
+
+        coolant_state_t coolant_state = gc_state.modal.coolant;
+
+        do {
+
+            switch(rt_exec) {
+
+                case CMD_OVERRIDE_COOLANT_MIST_TOGGLE:
+                    if (hal.driver_cap.mist_control && ((state_get() == STATE_IDLE) || (state_get() & (STATE_CYCLE | STATE_HOLD)))) {
+                        coolant_state.mist = !coolant_state.mist;
+                    }
+                    break;
+
+                case CMD_OVERRIDE_COOLANT_FLOOD_TOGGLE:
+                    if ((state_get() == STATE_IDLE) || (state_get() & (STATE_CYCLE | STATE_HOLD))) {
+                        coolant_state.flood = !coolant_state.flood;
+                    }
+                    break;
+
+                default:
+                    if(grbl.on_unknown_accessory_override)
+                        grbl.on_unknown_accessory_override(rt_exec);
+                    break;
+            }
+
+        } while((rt_exec = get_coolant_override()));
+
+      // NOTE: Since coolant state always performs a planner sync whenever it changes, the current
+      // run state can be determined by checking the parser state.
+        if(coolant_state.value != gc_state.modal.coolant.value) {
+            coolant_set_state(coolant_state); // Report flag set in coolant_set_state().
+            gc_state.modal.coolant = coolant_state;
+            if(grbl.on_override_changed)
+                grbl.on_override_changed(OverrideChanged_CoolantState);
+        }
+    }
+
+    // End execute overrides.
 
     // Reload step segment buffer
     if (state_get() & (STATE_CYCLE | STATE_HOLD | STATE_SAFETY_DOOR | STATE_HOMING | STATE_SLEEP| STATE_JOG))
@@ -876,11 +891,15 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(char c)
         case CMD_OVERRIDE_SPINDLE_FINE_PLUS:
         case CMD_OVERRIDE_SPINDLE_FINE_MINUS:
         case CMD_OVERRIDE_SPINDLE_STOP:
+            drop = true;
+            enqueue_spindle_override((uint8_t)c);
+            break;
+
         case CMD_OVERRIDE_COOLANT_FLOOD_TOGGLE:
         case CMD_OVERRIDE_COOLANT_MIST_TOGGLE:
         case CMD_OVERRIDE_FAN0_TOGGLE:
             drop = true;
-            enqueue_accessory_override((uint8_t)c);
+            enqueue_coolant_override((uint8_t)c);
             break;
 
         case CMD_REBOOT:

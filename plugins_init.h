@@ -85,6 +85,11 @@
     webui_init();
 #endif
 
+#if EMBROIDERY_ENABLE
+    extern void embroidery_init (void);
+    embroidery_init();
+#endif
+
     extern void my_plugin_init (void);
     my_plugin_init();
 

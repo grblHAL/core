@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2016-2019 Terje Io
+  Copyright (c) 2016-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -31,7 +31,9 @@
 void flush_override_buffers ();
 void enqueue_feed_override (uint8_t cmd);
 uint8_t get_feed_override (void);
-void enqueue_accessory_override (uint8_t cmd);
-uint8_t get_accessory_override (void);
+void enqueue_spindle_override (uint8_t cmd);
+uint8_t get_spindle_override (void);
+void enqueue_coolant_override (uint8_t cmd);
+uint8_t get_coolant_override (void);
 
 #endif

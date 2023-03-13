@@ -1014,7 +1014,7 @@ status_code_t gc_execute_block (char *block)
                         word_bit.modal_group.M7 = On;
                         gc_block.modal.spindle.state.on = !(int_value == 5);
                         gc_block.modal.spindle.state.ccw = int_value == 4;
-                        sys.flags.delay_overrides = On;
+                        sys.override_delay.spindle = On;
                         break;
 
                     case 6:
@@ -1028,7 +1028,7 @@ status_code_t gc_execute_block (char *block)
 
                     case 7: case 8: case 9:
                         word_bit.modal_group.M8 = On;
-                        sys.flags.delay_overrides = On;
+                        sys.override_delay.coolant = On;
                         gc_parser_flags.set_coolant = On;
                         switch(int_value) {
 
@@ -2856,7 +2856,7 @@ status_code_t gc_execute_block (char *block)
 
     plan_data.condition.coolant = gc_state.modal.coolant; // Set condition flag for planner use.
 
-    sys.flags.delay_overrides = Off;
+    sys.override_delay.flags = 0;
 
     // [9. Override control ]:
     if (gc_state.modal.override_ctrl.value != gc_block.modal.override_ctrl.value) {
