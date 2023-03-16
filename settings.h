@@ -678,60 +678,60 @@ typedef struct {
 } settings_t;
 
 typedef enum {
-    Group_Root = 0,
-    Group_General,
-    Group_ControlSignals,
-    Group_Limits,
-    Group_Limits_DualAxis,
-    Group_Coolant,
-    Group_Spindle,
-    Group_Spindle_Sync,
-    Group_Spindle_ClosedLoop,
-    Group_Toolchange,
-    Group_Plasma,
-    Group_Homing,
-    Group_Probing,
-    Group_SafetyDoor,
-    Group_Jogging,
-    Group_Networking,
-    Group_Networking_Wifi,
-    Group_Bluetooth,
-    Group_AuxPorts,
-    Group_ModBus,
-    Group_Encoders,
-    Group_Encoder0,
-    Group_Encoder1,
-    Group_Encoder2,
-    Group_Encoder3,
-    Group_Encoder4,
-    Group_UserSettings,
-    Group_Stepper,
-    Group_MotorDriver,
-    Group_VFD,
-    Group_CANbus,
-    Group_Embroidery,
-    Group_Axis,
+    Group_Root = 0,             //!< 0
+    Group_General,              //!< 1
+    Group_ControlSignals,       //!< 2
+    Group_Limits,               //!< 3
+    Group_Limits_DualAxis,      //!< 4
+    Group_Coolant,              //!< 5
+    Group_Spindle,              //!< 6
+    Group_Spindle_Sync,         //!< 7
+    Group_Spindle_ClosedLoop,   //!< 8
+    Group_Toolchange,           //!< 9
+    Group_Plasma,               //!< 10
+    Group_Homing,               //!< 11
+    Group_Probing,              //!< 12
+    Group_SafetyDoor,           //!< 13
+    Group_Jogging,              //!< 14
+    Group_Networking,           //!< 15
+    Group_Networking_Wifi,      //!< 16
+    Group_Bluetooth,            //!< 17
+    Group_AuxPorts,             //!< 18
+    Group_ModBus,               //!< 19
+    Group_Encoders,             //!< 20
+    Group_Encoder0,             //!< 21
+    Group_Encoder1,             //!< 22
+    Group_Encoder2,             //!< 23
+    Group_Encoder3,             //!< 24
+    Group_Encoder4,             //!< 25
+    Group_UserSettings,         //!< 26
+    Group_Stepper,              //!< 27
+    Group_MotorDriver,          //!< 28
+    Group_VFD,                  //!< 29
+    Group_CANbus,               //!< 30
+    Group_Embroidery,           //!< 31
+    Group_Axis,                 //!< 32
 // NOTE: axis groups MUST be sequential AND last
-    Group_Axis0,
-    Group_XAxis = Group_Axis0,
-    Group_YAxis,
-    Group_ZAxis,
+    Group_Axis0,                //!< 33
+    Group_XAxis = Group_Axis0,  //!< 34
+    Group_YAxis,                //!< 35
+    Group_ZAxis,                //!< 36
 #ifdef A_AXIS
-    Group_AAxis,
+    Group_AAxis,                //!< 37
 #endif
 #ifdef B_AXIS
-    Group_BAxis,
+    Group_BAxis,                //!< 38
 #endif
 #ifdef C_AXIS
-    Group_CAxis,
+    Group_CAxis,                //!< 39
 #endif
 #ifdef U_AXIS
-    Group_UAxis,
+    Group_UAxis,                //!< 40
 #endif
 #ifdef V_AXIS
-    Group_VAxis,
+    Group_VAxis,                //!< 41
 #endif
-    Group_All = Group_Root
+    Group_All = Group_Root      //!< 0
 } setting_group_t;
 
 typedef enum {

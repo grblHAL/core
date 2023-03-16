@@ -1,6 +1,23 @@
 ## grblHAL changelog
 
-<a name="20230312"/>20230312
+<a name="20230316"/>20230316
+
+Core:
+
+* Added preprosessor symbol handling for embroidery plugin.
+
+Drivers:
+
+* iMXRT1062, RP2040, STM32F4xx, STM32F7xx and ESP32: Added option for enabling embroidery plugin.  
+__NOTE:__ The plugin requires one interrupt capable auxillary input and SD card support.
+
+Plugins:
+
+* Embroidery: initial commit for testing.
+
+---
+
+<a name="20230312"/>Build 20230312
 
 Core:
 

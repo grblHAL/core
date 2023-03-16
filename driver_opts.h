@@ -187,20 +187,8 @@
 #define TRINAMIC_DEV        0
 #endif
 
-#ifndef SDCARD_ENABLE
-#define SDCARD_ENABLE       0
-#endif
-
 #ifndef LITTLEFS_ENABLE
 #define LITTLEFS_ENABLE     0
-#endif
-
-#ifndef SPI_ENABLE
-#if SDCARD_ENABLE || TRINAMIC_SPI_ENABLE
-#define SPI_ENABLE 1
-#else
-#define SPI_ENABLE 0
-#endif
 #endif
 
 #ifndef PWM_RAMPED
@@ -211,6 +199,15 @@
 #endif
 #ifndef PPI_ENABLE
 #define PPI_ENABLE          0
+#endif
+
+#if EMBROIDERY_ENABLE
+#if defined(SDCARD_ENABLE) && SDCARD_ENABLE == 0
+#undef SDCARD_ENABLE
+#endif
+#ifndef SDCARD_ENABLE
+#define SDCARD_ENABLE       1
+#endif
 #endif
 
 #ifndef VFD_SPINDLE
@@ -440,5 +437,17 @@
 #endif
 #endif // WIFI_SOFTAP
 #endif // WIFI_ENABLE
+
+#ifndef SDCARD_ENABLE
+#define SDCARD_ENABLE       0
+#endif
+
+#ifndef SPI_ENABLE
+#if SDCARD_ENABLE || TRINAMIC_SPI_ENABLE
+#define SPI_ENABLE 1
+#else
+#define SPI_ENABLE 0
+#endif
+#endif
 
 /*EOF*/
