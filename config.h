@@ -90,6 +90,25 @@ __NOTE:__ if switching to a level > 1 please reset non-volatile storage with `$R
 #define COMPATIBILITY_LEVEL 0
 #endif
 
+/*! \def ENABLE_SPINDLE_LINEARIZATION
+\brief This feature alters the spindle PWM/speed to a nonlinear output with a simple piecewise linear curve.
+
+Useful for spindles that don't produce the right RPM from Grbl's standard spindle PWM
+linear model. Requires a solution by the 'fit_nonlinear_spindle.py' script in the /doc/script
+folder of the repo. See file comments on how to gather spindle data and run the script to
+generate a solution.
+*/
+#if !defined ENABLE_SPINDLE_LINEARIZATION || defined __DOXYGEN__
+#define ENABLE_SPINDLE_LINEARIZATION 0  // Set to 1 to enable spindle RPM linearization. Requires compatible driver if enabled.
+#endif
+
+/*! \def SPINDLE_NPWM_PIECES
+\brief Number of pieces used for spindle RPM linearization, enabled by setting \ref ENABLE_SPINDLE_LINEARIZATION to 1.
+*/
+#if !defined SPINDLE_NPWM_PIECES || defined __DOXYGEN__
+#define SPINDLE_NPWM_PIECES 4 // Number of pieces for spindle RPM linearization, max 4.
+#endif
+
 #include "nuts_bolts.h"
 
 //#define KINEMATICS_API // Uncomment to add HAL entry points for custom kinematics
@@ -1055,6 +1074,70 @@ Default value is 0, meaning spindle sync is disabled
 #ifndef DEFAULT_SPINDLE_I_MAX
 #define DEFAULT_SPINDLE_I_MAX   10.0f
 #endif
+
+#if ENABLE_SPINDLE_LINEARIZATION || defined __DOXYGEN__
+
+/*! @name $66 - Setting_LinearSpindlePiece1
+Defines the parameters for the first entry in the spindle RPM linearization table.
+*/
+///@{
+#if !defined DEFAULT_RPM_POINT01 || defined __DOXYGEN__
+#define DEFAULT_RPM_POINT01 DEFAULT_SPINDLE_RPM_MIN  // Don not change! Set DEFAULT_SPINDLE_RPM_MIN instead.
+#endif
+#if !defined DEFAULT_RPM_LINE_A1 || defined __DOXYGEN__
+#define DEFAULT_RPM_LINE_A1 3.197101e-03f
+#endif
+#if !defined DEFAULT_RPM_LINE_B1 || defined __DOXYGEN__
+#define DEFAULT_RPM_LINE_B1 -3.526076e-1f
+#endif
+///@}
+
+/*! @name $67 - Setting_LinearSpindlePiece2
+Defines the parameters for the second entry in the spindle RPM linearization table.
+*/
+///@{
+#if !defined DEFAULT_RPM_POINT12 || defined __DOXYGEN__
+#define DEFAULT_RPM_POINT12 9627.8  // Set to a float constant to enable.
+#endif
+#if !defined DEFAULT_RPM_LINE_A2 || defined __DOXYGEN__
+#define DEFAULT_RPM_LINE_A2  1.722950e-2f
+#endif
+#if !defined DEFAULT_RPM_LINE_B2 || defined __DOXYGEN__
+#define DEFAULT_RPM_LINE_B2  1.0f,
+#endif
+///@}
+
+/*! @name $68 - Setting_LinearSpindlePiece3
+Defines the parameters for the third entry in the spindle RPM linearization table.
+*/
+///@{
+#if !defined DEFAULT_RPM_POINT23 || defined __DOXYGEN__
+#define DEFAULT_RPM_POINT23 10813.9  // Set to a float constant to enable.
+#endif
+#if !defined DEFAULT_RPM_LINE_A3 || defined __DOXYGEN__
+#define DEFAULT_RPM_LINE_A3 5.901518e-02f
+#endif
+#if !defined DEFAULT_RPM_LINE_B3 || defined __DOXYGEN__
+#define DEFAULT_RPM_LINE_B3 4.881851e+02f
+#endif
+///@}
+
+/*! @name $69 - Setting_LinearSpindlePiece4
+Defines the parameters for the fourth entry in the spindle RPM linearization table.
+*/
+///@{
+#if !defined DEFAULT_RPM_POINT34 || defined __DOXYGEN__
+#define DEFAULT_RPM_POINT34 NAN  // Set to a float constant to enable.
+#endif
+#if !defined DEFAULT_RPM_LINE_A4 || defined __DOXYGEN__
+#define DEFAULT_RPM_LINE_A4  1.203413e-01f
+#endif
+#if !defined DEFAULT_RPM_LINE_B4 || defined __DOXYGEN__
+#define DEFAULT_RPM_LINE_B4  1.151360e+03f
+#endif
+///@}
+
+#endif // ENABLE_SPINDLE_LINEARIZATION
 
 // Tool change settings (Group_Toolchange)
 

@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+<a name="20230317"/>Build 20230317
+
+Core:
+
+* Fix for issue #269 - setting of piecewise spindle linearisation values not working.
+
+Drivers:
+
+* STM32F3xx, STM32F4xx, STM32F7xx: Updated linker config to allow use of scanf, part of fix for issue #269.
+
+Plugins:
+
+* Keypad: updated for core API changes.
+
+---
+
 <a name="20230316"/>20230316
 
 Core:

@@ -42,7 +42,7 @@
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_BUILD 20230312
+#define GRBL_BUILD 20230317
 
 #define GRBL_URL "https://github.com/grblHAL"
 
@@ -177,8 +177,6 @@
 #define RAPID_OVERRIDE_LOW       25 // Percent of rapid (1-99). Usually 25%.
 // #define RAPID_OVERRIDE_EXTRA_LOW 5 // *NOT SUPPORTED* Percent of rapid (1-99). Usually 5%.
 
-// #define ENABLE_SPINDLE_LINEARIZATION        // Uncomment to enable spindle RPM linearization. Requires compatible driver if enabled.
-#define SPINDLE_NPWM_PIECES                 4 // Maximum number of pieces for spindle RPM linearization, do not change unless more are needed.
 #define DEFAULT_SPINDLE_RPM_OVERRIDE      100 // 100%. Don't change this value.
 #ifndef MAX_SPINDLE_RPM_OVERRIDE
 #define MAX_SPINDLE_RPM_OVERRIDE          200 // Percent of programmed spindle speed (100-65535). Usually 200%.

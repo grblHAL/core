@@ -36,7 +36,7 @@
 #if ENABLE_BACKLASH_COMPENSATION
 #include "motion_control.h"
 #endif
-#ifdef ENABLE_SPINDLE_LINEARIZATION
+#if ENABLE_SPINDLE_LINEARIZATION
 #include <stdio.h>
 #endif
 
@@ -168,17 +168,32 @@ PROGMEM const settings_t defaults = {
     .spindle.pid.i_gain = DEFAULT_SPINDLE_I_GAIN,
     .spindle.pid.d_gain = DEFAULT_SPINDLE_D_GAIN,
     .spindle.pid.i_max_error = DEFAULT_SPINDLE_I_MAX,
-#if SPINDLE_NPWM_PIECES > 0
+#if ENABLE_SPINDLE_LINEARIZATION
+  #if SPINDLE_NPWM_PIECES > 0
+    .spindle.pwm_piece[0] = { .rpm = DEFAULT_RPM_POINT01, .start = DEFAULT_RPM_LINE_A1, .end = DEFAULT_RPM_LINE_B1 },
+  #endif
+  #if SPINDLE_NPWM_PIECES > 1
+    .spindle.pwm_piece[1] = { .rpm = DEFAULT_RPM_POINT12, .start = DEFAULT_RPM_LINE_A2, .end = DEFAULT_RPM_LINE_B2 },
+  #endif
+  #if SPINDLE_NPWM_PIECES > 2
+    .spindle.pwm_piece[2] = { .rpm = DEFAULT_RPM_POINT23, .start = DEFAULT_RPM_LINE_A3, .end = DEFAULT_RPM_LINE_B3 },
+  #endif
+  #if SPINDLE_NPWM_PIECES > 3
+    .spindle.pwm_piece[3] = { .rpm = DEFAULT_RPM_POINT34, .start = DEFAULT_RPM_LINE_A4, .end = DEFAULT_RPM_LINE_B4 },
+  #endif
+#else
+  #if SPINDLE_NPWM_PIECES > 0
     .spindle.pwm_piece[0] = { .rpm = NAN, .start = 0.0f, .end = 0.0f },
-#endif
-#if SPINDLE_NPWM_PIECES > 1
+  #endif
+  #if SPINDLE_NPWM_PIECES > 1
     .spindle.pwm_piece[1] = { .rpm = NAN, .start = 0.0f, .end = 0.0f },
-#endif
-#if SPINDLE_NPWM_PIECES > 2
+  #endif
+  #if SPINDLE_NPWM_PIECES > 2
     .spindle.pwm_piece[2] = { .rpm = NAN, .start = 0.0f, .end = 0.0f },
-#endif
-#if SPINDLE_NPWM_PIECES > 3
+  #endif
+  #if SPINDLE_NPWM_PIECES > 3
     .spindle.pwm_piece[3] = { .rpm = NAN, .start = 0.0f, .end = 0.0f },
+  #endif
 #endif
 
     .coolant_invert.flood = DEFAULT_INVERT_COOLANT_FLOOD_PIN,
@@ -370,7 +385,7 @@ static status_code_t set_report_interval (setting_id_t setting, uint_fast16_t in
 static status_code_t set_parking_enable (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_restore_overrides (setting_id_t id, uint_fast16_t int_value);
 #endif
-#ifdef ENABLE_SPINDLE_LINEARIZATION
+#if ENABLE_SPINDLE_LINEARIZATION
 static status_code_t set_linear_piece (setting_id_t id, char *svalue);
 static char *get_linear_piece (setting_id_t id);
 #endif
@@ -494,11 +509,17 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_HoldActions, Group_General, "Feed hold actions", NULL, Format_Bitfield, "Disable laser during hold,Restore spindle and coolant state on resume", NULL, NULL, Setting_IsExtendedFn, set_hold_actions, get_int, NULL },
      { Setting_ForceInitAlarm, Group_General, "Force init alarm", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_force_initialization_alarm, get_int, NULL },
      { Setting_ProbingFeedOverride, Group_Probing, "Probing feed override", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_probe_allow_feed_override, get_int, is_setting_available },
-#ifdef ENABLE_SPINDLE_LINEARIZATION
-     { Setting_LinearSpindlePiece1, Group_Spindle, "Spindle linearisation, first point", NULL, Format_String, "x30", NULL, "30", Setting_IsExtendedFn, set_linear_piece, get_linear_piece, NULL },
-     { Setting_LinearSpindlePiece2, Group_Spindle, "Spindle linearisation, second point", NULL, Format_String, "x30", NULL, "30", Setting_IsExtendedFn, set_linear_piece, get_linear_piece, NULL },
-     { Setting_LinearSpindlePiece3, Group_Spindle, "Spindle linearisation, third point", NULL, Format_String, "x30", NULL, "30", Setting_IsExtendedFn, set_linear_piece, get_linear_piece, NULL },
-     { Setting_LinearSpindlePiece4, Group_Spindle, "Spindle linearisation, fourth point", NULL, Format_String, "x30", NULL, "30", Setting_IsExtendedFn, set_linear_piece, get_linear_piece, NULL },
+#if ENABLE_SPINDLE_LINEARIZATION
+     { Setting_LinearSpindlePiece1, Group_Spindle, "Spindle linearisation, 1st point", NULL, Format_String, "x(39)", NULL, "39", Setting_IsExtendedFn, set_linear_piece, get_linear_piece, NULL },
+  #if SPINDLE_NPWM_PIECES > 1
+     { Setting_LinearSpindlePiece2, Group_Spindle, "Spindle linearisation, 2nd point", NULL, Format_String, "x(39)", NULL, "39", Setting_IsExtendedFn, set_linear_piece, get_linear_piece, NULL },
+  #endif
+  #if SPINDLE_NPWM_PIECES > 2
+     { Setting_LinearSpindlePiece3, Group_Spindle, "Spindle linearisation, 3rd point", NULL, Format_String, "x(39)", NULL, "39", Setting_IsExtendedFn, set_linear_piece, get_linear_piece, NULL },
+  #endif
+  #if SPINDLE_NPWM_PIECES > 3
+     { Setting_LinearSpindlePiece4, Group_Spindle, "Spindle linearisation, 4th point", NULL, Format_String, "x(39)", NULL, "39", Setting_IsExtendedFn, set_linear_piece, get_linear_piece, NULL },
+  #endif
 #endif
      { Setting_SpindlePGain, Group_Spindle_ClosedLoop, "Spindle P-gain", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.spindle.pid.p_gain, NULL, is_group_available },
      { Setting_SpindleIGain, Group_Spindle_ClosedLoop, "Spindle I-gain", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.spindle.pid.i_gain, NULL, is_group_available },
@@ -665,6 +686,18 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_HoldActions, "Actions taken during feed hold and on resume from feed hold." },
     { Setting_ForceInitAlarm, "Starts Grbl in alarm mode after a cold reset." },
     { Setting_ProbingFeedOverride, "Allow feed override during probing." },
+#if ENABLE_SPINDLE_LINEARIZATION
+     { Setting_LinearSpindlePiece1, "Comma separated list of values: RPM_MIN, RPM_LINE_A1, RPM_LINE_B1, set to blank to disable." },
+  #if SPINDLE_NPWM_PIECES > 1
+     { Setting_LinearSpindlePiece2, "Comma separated list of values: RPM_POINT12, RPM_LINE_A2, RPM_LINE_B2, set to blank to disable." },
+  #endif
+  #if SPINDLE_NPWM_PIECES > 2
+     { Setting_LinearSpindlePiece3, "Comma separated list of values: RPM_POINT23, RPM_LINE_A3, RPM_LINE_B3, set to blank to disable." },
+  #endif
+  #if SPINDLE_NPWM_PIECES > 3
+     { Setting_LinearSpindlePiece4, "Comma separated list of values: RPM_POINT34, RPM_LINE_A4, RPM_LINE_B4, set to blank to disable." },
+  #endif
+#endif
     { Setting_SpindlePGain, "" },
     { Setting_SpindleIGain, "" },
     { Setting_SpindleDGain, "" },
@@ -1186,14 +1219,14 @@ static void set_axis_setting_unit (const setting_detail_t *setting, uint_fast8_t
 
 #endif
 
-#ifdef ENABLE_SPINDLE_LINEARIZATION
+#if ENABLE_SPINDLE_LINEARIZATION
 
 static status_code_t set_linear_piece (setting_id_t id, char *svalue)
 {
     uint32_t idx = id - Setting_LinearSpindlePiece1;
     float rpm, start, end;
 
-    if(svalue[0] == '0' && svalue[1] == '\0') {
+    if(*svalue == '\0' || (svalue[0] == '0' && svalue[1] == '\0')) {
         settings.spindle.pwm_piece[idx].rpm = NAN;
         settings.spindle.pwm_piece[idx].start =
         settings.spindle.pwm_piece[idx].end = 0.0f;
@@ -1201,24 +1234,24 @@ static status_code_t set_linear_piece (setting_id_t id, char *svalue)
         settings.spindle.pwm_piece[idx].rpm = rpm;
         settings.spindle.pwm_piece[idx].start = start;
         settings.spindle.pwm_piece[idx].end = end;
+//??       if(idx == 0)
+//            settings.spindle.rpm_min = rpm;
     } else
-        return Status_InvalidStatement;
+        return Status_SettingValueOutOfRange;
 
     return Status_OK;
 }
 
 static char *get_linear_piece (setting_id_t id)
 {
-    static char buf[20];
+    static char buf[40];
 
     uint32_t idx = id - Setting_LinearSpindlePiece1;
 
     if(isnan(settings.spindle.pwm_piece[idx].rpm))
-        strcpy(buf, ftoa(settings.spindle.pwm_piece[idx].rpm, N_DECIMAL_RPMVALUE));
-    else {
-        sprintf(buf, "$%d=%f,%f,%f" ASCII_EOL, (setting_id_t)(Setting_LinearSpindlePiece1 + idx), settings.spindle.pwm_piece[idx].rpm, settings.spindle.pwm_piece[idx].start, settings.spindle.pwm_piece[idx].end);
-        hal.stream.write(buf);
-    }
+        *buf = '\0';
+    else
+        snprintf(buf, sizeof(buf), "%g,%g,%g", settings.spindle.pwm_piece[idx].rpm, settings.spindle.pwm_piece[idx].start, settings.spindle.pwm_piece[idx].end);
 
     return buf;
 }

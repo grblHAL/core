@@ -40,7 +40,7 @@
 #include "state_machine.h"
 #include "regex.h"
 
-#ifdef ENABLE_SPINDLE_LINEARIZATION
+#if ENABLE_SPINDLE_LINEARIZATION
 #include <stdio.h>
 #endif
 

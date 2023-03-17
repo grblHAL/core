@@ -60,13 +60,12 @@ typedef union {
                  wifi                      :1,
                  spindle_pid               :1,
                  mpg_mode                  :1,
-                 spindle_pwm_linearization :1,
                  laser_ppi_mode            :1, //!< Laser PPI (Pulses Per Inch) mode is supported.
                  atc                       :1, //!< Automatic tool changer (ATC) is supported.
                  no_gcode_message_handling :1,
                  odometers                 :1,
                  pwm_spindle               :1,
-                 unassigned                :11;
+                 unassigned                :12;
     };
 } driver_cap_t;
 

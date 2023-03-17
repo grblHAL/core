@@ -59,8 +59,7 @@ typedef union {
                 spindle       :1,
                 amass         :1,
                 pulse_delay   :1,
-                linearization :1,
-                unused        :2;
+                unused        :3;
     };
 } driver_startup_t;
 
@@ -202,10 +201,6 @@ int grbl_enter (void)
 
     if(driver.ok == 0xFF)
         driver.setup = hal.driver_setup(&settings);
-
-#ifdef ENABLE_SPINDLE_LINEARIZATION
-    driver.linearization = hal.driver_cap.spindle_pwm_linearization;
-#endif
 
     if((driver.spindle = spindle_select(settings.spindle.flags.type))) {
         spindle_ptrs_t *spindle = spindle_get(0);
