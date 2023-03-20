@@ -4,13 +4,20 @@
 
 Core:
 
-* Another fix for issue #269 - setting of piecewise spindle linearisation values not working.
+* Another fix for issue #269 - setting of piecewise spindle linearisation values not working.  
+Fix for incorrect reporting of SD card size.
+
+Drivers:
+
+* ESP32: added sanity checks for http and websocket ports, sets websocket port to http port + 1 if equal.
 
 Plugins:
 
-* Spindle: Fix for [issue #18](https://github.com/grblHAL/Plugins_spindle/issues/18) - incorrect spindle RPM limits set from VFD response.
+* Spindle: fix for [issue #18](https://github.com/grblHAL/Plugins_spindle/issues/18) - incorrect spindle RPM limits set from VFD response.
 
-* Embroidery: added option to use Z limit pin as needle trigger.
+* SD card: fix for incorrect reporting of SD card size.
+
+* Embroidery: added option to use Z limit input as needle trigger.
 
 ---
 
