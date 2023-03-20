@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+<a name="20230320"/>Build 20230320
+
+Core:
+
+* Another fix for issue #269 - setting of piecewise spindle linearisation values not working.
+
+Plugins:
+
+* Spindle: Fix for [issue #18](https://github.com/grblHAL/Plugins_spindle/issues/18) - incorrect spindle RPM limits set from VFD response.
+
+* Embroidery: added option to use Z limit pin as needle trigger.
+
+---
+
 <a name="20230317"/>Build 20230317
 
 Core:

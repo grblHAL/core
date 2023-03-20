@@ -92,8 +92,8 @@ typedef struct {
 } vfs_dirent_t;
 
 typedef struct {
-    size_t size;
-    size_t used;
+    uint64_t size;
+    uint64_t used;
 } vfs_free_t;
 
 typedef struct {
