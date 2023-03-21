@@ -267,8 +267,10 @@ bool protocol_main_loop (void)
                 if(state_get() == STATE_CHECK_MODE)
                     hal.delay_ms(CHECK_MODE_DELAY, NULL);
 #endif
-
-                grbl.report.status_message(gc_state.last_error);
+                if(ABORTED)
+                    break;
+                else
+                    grbl.report.status_message(gc_state.last_error);
 
                 // Reset tracking data for next line.
                 keep_rt_commands = false;

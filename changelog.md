@@ -1,11 +1,30 @@
 ## grblHAL changelog
 
+<a name="20230321"/>Build 20230321
+
+Core:
+
+* Fix for issue #271 - unwanted motion after soft reset when feed hold was active, reported for canned cycle but may occur for other commands as well.
+
+* Added function for properly initializing planner struct, updated core to use it.
+
+Plugins:
+
+* Embroidery: switched to new function for initializing planner struct.
+
+Templates:
+
+* HPGL: switched to new function for initializing planner struct.
+
+---
+
 <a name="20230320"/>Build 20230320
 
 Core:
 
 * Another fix for issue #269 - setting of piecewise spindle linearisation values not working.  
-Fix for incorrect reporting of SD card size.
+
+* Fix for incorrect reporting of SD card size.
 
 Drivers:
 

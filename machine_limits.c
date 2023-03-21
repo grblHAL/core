@@ -141,11 +141,12 @@ static bool limits_pull_off (axes_signals_t axis, float distance)
 {
     uint_fast8_t n_axis = 0, idx = N_AXIS;
     coord_data_t target = {0};
-    plan_line_data_t plan_data = {
-        .condition.system_motion = On,
-        .condition.no_feed_override = On,
-        .line_number = DEFAULT_HOMING_CYCLE_LINE_NUMBER
-    };
+    plan_line_data_t plan_data;
+
+    plan_data_init(&plan_data);
+    plan_data.condition.system_motion = On;
+    plan_data.condition.no_feed_override = On;
+    plan_data.line_number = DEFAULT_HOMING_CYCLE_LINE_NUMBER;
 
     system_convert_array_steps_to_mpos(target.values, sys.position);
 
@@ -249,11 +250,12 @@ static bool limits_homing_cycle (axes_signals_t cycle, axes_signals_t auto_squar
     limit_signals_t limits_state;
     squaring_mode_t squaring_mode = SquaringMode_Both;
     coord_data_t target;
-    plan_line_data_t plan_data = {
-        .condition.system_motion = On,
-        .condition.no_feed_override = On,
-        .line_number = DEFAULT_HOMING_CYCLE_LINE_NUMBER
-    };
+    plan_line_data_t plan_data;
+
+    plan_data_init(&plan_data);
+    plan_data.condition.system_motion = On;
+    plan_data.condition.no_feed_override = On;
+    plan_data.line_number = DEFAULT_HOMING_CYCLE_LINE_NUMBER;
 
     // Initialize plan data struct for homing motion.
     memcpy(&plan_data.spindle, &gc_state.spindle, sizeof(spindle_t));

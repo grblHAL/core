@@ -139,8 +139,7 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
 
                 plan_line_data_t pl_backlash;
 
-                memset(&pl_backlash, 0, sizeof(plan_line_data_t));
-
+                plan_data_init(&pl_backlash, 0);
                 pl_backlash.condition.rapid_motion = On;
                 pl_backlash.condition.backlash_motion = On;
                 pl_backlash.line_number = pl_data->line_number;

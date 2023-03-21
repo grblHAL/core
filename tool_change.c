@@ -114,8 +114,9 @@ static void reset (void)
 // Restore coolant and spindle status, return controlled point to original position.
 static bool restore (void)
 {
-    plan_line_data_t plan_data = {0};
+    plan_line_data_t plan_data;
 
+    plan_data_init(&plan_data);
     plan_data.condition.rapid_motion = On;
 
     target.values[plane.axis_linear] = tool_change_position;
@@ -132,7 +133,7 @@ static bool restore (void)
         sync_position();
 
         coolant_sync(gc_state.modal.coolant);
-        spindle_restore(spindle_get(0), gc_state.modal.spindle.state, gc_state.spindle.rpm);
+        spindle_restore(plan_data.spindle.hal, gc_state.modal.spindle.state, gc_state.spindle.rpm);
 
         if(!settings.flags.no_restore_position_after_M6) {
             previous.values[plane.axis_linear] += gc_get_offset(plane.axis_linear);
@@ -179,7 +180,7 @@ static void execute_probe (sys_state_t state)
 #if COMPATIBILITY_LEVEL <= 1
     bool ok;
     coord_data_t offset;
-    plan_line_data_t plan_data = {0};
+    plan_line_data_t plan_data;
     gc_parser_flags_t flags = {0};
 
     if(probe_fixture)
@@ -188,6 +189,7 @@ static void execute_probe (sys_state_t state)
     // G59.3 contains offsets to position of TLS.
     settings_read_coord_data(CoordinateSystem_G59_3, &offset.values);
 
+    plan_data_init(&plan_data);
     plan_data.condition.rapid_motion = On;
 
     target.values[plane.axis_0] = offset.values[plane.axis_0];
@@ -353,7 +355,9 @@ static status_code_t tool_change (parser_state_t *parser_state)
 
     previous.values[plane.axis_linear] -= gc_get_offset(plane.axis_linear);
 
-    plan_line_data_t plan_data = {0};
+    plan_line_data_t plan_data;
+
+    plan_data_init(&plan_data);
     plan_data.condition.rapid_motion = On;
 
     // TODO: add?
@@ -462,7 +466,7 @@ status_code_t tc_probe_workpiece (void)
 
     bool ok;
     gc_parser_flags_t flags = {0};
-    plan_line_data_t plan_data = {0};
+    plan_line_data_t plan_data;
 
 #if COMPATIBILITY_LEVEL <= 1
     if(probe_fixture)
@@ -473,6 +477,8 @@ status_code_t tc_probe_workpiece (void)
     system_convert_array_steps_to_mpos(target.values, sys.position);
 
     flags.probe_is_no_error = On;
+
+    plan_data_init(&plan_data);
     plan_data.feed_rate = settings.tool_change.seek_rate;
 
     target.values[plane.axis_linear] -= settings.tool_change.probing_distance;

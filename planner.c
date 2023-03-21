@@ -678,3 +678,9 @@ void plan_feed_override (override_t feed_override, override_t rapid_override)
         }
     }
 }
+
+void plan_data_init (plan_line_data_t *plan_data)
+{
+    memset(plan_data, 0, sizeof(plan_line_data_t));
+    plan_data->spindle.hal = gc_state.spindle.hal ? gc_state.spindle.hal : spindle_get(0);
+}
