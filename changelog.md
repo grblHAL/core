@@ -1,5 +1,13 @@
 ## grblHAL changelog
 
+<a name="20230327"/>20230327
+
+Drivers:
+
+* ESP32: Fix for [issue #63](https://github.com/grblHAL/ESP32/issues/63), use static I2S mode when laser mode is configured \($32=1\). Untested!
+
+---
+
 <a name="20230321"/>Build 20230321
 
 Core:
