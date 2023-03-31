@@ -1,5 +1,13 @@
 ## grblHAL changelog
 
+<a name="20230331"/>20230331
+
+Plugins:
+
+* Motors: Fix for [issue #11](https://github.com/grblHAL/Plugins_motor/issues/11), fix for potential infinite loop.
+
+---
+
 <a name="20230327"/>20230327
 
 Drivers:
