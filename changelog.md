@@ -4,7 +4,7 @@
 
 Plugins:
 
-* Motors: Fix for [issue #11](https://github.com/grblHAL/Plugins_motor/issues/11), fix for potential infinite loop.
+* Motors: fix for [issue #11](https://github.com/grblHAL/Plugins_motor/issues/11), potential infinite loop.
 
 ---
 
