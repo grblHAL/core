@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2022 Terje Io
+  Copyright (c) 2021-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -160,6 +160,76 @@
   #define X2_ENABLE_BIT     (1<<M5_ENABLE_PIN)
 #endif
 
+#elif X_DOUBLED == 4
+
+#ifdef U_AXIS
+#error "U-axis motor is used for ganged X motor"
+#endif
+#define X2_STEP_PORT        M6_STEP_PORT
+#define X2_STEP_PIN         M6_STEP_PIN
+#define X2_STEP_BIT         (1<<M6_STEP_PIN)
+#define X2_DIRECTION_PORT   M6_DIRECTION_PORT
+#define X2_DIRECTION_PIN    M6_DIRECTION_PIN
+#define X2_DIRECTION_BIT    (1<<M6_DIRECTION_PIN)
+#ifdef M6_LIMIT_PIN
+ #if X_AUTO_SQUARE
+  #define X2_LIMIT_PORT     M6_LIMIT_PORT
+  #define X2_LIMIT_PIN      M6_LIMIT_PIN
+  #define X2_LIMIT_BIT      (1<<M6_LIMIT_PIN)
+ #elif X_GANGED_LIM_MAX && !defined(M6_LIMIT_PIN_MAX)
+  #define X_LIMIT_PORT_MAX  M6_LIMIT_PORT
+  #define X_LIMIT_PIN_MAX   M6_LIMIT_PIN
+  #define X_LIMIT_BIT_MAX   (1<<M6_LIMIT_PIN)
+ #endif
+#elif X_AUTO_SQUARE
+  #error "Auto squared X-axis requires second limit pin input"
+#endif
+#ifdef M6_LIMIT_PIN_MAX
+  #define X_LIMIT_PORT_MAX  M6_LIMIT_PORT_MAX
+  #define X_LIMIT_PIN_MAX   M6_LIMIT_PIN_MAX
+  #define X_LIMIT_BIT_MAX   (1<<M6_LIMIT_PIN_MAX)
+#endif
+#ifdef M6_ENABLE_PIN
+  #define X2_ENABLE_PORT    M6_ENABLE_PORT
+  #define X2_ENABLE_PIN     M6_ENABLE_PIN
+  #define X2_ENABLE_BIT     (1<<M6_ENABLE_PIN)
+#endif
+
+#elif X_DOUBLED == 5
+
+#ifdef V_AXIS
+#error "V-axis motor is used for ganged X motor"
+#endif
+#define X2_STEP_PORT        M7_STEP_PORT
+#define X2_STEP_PIN         M7_STEP_PIN
+#define X2_STEP_BIT         (1<<M7_STEP_PIN)
+#define X2_DIRECTION_PORT   M7_DIRECTION_PORT
+#define X2_DIRECTION_PIN    M7_DIRECTION_PIN
+#define X2_DIRECTION_BIT    (1<<M7_DIRECTION_PIN)
+#ifdef M7_LIMIT_PIN
+ #if X_AUTO_SQUARE
+  #define X2_LIMIT_PORT     M7_LIMIT_PORT
+  #define X2_LIMIT_PIN      M7_LIMIT_PIN
+  #define X2_LIMIT_BIT      (1<<M7_LIMIT_PIN)
+ #elif X_GANGED_LIM_MAX && !defined(M7_LIMIT_PIN_MAX)
+  #define X_LIMIT_PORT_MAX  M7_LIMIT_PORT
+  #define X_LIMIT_PIN_MAX   M7_LIMIT_PIN
+  #define X_LIMIT_BIT_MAX   (1<<M7_LIMIT_PIN)
+ #endif
+#elif X_AUTO_SQUARE
+  #error "Auto squared X-axis requires second limit pin input"
+#endif
+#ifdef M7_LIMIT_PIN_MAX
+  #define X_LIMIT_PORT_MAX  M7_LIMIT_PORT_MAX
+  #define X_LIMIT_PIN_MAX   M7_LIMIT_PIN_MAX
+  #define X_LIMIT_BIT_MAX   (1<<M7_LIMIT_PIN_MAX)
+#endif
+#ifdef M7_ENABLE_PIN
+  #define X2_ENABLE_PORT    M7_ENABLE_PORT
+  #define X2_ENABLE_PIN     M7_ENABLE_PIN
+  #define X2_ENABLE_BIT     (1<<M7_ENABLE_PIN)
+#endif
+
 #endif // X_DOUBLED
 
 #if Y_DOUBLED == 1
@@ -265,6 +335,76 @@
   #define Y2_ENABLE_PORT    M5_ENABLE_PORT
   #define Y2_ENABLE_PIN     M5_ENABLE_PIN
   #define Y2_ENABLE_BIT     (1<<M5_ENABLE_PIN)
+#endif
+
+#elif Y_DOUBLED == 4
+
+#ifdef U_AXIS
+#error "U-axis motor is used for ganged Y motor"
+#endif
+#define Y2_STEP_PORT        M6_STEP_PORT
+#define Y2_STEP_PIN         M6_STEP_PIN
+#define Y2_STEP_BIT         (1<<M6_STEP_PIN)
+#define Y2_DIRECTION_PORT   M6_DIRECTION_PORT
+#define Y2_DIRECTION_PIN    M6_DIRECTION_PIN
+#define Y2_DIRECTION_BIT    (1<<M6_DIRECTION_PIN)
+#ifdef M6_LIMIT_PIN
+ #if Y_AUTO_SQUARE
+  #define Y2_LIMIT_PORT     M6_LIMIT_PORT
+  #define Y2_LIMIT_PIN      M6_LIMIT_PIN
+  #define Y2_LIMIT_BIT      (1<<M6_LIMIT_PIN)
+ #elif Y_GANGED_LIM_MAX && !defined(M6_LIMIT_PIN_MAX)
+  #define Y_LIMIT_PORT_MAX  M6_LIMIT_PORT
+  #define Y_LIMIT_PIN_MAX   M6_LIMIT_PIN
+  #define Y_LIMIT_BIT_MAX   (1<<M6_LIMIT_PIN)
+ #endif
+#elif Y_AUTO_SQUARE
+  #error "Auto squared Y-axis requires second limit pin input"
+#endif
+#ifdef M6_LIMIT_PIN_MAX
+  #define Y_LIMIT_PORT_MAX  M6_LIMIT_PORT_MAX
+  #define Y_LIMIT_PIN_MAX   M6_LIMIT_PIN_MAX
+  #define Y_LIMIT_BIT_MAX   (1<<M6_LIMIT_PIN_MAX)
+#endif
+#ifdef M6_ENABLE_PIN
+  #define Y2_ENABLE_PORT    M6_ENABLE_PORT
+  #define Y2_ENABLE_PIN     M6_ENABLE_PIN
+  #define Y2_ENABLE_BIT     (1<<M6_ENABLE_PIN)
+#endif
+
+#elif Y_DOUBLED == 5
+
+#ifdef V_AXIS
+#error "V-axis motor is used for ganged Y motor"
+#endif
+#define Y2_STEP_PORT        M7_STEP_PORT
+#define Y2_STEP_PIN         M7_STEP_PIN
+#define Y2_STEP_BIT         (1<<M7_STEP_PIN)
+#define Y2_DIRECTION_PORT   M7_DIRECTION_PORT
+#define Y2_DIRECTION_PIN    M7_DIRECTION_PIN
+#define Y2_DIRECTION_BIT    (1<<M7_DIRECTION_PIN)
+#ifdef M7_LIMIT_PIN
+ #if Y_AUTO_SQUARE
+  #define Y2_LIMIT_PORT     M7_LIMIT_PORT
+  #define Y2_LIMIT_PIN      M7_LIMIT_PIN
+  #define Y2_LIMIT_BIT      (1<<M7_LIMIT_PIN)
+ #elif Y_GANGED_LIM_MAX && !defined(M7_LIMIT_PIN_MAX)
+  #define Y_LIMIT_PORT_MAX  M7_LIMIT_PORT
+  #define Y_LIMIT_PIN_MAX   M7_LIMIT_PIN
+  #define Y_LIMIT_BIT_MAX   (1<<M7_LIMIT_PIN)
+ #endif
+#elif Y_AUTO_SQUARE
+  #error "Auto squared Y-axis requires second limit pin input"
+#endif
+#ifdef M7_LIMIT_PIN_MAX
+  #define Y_LIMIT_PORT_MAX  M7_LIMIT_PORT_MAX
+  #define Y_LIMIT_PIN_MAX   M7_LIMIT_PIN_MAX
+  #define Y_LIMIT_BIT_MAX   (1<<M7_LIMIT_PIN_MAX)
+#endif
+#ifdef M7_ENABLE_PIN
+  #define Y2_ENABLE_PORT    M7_ENABLE_PORT
+  #define Y2_ENABLE_PIN     M7_ENABLE_PIN
+  #define Y2_ENABLE_BIT     (1<<M7_ENABLE_PIN)
 #endif
 
 #endif // Y_DOUBLED
@@ -374,6 +514,75 @@
   #define Z2_ENABLE_BIT     (1<<M5_ENABLE_PIN)
 #endif
 
+#elif Z_DOUBLED == 4
+
+#ifdef U_AZIS
+#error "U-axis motor is used for ganged Z motor"
+#endif
+#define Z2_STEP_PORT        M6_STEP_PORT
+#define Z2_STEP_PIN         M6_STEP_PIN
+#define Z2_STEP_BIT         (1<<M6_STEP_PIN)
+#define Z2_DIRECTION_PORT   M6_DIRECTION_PORT
+#define Z2_DIRECTION_PIN    M6_DIRECTION_PIN
+#define Z2_DIRECTION_BIT    (1<<M6_DIRECTION_PIN)
+#ifdef M6_LIMIT_PIN
+ #if Z_AUTO_SQUARE
+  #define Z2_LIMIT_PORT     M6_LIMIT_PORT
+  #define Z2_LIMIT_PIN      M6_LIMIT_PIN
+  #define Z2_LIMIT_BIT      (1<<M6_LIMIT_PIN)
+ #elif Z_GANGED_LIM_MAX && !defined(M6_LIMIT_PIN_MAX)
+  #define Z_LIMIT_PORT_MAX  M6_LIMIT_PORT
+  #define Z_LIMIT_PIN_MAX   M6_LIMIT_PIN
+  #define Z_LIMIT_BIT_MAX   (1<<M6_LIMIT_PIN)
+ #endif
+#elif Z_AUTO_SQUARE
+  #error "Auto squared Z-axis requires second limit pin input"
+#endif
+#ifdef M6_LIMIT_PIN_MAX
+  #define Z_LIMIT_PORT_MAX  M6_LIMIT_PORT_MAX
+  #define Z_LIMIT_PIN_MAX   M6_LIMIT_PIN_MAX
+  #define Z_LIMIT_BIT_MAX   (1<<M6_LIMIT_PIN_MAX)
+#endif
+#ifdef M6_ENABLE_PIN
+  #define Z2_ENABLE_PORT    M6_ENABLE_PORT
+  #define Z2_ENABLE_PIN     M6_ENABLE_PIN
+  #define Z2_ENABLE_BIT     (1<<M6_ENABLE_PIN)
+#endif
+
+#elif Z_DOUBLED == 5
+
+#ifdef V_AZIS
+#error "V-axis motor is used for ganged Z motor"
+#endif
+#define Z2_STEP_PORT        M7_STEP_PORT
+#define Z2_STEP_PIN         M7_STEP_PIN
+#define Z2_STEP_BIT         (1<<M7_STEP_PIN)
+#define Z2_DIRECTION_PORT   M7_DIRECTION_PORT
+#define Z2_DIRECTION_PIN    M7_DIRECTION_PIN
+#define Z2_DIRECTION_BIT    (1<<M7_DIRECTION_PIN)
+#ifdef M7_LIMIT_PIN
+ #if Z_AUTO_SQUARE
+  #define Z2_LIMIT_PORT     M7_LIMIT_PORT
+  #define Z2_LIMIT_PIN      M7_LIMIT_PIN
+  #define Z2_LIMIT_BIT      (1<<M7_LIMIT_PIN)
+ #elif Z_GANGED_LIM_MAX && !defined(M7_LIMIT_PIN_MAX)
+  #define Z_LIMIT_PORT_MAX  M7_LIMIT_PORT
+  #define Z_LIMIT_PIN_MAX   M7_LIMIT_PIN
+  #define Z_LIMIT_BIT_MAX   (1<<M7_LIMIT_PIN)
+ #endif
+#elif Z_AUTO_SQUARE
+  #error "Auto squared Z-axis requires second limit pin input"
+#endif
+#ifdef M7_LIMIT_PIN_MAX
+  #define Z_LIMIT_PORT_MAX  M7_LIMIT_PORT_MAX
+  #define Z_LIMIT_PIN_MAX   M7_LIMIT_PIN_MAX
+  #define Z_LIMIT_BIT_MAX   (1<<M7_LIMIT_PIN_MAX)
+#endif
+#ifdef M7_ENABLE_PIN
+  #define Z2_ENABLE_PORT    M7_ENABLE_PORT
+  #define Z2_ENABLE_PIN     M7_ENABLE_PIN
+  #define Z2_ENABLE_BIT     (1<<M7_ENABLE_PIN)
+#endif
 #endif // Z_DOUBLED
 
 #ifdef X_DOUBLED
@@ -390,6 +599,20 @@
 
 #if defined(X2_LIMIT_PIN) || defined(Y2_LIMIT_PIN) || defined(Z2_LIMIT_PIN)
 #define DUAL_LIMIT_SWITCHES
+#ifndef X2_LIMIT_BIT
+#define X2_LIMIT_BIT 0
+#endif
+#ifndef Y2_LIMIT_BIT
+#define Y2_LIMIT_BIT 0
+#endif
+#ifndef Z2_LIMIT_BIT
+#define Z2_LIMIT_BIT 0
+#endif
+#define LIMIT2_MASK (X2_LIMIT_BIT|Y2_LIMIT_BIT|Z2_LIMIT_BIT)
+#define LIMIT2_MASK_SUM (X2_LIMIT_BIT+Y2_LIMIT_BIT+Z2_LIMIT_BIT)
+#else
+#define LIMIT2_MASK 0
+#define LIMIT2_MASK_SUM 0
 #endif
 
 #if defined(X_LIMIT_PIN_MAX) || defined(Y_LIMIT_PIN_MAX) || defined(Z_LIMIT_PIN_MAX) || defined(A_LIMIT_PIN_MAX) || defined(B_LIMIT_PIN_MAX) || defined(C_LIMIT_PIN_MAX)
@@ -761,8 +984,8 @@
 #endif
 
 #ifdef Z_LIMIT_POLL
-#define LIMIT_MASK_BASE (X_LIMIT_BIT|Y_LIMIT_BIT)
-#define LIMIT_MASK_BASE_SUM (X_LIMIT_BIT+Y_LIMIT_BIT)
+#define LIMIT_MASK_BASE (X_LIMIT_BIT|Y_LIMIT_BIT|LIMIT2_MASK)
+#define LIMIT_MASK_BASE_SUM (X_LIMIT_BIT+Y_LIMIT_BIT+LIMIT2_MASK_SUM)
 #else
 #define LIMIT_MASK_BASE (X_LIMIT_BIT|Y_LIMIT_BIT|Z_LIMIT_BIT)
 #define LIMIT_MASK_BASE_SUM (X_LIMIT_BIT+Y_LIMIT_BIT+Z_LIMIT_BIT)
@@ -771,12 +994,13 @@
 #if N_AXIS == 3
 #define LIMIT_MASK LIMIT_MASK_BASE
 #define LIMIT_MASK_SUM LIMIT_MASK_BASE_SUM
+#define LIMIT_MIN_CAP AXES_BITMASK
 #elif N_AXIS == 4
 #define LIMIT_MASK (LIMIT_MASK_BASE|A_LIMIT_BIT)
 #define LIMIT_MASK_SUM (LIMIT_MASK_BASE_SUM+A_LIMIT_BIT)
 #elif N_AXIS == 5
 #define LIMIT_MASK (LIMIT_MASK_BASE|A_LIMIT_BIT|B_LIMIT_BIT)
-#define LIMIT_MASK_SUM (LIMIT_MASK_BASE_SUM+A_LIMIT_BIT+B_LIMIT_BITT)
+#define LIMIT_MASK_SUM (LIMIT_MASK_BASE_SUM+A_LIMIT_BIT+B_LIMIT_BIT)
 #elif N_AXIS == 6
 #define LIMIT_MASK (LIMIT_MASK_BASE|A_LIMIT_BIT|B_LIMIT_BIT|C_LIMIT_BIT)
 #define LIMIT_MASK_SUM (LIMIT_MASK_BASE_SUM+A_LIMIT_BIT+B_LIMIT_BIT+C_LIMIT_BIT)
@@ -821,6 +1045,73 @@ static void motor_iterator (motor_iterator_callback_ptr callback)
         }
         callback(motor);
     }
+}
+
+static limit_signals_t get_limits_cap (void)
+{
+    limit_signals_t limits = {0};
+
+#if X_LIMIT_BIT
+    limits.min.x = On;
+#endif
+#if Y_LIMIT_BIT
+    limits.min.y = On;
+#endif
+#if Z_LIMIT_BIT
+    limits.min.z = On;
+#endif
+#if A_LIMIT_BIT
+    limits.min.a = On;
+#endif
+#if B_LIMIT_BIT
+    limits.min.b = On;
+#endif
+#if C_LIMIT_BIT
+    limits.min.c = On;
+#endif
+#if U_LIMIT_BIT
+    limits.min.u = On;
+#endif
+#if V_LIMIT_BIT
+    limits.min.v = On;
+#endif
+
+#if X2_LIMIT_BIT
+    limits.min2.x = On;
+#endif
+#if Y2_LIMIT_BIT
+    limits.min2.y = On;
+#endif
+#if Z2_LIMIT_BIT
+    limits.min2.z = On;
+#endif
+
+#if X_LIMIT_BIT_MAX
+    limits.max.x = On;
+#endif
+#if Y_LIMIT_BIT_MAX
+    limits.max.y = On;
+#endif
+#if Z_LIMIT_BIT_MAX
+    limits.max.z = On;
+#endif
+#if A_LIMIT_BIT_MAX
+    limits.max.a = On;
+#endif
+#if B_LIMIT_BIT_MAX
+    limits.max.b = On;
+#endif
+#if C_LIMIT_BIT_MAX
+    limits.max.c = On;
+#endif
+#if U_LIMIT_BIT_MAX
+    limits.max.u = On;
+#endif
+#if V_LIMIT_BIT_MAX
+    limits.max.v = On;
+#endif
+
+    return limits;
 }
 
 /*EOF*/

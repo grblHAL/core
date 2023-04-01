@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+<a name="20230401"/>20230401
+
+Core:
+
+* Fix for issue #279 - B-axis pin name typo.
+* Added HAL capability flags for limit switches supported.
+* Improved motor pins preprocessor code.
+
+Drivers:
+
+* ESP32: fix for [issue #64](https://github.com/grblHAL/ESP32/issues/64) and [#67](https://github.com/grblHAL/ESP32/issues/67) - use single input for squaring two axes.
+
+* All: added call for setting new HAL limit switches capability flags.
+
+---
+
 <a name="20230331"/>20230331
 
 Plugins:
@@ -8,20 +24,11 @@ Plugins:
 
 ---
 
-<a name="20230327"/>20230327
-
-Drivers:
-
-* ESP32: Fix for [issue #63](https://github.com/grblHAL/ESP32/issues/63), use static I2S mode when laser mode is configured \($32=1\). Untested!
-
----
-
 <a name="20230321"/>Build 20230321
 
 Core:
 
 * Fix for issue #271 - unwanted motion after soft reset when feed hold was active, reported for canned cycle but may occur for other commands as well.
-
 * Added function for properly initializing planner struct, updated core to use it.
 
 Plugins:
