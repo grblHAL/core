@@ -1,6 +1,16 @@
 ## grblHAL changelog
 
-<a name="20230401"/>20230401
+<a name="20230409"/>20230409
+
+Plugins:
+
+* Networking: fix for incorrect header returned for plain .gz files.
+
+* Webui: fixes for [issue #10](https://github.com/grblHAL/Plugin_WebUI/issues/10), cannot download any file from local FS but preferences.json.
+
+---
+
+<a name="20230401"/>Build 20230401
 
 Core:
 
