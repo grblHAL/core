@@ -459,8 +459,8 @@ static bool limits_homing_cycle (axes_signals_t cycle, axes_signals_t auto_squar
 
     // Pull off B motor to compensate for switch inaccuracy when configured.
     if(auto_square.mask && settings.axis[dual_motor_axis].dual_axis_offset != 0.0f) {
-        hal.stepper.disable_motors(auto_square, SquaringMode_A);
-        if(!limits_pull_off(auto_square, settings.axis[dual_motor_axis].dual_axis_offset))
+        hal.stepper.disable_motors(auto_square, settings.axis[dual_motor_axis].dual_axis_offset < 0.0f ? SquaringMode_B : SquaringMode_A);
+        if(!limits_pull_off(auto_square, fabs(settings.axis[dual_motor_axis].dual_axis_offset)))
             return false;
         hal.stepper.disable_motors((axes_signals_t){0}, SquaringMode_Both);
     }

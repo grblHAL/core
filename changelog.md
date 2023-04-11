@@ -1,10 +1,31 @@
 ## grblHAL changelog
 
+<a name="20230401"/>Build 20230411
+
+Core:
+
+* Fix for issue #236, dual axis offsets.  
+__NOTE:__ handling of negative offset values has changed. The primary motor will now be run to correct for negative offset values by moving away from the limit switch.
+Prior to this build the secondary motor was run to move towards the limit switch for negative values.
+* Changes to allow use of M4 for laser capable spindles in laser mode even if direction control is not available.
+
+Drivers:
+
+* STM32F4xx: pin mappings fix for [BTT SKR Pro 1.x](https://github.com/grblHAL/STM32F4xx/blob/master/Inc/btt_skr_pro_v1_1_map.h) to avoid IRQ conflicts.
+
+Plugins:
+
+* Networking: improved handling of .gz compressed files by httpd daemon.
+
+* Webui: more fixes for [issue #10](https://github.com/grblHAL/Plugin_WebUI/issues/10), cannot download any file from local FS but preferences.json.
+
+---
+
 <a name="20230409"/>20230409
 
 Plugins:
 
-* Networking: fix for incorrect header returned for plain .gz files.
+* Networking: fix for incorrect header returned by httpd daemon for plain .gz files.
 
 * Webui: fixes for [issue #10](https://github.com/grblHAL/Plugin_WebUI/issues/10), cannot download any file from local FS but preferences.json.
 

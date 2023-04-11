@@ -565,6 +565,15 @@ void debug_write (const char *s)
     }
 }
 
+void debug_writeln (const char *s)
+{
+    if(dbg_write) {
+        dbg_write(s);
+        dbg_write(ASCII_EOL);
+        while(hal.debug.get_tx_buffer_count()); // Wait until message is delivered
+    }
+}
+
 static bool debug_claim_stream (io_stream_properties_t const *stream)
 {
     io_stream_t const *claimed = NULL;

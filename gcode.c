@@ -1608,10 +1608,10 @@ status_code_t gc_execute_block (char *block)
             uint_fast8_t idx = N_SYS_SPINDLE;
             do {
                 idx--;
-                if(spindle_is_enabled(idx) && !spindle_get(idx)->cap.direction)
+                if(spindle_is_enabled(idx) && !(spindle_get(idx)->cap.direction || spindle_get(idx)->cap.laser))
                     FAIL(Status_GcodeUnsupportedCommand);
             } while(idx);
-        } else if(!gc_block.spindle->cap.direction)
+        } else if(!(gc_block.spindle->cap.direction || gc_block.spindle->cap.laser))
             FAIL(Status_GcodeUnsupportedCommand);
     }
 
