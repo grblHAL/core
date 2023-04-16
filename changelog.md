@@ -1,6 +1,26 @@
 ## grblHAL changelog
 
-<a name="20230401"/>Build 20230411
+<a name="20230416"/>20230416
+
+Core:
+
+* Added reboot required tag for setting $16 and $38.
+
+Drivers:
+
+* ESP32: Improved handling of mixed I2S and GPIO signalling. Allows fix for [issue #70](https://github.com/grblHAL/ESP32/issues/70).
+
+* STM32F4xx: Improved clock tree handling for the different MCU variants, spindle sync fixes and improvements. Fix for [issue #117](https://github.com/grblHAL/STM32F4xx/issues/117), random pauses.
+
+* RP2040: Fix for incorrect reporting of spindle and coolant states in some configurations. Fixes ioSender [issue #286](https://github.com/terjeio/ioSender/issues/286).
+
+Plugins:
+
+* Embroidery: Fix for incorrect handling of jumps.
+
+---
+
+<a name="20230411"/>Build 20230411
 
 Core:
 
