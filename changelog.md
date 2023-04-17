@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+<a name="20230417"/>20230417
+
+Core:
+
+* Added missing files to CMakeLists.txt \(used by RP2040 build\).
+
+Drivers:
+
+* RP2040: Fix for incorrect step signals sent to PIO for ganged axes, [issue #60](https://github.com/grblHAL/RP2040/issues/60).
+
+---
+
 <a name="20230416"/>20230416
 
 Core:

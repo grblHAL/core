@@ -29,4 +29,6 @@ target_sources(grbl INTERFACE
  ${CMAKE_CURRENT_LIST_DIR}/regex.c
  ${CMAKE_CURRENT_LIST_DIR}/ioports.c
  ${CMAKE_CURRENT_LIST_DIR}/vfs.c
+ ${CMAKE_CURRENT_LIST_DIR}/corexy.c
+ ${CMAKE_CURRENT_LIST_DIR}/wall_plotter.c
 )
