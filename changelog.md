@@ -18,8 +18,6 @@ Plugins:
 
 * WebUI: fix for [issue #10](https://github.com/grblHAL/Plugin_WebUI/issues/10) - problem with saving files.
 
-* Networking: fix for [WebUI issue #10](https://github.com/grblHAL/Plugin_WebUI/issues/10) - incorrect handling of gzipped files.
-
 * SDCard: added VFS property.
 
 ---
