@@ -451,6 +451,7 @@ vfs_drive_t *vfs_get_drive (const char *path)
     drive.name = mount->vfs->fs_name;
     drive.path = (const char *)mount->path;
     drive.mode = mount->vfs->mode;
+    drive.removable = mount->vfs->removable;
     drive.fs = mount->vfs;
 
     return &drive;
@@ -491,6 +492,7 @@ vfs_drive_t *vfs_drives_read (vfs_drives_t *handle)
         drive.name = handle->mount->vfs->fs_name;
         drive.path = (const char *)handle->mount->path;
         drive.mode = handle->mount->vfs->mode;
+        drive.removable = handle->mount->vfs->removable;
         drive.fs = handle->mount->vfs;
 
         handle->mount = handle->mount->next;

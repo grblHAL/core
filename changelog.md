@@ -1,5 +1,29 @@
 ## grblHAL changelog
 
+<a name="20230427"/>Build 20230427
+
+Core:
+
+* Fixed some typos, incorrect default value for setting $63 - _Disable laser during hold_ flag. Added VFS property.
+
+Drivers:
+
+* STM32F1xx: fix for [issue #34](https://github.com/grblHAL/STM32F1xx/issues/34), typo blocking GPIO interrupt for pin 4.
+
+* ESP32: improved handling of I2S/GPIO pin assignments, added _CMakeLists.txt_ option to enable custom _my_plugin.c_.
+
+* RP2040: added _CMakeLists.txt_ option to enable custom _my_plugin.c_.
+
+Plugins:
+
+* WebUI: fix for [issue #10](https://github.com/grblHAL/Plugin_WebUI/issues/10) - problem with saving files.
+
+* Networking: fix for [WebUI issue #10](https://github.com/grblHAL/Plugin_WebUI/issues/10) - incorrect handling of gzipped files.
+
+* SDCard: added VFS property.
+
+---
+
 <a name="20230417"/>20230417
 
 Core:

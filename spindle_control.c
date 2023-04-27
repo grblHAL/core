@@ -228,15 +228,17 @@ spindle_id_t spindle_get_default (void)
 }
 
 /*! \brief Get the merged spindle capabilities of all registered spindles.
+\param active true to return active capabilities, false to return default capabilities.
 \returns capabilities in a \ref spindle_cap_t structure.
 */
-spindle_cap_t spindle_get_caps (void)
+spindle_cap_t spindle_get_caps (bool active)
 {
     spindle_cap_t caps = {0};
     uint_fast8_t idx = n_spindle;
 
     do {
-        caps.value |= spindles[--idx].hal.cap.value;
+        --idx;
+        caps.value |= (active ? spindles[idx].hal.cap.value : spindles[idx].cfg->cap.value);
     } while(idx);
 
     return caps;

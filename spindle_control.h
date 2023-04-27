@@ -268,7 +268,7 @@ uint8_t spindle_get_count (void);
 
 bool spindle_select (spindle_id_t spindle_id);
 
-spindle_cap_t spindle_get_caps (void);
+spindle_cap_t spindle_get_caps (bool active);
 
 void spindle_update_caps (spindle_ptrs_t *spindle, spindle_pwm_t *pwm_caps);
 

@@ -71,7 +71,7 @@ PROGMEM const settings_t defaults = {
 #endif
 #if DEFAULT_LASER_MODE
     .mode = Mode_Laser,
-    .flags.disable_laser_during_hold = DEFAULT_ENABLE_LASER_DURING_HOLD,
+    .flags.disable_laser_during_hold = DDEFAULT_DISABLE_LASER_DURING_HOLD
 #else
     .flags.disable_laser_during_hold = 0,
   #if DEFAULT_LATHE_MODE
@@ -954,7 +954,7 @@ static status_code_t set_spindle_type (setting_id_t id, uint_fast16_t int_value)
 static status_code_t set_spindle_invert (setting_id_t id, uint_fast16_t int_value)
 {
     settings.spindle.invert.mask = int_value;
-    if(settings.spindle.invert.pwm && !spindle_get_caps().pwm_invert) {
+    if(settings.spindle.invert.pwm && !spindle_get_caps(false).pwm_invert) {
         settings.spindle.invert.pwm = Off;
         return Status_SettingDisabled;
     }
@@ -1058,20 +1058,16 @@ static status_code_t set_mode (setting_id_t id, uint_fast16_t int_value)
     switch((machine_mode_t)int_value) {
 
         case Mode_Standard:
-           settings.flags.disable_laser_during_hold = 0;
            gc_state.modal.diameter_mode = false;
            break;
 
         case Mode_Laser:
-//            if(!spindle_get_caps().laser)
-//                return Status_SettingDisabledLaser;
-            if(settings.mode != Mode_Laser)
-                settings.flags.disable_laser_during_hold = DEFAULT_ENABLE_LASER_DURING_HOLD;
+            if(!spindle_get_caps(false).laser)
+                return Status_SettingDisabledLaser;
             gc_state.modal.diameter_mode = false;
             break;
 
          case Mode_Lathe:
-            settings.flags.disable_laser_during_hold = 0;
             break;
 
          default: // Mode_Standard
@@ -1755,7 +1751,7 @@ static bool is_setting_available (const setting_detail_t *setting)
             break;
 
         case Setting_SpindlePWMOptions:
-            available = hal.driver_cap.pwm_spindle && spindle_get_caps().laser;
+            available = hal.driver_cap.pwm_spindle && spindle_get_caps(false).laser;
             break;
 
         case Setting_PWMFreq:
@@ -1775,7 +1771,7 @@ static bool is_setting_available (const setting_detail_t *setting)
 
         case Setting_RpmMax:
         case Setting_RpmMin:
-            available = spindle_get_caps().variable;
+            available = spindle_get_caps(false).variable;
             break;
 
         case Setting_DualAxisLengthFailPercent:
@@ -1802,11 +1798,11 @@ static bool is_setting_available (const setting_detail_t *setting)
 #endif
 
         case Setting_SpindleAtSpeedTolerance:
-            available = spindle_get_caps().at_speed || hal.driver_cap.spindle_sync;
+            available = spindle_get_caps(true).at_speed || hal.driver_cap.spindle_sync;
             break;
 
         case Setting_SpindleOnDelay:
-            available = !hal.signals_cap.safety_door_ajar && spindle_get_caps().at_speed;
+            available = !hal.signals_cap.safety_door_ajar && spindle_get_caps(true).at_speed;
             break;
 
         case Setting_AutoReportInterval:
@@ -1936,7 +1932,7 @@ bool read_global_settings ()
     bool ok = hal.nvs.type != NVS_None && SETTINGS_VERSION == hal.nvs.get_byte(0) && hal.nvs.memcpy_from_nvs((uint8_t *)&settings, NVS_ADDR_GLOBAL, sizeof(settings_t), true) == NVS_TransferResult_OK;
 
     // Sanity check of settings, board map could have been changed...
-    if(settings.mode == Mode_Laser && !spindle_get_caps().laser)
+    if(settings.mode == Mode_Laser && !spindle_get_caps(false).laser)
         settings.mode = Mode_Standard;
 
     if(settings.spindle.flags.type >= spindle_get_count())
@@ -1990,8 +1986,8 @@ void settings_restore (settings_restore_t restore)
         memcpy(&settings, &defaults, sizeof(settings_t));
 
         settings.control_invert.mask &= hal.signals_cap.mask;
-        settings.spindle.invert.ccw &= spindle_get_caps().direction;
-        settings.spindle.invert.pwm &= spindle_get_caps().pwm_invert;
+        settings.spindle.invert.ccw &= spindle_get_caps(false).direction;
+        settings.spindle.invert.pwm &= spindle_get_caps(false).pwm_invert;
 #if ENABLE_BACKLASH_COMPENSATION
         if(sys.driver_started)
             mc_backlash_init((axes_signals_t){AXES_BITMASK});
@@ -2733,8 +2729,8 @@ void settings_init (void)
         .on = On,
     };
 
-    spindle_cap.ccw = spindle_get_caps().direction;
-    spindle_cap.pwm = spindle_get_caps().pwm_invert;
+    spindle_cap.ccw = spindle_get_caps(false).direction;
+    spindle_cap.pwm = spindle_get_caps(false).pwm_invert;
 
     setting_remove_elements(Setting_SpindleInvertMask, spindle_cap.mask);
     setting_remove_elements(Setting_ControlInvertMask, hal.signals_cap.mask);

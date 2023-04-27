@@ -736,8 +736,8 @@ be re-enabled by disabling the spindle stop override, if needed. This is purely 
 to ensure the laser doesn't inadvertently remain powered while at a stop and cause a fire.
 */
 ///@{
-#if !defined DEFAULT_ENABLE_LASER_DURING_HOLD || defined __DOXYGEN__
-#define DEFAULT_ENABLE_LASER_DURING_HOLD Off
+#if !defined DEFAULT_DISABLE_LASER_DURING_HOLD || defined __DOXYGEN__
+#define DEFAULT_DISABLE_LASER_DURING_HOLD On
 #endif
 ///@}
 
@@ -1773,28 +1773,28 @@ Timezone offset from UTC in hours, allowed range is -12.0 - 12.0.
 */
 ///@{
 #if !defined DEFAULT_X_ACCELERATION || defined __DOXYGEN__
-#define DEFAULT_X_ACCELERATION 10.0f // mm/min^2
+#define DEFAULT_X_ACCELERATION 10.0f // mm/sec^2
 #endif
 #if !defined DEFAULT_Y_ACCELERATION || defined __DOXYGEN__
-#define DEFAULT_Y_ACCELERATION 10.0f // mm/min^2
+#define DEFAULT_Y_ACCELERATION 10.0f // mm/sec^2
 #endif
 #if !defined DEFAULT_Z_ACCELERATION || defined __DOXYGEN__
-#define DEFAULT_Z_ACCELERATION 10.0f // mm/min^2
+#define DEFAULT_Z_ACCELERATION 10.0f // mm/sec^2
 #endif
 #if (defined A_AXIS && !defined DEFAULT_A_ACCELERATION) || defined __DOXYGEN__
-#define DEFAULT_A_ACCELERATION 10.0f // mm/min^2
+#define DEFAULT_A_ACCELERATION 10.0f // mm/sec^2
 #endif
 #if (defined B_AXIS && !defined DEFAULT_B_ACCELERATION) || defined __DOXYGEN__
-#define DEFAULT_B_ACCELERATION 10.0f // mm/min^2
+#define DEFAULT_B_ACCELERATION 10.0f // mm/sec^2
 #endif
 #if (defined C_AXIS && !defined DEFAULT_C_ACCELERATION) || defined __DOXYGEN__
-#define DEFAULT_C_ACCELERATION 10.0f // mm/min^2
+#define DEFAULT_C_ACCELERATION 10.0f // mm/sec^2
 #endif
 #if (defined U_AXIS && !defined DEFAULT_U_ACCELERATION) || defined __DOXYGEN__
-#define DEFAULT_U_ACCELERATION 10.0f // mm/min^2
+#define DEFAULT_U_ACCELERATION 10.0f // mm/sec^2
 #endif
 #if (defined V_AXIS && !defined DEFAULT_V_ACCELERATION) || defined __DOXYGEN__
-#define DEFAULT_V_ACCELERATION 10.0f // mm/min^2
+#define DEFAULT_V_ACCELERATION 10.0f // mm/sec^2
 #endif
 ///@}
 
