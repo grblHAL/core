@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+<a name="20230429"/>Build 20230429
+
+Core:
+
+* Now allows some $-commands while critical events are active or in sleep mode. E.g. settings commands can be used to configure the controller.
+
+* Added work envelope data to [global sys struct](http://svn.io-engineering.com/grblHAL/html/structsystem.html), used by soft limits and jog limit handling. This can be modified by plugin code to restrict motion.
+
+Drivers:
+
+* STM32F1xx: added driver support for ganged and auto-squared axes.
+
+* STM32F4xx: fixed typos.
+
+---
+
 <a name="20230427"/>Build 20230427
 
 Core:

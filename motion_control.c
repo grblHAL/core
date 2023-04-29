@@ -929,8 +929,13 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
                     ? Status_LimitsEngaged
                     : Status_OK;
 
-    if(homed_status == Status_OK && grbl.on_homing_completed)
-        grbl.on_homing_completed();
+    if(homed_status == Status_OK) {
+
+        limits_set_work_envelope();
+
+        if(grbl.on_homing_completed)
+            grbl.on_homing_completed();
+    }
 
     return homed_status;
 }

@@ -191,79 +191,79 @@ status_code_t read_int (char *s, int32_t *value)
 }
 
 PROGMEM static const sys_command_t sys_commands[] = {
-    { "G", true, output_parser_state },
-    { "J", false, jog },
-    { "#", false, output_ngc_parameters },
-    { "$", false, output_settings },
-    { "+", false, output_all_settings },
+    { "G", output_parser_state, { .noargs = On, .allow_blocking = On } },
+    { "J", jog },
+    { "#", output_ngc_parameters, { .allow_blocking = On } },
+    { "$", output_settings, { .allow_blocking = On } },
+    { "+", output_all_settings, { .allow_blocking = On } },
 #ifndef NO_SETTINGS_DESCRIPTIONS
-    { "SED", false, output_setting_description },
+    { "SED", output_setting_description, { .allow_blocking = On } },
 #endif
-    { "B", true, toggle_block_delete },
-    { "S", true, toggle_single_block },
-    { "O", true, toggle_optional_stop },
-    { "C", true, check_mode },
-    { "X", false, disable_lock },
-    { "H", false, home },
-    { "HX", false, home_x },
-    { "HY", false, home_y },
-    { "HZ", false, home_z },
+    { "B", toggle_block_delete, { .noargs = On } },
+    { "S", toggle_single_block, { .noargs = On } },
+    { "O", toggle_optional_stop, { .noargs = On } },
+    { "C", check_mode, { .noargs = On } },
+    { "X", disable_lock },
+    { "H", home },
+    { "HX", home_x },
+    { "HY", home_y },
+    { "HZ", home_z },
 #if AXIS_REMAP_ABC2UVW
   #ifdef A_AXIS
-    { "HU", false, home_a },
+    { "HU", home_a },
   #endif
   #ifdef B_AXIS
-    { "HV", false, home_b },
+    { "HV", home_b },
   #endif
   #ifdef C_AXIS
-    { "HW", false, home_c },
+    { "HW", home_c },
   #endif
 #else
   #ifdef A_AXIS
-    { "HA", false, home_a },
+    { "HA", home_a },
   #endif
   #ifdef B_AXIS
-    { "HB", false, home_b },
+    { "HB", home_b },
   #endif
   #ifdef C_AXIS
-    { "HC", false, home_c },
+    { "HC", home_c },
   #endif
 #endif
 #ifdef U_AXIS
-    { "HU", false, home_u },
+    { "HU", home_u },
 #endif
 #ifdef V_AXIS
-    { "HV", false, home_v },
+    { "HV", home_v },
 #endif
-    { "HELP", false, output_help },
-    { "SPINDLES", false, output_spindles },
-    { "SLP", true, enter_sleep },
-    { "TLR", true, set_tool_reference },
-    { "TPW", true, tool_probe_workpiece },
-    { "I", false, build_info },
-    { "I+", true, output_all_build_info },
-    { "RST", false, settings_reset },
-    { "N", true, output_startup_lines },
-    { "N0", false, set_startup_line0 },
-    { "N1", false, set_startup_line1 },
-    { "EA", true, enumerate_alarms },
-    { "EAG", true, enumerate_alarms_grblformatted },
-    { "EE", true, enumerate_errors },
-    { "EEG", true, enumerate_errors_grblformatted },
-    { "EG", true, enumerate_groups },
-    { "ES", true, enumerate_settings },
-    { "ESG", true, enumerate_settings_grblformatted },
-    { "ESH", true, enumerate_settings_halformatted },
-    { "E*", true, enumerate_all },
-    { "PINS", true, enumerate_pins },
-    { "RST", false, settings_reset },
-    { "LEV", true, report_last_signals_event },
-    { "LIM", true, report_current_limit_state },
-    { "SD", false, report_spindle_data },
-    { "SR", false, spindle_reset_data },
-    { "RTC", false, rtc_action },
+    { "HELP", output_help, { .allow_blocking = On } },
+    { "SPINDLES", output_spindles },
+    { "SLP", enter_sleep, { .noargs = On } },
+    { "TLR", set_tool_reference, { .noargs = On } },
+    { "TPW", tool_probe_workpiece, { .noargs = On } },
+    { "I", build_info, { .allow_blocking = On } },
+    { "I+", output_all_build_info, { .noargs = On, .allow_blocking = On } },
+    { "RST", settings_reset, { .allow_blocking = On } },
+    { "N", output_startup_lines, { .noargs = On, .allow_blocking = On } },
+    { "N0", set_startup_line0 },
+    { "N1", set_startup_line1 },
+    { "EA", enumerate_alarms, { .noargs = On, .allow_blocking = On } },
+    { "EAG", enumerate_alarms_grblformatted, { .noargs = On, .allow_blocking = On } },
+    { "EE", enumerate_errors, { .noargs = On, .allow_blocking = On } },
+    { "EEG", enumerate_errors_grblformatted, { .noargs = On, .allow_blocking = On } },
+    { "EG", enumerate_groups, { .noargs = On, .allow_blocking = On } },
+    { "ES", enumerate_settings, { .noargs = On, .allow_blocking = On } },
+    { "ESG", enumerate_settings_grblformatted, { .noargs = On, .allow_blocking = On } },
+    { "ESH", enumerate_settings_halformatted, { .noargs = On, .allow_blocking = On } },
+    { "E*", enumerate_all, { .noargs = On, .allow_blocking = On } },
+    { "PINS", enumerate_pins, { .noargs = On, .allow_blocking = On } },
+    { "RST", settings_reset, { .allow_blocking = On } },
+    { "LEV", report_last_signals_event, { .noargs = On, .allow_blocking = On } },
+    { "LIM", report_current_limit_state, { .noargs = On, .allow_blocking = On } },
+    { "SD", report_spindle_data },
+    { "SR", spindle_reset_data },
+    { "RTC", rtc_action, { .allow_blocking = On } },
 #ifdef DEBUGOUT
-    { "Q", true, output_memmap },
+    { "Q", output_memmap, { .noargs = On } },
 #endif
 };
 
@@ -382,7 +382,10 @@ status_code_t system_execute_line (char *line)
     do {
         for(idx = 0; idx < cmd->n_commands; idx++) {
             if(!strcmp(line, cmd->commands[idx].command)) {
-                if(!cmd->commands[idx].noargs || args == NULL) {
+                if(sys.blocking_event && !cmd->commands[idx].flags.allow_blocking) {
+                    retval = Status_NotAllowedCriticalEvent;
+                    break;
+                } else if(!cmd->commands[idx].flags.noargs || args == NULL) {
                     if((retval = cmd->commands[idx].execute(state_get(), args)) != Status_Unhandled)
                         break;
                 }
@@ -801,7 +804,7 @@ static status_code_t output_ngc_parameters (sys_state_t state, char *args)
 
 static status_code_t build_info (sys_state_t state, char *args)
 {
-    if (!(state == STATE_IDLE || (state & (STATE_ALARM|STATE_ESTOP|STATE_CHECK_MODE))))
+    if (!(state == STATE_IDLE || (state & (STATE_ALARM|STATE_ESTOP|STATE_SLEEP|STATE_CHECK_MODE))))
         return Status_IdleError;
 
     if (args == NULL) {
@@ -1003,62 +1006,30 @@ bool system_xy_at_fixture (coord_system_id_t id, float tolerance)
     return ok;
 }
 
-
 // Checks and reports if target array exceeds machine travel limits. Returns false if check failed.
-// NOTE: max_travel is stored as negative
-// TODO: only check homed axes?
 bool system_check_travel_limits (float *target)
 {
     bool failed = false;
     uint_fast8_t idx = N_AXIS;
 
-    if(settings.homing.flags.force_set_origin) {
-        do {
-            idx--;
-        // When homing forced set origin is enabled, soft limits checks need to account for directionality.
-            failed = settings.axis[idx].max_travel < -0.0f &&
-                      (bit_istrue(settings.homing.dir_mask.value, bit(idx))
-                        ? (target[idx] < 0.0f || target[idx] > -settings.axis[idx].max_travel)
-                        : (target[idx] > 0.0f || target[idx] < settings.axis[idx].max_travel));
-        } while(!failed && idx);
-    } else do {
+    if(sys.homed.mask) do {
         idx--;
-        failed = settings.axis[idx].max_travel < -0.0f && (target[idx] > 0.0f || target[idx] < settings.axis[idx].max_travel);
+        if(bit_istrue(sys.homed.mask, bit(idx)) && settings.axis[idx].max_travel < -0.0f)
+            failed = target[idx] < sys.work_envelope.min[idx] || target[idx] > sys.work_envelope.max[idx];
     } while(!failed && idx);
 
     return !failed;
 }
 
 // Limits jog commands to be within machine limits, homed axes only.
-// When hard limits are enabled pulloff distance is subtracted to avoid triggering limit switches.
-// NOTE: max_travel is stored as negative
 void system_apply_jog_limits (float *target)
 {
     uint_fast8_t idx = N_AXIS;
 
     if(sys.homed.mask) do {
         idx--;
-        float pulloff = settings.limits.flags.hard_enabled && bit_istrue(sys.homing.mask, bit(idx)) ? settings.homing.pulloff : 0.0f;
-        if(bit_istrue(sys.homed.mask, bit(idx)) && settings.axis[idx].max_travel < -0.0f) {
-            if(settings.homing.flags.force_set_origin) {
-                if(bit_isfalse(settings.homing.dir_mask.value, bit(idx))) {
-                    if(target[idx] > 0.0f)
-                        target[idx] = 0.0f;
-                    else if(target[idx] < (settings.axis[idx].max_travel + pulloff))
-                        target[idx] = (settings.axis[idx].max_travel + pulloff);
-                } else {
-                    if(target[idx] < 0.0f)
-                        target[idx] = 0.0f;
-                    else if(target[idx] > -(settings.axis[idx].max_travel + pulloff))
-                        target[idx] = -(settings.axis[idx].max_travel + pulloff);
-                }
-            } else {
-                if(target[idx] > -pulloff)
-                    target[idx] = -pulloff;
-                else if(target[idx] < (settings.axis[idx].max_travel + pulloff))
-                    target[idx] = (settings.axis[idx].max_travel + pulloff);
-            }
-        }
+        if(bit_istrue(sys.homed.mask, bit(idx)) && settings.axis[idx].max_travel < -0.0f)
+            target[idx] = max(min(target[idx], sys.work_envelope.max[idx]), sys.work_envelope.min[idx]);
     } while(idx);
 }
 

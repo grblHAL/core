@@ -109,7 +109,36 @@ ISR_CODE void ISR_FUNC(limit_interrupt_handler)(limit_signals_t state) // DEFAUL
     }
 }
 
+// Establish work envelope for homed axes, used by soft limits and jog limits handling.
+// When hard limits are enabled pulloff distance is subtracted to avoid triggering limit switches.
+void limits_set_work_envelope (void)
+{
+    uint_fast8_t idx = N_AXIS;
+
+    do {
+        if(sys.homed.mask & bit(--idx)) {
+
+            float pulloff = settings.limits.flags.hard_enabled && bit_istrue(sys.homing.mask, bit(idx)) ? settings.homing.pulloff : 0.0f;
+
+            if(settings.homing.flags.force_set_origin) {
+                if(bit_isfalse(settings.homing.dir_mask.value, bit(idx))) {
+                    sys.work_envelope.min[idx] = settings.axis[idx].max_travel + pulloff;
+                    sys.work_envelope.max[idx] = 0.0f;
+                } else {
+                    sys.work_envelope.min[idx] = 0.0f;
+                    sys.work_envelope.max[idx] = - (settings.axis[idx].max_travel + pulloff);
+                }
+            } else {
+                sys.work_envelope.min[idx] = settings.axis[idx].max_travel + pulloff;
+                sys.work_envelope.max[idx] = - pulloff;
+            }
+        } else
+            sys.work_envelope.min[idx] = sys.work_envelope.max[idx] = 0.0f;
+    } while(idx);
+}
+
 #ifndef KINEMATICS_API
+
 // Set machine positions for homed limit switches. Don't update non-homed axes.
 // NOTE: settings.max_travel[] is stored as a negative value.
 void limits_set_machine_positions (axes_signals_t cycle, bool add_pulloff)
@@ -133,6 +162,7 @@ void limits_set_machine_positions (axes_signals_t cycle, bool add_pulloff)
         }
     } while(idx);
 }
+
 #endif
 
 // Pulls off axes from asserted homing switches before homing starts.

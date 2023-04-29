@@ -105,6 +105,7 @@ typedef enum {
 
     Status_AuthenticationRequired = 77,
     Status_AccessDenied = 78,
+    Status_NotAllowedCriticalEvent = 79,
 
     Status_Unhandled, // For internal use only
     Status_StatusMax = Status_Unhandled

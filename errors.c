@@ -93,6 +93,7 @@ PROGMEM static const status_detail_t status_detail[] = {
 #endif
     { Status_AuthenticationRequired, "Authentication required." },
     { Status_AccessDenied, "Access denied." },
+    { Status_NotAllowedCriticalEvent, "Not allowed while critical event is active." }
 };
 
 static error_details_t details = {

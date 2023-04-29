@@ -222,10 +222,10 @@ typedef struct {
 typedef union {
     uint8_t flags;
     struct {
-        uint16_t feedrate :1,
-                 coolant  :1,
-                 spindle  :1,
-                 unused   :5;
+        uint8_t feedrate :1,
+                coolant  :1,
+                spindle  :1,
+                unused   :5;
     };
 } system_override_delay_t;
 
@@ -246,11 +246,15 @@ typedef union {
     };
 } system_flags_t;
 
-typedef struct
-{
+typedef struct {
     control_signals_t control;
     limit_signals_t limits;
 } signal_event_t;
+
+typedef struct {
+    float min[N_AXIS];
+    float max[N_AXIS];
+} work_envelope_t;
 
 //! Global system variables struct.
 // NOTE: probe_position and position variables may need to be declared as volatiles, if problems arise.
@@ -260,6 +264,7 @@ typedef struct system {
     bool suspend;                           //!< System suspend state flag.
     bool position_lost;                     //!< Set when mc_reset is called when machine is moving.
     bool reset_pending;                     //!< Set when reset processing is underway.
+    bool blocking_event;                    //!< Set when a blocking event that requires reset to clear is active.
     volatile bool steppers_deenergize;      //!< Set to true to deenergize stepperes
     axes_signals_t tlo_reference_set;       //!< Axes with tool length reference offset set
     int32_t tlo_reference[N_AXIS];          //!< Tool length reference offset
@@ -284,7 +289,8 @@ typedef struct system {
 //! @name The following variables are only cleared upon soft reset if position is likely lost, do NOT move. homed must be first!
 //@{
     axes_signals_t homed;                   //!< Indicates which axes has been homed.
-    float home_position[N_AXIS];            //!< Home position for homed axes
+    float home_position[N_AXIS];            //!< Home position for homed axes.
+    work_envelope_t work_envelope;          //!< Work envelope, only valid for homed axes.
 //@}
 //!  @name The following variables are not cleared upon soft reset, do NOT move. alarm must be first!
 //@{
@@ -299,11 +305,20 @@ typedef struct system {
 
 typedef status_code_t (*sys_command_ptr)(sys_state_t state, char *args);
 
+typedef union {
+    uint8_t flags;
+    struct {
+        uint8_t noargs         :1, //!< System command does not handle arguments.
+                allow_blocking :1, //!< System command can be used when blocking event is active.
+                unused         :6;
+    };
+} sys_command_flags_t;
+
 typedef struct
 {
     const char *command;
-    bool noargs;
     sys_command_ptr execute;
+    sys_command_flags_t flags;
 } sys_command_t;
 
 typedef struct sys_commands_str {

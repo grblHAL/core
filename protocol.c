@@ -61,7 +61,7 @@ static char xcommand[LINE_BUFFER_SIZE];
 static bool keep_rt_commands = false;
 static realtime_queue_t realtime_queue = {0};
 
-static void protocol_exec_rt_suspend ();
+static void protocol_exec_rt_suspend (sys_state_t state);
 static void protocol_execute_rt_commands (void);
 
 // add gcode to execute not originating from normal input stream
@@ -239,14 +239,14 @@ bool protocol_main_loop (void)
                 // Direct and execute one line of formatted input, and report status of execution.
                 if (line_flags.overflow) // Report line overflow error.
                     gc_state.last_error = Status_Overflow;
-                else if(line[0] == '\0') // Empty line. For syncing purposes.
+                else if(*line == '\0') // Empty line. For syncing purposes.
                     gc_state.last_error = Status_OK;
-                else if (line[0] == '$') {// Grbl '$' system command
+                else if(*line == '$') {// Grbl '$' system command
                     if((gc_state.last_error = system_execute_line(line)) == Status_LimitsEngaged) {
                         system_raise_alarm(Alarm_LimitsEngaged);
                         grbl.report.feedback_message(Message_CheckLimits);
                     }
-                } else if (line[0] == '[' && grbl.on_user_command)
+                } else if(*line == '[' && grbl.on_user_command)
                     gc_state.last_error = grbl.on_user_command(line);
                 else if (state_get() & (STATE_ALARM|STATE_ESTOP|STATE_JOG)) // Everything else is gcode. Block if in alarm, eStop or jog mode.
                     gc_state.last_error = Status_SystemGClock;
@@ -276,7 +276,7 @@ bool protocol_main_loop (void)
                 keep_rt_commands = false;
                 char_counter = line_flags.value = 0;
 
-            } else if (c <= (char_counter > 0 ? ' ' - 1 : ' '))
+            } else if (c != ASCII_BS && c <= (char_counter > 0 ? ' ' - 1 : ' '))
                 continue; // Strip control characters and leading whitespace.
             else {
                 switch(c) {
@@ -304,6 +304,7 @@ bool protocol_main_loop (void)
                         }
                         break;
 
+                    case ASCII_BS:
                     case ASCII_DEL:
                         if(char_counter) {
                             line[--char_counter] = '\0';
@@ -388,16 +389,40 @@ bool protocol_execute_realtime (void)
 {
     if(protocol_exec_rt_system()) {
 
-        if (sys.suspend)
-            protocol_exec_rt_suspend();
+        sys_state_t state = state_get();
 
-      #if NVSDATA_BUFFER_ENABLE
-        if((state_get() == STATE_IDLE || (state_get() & (STATE_ALARM|STATE_ESTOP))) && settings_dirty.is_dirty && !gc_state.file_run)
+        if(sys.suspend)
+            protocol_exec_rt_suspend(state);
+
+#if NVSDATA_BUFFER_ENABLE
+        if((state == STATE_IDLE || (state & (STATE_ALARM|STATE_ESTOP))) && settings_dirty.is_dirty && !gc_state.file_run)
             nvs_buffer_sync_physical();
-      #endif
+#endif
     }
 
     return !ABORTED;
+}
+
+static void protocol_poll_cmd (void)
+{
+    int16_t c;
+
+    if((c = hal.stream.read()) != SERIAL_NO_DATA) {
+
+        if ((c == '\n') || (c == '\r')) { // End of line reached
+            line[char_counter] = '\0';
+            gc_state.last_error = *line == '\0' ? Status_OK : (*line == '$' ? system_execute_line(line) : Status_SystemGClock);
+            char_counter = 0;
+            *line = '\0';
+            grbl.report.status_message(gc_state.last_error);
+        } else if(c == ASCII_DEL || c == ASCII_BS) {
+            if(char_counter)
+                line[--char_counter] = '\0';
+        } else if(char_counter == 0 ? c != ' ' : char_counter < (LINE_BUFFER_SIZE - 1))
+            line[char_counter++] = c;
+
+        keep_rt_commands = char_counter > 0 && *line == '$';
+    }
 }
 
 // Executes run-time commands, when required. This function primarily operates as Grbl's state
@@ -426,11 +451,13 @@ bool protocol_exec_rt_system (void)
             hal.driver_reset();
 
         // Halt everything upon a critical event flag. Currently hard and soft limits flag this.
-        if ((alarm_code_t)rt_exec == Alarm_HardLimit ||
-            (alarm_code_t)rt_exec == Alarm_SoftLimit ||
-             (alarm_code_t)rt_exec == Alarm_EStop ||
-              (alarm_code_t)rt_exec == Alarm_MotorFault) {
+        if((sys.blocking_event = (alarm_code_t)rt_exec == Alarm_HardLimit ||
+                                  (alarm_code_t)rt_exec == Alarm_SoftLimit ||
+                                   (alarm_code_t)rt_exec == Alarm_EStop ||
+                                    (alarm_code_t)rt_exec == Alarm_MotorFault)) {
+
             system_set_exec_alarm(rt_exec);
+
             switch((alarm_code_t)rt_exec) {
 
                 case Alarm_EStop:
@@ -445,20 +472,30 @@ bool protocol_exec_rt_system (void)
                     grbl.report.feedback_message(Message_CriticalEvent);
                     break;
             }
+
             system_clear_exec_state_flag(EXEC_RESET); // Disable any existing reset
+
+            *line = '\0';
+            char_counter = 0;
+            hal.stream.reset_read_buffer();
+
             while (bit_isfalse(sys.rt_exec_state, EXEC_RESET)) {
+
                 // Block everything, except reset and status reports, until user issues reset or power
                 // cycles. Hard limits typically occur while unattended or not paying attention. Gives
                 // the user and a GUI time to do what is needed before resetting, like killing the
                 // incoming stream. The same could be said about soft limits. While the position is not
                 // lost, continued streaming could cause a serious crash if by chance it gets executed.
+
                 if(bit_istrue(sys.rt_exec_state, EXEC_STATUS_REPORT)) {
                     system_clear_exec_state_flag(EXEC_STATUS_REPORT);
                     report_realtime_status();
                 }
 
+                protocol_poll_cmd();
                 grbl.on_execute_realtime(STATE_ESTOP);
             }
+
             system_clear_exec_alarm(); // Clear alarm
         }
     }
@@ -723,12 +760,21 @@ bool protocol_exec_rt_system (void)
 // whatever function that invoked the suspend, such that Grbl resumes normal operation.
 // This function is written in a way to promote custom parking motions. Simply use this as a
 // template.
-static void protocol_exec_rt_suspend (void)
+static void protocol_exec_rt_suspend (sys_state_t state)
 {
-    while (sys.suspend) {
+    if((sys.blocking_event = state == STATE_SLEEP)) {
+        *line = '\0';
+        char_counter = 0;
+        hal.stream.reset_read_buffer();
+    }
 
-        if (sys.abort)
+    while(sys.suspend) {
+
+        if(sys.abort)
             return;
+
+        if(sys.blocking_event)
+            protocol_poll_cmd();
 
         // Handle spindle overrides during suspend
         state_suspend_manager();
@@ -910,7 +956,7 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(char c)
             break;
 
         default:
-            if(c < ' ' || (c > ASCII_DEL && c <= 0xBF))
+            if((c < ' ' && c != ASCII_BS) || (c > ASCII_DEL && c <= 0xBF))
                 drop = grbl.on_unknown_realtime_cmd == NULL || grbl.on_unknown_realtime_cmd(c);
             break;
     }
