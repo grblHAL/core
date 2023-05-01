@@ -23,7 +23,7 @@
 #include "hal.h"
 #include "state_machine.h"
 
-volatile bool slumber;
+static volatile bool slumber;
 
 static void fall_asleep()
 {

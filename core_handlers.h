@@ -146,6 +146,7 @@ typedef struct {
     on_probe_start_ptr on_probe_start;
     on_probe_completed_ptr on_probe_completed;
     on_gcode_message_ptr on_gcode_message;              //!< Called on output of message parsed from gcode. NOTE: string pointed to is freed after this call.
+    on_gcode_message_ptr on_gcode_comment;              //!< Called when a plain gcode comment has been parsed.
     on_tool_selected_ptr on_tool_selected;              //!< Called prior to executing M6 or after executing M61.
     on_toolchange_ack_ptr on_toolchange_ack;            //!< Called from interrupt context.
     on_jog_cancel_ptr on_jog_cancel;                    //!< Called from interrupt context.

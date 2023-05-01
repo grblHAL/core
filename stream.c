@@ -463,7 +463,7 @@ bool stream_mpg_enable (bool on)
     hal.stream.reset_read_buffer();
 
     sys.mpg_mode = on;
-    system_add_rt_report(Report_MPGMode);;
+    system_add_rt_report(Report_MPGMode);
 
     // Force a realtime status report, all reports when MPG mode active
     protocol_enqueue_realtime_command(on ? CMD_STATUS_REPORT_ALL : CMD_STATUS_REPORT);

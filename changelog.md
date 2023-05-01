@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+<a name="20230501"/>20230501
+
+Core: 
+
+* Fixed typos.
+
+* Added `grbl.on_gcode_comment` event - can be subscribed to by plugin code to trap comments and act upon them. Intended for implementation of non-standard functionality outside the scope of gcode and $-commands.
+
+Drivers:
+
+* ESP32: fix for spindle PWM not turning off on stop or soft reset.
+
+---
+
 <a name="20230429"/>Build 20230429
 
 Core:

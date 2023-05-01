@@ -234,7 +234,7 @@ void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *o
         do {
             idx--;
             if(!(idx == plane.axis_0 || idx == plane.axis_1))
-                linear_per_turn[idx] = (target[idx] - position[idx]) / arc_travel * 2.0f * M_PI;;
+                linear_per_turn[idx] = (target[idx] - position[idx]) / arc_travel * 2.0f * M_PI;
         } while(idx);
 #else
         float linear_per_turn = (target[plane.axis_linear] - position[plane.axis_linear]) / arc_travel * 2.0f * M_PI;

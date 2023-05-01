@@ -366,7 +366,7 @@ void state_suspend_manager (void)
 
     } else if (sys.step_control.update_spindle_rpm && restore_condition.spindle[0].hal->get_state().on) {
         // Handles spindle state during hold. NOTE: Spindle speed overrides may be altered during hold state.
-        state_spindle_set_state(&restore_condition.spindle[restore_condition.spindle_num]);;
+        state_spindle_set_state(&restore_condition.spindle[restore_condition.spindle_num]);
         sys.step_control.update_spindle_rpm = Off;
     }
 }

@@ -1833,28 +1833,28 @@ __NOTE:__ Must be a positive values.
  */
 ///@{
 #if !defined DEFAULT_X_CURRENT || defined __DOXYGEN__
-#define DEFAULT_X_CURRENT 0.0 // amps
+#define DEFAULT_X_CURRENT 0.0 // mA
 #endif
 #if !defined DEFAULT_Y_CURRENT || defined __DOXYGEN__
-#define DEFAULT_Y_CURRENT 0.0 // amps
+#define DEFAULT_Y_CURRENT 0.0 // mA
 #endif
 #if !defined DEFAULT_Z_CURRENT || defined __DOXYGEN__
-#define DEFAULT_Z_CURRENT 0.0 // amps
+#define DEFAULT_Z_CURRENT 0.0 // mA
 #endif
 #if (defined A_AXIS && !defined DEFAULT_A_CURRENT) || defined __DOXYGEN__
-#define DEFAULT_A_CURRENT 0.0 // amps
+#define DEFAULT_A_CURRENT 0.0 // mA
 #endif
 #if (defined B_AXIS && !defined DEFAULT_B_CURRENT) || defined __DOXYGEN__
-#define DEFAULT_B_CURRENT 0.0 // amps
+#define DEFAULT_B_CURRENT 0.0 // mA
 #endif
 #if (defined C_AXIS && !defined DEFAULT_C_CURRENT) || defined __DOXYGEN__
-#define DEFAULT_C_CURRENT 0.0 // amps
+#define DEFAULT_C_CURRENT 0.0 // mA
 #endif
 #if (defined U_AXIS && !defined DEFAULT_U_CURRENT) || defined __DOXYGEN__
-#define DEFAULT_U_CURRENT 0.0 // amps
+#define DEFAULT_U_CURRENT 0.0 // mA
 #endif
 #if (defined V_AXIS && !defined DEFAULT_V_CURRENT) || defined __DOXYGEN__
-#define DEFAULT_V_CURRENT 0.0 // amps
+#define DEFAULT_V_CURRENT 0.0 // mA
 #endif
 ///@}
 

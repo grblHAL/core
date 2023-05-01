@@ -54,6 +54,13 @@ PROGMEM const settings_t defaults = {
 
     .version = SETTINGS_VERSION,
 
+#if DEFAULT_LASER_MODE
+    .mode = Mode_Laser,
+#elif DEFAULT_LATHE_MODE
+    .mode = Mode_Lathe,
+#else
+    .mode = Mode_Standard,
+#endif
     .junction_deviation = DEFAULT_JUNCTION_DEVIATION,
     .arc_tolerance = DEFAULT_ARC_TOLERANCE,
     .g73_retract = DEFAULT_G73_RETRACT,
@@ -69,15 +76,7 @@ PROGMEM const settings_t defaults = {
 #else
     .flags.g92_is_volatile = 0,
 #endif
-#if DEFAULT_LASER_MODE
-    .mode = Mode_Laser,
-    .flags.disable_laser_during_hold = DDEFAULT_DISABLE_LASER_DURING_HOLD
-#else
-    .flags.disable_laser_during_hold = 0,
-  #if DEFAULT_LATHE_MODE
-    .mode = Mode_Lathe,
-  #endif
-#endif
+    .flags.disable_laser_during_hold = DEFAULT_DISABLE_LASER_DURING_HOLD,
     .flags.restore_after_feed_hold = DEFAULT_RESTORE_AFTER_FEED_HOLD,
     .flags.force_initialization_alarm = DEFAULT_FORCE_INITIALIZATION_ALARM,
     .flags.restore_overrides = DEFAULT_RESET_OVERRIDES,

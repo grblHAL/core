@@ -409,10 +409,11 @@ static status_code_t init_sync_motion (plan_line_data_t *pl_data, float pitch)
 // Output and free previously allocated message
 static void output_message (char *message)
 {
-    report_message(message, Message_Plain);
-
     if(grbl.on_gcode_message)
         grbl.on_gcode_message(message);
+
+    if(*message)
+        report_message(message, Message_Plain);
 
     free(message);
 }
@@ -457,18 +458,22 @@ char *gc_normalize_block (char *block, char **message)
                 break;
 
             case ')':
-                if(comment && !hal.driver_cap.no_gcode_message_handling) {
-                    size_t len = s1 - comment - 4;
-                    if(message && *message == NULL && !strncmp(comment, "(MSG,", 5) && (*message = malloc(len))) {
-                        *s1 = '\0';
-                        comment += 5;
-                        // trim leading spaces
-                        while(*comment == ' ') {
-                            comment++;
-                            len--;
+                if(comment) {
+                    *s1 = '\0';
+                    if(!hal.driver_cap.no_gcode_message_handling) {
+                        size_t len = s1 - comment - 4;
+                        if(message && *message == NULL && !strncmp(comment, "(MSG,", 5) && (*message = malloc(len))) {
+                            comment += 5;
+                            // trim leading spaces
+                            while(*comment == ' ') {
+                                comment++;
+                                len--;
+                            }
+                            memcpy(*message, comment, len);
                         }
-                        memcpy(*message, comment, len);
                     }
+                    if(*comment && *message == NULL && grbl.on_gcode_comment)
+                        grbl.on_gcode_comment(comment);
                 }
                 comment = NULL;
                 break;
