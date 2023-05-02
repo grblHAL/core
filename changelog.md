@@ -1,6 +1,14 @@
 ## grblHAL changelog
 
-<a name="20230501"/>20230501
+<a name="20230502"/>20230502
+
+Plugins:
+
+WebUI: fixes for [issue #6](https://github.com/grblHAL/Plugin_networking/issues/6) - block disabling of websocket daemon from WebUI v3 and [issue #11](https://github.com/grblHAL/Plugin_WebUI/issues/11) - SSDP failure \(with ESP32 in SoftAP mode\).
+
+---
+
+<a name="20230501"/>Build 20230501
 
 Core: 
 
