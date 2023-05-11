@@ -488,7 +488,7 @@ Some LinuxCNC extensions are supported, conditionals and subroutines are not.
 #define NGC_EXPRESSIONS_ENABLE Off
 #endif
 
-/*! \def NGC_EXPRESSIONS_ENABLE
+/*! \def NGC_N_ASSIGN_PARAMETERS_PER_BLOCK
 \brief
 Maximum number of parameters allowed in a block.
 */

@@ -43,11 +43,9 @@
     vfd_init();
 #endif
 
-#ifndef GRBL_ESP32 // ESP32 has its own bluetooth_init
-#if BLUETOOTH_ENABLE
+#if BLUETOOTH_ENABLE > 1
     extern void bluetooth_init (void);
     bluetooth_init();
-#endif
 #endif
 
 #if KEYPAD_ENABLE

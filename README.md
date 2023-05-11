@@ -54,7 +54,7 @@ This is a port/rewrite of [grbl 1.1f](https://github.com/gnea/grbl) and should b
 
 ```
 List of Supported G-Codes:
-  - Non-Modal Commands: G4, G10L2, G10L20, G28, G30, G28.1, G30.1, G53, G92, G92.1
+  - Non-Modal Commands: G4, G10L2, G10L20, G28, G30, G28.1, G30.1, G53, G65*****, G92, G92.1
   - Additional Non-Modal Commands: G10L1*, G10L10*, G10L11*
   - Motion Modes: G0, G1, G2****, G3****, G5, G5.1, G38.2, G38.3, G38.4, G38.5, G80, G33*
   - Canned cycles: G73, G81, G82, G83, G85, G86, G89, G98, G99
@@ -75,16 +75,18 @@ List of Supported G-Codes:
   - Spindle Control: M3, M4, M5
   - Tool Change: M6* (Two modes possible: manual** - supports jogging, ATC), M61
   - Switches: M48, M49, M50, M51, M53
-  - Input/uutput control***: M62, M63, M64, M65, M66, M67, M68
+  - Input/output control***: M62, M63, M64, M65, M66, M67, M68
+  - Return from macro*****: M99
   - Valid Non-Command Words: A*, B*, C*, D, E*, F, H*, I, J, K, L, N, P, Q*, R, S, T, U*, V*, W*, X, Y, Z
 
   * driver/configuration dependent. W axis only available when ABC axes are remapped to UVW.
   ** requires compatible GCode sender due to protocol extensions, new state and RT command.
   *** number of inputs and outputs supported dependent on driver implementation.
   **** supports multi turn arcs from build 20220718.
+  ***** requires keypad macros plugin or SD card plugin. Nesting is not allowed.
 ```
 
 Some [plugins](https://github.com/grblHAL/plugins) implements additional M-codes.
 
 ---
-2023-03-06
+2023-05-07

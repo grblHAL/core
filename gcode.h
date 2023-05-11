@@ -29,6 +29,8 @@
 #include "spindle_control.h"
 #include "errors.h"
 
+typedef uint16_t macro_id_t;
+
 // Define command actions for within execution-type modal groups (motion, stopping, non-modal). Used
 // internally by the parser to know which command to execute.
 // NOTE: Some values are assigned specific values to make g-code state reporting and parsing
@@ -49,6 +51,7 @@ typedef enum {
     NonModal_GoHome_1 = 30,                 //!< 30 - G30
     NonModal_SetHome_1 = 40,                //!< 40 - G30.1
     NonModal_AbsoluteOverride = 53,         //!< 53 - G53
+    NonModal_MacroCall = 65,                //!< 65 - G65
     NonModal_SetCoordinateOffset = 92,      //!< 92 - G92
     NonModal_ResetCoordinateOffset = 102,   //!< 102 - G92.1
     NonModal_ClearCoordinateOffset = 112,   //!< 112 - G92.2
@@ -185,7 +188,8 @@ typedef enum {
     ProgramFlow_OptionalStop = 1,   //!< 1 - M1
     ProgramFlow_CompletedM2 = 2,    //!< 2 - M2
     ProgramFlow_CompletedM30 = 30,  //!< 30 - M30
-    ProgramFlow_CompletedM60 = 60   //!< 60 - M60
+    ProgramFlow_CompletedM60 = 60,  //!< 60 - M60
+    ProgramFlow_Return = 99         //!< 99 - M99
 } program_flow_t;
 
 // Modal Group M9: Override control
@@ -368,6 +372,7 @@ typedef struct {
     float f;                   //!< Feed rate - single-meaning word
     float ijk[3];              //!< I,J,K Axis arc offsets
     float k;                   //!< G33 distance per revolution
+    float m;                   //!< G65 argument.
     float p;                   //!< G10 or dwell parameters
     float q;                   //!< User defined M-code parameter, M67 output value, G83 delta increment
     float r;                   //!< Arc radius or retract position
@@ -382,41 +387,53 @@ typedef struct {
     uint8_t l;                 //!< G10 or canned cycles parameters
 } gc_values_t;
 
-//! Parameter words found by parser
+//! Parameter words found by parser - do not change order!
 typedef union {
     uint32_t mask;      //!< All flags as a bitmap.
     uint32_t value;     //!< Synonymous with \a mask.
     struct {
-        uint32_t $ :1, //!< Spindle id
+        uint32_t $ :1, //!< Spindle id.
+                 a :1, //!< A-axis.
+                 b :1, //!< B-axis.
+                 c :1, //!< C-axis.
+                 i :1, //!< X-axis offset for arcs.
+                 j :1, //!< Y-axis offset for arcs.
+                 k :1, //!< Z-axis offset for arcs.
+                 d :1, //!< Tool radius compensation.
                  e :1, //!< Analog port number for M66 - M68.
                  f :1, //!< Feedrate.
+                 g :1, //!< Unused (placeholder).
                  h :1, //!< Tool length offset index.
-                 i :1, //!< X-axis offset for arcs
-                 j :1, //!< Y-axis offset for arcs
-                 k :1, //!< Z-axis offset for arcs
                  l :1, //!< Number of repetitions in canned cycles, wait mode for M66.
+                 m :1, //!< G65 argument.
                  n :1, //!< Line number.
                  o :1, //!< Subroutine identifier.
                  p :1, //!< Dwell time for G4 or in canned cycles, port number for M62 - M66.
+                 q :1, //!< Feed increment for G83 canned cycle, tool number for M61, timeout for M66.
                  r :1, //!< Arc radius, canned cycle retract level.
                  s :1, //!< Spindle speed.
                  t :1, //!< Tool number.
-                 x :1, //!< X-axis
-                 y :1, //!< Y-axis
-                 z :1, //!< Z-axis
-                 q :1, //!< Feed increment for G83 canned cycle, tool number for M61, timeout for M66.
-#if N_AXIS > 3
-                 a :1, //!< A-axis
-                 b :1, //!< B-axis
-                 c :1, //!< C-axis
-#endif
-#if N_AXIS > 6
-                 u :1, //!< U-axis
-                 v :1, //!< V-axis
-#endif
-                 d :1; //!< Tool radius compensation
+                 u :1, //!< U-axis.
+                 v :1, //!< V-axis.
+                 w :1, //!< W-axis.
+                 x :1, //!< X-axis.
+                 y :1, //!< Y-axis.
+                 z :1; //!< Z-axis.
     };
 } parameter_words_t;
+
+typedef enum {
+    ValueType_NA = 0,
+    ValueType_UInt8,
+    ValueType_UInt32,
+    ValueType_Int32,
+    ValueType_Float
+} gc_value_type_t;
+
+typedef struct {
+    const void *value;
+    const gc_value_type_t type;
+} gc_value_ptr_t;
 
 typedef struct {
     spindle_state_t state;          //!< {M3,M4,M5}

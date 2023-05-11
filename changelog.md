@@ -1,5 +1,25 @@
 ## grblHAL changelog
 
+<a name="20230507"/>20230507
+
+Core:
+
+* Added experimental support for [G65 and M99](https://github.com/grblHAL/core/wiki/Additional-G--and-M-codes#codes-available-if-driver-or-plugins-supports-them), call and return from macro.
+
+Drivers:
+
+* ESP32: Fix for [issue #73](https://github.com/grblHAL/ESP32/issues/73) - spindle not disabled on reset/stop.
+
+* RP2040: Added Bluetooth support for Pico W. [Discussion #61](https://github.com/grblHAL/RP2040/discussions/61).
+
+* Some: updated for more flexible Bluetooth configuration.
+
+Plugins:
+
+* SD card and macros: added low-level support for G65.
+
+---
+
 <a name="20230502"/>20230502
 
 Plugins:

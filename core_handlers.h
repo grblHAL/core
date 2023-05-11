@@ -112,6 +112,8 @@ typedef status_code_t (*on_file_open_ptr)(const char *fname, vfs_file_t *handle,
 typedef status_code_t (*on_unknown_sys_command_ptr)(sys_state_t state, char *line); // return Status_Unhandled.
 typedef status_code_t (*on_user_command_ptr)(char *line);
 typedef sys_commands_t *(*on_get_commands_ptr)(void);
+typedef status_code_t (*on_macro_execute_ptr)(macro_id_t macro); // macro implementations _must_ claim hal.stream.read to stream macros!
+typedef void (*on_macro_return_ptr)(void);
 
 typedef struct {
     // report entry points set by core at reset.
@@ -158,6 +160,8 @@ typedef struct {
     // core entry points - set up by core before driver_init() is called.
     enqueue_gcode_ptr enqueue_gcode;
     enqueue_realtime_command_ptr enqueue_realtime_command;
+    on_macro_execute_ptr on_macro_execute;
+    on_macro_return_ptr on_macro_return;                //!< NOTE: will be cleared on a hal.driver_reset call.
 } grbl_t;
 
 extern grbl_t grbl;
