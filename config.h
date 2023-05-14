@@ -144,6 +144,14 @@ have the same steps per mm internally.
 #define COREXY Off
 #endif
 
+/*! \def SCARA
+\brief Enable scara kinematics.
+Experimental - needs to be tested and extended to support more than 2 axes.
+*/
+#if !defined SCARA || defined __DOXYGEN__
+#define SCARA On
+#endif
+
 /*! \def CHECK_MODE_DELAY
 \brief
 Add a short delay for each block processed in Check Mode to

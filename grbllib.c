@@ -50,6 +50,9 @@
 #include "wall_plotter.h"
 #endif
 
+#if SCARA
+#include "scara.h"
+#endif
 
 typedef union {
     uint8_t ok;
@@ -227,6 +230,10 @@ int grbl_enter (void)
 
 #if WALL_PLOTTER
     wall_plotter_init();
+#endif
+
+#if SCARA
+    scara_init();
 #endif
 
 #if ENABLE_BACKLASH_COMPENSATION

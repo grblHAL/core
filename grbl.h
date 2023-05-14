@@ -70,7 +70,7 @@
 #define PROGMEM
 #endif
 
-#if (COREXY || WALL_PLOTTER || MASLOW_ROUTER) && !defined(KINEMATICS_API)
+#if (COREXY || WALL_PLOTTER || MASLOW_ROUTER || SCARA) && !defined(KINEMATICS_API)
 #define KINEMATICS_API
 #endif
 

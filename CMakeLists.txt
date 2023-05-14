@@ -1,6 +1,7 @@
 add_library(grbl INTERFACE)
 
 target_sources(grbl INTERFACE
+ ${CMAKE_CURRENT_LIST_DIR}/scara.c
  ${CMAKE_CURRENT_LIST_DIR}/grbllib.c
  ${CMAKE_CURRENT_LIST_DIR}/coolant_control.c
  ${CMAKE_CURRENT_LIST_DIR}/nvs_buffer.c
