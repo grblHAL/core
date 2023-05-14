@@ -1,5 +1,211 @@
 ## grblHAL changelog
 
+<a name="20230507"/>20230507
+
+Core:
+
+* Added experimental support for [G65 and M99](https://github.com/grblHAL/core/wiki/Additional-G--and-M-codes#codes-available-if-driver-or-plugins-supports-them), call and return from macro.
+
+Drivers:
+
+* ESP32: Fix for [issue #73](https://github.com/grblHAL/ESP32/issues/73) - spindle not disabled on reset/stop.
+
+* RP2040: Added Bluetooth support for Pico W. [Discussion #61](https://github.com/grblHAL/RP2040/discussions/61).
+
+* Some: updated for more flexible Bluetooth configuration.
+
+Plugins:
+
+* SD card and macros: added low-level support for G65.
+
+---
+
+<a name="20230502"/>20230502
+
+Plugins:
+
+WebUI: fixes for [issue #6](https://github.com/grblHAL/Plugin_networking/issues/6) - block disabling of websocket daemon from WebUI v3 and [issue #11](https://github.com/grblHAL/Plugin_WebUI/issues/11) - SSDP failure \(with ESP32 in SoftAP mode\).
+
+---
+
+<a name="20230501"/>Build 20230501
+
+Core: 
+
+* Fixed typos.
+
+* Added `grbl.on_gcode_comment` event - can be subscribed to by plugin code to trap comments and act upon them. Intended for implementation of non-standard functionality outside the scope of gcode and $-commands.
+
+Drivers:
+
+* ESP32: fix for spindle PWM not turning off on stop or soft reset.
+
+---
+
+<a name="20230429"/>Build 20230429
+
+Core:
+
+* Now allows some $-commands while critical events are active or in sleep mode. E.g. settings commands can be used to configure the controller.
+
+* Added work envelope data to [global sys struct](http://svn.io-engineering.com/grblHAL/html/structsystem.html), used by soft limits and jog limit handling. This can be modified by plugin code to restrict motion.
+
+Drivers:
+
+* STM32F1xx: added driver support for ganged and auto-squared axes.
+
+* STM32F4xx: fixed typos.
+
+---
+
+<a name="20230427"/>Build 20230427
+
+Core:
+
+* Fixed some typos, incorrect default value for setting $63 - _Disable laser during hold_ flag. Added VFS property.
+
+Drivers:
+
+* STM32F1xx: fix for [issue #34](https://github.com/grblHAL/STM32F1xx/issues/34), typo blocking GPIO interrupt for pin 4.
+
+* ESP32: improved handling of I2S/GPIO pin assignments, added _CMakeLists.txt_ option to enable custom _my_plugin.c_.
+
+* RP2040: added _CMakeLists.txt_ option to enable custom _my_plugin.c_.
+
+Plugins:
+
+* WebUI: fix for [issue #10](https://github.com/grblHAL/Plugin_WebUI/issues/10) - problem with saving files.
+
+* SDCard: added VFS property.
+
+---
+
+<a name="20230417"/>20230417
+
+Core:
+
+* Added missing files to CMakeLists.txt \(used by RP2040 build\).
+
+Drivers:
+
+* RP2040: Fix for incorrect step signals sent to PIO for ganged axes, [issue #60](https://github.com/grblHAL/RP2040/issues/60).
+
+---
+
+<a name="20230416"/>20230416
+
+Core:
+
+* Added reboot required tag for setting $16 and $38.
+
+Drivers:
+
+* ESP32: Improved handling of mixed I2S and GPIO signalling. Allows fix for [issue #70](https://github.com/grblHAL/ESP32/issues/70).
+
+* STM32F4xx: Improved clock tree handling for the different MCU variants, spindle sync fixes and improvements. Fix for [issue #117](https://github.com/grblHAL/STM32F4xx/issues/117), random pauses.
+
+* RP2040: Fix for incorrect reporting of spindle and coolant states in some configurations. Fixes ioSender [issue #286](https://github.com/terjeio/ioSender/issues/286).
+
+Plugins:
+
+* Embroidery: Fix for incorrect handling of jumps.
+
+---
+
+<a name="20230411"/>Build 20230411
+
+Core:
+
+* Fix for issue #236, dual axis offsets.  
+__NOTE:__ handling of negative offset values has changed. The primary motor will now be run to correct for negative offset values by moving away from the limit switch.
+Prior to this build the secondary motor was run to move towards the limit switch for negative values.
+* Changes to allow use of M4 for laser capable spindles in laser mode even if direction control is not available.
+
+Drivers:
+
+* STM32F4xx: pin mappings fix for [BTT SKR Pro 1.x](https://github.com/grblHAL/STM32F4xx/blob/master/Inc/btt_skr_pro_v1_1_map.h) to avoid IRQ conflicts.
+
+Plugins:
+
+* Networking: improved handling of .gz compressed files by httpd daemon.
+
+* Webui: more fixes for [issue #10](https://github.com/grblHAL/Plugin_WebUI/issues/10), cannot download any file from local FS but preferences.json.
+
+---
+
+<a name="20230409"/>20230409
+
+Plugins:
+
+* Networking: fix for incorrect header returned by httpd daemon for plain .gz files.
+
+* Webui: fixes for [issue #10](https://github.com/grblHAL/Plugin_WebUI/issues/10), cannot download any file from local FS but preferences.json.
+
+---
+
+<a name="20230401"/>Build 20230401
+
+Core:
+
+* Fix for issue #279 - B-axis pin name typo.
+* Added HAL capability flags for limit switches supported.
+* Improved motor pins preprocessor code.
+
+Drivers:
+
+* ESP32: fix for [issue #64](https://github.com/grblHAL/ESP32/issues/64) and [#67](https://github.com/grblHAL/ESP32/issues/67) - use single input for squaring two axes.
+
+* All: added call for setting new HAL limit switches capability flags.
+
+---
+
+<a name="20230331"/>20230331
+
+Plugins:
+
+* Motors: fix for [issue #11](https://github.com/grblHAL/Plugins_motor/issues/11), potential infinite loop.
+
+---
+
+<a name="20230321"/>Build 20230321
+
+Core:
+
+* Fix for issue #271 - unwanted motion after soft reset when feed hold was active, reported for canned cycle but may occur for other commands as well.
+* Added function for properly initializing planner struct, updated core to use it.
+
+Plugins:
+
+* Embroidery: switched to new function for initializing planner struct.
+
+Templates:
+
+* HPGL: switched to new function for initializing planner struct.
+
+---
+
+<a name="20230320"/>Build 20230320
+
+Core:
+
+* Another fix for issue #269 - setting of piecewise spindle linearisation values not working.  
+
+* Fix for incorrect reporting of SD card size.
+
+Drivers:
+
+* ESP32: added sanity checks for http and websocket ports, sets websocket port to http port + 1 if equal.
+
+Plugins:
+
+* Spindle: fix for [issue #18](https://github.com/grblHAL/Plugins_spindle/issues/18) - incorrect spindle RPM limits set from VFD response.
+
+* SD card: fix for incorrect reporting of SD card size.
+
+* Embroidery: added option to use Z limit input as needle trigger.
+
+---
+
 <a name="20230317"/>Build 20230317
 
 Core:

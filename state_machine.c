@@ -126,7 +126,7 @@ static bool initiate_hold (uint_fast16_t new_state)
     spindle_num_t spindle_num = N_SYS_SPINDLE;
 
     if (settings.parking.flags.enabled) {
-        memset(&park.plan_data, 0, sizeof(plan_line_data_t));
+        plan_data_init(&park.plan_data);
         park.plan_data.condition.system_motion = On;
         park.plan_data.condition.no_feed_override = On;
         park.plan_data.line_number = PARKING_MOTION_LINE_NUMBER;
@@ -366,7 +366,7 @@ void state_suspend_manager (void)
 
     } else if (sys.step_control.update_spindle_rpm && restore_condition.spindle[0].hal->get_state().on) {
         // Handles spindle state during hold. NOTE: Spindle speed overrides may be altered during hold state.
-        state_spindle_set_state(&restore_condition.spindle[restore_condition.spindle_num]);;
+        state_spindle_set_state(&restore_condition.spindle[restore_condition.spindle_num]);
         sys.step_control.update_spindle_rpm = Off;
     }
 }

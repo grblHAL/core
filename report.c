@@ -816,7 +816,7 @@ void report_build_info (char *line, bool extended)
 
     strcpy(buf, "[OPT:");
 
-    if(spindle_get_caps().variable)
+    if(spindle_get_caps(false).variable)
         *append++ = 'V';
 
     *append++ = 'N';

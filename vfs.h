@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2022 Terje Io
+  Copyright (c) 2022-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -92,8 +92,8 @@ typedef struct {
 } vfs_dirent_t;
 
 typedef struct {
-    size_t size;
-    size_t used;
+    uint64_t size;
+    uint64_t used;
 } vfs_free_t;
 
 typedef struct {
@@ -128,6 +128,7 @@ typedef int (*vfs_format_ptr)(void);
 typedef struct
 {
     const char *fs_name;
+    bool removable;
     vfs_st_mode_t mode;
     vfs_open_ptr fopen;
     vfs_close_ptr fclose;
@@ -165,6 +166,7 @@ typedef struct {
 typedef struct {
     const char *name;
     const char *path;
+    bool removable;
     vfs_st_mode_t mode;
     const void *fs;
 } vfs_drive_t;

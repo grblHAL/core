@@ -342,6 +342,7 @@ io_stream_t const *stream_open_instance (uint8_t instance, uint32_t baud_rate, s
 
 #ifdef DEBUGOUT
 void debug_write (const char *s);
+void debug_writeln (const char *s);
 bool debug_stream_init (void);
 #endif
 

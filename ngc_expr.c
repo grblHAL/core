@@ -451,7 +451,7 @@ static status_code_t read_operation (char *line, uint_fast8_t *pos, ngc_binary_o
                 (*pos)++;
             }
             else
-                status = Status_ExpressionUknownOp;; // Unknown operation name starting with L
+                status = Status_ExpressionUknownOp; // Unknown operation name starting with L
             break;
 
 //        case '\0':

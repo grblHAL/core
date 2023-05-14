@@ -291,6 +291,7 @@ bool ngc_param_set (ngc_param_id_t id, float value)
 
     return ok;
 }
+
 PROGMEM static const ngc_named_ro_param_t ngc_named_ro_param[] = {
     { .name = "_vmajor",              .id = NGCParam_vmajor },
     { .name = "_vminor",              .id = NGCParam_vminor },

@@ -463,7 +463,7 @@ bool stream_mpg_enable (bool on)
     hal.stream.reset_read_buffer();
 
     sys.mpg_mode = on;
-    system_add_rt_report(Report_MPGMode);;
+    system_add_rt_report(Report_MPGMode);
 
     // Force a realtime status report, all reports when MPG mode active
     protocol_enqueue_realtime_command(on ? CMD_STATUS_REPORT_ALL : CMD_STATUS_REPORT);
@@ -561,6 +561,15 @@ void debug_write (const char *s)
 {
     if(dbg_write) {
         dbg_write(s);
+        while(hal.debug.get_tx_buffer_count()); // Wait until message is delivered
+    }
+}
+
+void debug_writeln (const char *s)
+{
+    if(dbg_write) {
+        dbg_write(s);
+        dbg_write(ASCII_EOL);
         while(hal.debug.get_tx_buffer_count()); // Wait until message is delivered
     }
 }

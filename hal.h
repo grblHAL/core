@@ -623,7 +623,8 @@ typedef struct {
     bool (*stream_blocking_callback)(void);
 
     driver_cap_t driver_cap;                //!< Basic driver capabilities flags.
-    control_signals_t signals_cap;          //!< Control input signals supported by the core.
+    control_signals_t signals_cap;          //!< Control input signals supported by the driver.
+    limit_signals_t limits_cap;             //!< Limit input signals supported by the driver.
 
 } grbl_hal_t;
 

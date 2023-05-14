@@ -54,6 +54,13 @@ PROGMEM const settings_t defaults = {
 
     .version = SETTINGS_VERSION,
 
+#if DEFAULT_LASER_MODE
+    .mode = Mode_Laser,
+#elif DEFAULT_LATHE_MODE
+    .mode = Mode_Lathe,
+#else
+    .mode = Mode_Standard,
+#endif
     .junction_deviation = DEFAULT_JUNCTION_DEVIATION,
     .arc_tolerance = DEFAULT_ARC_TOLERANCE,
     .g73_retract = DEFAULT_G73_RETRACT,
@@ -69,15 +76,7 @@ PROGMEM const settings_t defaults = {
 #else
     .flags.g92_is_volatile = 0,
 #endif
-#if DEFAULT_LASER_MODE
-    .mode = Mode_Laser,
-    .flags.disable_laser_during_hold = DEFAULT_ENABLE_LASER_DURING_HOLD,
-#else
-    .flags.disable_laser_during_hold = 0,
-  #if DEFAULT_LATHE_MODE
-    .mode = Mode_Lathe,
-  #endif
-#endif
+    .flags.disable_laser_during_hold = DEFAULT_DISABLE_LASER_DURING_HOLD,
     .flags.restore_after_feed_hold = DEFAULT_RESTORE_AFTER_FEED_HOLD,
     .flags.force_initialization_alarm = DEFAULT_FORCE_INITIALIZATION_ALARM,
     .flags.restore_overrides = DEFAULT_RESET_OVERRIDES,
@@ -447,7 +446,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_ReportInches, Group_General, "Report in inches", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsLegacyFn, set_report_inches, get_int, NULL },
      { Setting_ControlInvertMask, Group_ControlSignals, "Invert control pins", NULL, Format_Bitfield, control_signals, NULL, NULL, Setting_IsExpandedFn, set_control_invert, get_int, NULL },
      { Setting_CoolantInvertMask, Group_Coolant, "Invert coolant pins", NULL, Format_Bitfield, coolant_signals, NULL, NULL, Setting_IsExtended, &settings.coolant_invert.mask, NULL, NULL },
-     { Setting_SpindleInvertMask, Group_Spindle, "Invert spindle signals", NULL, Format_Bitfield, spindle_signals, NULL, NULL, Setting_IsExtendedFn, set_spindle_invert, get_int, NULL },
+     { Setting_SpindleInvertMask, Group_Spindle, "Invert spindle signals", NULL, Format_Bitfield, spindle_signals, NULL, NULL, Setting_IsExtendedFn, set_spindle_invert, get_int, NULL, { .reboot_required = On } },
      { Setting_ControlPullUpDisableMask, Group_ControlSignals, "Pullup disable control pins", NULL, Format_Bitfield, control_signals, NULL, NULL, Setting_IsExtendedFn, set_control_disable_pullup, get_int, NULL },
      { Setting_LimitPullUpDisableMask, Group_Limits, "Pullup disable limit pins", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.limits.disable_pullup.mask, NULL, NULL },
      { Setting_ProbePullUpDisable, Group_Probing, "Pullup disable probe pin", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_probe_disable_pullup, get_int, is_setting_available },
@@ -477,7 +476,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_PWMMinValue, Group_Spindle, "Spindle PWM min value", "percent", Format_Decimal, "##0.0", NULL, "100", Setting_IsExtended, &settings.spindle.pwm_min_value, NULL, is_setting_available },
      { Setting_PWMMaxValue, Group_Spindle, "Spindle PWM max value", "percent", Format_Decimal, "##0.0", NULL, "100", Setting_IsExtended, &settings.spindle.pwm_max_value, NULL, is_setting_available },
      { Setting_StepperDeenergizeMask, Group_Stepper, "Steppers deenergize", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_stepper_deenergize_mask, get_int, NULL },
-     { Setting_SpindlePPR, Group_Spindle, "Spindle pulses per revolution (PPR)", NULL, Format_Int16, "###0", NULL, NULL, Setting_IsExtended, &settings.spindle.ppr, NULL, is_setting_available },
+     { Setting_SpindlePPR, Group_Spindle, "Spindle pulses per revolution (PPR)", NULL, Format_Int16, "###0", NULL, NULL, Setting_IsExtended, &settings.spindle.ppr, NULL, is_setting_available, { .reboot_required = On } },
      { Setting_EnableLegacyRTCommands, Group_General, "Enable legacy RT commands", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_enable_legacy_rt_commands, get_int, NULL },
      { Setting_JogSoftLimited, Group_Jogging, "Limit jog commands", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_jog_soft_limited, get_int, NULL },
 #ifndef NO_SAFETY_DOOR_SUPPORT
@@ -954,7 +953,7 @@ static status_code_t set_spindle_type (setting_id_t id, uint_fast16_t int_value)
 static status_code_t set_spindle_invert (setting_id_t id, uint_fast16_t int_value)
 {
     settings.spindle.invert.mask = int_value;
-    if(settings.spindle.invert.pwm && !spindle_get_caps().pwm_invert) {
+    if(settings.spindle.invert.pwm && !spindle_get_caps(false).pwm_invert) {
         settings.spindle.invert.pwm = Off;
         return Status_SettingDisabled;
     }
@@ -1058,20 +1057,16 @@ static status_code_t set_mode (setting_id_t id, uint_fast16_t int_value)
     switch((machine_mode_t)int_value) {
 
         case Mode_Standard:
-           settings.flags.disable_laser_during_hold = 0;
            gc_state.modal.diameter_mode = false;
            break;
 
         case Mode_Laser:
-//            if(!spindle_get_caps().laser)
-//                return Status_SettingDisabledLaser;
-            if(settings.mode != Mode_Laser)
-                settings.flags.disable_laser_during_hold = DEFAULT_ENABLE_LASER_DURING_HOLD;
+            if(!spindle_get_caps(false).laser)
+                return Status_SettingDisabledLaser;
             gc_state.modal.diameter_mode = false;
             break;
 
          case Mode_Lathe:
-            settings.flags.disable_laser_during_hold = 0;
             break;
 
          default: // Mode_Standard
@@ -1755,7 +1750,7 @@ static bool is_setting_available (const setting_detail_t *setting)
             break;
 
         case Setting_SpindlePWMOptions:
-            available = hal.driver_cap.pwm_spindle && spindle_get_caps().laser;
+            available = hal.driver_cap.pwm_spindle && spindle_get_caps(false).laser;
             break;
 
         case Setting_PWMFreq:
@@ -1775,7 +1770,7 @@ static bool is_setting_available (const setting_detail_t *setting)
 
         case Setting_RpmMax:
         case Setting_RpmMin:
-            available = spindle_get_caps().variable;
+            available = spindle_get_caps(false).variable;
             break;
 
         case Setting_DualAxisLengthFailPercent:
@@ -1802,11 +1797,11 @@ static bool is_setting_available (const setting_detail_t *setting)
 #endif
 
         case Setting_SpindleAtSpeedTolerance:
-            available = spindle_get_caps().at_speed || hal.driver_cap.spindle_sync;
+            available = spindle_get_caps(true).at_speed || hal.driver_cap.spindle_sync;
             break;
 
         case Setting_SpindleOnDelay:
-            available = !hal.signals_cap.safety_door_ajar && spindle_get_caps().at_speed;
+            available = !hal.signals_cap.safety_door_ajar && spindle_get_caps(true).at_speed;
             break;
 
         case Setting_AutoReportInterval:
@@ -1936,7 +1931,7 @@ bool read_global_settings ()
     bool ok = hal.nvs.type != NVS_None && SETTINGS_VERSION == hal.nvs.get_byte(0) && hal.nvs.memcpy_from_nvs((uint8_t *)&settings, NVS_ADDR_GLOBAL, sizeof(settings_t), true) == NVS_TransferResult_OK;
 
     // Sanity check of settings, board map could have been changed...
-    if(settings.mode == Mode_Laser && !spindle_get_caps().laser)
+    if(settings.mode == Mode_Laser && !spindle_get_caps(false).laser)
         settings.mode = Mode_Standard;
 
     if(settings.spindle.flags.type >= spindle_get_count())
@@ -1990,8 +1985,8 @@ void settings_restore (settings_restore_t restore)
         memcpy(&settings, &defaults, sizeof(settings_t));
 
         settings.control_invert.mask &= hal.signals_cap.mask;
-        settings.spindle.invert.ccw &= spindle_get_caps().direction;
-        settings.spindle.invert.pwm &= spindle_get_caps().pwm_invert;
+        settings.spindle.invert.ccw &= spindle_get_caps(false).direction;
+        settings.spindle.invert.pwm &= spindle_get_caps(false).pwm_invert;
 #if ENABLE_BACKLASH_COMPENSATION
         if(sys.driver_started)
             mc_backlash_init((axes_signals_t){AXES_BITMASK});
@@ -2733,8 +2728,8 @@ void settings_init (void)
         .on = On,
     };
 
-    spindle_cap.ccw = spindle_get_caps().direction;
-    spindle_cap.pwm = spindle_get_caps().pwm_invert;
+    spindle_cap.ccw = spindle_get_caps(false).direction;
+    spindle_cap.pwm = spindle_get_caps(false).pwm_invert;
 
     setting_remove_elements(Setting_SpindleInvertMask, spindle_cap.mask);
     setting_remove_elements(Setting_ControlInvertMask, hal.signals_cap.mask);

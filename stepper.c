@@ -183,10 +183,11 @@ static void output_message (sys_state_t state)
 {
     if(message) {
 
-        report_message(message, Message_Plain);
-
         if(grbl.on_gcode_message)
             grbl.on_gcode_message(message);
+
+        if(*message)
+            report_message(message, Message_Plain);
 
         free(message);
         message = NULL;

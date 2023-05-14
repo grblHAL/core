@@ -81,6 +81,13 @@ void dummy_bool_handler (bool arg)
     // NOOP
 }
 
+void reset_handler (void)
+{
+    report_init_fns();
+
+    grbl.on_macro_return = NULL;
+}
+
 static bool dummy_irq_claim (irq_type_t irq, uint_fast8_t id, irq_callback_ptr callback)
 {
     return false;
@@ -138,7 +145,7 @@ int grbl_enter (void)
     // Clear all and set some HAL function pointers
     memset(&hal, 0, sizeof(grbl_hal_t));
     hal.version = HAL_VERSION; // Update when signatures and/or contract is changed - driver_init() should fail
-    hal.driver_reset = dummy_handler;
+    hal.driver_reset = reset_handler;
     hal.irq_enable = dummy_handler;
     hal.irq_disable = dummy_handler;
     hal.irq_claim = dummy_irq_claim;

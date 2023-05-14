@@ -409,10 +409,11 @@ static status_code_t init_sync_motion (plan_line_data_t *pl_data, float pitch)
 // Output and free previously allocated message
 static void output_message (char *message)
 {
-    report_message(message, Message_Plain);
-
     if(grbl.on_gcode_message)
         grbl.on_gcode_message(message);
+
+    if(*message)
+        report_message(message, Message_Plain);
 
     free(message);
 }
@@ -457,18 +458,22 @@ char *gc_normalize_block (char *block, char **message)
                 break;
 
             case ')':
-                if(comment && !hal.driver_cap.no_gcode_message_handling) {
-                    size_t len = s1 - comment - 4;
-                    if(message && *message == NULL && !strncmp(comment, "(MSG,", 5) && (*message = malloc(len))) {
-                        *s1 = '\0';
-                        comment += 5;
-                        // trim leading spaces
-                        while(*comment == ' ') {
-                            comment++;
-                            len--;
+                if(comment) {
+                    *s1 = '\0';
+                    if(!hal.driver_cap.no_gcode_message_handling) {
+                        size_t len = s1 - comment - 4;
+                        if(message && *message == NULL && !strncmp(comment, "(MSG,", 5) && (*message = malloc(len))) {
+                            comment += 5;
+                            // trim leading spaces
+                            while(*comment == ' ') {
+                                comment++;
+                                len--;
+                            }
+                            memcpy(*message, comment, len);
                         }
-                        memcpy(*message, comment, len);
                     }
+                    if(*comment && *message == NULL && grbl.on_gcode_comment)
+                        grbl.on_gcode_comment(comment);
                 }
                 comment = NULL;
                 break;
@@ -594,7 +599,60 @@ status_code_t gc_execute_block (char *block)
     static parser_block_t gc_block;
 
 #if NGC_EXPRESSIONS_ENABLE
+
     uint_fast8_t ngc_param_count = 0;
+
+    // NOTE: this array has to match the parameter_words_t order!
+    PROGMEM static const gc_value_ptr_t gc_value_ptr[] = {
+       { NULL, ValueType_NA }, // $
+#if N_AXIS > 3
+       { &gc_block.values.xyz[A_AXIS], ValueType_Float },
+#else
+       { NULL, ValueType_NA },
+#endif
+#if N_AXIS > 4
+       { &gc_block.values.xyz[B_AXIS], ValueType_Float },
+#else
+       { NULL, ValueType_NA },
+#endif
+#if N_AXIS > 5
+       { &gc_block.values.xyz[C_AXIS], ValueType_Float },
+#else
+       { NULL, ValueType_NA },
+#endif
+       { &gc_block.values.ijk[I_VALUE], ValueType_Float },
+       { &gc_block.values.ijk[J_VALUE], ValueType_Float },
+       { &gc_block.values.ijk[K_VALUE], ValueType_Float },
+       { &gc_block.values.d, ValueType_Float },
+       { &gc_block.values.e, ValueType_Float },
+       { &gc_block.values.f, ValueType_Float },
+       { NULL, ValueType_NA }, // G
+       { &gc_block.values.h, ValueType_UInt32 },
+       { NULL, ValueType_NA }, // L
+       { &gc_block.values.m, ValueType_Float },
+       { NULL, ValueType_NA }, // N
+       { NULL, ValueType_NA }, // O
+       { NULL, ValueType_NA }, // P
+       { &gc_block.values.q, ValueType_Float },
+       { &gc_block.values.r, ValueType_Float },
+       { &gc_block.values.s, ValueType_Float },
+       { &gc_block.values.t, ValueType_UInt32 },
+#if N_AXIS > 6
+       { &gc_block.values.xyz[U_AXIS], ValueType_Float },
+#else
+       { NULL, ValueType_NA },
+#endif
+#if N_AXIS > 7
+       { &gc_block.values.xyz[V_AXIS], ValueType_Float },
+#else
+       { NULL, ValueType_NA },
+#endif
+       { NULL, ValueType_NA }, // W
+       { &gc_block.values.xyz[X_AXIS], ValueType_Float },
+       { &gc_block.values.xyz[Y_AXIS], ValueType_Float },
+       { &gc_block.values.xyz[Z_AXIS], ValueType_Float }
+    };
+
 #endif
 
     char *message = NULL;
@@ -949,6 +1007,14 @@ status_code_t gc_execute_block (char *block)
                         gc_block.modal.control = ControlMode_PathBlending; // G64
                         break;
 */
+
+                    case 65: // NOTE: Mach 3/4 GCode
+                        word_bit.modal_group.G0 = On;
+                        gc_block.non_modal_command = (non_modal_t)int_value;
+                        if(mantissa != 0 || grbl.on_macro_execute == NULL)
+                            FAIL(Status_GcodeUnsupportedCommand);
+                        break;
+
                     case 96: case 97:
                         if(settings.mode == Mode_Lathe) {
                             word_bit.modal_group.G14 = On;
@@ -984,7 +1050,18 @@ status_code_t gc_execute_block (char *block)
 
             case 'M': // Determine 'M' command and its modal group
 
-                if (mantissa > 0)
+                if(gc_block.non_modal_command == NonModal_MacroCall) {
+
+                    if(gc_block.words.m)
+                        FAIL(Status_GcodeWordRepeated); // [Word repeated]
+
+                    gc_block.values.m = value;
+                    gc_block.words.m = On; // Flag to indicate parameter assigned.
+
+                    continue;
+                }
+
+                if(mantissa > 0)
                     FAIL(Status_GcodeCommandValueNotInteger); // [No Mxx.x commands]
 
                 is_user_mcode = false;
@@ -1110,6 +1187,14 @@ status_code_t gc_execute_block (char *block)
                         }
                         return Status_OK;
 */
+
+                    case 99:
+                        word_bit.modal_group.M4 = On;
+                        gc_block.modal.program_flow = ProgramFlow_Return;
+                        if(grbl.on_macro_return == NULL)
+                            FAIL(Status_GcodeUnsupportedCommand);
+                        break;
+
                     default:
                         if(hal.user_mcode.check && (gc_block.user_mcode = hal.user_mcode.check((user_mcode_t)int_value))) {
                             is_user_mcode = true;
@@ -1608,10 +1693,10 @@ status_code_t gc_execute_block (char *block)
             uint_fast8_t idx = N_SYS_SPINDLE;
             do {
                 idx--;
-                if(spindle_is_enabled(idx) && !spindle_get(idx)->cap.direction)
+                if(spindle_is_enabled(idx) && !(spindle_get(idx)->cap.direction || spindle_get(idx)->cap.laser))
                     FAIL(Status_GcodeUnsupportedCommand);
             } while(idx);
-        } else if(!gc_block.spindle->cap.direction)
+        } else if(!(gc_block.spindle->cap.direction || gc_block.spindle->cap.laser))
             FAIL(Status_GcodeUnsupportedCommand);
     }
 
@@ -2043,6 +2128,41 @@ status_code_t gc_execute_block (char *block)
                         FAIL(Status_GcodeG53InvalidMotionMode); // [G53 G0/1 not active]
                     break;
 
+                case NonModal_MacroCall:
+                    if(!gc_block.words.p)
+                        FAIL(Status_GcodeValueWordMissing); // [P word missing]
+                    if(gc_block.values.p > 65535.0f)
+                        FAIL(Status_GcodeValueOutOfRange); // [P word out of range]
+#if NGC_EXPRESSIONS_ENABLE
+                    // TODO: add context for local storage?
+                    {
+                        uint_fast8_t idx = 1;
+
+                        axis_words.mask = 0;
+                        gc_block.words.p = Off;
+                        gc_block.words.value >>= 1;
+
+                        while(gc_block.words.value) {
+                            if(gc_block.words.value & 0x1 && gc_value_ptr[idx].value) switch(gc_value_ptr[idx].type) {
+                                case ValueType_Float:
+                                    ngc_param_set((ngc_param_id_t)idx, *(float *)gc_value_ptr[idx].value);
+                                    break;
+
+                                case ValueType_UInt32:
+                                    ngc_param_set((ngc_param_id_t)idx, (float)*(uint32_t *)gc_value_ptr[idx].value);
+                                    break;
+
+                                default:
+                                    break;
+                            }
+                            idx++;
+                            gc_block.words.value >>= 1;
+                        }
+                    }
+#else
+                    gc_block.words.p = Off;
+#endif
+                    break;
                 default:
                     break;
             }
@@ -2996,6 +3116,14 @@ status_code_t gc_execute_block (char *block)
             settings_write_coord_data(CoordinateSystem_G30, &gc_state.position);
             break;
 
+        case NonModal_MacroCall:
+            {
+                status_code_t status = grbl.on_macro_execute((macro_id_t)gc_block.values.p);
+
+                return status == Status_Unhandled ? Status_GcodeValueOutOfRange : status;
+            }
+            break;
+
         case NonModal_SetCoordinateOffset: // G92
             gc_state.g92_coord_offset_applied = true; // TODO: check for all zero?
             memcpy(gc_state.g92_coord_offset, gc_block.values.xyz, sizeof(gc_state.g92_coord_offset));
@@ -3179,12 +3307,15 @@ status_code_t gc_execute_block (char *block)
     // refill and can only be resumed by the cycle start run-time command.
     gc_state.modal.program_flow = gc_block.modal.program_flow;
 
-    if (gc_state.modal.program_flow || sys.flags.single_block) {
+    if(gc_state.modal.program_flow || sys.flags.single_block) {
 
         protocol_buffer_synchronize(); // Sync and finish all remaining buffered motions before moving on.
 
-        if (gc_state.modal.program_flow == ProgramFlow_Paused || gc_block.modal.program_flow == ProgramFlow_OptionalStop || gc_block.modal.program_flow == ProgramFlow_CompletedM60 || sys.flags.single_block) {
-            if (!check_mode) {
+        if(gc_state.modal.program_flow == ProgramFlow_Return) {
+            if(grbl.on_macro_return)
+                grbl.on_macro_return();
+        } else if(gc_state.modal.program_flow == ProgramFlow_Paused || gc_block.modal.program_flow == ProgramFlow_OptionalStop || gc_block.modal.program_flow == ProgramFlow_CompletedM60 || sys.flags.single_block) {
+            if(!check_mode) {
                 if(gc_block.modal.program_flow == ProgramFlow_CompletedM60 && hal.pallet_shuttle)
                     hal.pallet_shuttle();
                 system_set_exec_state_flag(EXEC_FEED_HOLD); // Use feed hold for program pause.

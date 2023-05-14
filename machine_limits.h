@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2022 Terje Io
+  Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2012-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -45,6 +45,7 @@ bool limits_homing_required (void);
 // Set axes to be homed from settings.
 void limits_set_homing_axes (void);
 void limits_set_machine_positions (axes_signals_t cycle, bool add_pulloff);
+void limits_set_work_envelope (void);
 
 void limit_interrupt_handler (limit_signals_t state);
 

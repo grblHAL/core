@@ -143,4 +143,6 @@ bool plan_check_full_buffer (void);
 
 void plan_feed_override (override_t feed_override, override_t rapid_override);
 
+void plan_data_init (plan_line_data_t *plan_data);
+
 #endif

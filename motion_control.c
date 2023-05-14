@@ -139,8 +139,7 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
 
                 plan_line_data_t pl_backlash;
 
-                memset(&pl_backlash, 0, sizeof(plan_line_data_t));
-
+                plan_data_init(&pl_backlash);
                 pl_backlash.condition.rapid_motion = On;
                 pl_backlash.condition.backlash_motion = On;
                 pl_backlash.line_number = pl_data->line_number;
@@ -235,7 +234,7 @@ void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *o
         do {
             idx--;
             if(!(idx == plane.axis_0 || idx == plane.axis_1))
-                linear_per_turn[idx] = (target[idx] - position[idx]) / arc_travel * 2.0f * M_PI;;
+                linear_per_turn[idx] = (target[idx] - position[idx]) / arc_travel * 2.0f * M_PI;
         } while(idx);
 #else
         float linear_per_turn = (target[plane.axis_linear] - position[plane.axis_linear]) / arc_travel * 2.0f * M_PI;
@@ -930,8 +929,13 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
                     ? Status_LimitsEngaged
                     : Status_OK;
 
-    if(homed_status == Status_OK && grbl.on_homing_completed)
-        grbl.on_homing_completed();
+    if(homed_status == Status_OK) {
+
+        limits_set_work_envelope();
+
+        if(grbl.on_homing_completed)
+            grbl.on_homing_completed();
+    }
 
     return homed_status;
 }

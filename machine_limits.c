@@ -109,7 +109,36 @@ ISR_CODE void ISR_FUNC(limit_interrupt_handler)(limit_signals_t state) // DEFAUL
     }
 }
 
+// Establish work envelope for homed axes, used by soft limits and jog limits handling.
+// When hard limits are enabled pulloff distance is subtracted to avoid triggering limit switches.
+void limits_set_work_envelope (void)
+{
+    uint_fast8_t idx = N_AXIS;
+
+    do {
+        if(sys.homed.mask & bit(--idx)) {
+
+            float pulloff = settings.limits.flags.hard_enabled && bit_istrue(sys.homing.mask, bit(idx)) ? settings.homing.pulloff : 0.0f;
+
+            if(settings.homing.flags.force_set_origin) {
+                if(bit_isfalse(settings.homing.dir_mask.value, bit(idx))) {
+                    sys.work_envelope.min[idx] = settings.axis[idx].max_travel + pulloff;
+                    sys.work_envelope.max[idx] = 0.0f;
+                } else {
+                    sys.work_envelope.min[idx] = 0.0f;
+                    sys.work_envelope.max[idx] = - (settings.axis[idx].max_travel + pulloff);
+                }
+            } else {
+                sys.work_envelope.min[idx] = settings.axis[idx].max_travel + pulloff;
+                sys.work_envelope.max[idx] = - pulloff;
+            }
+        } else
+            sys.work_envelope.min[idx] = sys.work_envelope.max[idx] = 0.0f;
+    } while(idx);
+}
+
 #ifndef KINEMATICS_API
+
 // Set machine positions for homed limit switches. Don't update non-homed axes.
 // NOTE: settings.max_travel[] is stored as a negative value.
 void limits_set_machine_positions (axes_signals_t cycle, bool add_pulloff)
@@ -133,6 +162,7 @@ void limits_set_machine_positions (axes_signals_t cycle, bool add_pulloff)
         }
     } while(idx);
 }
+
 #endif
 
 // Pulls off axes from asserted homing switches before homing starts.
@@ -141,11 +171,12 @@ static bool limits_pull_off (axes_signals_t axis, float distance)
 {
     uint_fast8_t n_axis = 0, idx = N_AXIS;
     coord_data_t target = {0};
-    plan_line_data_t plan_data = {
-        .condition.system_motion = On,
-        .condition.no_feed_override = On,
-        .line_number = DEFAULT_HOMING_CYCLE_LINE_NUMBER
-    };
+    plan_line_data_t plan_data;
+
+    plan_data_init(&plan_data);
+    plan_data.condition.system_motion = On;
+    plan_data.condition.no_feed_override = On;
+    plan_data.line_number = DEFAULT_HOMING_CYCLE_LINE_NUMBER;
 
     system_convert_array_steps_to_mpos(target.values, sys.position);
 
@@ -249,11 +280,12 @@ static bool limits_homing_cycle (axes_signals_t cycle, axes_signals_t auto_squar
     limit_signals_t limits_state;
     squaring_mode_t squaring_mode = SquaringMode_Both;
     coord_data_t target;
-    plan_line_data_t plan_data = {
-        .condition.system_motion = On,
-        .condition.no_feed_override = On,
-        .line_number = DEFAULT_HOMING_CYCLE_LINE_NUMBER
-    };
+    plan_line_data_t plan_data;
+
+    plan_data_init(&plan_data);
+    plan_data.condition.system_motion = On;
+    plan_data.condition.no_feed_override = On;
+    plan_data.line_number = DEFAULT_HOMING_CYCLE_LINE_NUMBER;
 
     // Initialize plan data struct for homing motion.
     memcpy(&plan_data.spindle, &gc_state.spindle, sizeof(spindle_t));
@@ -457,8 +489,8 @@ static bool limits_homing_cycle (axes_signals_t cycle, axes_signals_t auto_squar
 
     // Pull off B motor to compensate for switch inaccuracy when configured.
     if(auto_square.mask && settings.axis[dual_motor_axis].dual_axis_offset != 0.0f) {
-        hal.stepper.disable_motors(auto_square, SquaringMode_A);
-        if(!limits_pull_off(auto_square, settings.axis[dual_motor_axis].dual_axis_offset))
+        hal.stepper.disable_motors(auto_square, settings.axis[dual_motor_axis].dual_axis_offset < 0.0f ? SquaringMode_B : SquaringMode_A);
+        if(!limits_pull_off(auto_square, fabs(settings.axis[dual_motor_axis].dual_axis_offset)))
             return false;
         hal.stepper.disable_motors((axes_signals_t){0}, SquaringMode_Both);
     }
