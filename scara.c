@@ -59,33 +59,36 @@ static on_realtime_report_ptr on_realtime_report;
 
 // ************************ Kinematics Calculations ****************************//
 
-// forward kinematics: joint angles to cartesian XY
+// forward kinematics: (absolute) joint angles to cartesian XY
 static xy_t q_to_xy(float q1, float q2) {
     xy_t xy;
-    xy.x = SCARA_L1*cosf(q1) + SCARA_L2*cosf(q1 + q2);
-    xy.y = SCARA_L1*sinf(q1) + SCARA_L2*sinf(q1 + q2);
+    xy.x = SCARA_L1*cosf(q1) + SCARA_L2*cosf(q2);
+    xy.y = SCARA_L1*sinf(q1) + SCARA_L2*sinf(q2);
     return xy;
 }
 
-// backwards kinematics: cartesian XY to joint angles
+// backwards kinematics: cartesian XY to joint angles (absolute joint angles)
 static q_t xy_to_q(float x, float y) {
     q_t q;
     float r_sq = x*x + y*y;
     if (r_sq > SCARA_REACH*SCARA_REACH) {
         q.q1 = q.q2 = NAN;
     } else {
-        float cos_q2 = (r_sq - SCARA_L1*SCARA_L1 - SCARA_L2*SCARA_L2) / (-2.0f * SCARA_L1 * SCARA_L2);
-        q.q2 = acosf(cos_q2);
-        q.q1 = atan2f(y, x) - atan2f(SCARA_L2*sinf(q.q2), SCARA_L1 + SCARA_L2*cos_q2); //TODO: use faster atan2 approximation
+        float cos_q12 = (r_sq - SCARA_L1*SCARA_L1 - SCARA_L2*SCARA_L2) / (2.0f * SCARA_L1 * SCARA_L2);
+        float q12 = acosf(cos_q12); //relative angle between l1 and l2
+        q.q1 = atan2f(y, x) - atan2f(SCARA_L2*sinf(q12), SCARA_L1 + SCARA_L2*cos_q12); //TODO: use faster atan2 approximation
+        q.q2 = q.q1 + q12;
     }
     return q;
 }
+
 
 // *********************** required grblHAL Kinematics functions ************************ //
 
 // Returns machine position in mm converted from system position steps.
 static float *scara_convert_array_steps_to_mpos (float *position, int32_t *steps)
 {
+    hal.stream.write("scara_convert_array_steps_to_mpos\n");
     q_t q;
     q.q1 = (float)steps[A_MOTOR] / settings.axis[A_MOTOR].steps_per_mm; //actually steps mer radian
     q.q2 = (float)steps[B_MOTOR] / settings.axis[B_MOTOR].steps_per_mm;
@@ -100,117 +103,155 @@ static float *scara_convert_array_steps_to_mpos (float *position, int32_t *steps
     return position;
 }
 
-static float *scara_transform_from_cartesian(float *target, float *position)
+static float *scara_transform_from_cartesian(float *target_q_steps, float *target_xy)
 {
+    hal.stream.write("scara_transform_from_cartesian");
     // do not change higher axis
-    uint_fast8_t idx = N_AXIS - 1;
+    uint_fast8_t idx = N_AXIS-1;
     do {
-        target[idx] = position[idx];
-    } while (--idx > Y_AXIS);
+        target_q_steps[idx] = target_xy[idx];
+        idx--;
+    } while (idx > Y_AXIS);
 
     // apply inverse kinematics
-    q_t q = xy_to_q(position[X_AXIS], position[Y_AXIS]);
+    q_t q = xy_to_q(target_xy[A_MOTOR], target_xy[B_MOTOR]);
 
-    target[A_MOTOR] = q.q1 * settings.axis[A_MOTOR].steps_per_mm;
-    target[B_MOTOR] = q.q2 * settings.axis[B_MOTOR].steps_per_mm;
+    // trigger soft limit if out of reach
+    if (isnan(q.q1) || isnan(q.q2)) {
+        //;
+    }
 
-    return target;
+    char msgOut[70] = {0};
+    snprintf(msgOut, sizeof(msgOut), "xy:%.05f,%.05f|q:%.05f,%.05f\n", target_xy[X_AXIS], target_xy[Y_AXIS], q.q1, q.q2);
+    hal.stream.write(msgOut);
+
+    target_q_steps[A_MOTOR] = q.q1 ;// * settings.axis[A_MOTOR].steps_per_mm;
+    target_q_steps[B_MOTOR] = q.q2 ;// * settings.axis[B_MOTOR].steps_per_mm;
+
+    return target_q_steps;
 }
 
-// segment long lines into smaller segments, then apply kinematics for every segment.
-// first runs initialization to calculate amount of segment, then repeats segment coordinates after. return NULL when done.
+static float *scara_transform_to_cartesian(float *position, float *angles)
+{
+    hal.stream.write("scara_transform_to_cartesian\n");
+    // do not change higher axis
+    uint_fast8_t idx = N_AXIS-1;
+    do {
+        position[idx] = angles[idx];
+        idx--;
+    } while (idx > Y_AXIS);
+    
+    // apply forward kinematics
+    xy_t xy = q_to_xy(angles[X_AXIS], angles[Y_AXIS]);
+
+    position[X_AXIS] = xy.x;
+    position[Y_AXIS] = xy.y;
+
+    return position;
+}
+
+
+// segment long lines into smaller segments for non-linear kinematics
+// target is cartesian, position transformed (joint steps)
+// first call: init = true, position is current motor steps, target is cartesian coordinates
+// later calls: init = false, position is null, target = init return value, now return: next segment target in joint steps
 static float *scara_segment_line (float *target, float *position, plan_line_data_t *plan_data, bool init)
 {
-    static uint_fast16_t iterations;        // number of segments to be generated
-    static bool do_segmentation;            // false distance too small or rapid motion
-    static coord_data_t delta;  
-    static coord_data_t segment_target, final_target, cur_pos;
-    //static plan_line_data_t plan;
+    static bool do_segments;
+    static uint_fast16_t iterations;
+    static coord_data_t delta, segment_target, current_position, final_target;
 
     uint_fast8_t idx = N_AXIS;
+    char msgOut[200] = {0};
 
-    // initialization: 
-    if(init) {
-        jog_cancel = false; // resume motion
+    if (init) {
+        // resume motion
+        jog_cancel = false;
 
-        // copy from target pointer to static local array
-        memcpy(final_target.values, target, sizeof(final_target));
+        // save final target
+        memcpy(final_target.values, target, sizeof(coord_data_t));
 
-        // convert position in joint space to target in cartesian space
-        //scara_transform_to_cartesian(segment_target.values, position);
-        q_t q;
-        q.q1 = position[A_MOTOR] / settings.axis[A_MOTOR].steps_per_mm;
-        q.q2 = position[B_MOTOR] / settings.axis[B_MOTOR].steps_per_mm;
-        xy_t xy = q_to_xy(q.q1, q.q2);
-        cur_pos.x = xy.x;
-        cur_pos.y = xy.y;
-        cur_pos.z = position[Z_AXIS] / settings.axis[Z_AXIS].steps_per_mm;
+        // get current position in cartesian coordinates
+        scara_transform_to_cartesian(current_position.values, position);
 
-        // delta vector between current position and target
-        delta.x = target[X_AXIS] - cur_pos.x;
-        delta.y = target[Y_AXIS] - cur_pos.y;
-        delta.z = target[Z_AXIS] - cur_pos.z;
+        // calculate total delta
+        idx = N_AXIS;
+        do {
+            idx--;
+            delta.values[idx] = target[idx] - current_position.values[idx];
+        } while(idx);
 
-        char msgOut[40];
-        snprintf(msgOut, sizeof(msgOut), "full delta: X:%f Y:%f Z:%f\r\n", delta.x, delta.y, delta.z);
-        hal.stream.write(msgOut);
-
-        // check if segmentation is needed
+        // check if segmentation needed
         float distance = sqrtf(delta.x * delta.x + delta.y * delta.y);
+        do_segments = !(plan_data->condition.rapid_motion) && distance > MAX_SEG_LENGTH_MM;
 
-        bool do_segmentation = !(plan_data->condition.rapid_motion) && distance > MAX_SEG_LENGTH_MM;
-        if (do_segmentation) {
+        // calculate amount of segments and delta step size
+        if (do_segments) {
             iterations = (uint_fast16_t)ceilf(distance / MAX_SEG_LENGTH_MM);
-
-            // adjust delta vector to match segment length
             idx = N_AXIS;
             do {
-                --idx;
-                delta.values[X_AXIS] = delta.values[X_AXIS] / (float)iterations;
+                idx--;
+                delta.values[idx] = delta.values[idx] / (float)iterations;
             } while(idx);
-        } else {
+
+            // save current position as initial segment target
+            memcpy(&segment_target, &current_position, sizeof(coord_data_t));
+        } 
+        else {
             // no segmentation needed: segment target matches final target
             iterations = 1;
             memcpy(&segment_target, &final_target, sizeof(coord_data_t));
         }
-        snprintf(msgOut, sizeof(msgOut), "segm delta: X:%f Y:%f Z:%f\r\n", delta.x, delta.y, delta.z);
+
+        // ensure at least 1 iteration
+        iterations++;
+
+        // print debug info
+        snprintf(msgOut, sizeof(msgOut), "seg_line: itrs=%d, do_segments=%d, distance=%f, delta=%f,%f,%f\n", iterations, do_segments, distance, delta.x, delta.y, delta.z);
         hal.stream.write(msgOut);
-
-        iterations++; // return at least one iteration
-
-    // return next segment
-    } else {
+    } 
+    else {
+        // return next segment
         iterations--;
-        if(do_segmentation && iterations > 1) {
+        if(do_segments && iterations > 1) {
             // increment segment target for all axes
+            idx = N_AXIS;
             do {
                 idx--;
                 segment_target.values[idx] += delta.values[idx];
             } while(idx);
-        } else
+        } else {
             // last segment: segment target matches final target
             memcpy(&segment_target, &final_target, sizeof(coord_data_t));
+        }
 
-        // convert segment target in cartesian space to joint space
-        scara_transform_from_cartesian(cur_pos.values, segment_target.values);
+        // convert to joint steps
+        scara_transform_from_cartesian(current_position.values, segment_target.values);
+
+        // print debug info
+        snprintf(msgOut, sizeof(msgOut), "seg_line: itrs=%d, do_segments=%d, segment_target=%f,%f steps=%f,%f\n", 
+            iterations, do_segments, segment_target.x, segment_target.y, current_position.x, current_position.y);
+        hal.stream.write(msgOut);
     }
 
     if (iterations == 0 || jog_cancel) {
         return NULL;
     } else {
-        return cur_pos.values;
+        return current_position.values;
     }
 }
 
 
 static uint_fast8_t scara_limits_get_axis_mask (uint_fast8_t idx)
 {
+    hal.stream.write("scara_limits_get_axis_mask\n");
     return ((idx == A_MOTOR) || (idx == B_MOTOR)) ? (bit(X_AXIS) | bit(Y_AXIS)) : bit(idx);
 }
 
 
 static void scara_limits_set_target_pos (uint_fast8_t idx)
 {
+    hal.stream.write("scara_limits_set_target_pos\n");
     xy_t xy;
     xy.x = sys.position[X_AXIS] / settings.axis[X_AXIS].steps_per_mm;
     xy.y = sys.position[Y_AXIS] / settings.axis[Y_AXIS].steps_per_mm;
@@ -219,8 +260,9 @@ static void scara_limits_set_target_pos (uint_fast8_t idx)
 
     switch(idx) {
         case X_AXIS:
-        case Y_AXIS:
             sys.position[A_MOTOR] = q.q1 * settings.axis[A_MOTOR].steps_per_mm;
+            break;
+        case Y_AXIS:
             sys.position[B_MOTOR] = q.q2 * settings.axis[B_MOTOR].steps_per_mm;
             break;
         default:
@@ -234,6 +276,8 @@ static void scara_limits_set_target_pos (uint_fast8_t idx)
 static void scara_limits_set_machine_positions (axes_signals_t cycle)
 {
     uint_fast8_t idx = N_AXIS;
+
+    hal.stream.write("scara_limits_set_machine_positions\n");
 
     xy_t xy;
     xy.x = sys.position[X_AXIS] / settings.axis[X_AXIS].steps_per_mm;
@@ -284,7 +328,7 @@ static void report_angles (stream_write_ptr stream_write, report_tracking_flags_
     if (true) { // on report.status_report?
         char *q1 = ftoa(sys.position[A_MOTOR] / settings.axis[A_MOTOR].steps_per_mm, 3);
         char *q2 = ftoa(sys.position[B_MOTOR] / settings.axis[B_MOTOR].steps_per_mm, 3);
-        stream_write("|Q:");
+        stream_write("|Qj:");
         stream_write(q1);
         stream_write(",");
         stream_write(q2);
@@ -298,6 +342,10 @@ static void report_angles (stream_write_ptr stream_write, report_tracking_flags_
 
 // Initialize API pointers for scara kinematics
 void scara_init(void){
+    // set initial angles:
+    sys.position[A_MOTOR] = (int32_t)(-3.14159/0.5f);  //*settings.axis[A_MOTOR].steps_per_mm
+    sys.position[B_MOTOR] = 0; //(int32_t)(3.14159/0.5f*settings.axis[B_MOTOR].steps_per_mm);
+
     // specify custom kinematics functions
     kinematics.transform_steps_to_cartesian = scara_convert_array_steps_to_mpos;
     kinematics.transform_from_cartesian = scara_transform_from_cartesian;
