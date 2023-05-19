@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021 Terje Io
+  Copyright (c) 2021-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -90,7 +90,7 @@ bool ioport_claim (io_port_type_t type, io_port_direction_t dir, uint8_t *port, 
     uint8_t n_ports = ioports_available(type, dir);
     uint8_t base = type == Port_Digital
                     ? (dir == Port_Input ? Input_Aux0 : Output_Aux0)
-                    : (dir == Port_Input ? Input_Aux0 : Output_Aux0); // TODO add analog ports?
+                    : (dir == Port_Input ? Input_Analog_Aux0 : Output_Analog_Aux0);
 
     if(hal.port.claim != NULL) {
 

@@ -197,6 +197,10 @@
 #define I2C_STROBE_BIT (1<<I2C_STROBE_PIN)
 #endif
 
+#if defined(SPI_IRQ_PIN) && !defined(SPI_IRQ_BIT)
+#define SPI_IRQ_BIT (1<<SPI_IRQ_PIN)
+#endif
+
 #if defined(RTS_PIN) && !defined(RTS_BIT)
 #define RTS_BIT (1<<RTS_PIN)
 #endif

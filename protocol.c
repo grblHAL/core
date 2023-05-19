@@ -813,6 +813,11 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(char c)
         case '\r':
             break;
 
+        case '$':
+            if(char_counter == 0)
+                keep_rt_commands = !settings.flags.legacy_rt_commands;
+            break;
+
         case CMD_STOP:
             system_set_exec_state_flag(EXEC_STOP);
             char_counter = 0;

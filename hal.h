@@ -79,14 +79,6 @@ typedef void (*driver_reset_ptr)(void);
 /*! \brief Pointer to function for getting free memory (as sum of all free blocks in the heap). */
 typedef uint32_t (*get_free_mem_ptr)(void);
 
-/*! \brief Optional pointer to function for switching between I/O streams.
-\param stream pointer to io_stream_t
-\returns true if switch was successful
-
-__NOTE:__ required if the networking plugin is to be supported.
-*/
-typedef bool (*stream_select_ptr)(const io_stream_t *stream);
-
 /*! \brief Pointer to function for registering information about a peripheral pin.
 \param pin as periph_pin_t struct containing pin information.
 */
@@ -585,7 +577,6 @@ typedef struct {
     spindle_data_ptrs_t spindle_data;       //!< Handlers for getting/resetting spindle data (RPM, angular position, ...).
     stepper_ptrs_t stepper;                 //!< Handlers for stepper motors.
     io_stream_t stream;                     //!< Handlers for stream I/O.
-    stream_select_ptr stream_select;        //!< Optional handler for switching between I/O streams.
     settings_changed_ptr settings_changed;  //!< Callback handler to be called on settings loaded or settings changed events.
     probe_ptrs_t probe;                     //!< Optional handlers for probe input(s).
     tool_ptrs_t tool;                       //!< Optional handlers for tool changes.

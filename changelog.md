@@ -1,5 +1,29 @@
 ## grblHAL changelog
 
+<a name="20230519"/>20230519
+
+Core:
+
+* Extended handling of legacy printable real-time commands due to ESP32 RTOS issue.
+* Internal to changes for crossbar definitions, improved stream handling and sleep handling.
+
+Plugins:
+
+* Networking: added support for some WIZnet SPI based ethernet breakout boards, currently only W5100S and W5500 based. Updated for core changes.
+
+Drivers:
+
+* STM32F4xx: added low level driver support for WIZnet SPI based ethernet breakout boards, updated SPI interface for DMA transfer.
+
+* RP2040: added low level driver support for WIZnet SPI based ethernet breakout boards, updated SPI interface for DMA transfer. 
+__NOTE:__ Build support for ethernet is not yet ready!
+
+Web Builder:
+
+Added options for spindle sync and WIZnet networking for relevant drivers and boards.
+
+---
+
 <a name="20230507"/>20230507
 
 Core:

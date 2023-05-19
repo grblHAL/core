@@ -89,6 +89,11 @@ typedef enum {
     StreamType_Null
 } stream_type_t;
 
+/*! \brief Pointer to function for getting stream connected status.
+\returns \a true connected, \a false otherwise.
+*/
+typedef bool (*stream_is_connected_ptr)(void);
+
 /*! \brief Pointer to function for getting number of characters available or free in a stream buffer.
 \returns number of characters available or free.
 */
@@ -197,7 +202,7 @@ typedef bool (*disable_rx_stream_ptr)(bool disable);
 typedef union {
     uint8_t value;
     struct {
-        uint8_t connected     :1,
+        uint8_t connected     :1, //!< deprecated
                 claimable     :1,
                 claimed       :1,
                 can_set_baud  :1,
@@ -223,6 +228,7 @@ typedef struct {
     stream_type_t type;                                     //!< Type of stream.
     uint8_t instance;                                       //!< Instance of stream type, starts from 0.
     io_stream_state_t state;                                //!< Optional status flags such as connected status.
+    stream_is_connected_ptr is_connected;                   //!< Handler for getting stream connected status.
     get_stream_buffer_count_ptr get_rx_buffer_free;         //!< Handler for getting number of free characters in the input buffer.
     stream_write_ptr write;                                 //!< Handler for writing string to current output stream only.
     stream_write_ptr write_all;                             //!< Handler for writing string to all active output streams.
