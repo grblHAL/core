@@ -1,6 +1,16 @@
 ## grblHAL changelog
 
-<a name="20230519"/>20230519
+<a name="20230521"/>
+
+Drivers:
+
+* RP2040: added build support for WIZnet ethernet breakouts \(W5500 and W5100S\).
+
+* iMXRT1062, SAM3X8E, SAMD21: fix for C++ serial code compilation issue.
+
+---
+
+<a name="20230519"/>Build 20230519
 
 Core:
 
@@ -26,7 +36,7 @@ Added options for spindle sync and WIZnet networking for relevant driver and boa
 
 ---
 
-<a name="20230507"/>20230507
+<a name="20230507"/> Build 20230507
 
 Core:
 
