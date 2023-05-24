@@ -37,8 +37,8 @@
 
 #define MAX_SEG_LENGTH_MM 2.0f // mm
 
-#define SCARA_L1 700.0f // mm
-#define SCARA_L2 600.0f // mm
+#define SCARA_L1 500.0f // mm    TODO: read from settings
+#define SCARA_L2 450.0f // mm
 #define SCARA_REACH (SCARA_L1 + SCARA_L2)
 
 // struct to hold the xy coordinates
@@ -76,7 +76,7 @@ static q_t xy_to_q(float x, float y) {
     } else {
         float cos_q12 = (r_sq - SCARA_L1*SCARA_L1 - SCARA_L2*SCARA_L2) / (2.0f * SCARA_L1 * SCARA_L2);
         float q12 = acosf(cos_q12); //relative angle between l1 and l2
-        q.q1 = atan2f(y, x) - atan2f(SCARA_L2*sinf(q12), SCARA_L1 + SCARA_L2*cos_q12); //TODO: use faster atan2 approximation
+        q.q1 = atan2f(y, x) - atan2f(SCARA_L2*sinf(q12), SCARA_L1 + SCARA_L2*cos_q12);
         q.q2 = q.q1 + q12;
     }
     return q;
@@ -85,56 +85,10 @@ static q_t xy_to_q(float x, float y) {
 
 // *********************** required grblHAL Kinematics functions ************************ //
 
-// Returns machine position in mm converted from system position steps.
-static float *scara_convert_array_steps_to_mpos (float *position, int32_t *steps)
-{
-    hal.stream.write("scara_convert_array_steps_to_mpos\n");
-    q_t q;
-    q.q1 = (float)steps[A_MOTOR] / settings.axis[A_MOTOR].steps_per_mm; //actually steps mer radian
-    q.q2 = (float)steps[B_MOTOR] / settings.axis[B_MOTOR].steps_per_mm;
-
-    // apply forward kinematics
-    xy_t xy = q_to_xy(q.q1, q.q2);
-
-    position[X_AXIS] = xy.x;
-    position[Y_AXIS] = xy.y;
-    position[Z_AXIS] = steps[Z_AXIS] / settings.axis[Z_AXIS].steps_per_mm;
-
-    return position;
-}
-
-static float *scara_transform_from_cartesian(float *target_q_steps, float *target_xy)
-{
-    hal.stream.write("scara_transform_from_cartesian");
-    // do not change higher axis
-    uint_fast8_t idx = N_AXIS-1;
-    do {
-        target_q_steps[idx] = target_xy[idx];
-        idx--;
-    } while (idx > Y_AXIS);
-
-    // apply inverse kinematics
-    q_t q = xy_to_q(target_xy[A_MOTOR], target_xy[B_MOTOR]);
-
-    // trigger soft limit if out of reach
-    if (isnan(q.q1) || isnan(q.q2)) {
-        //;
-    }
-
-    char msgOut[70] = {0};
-    snprintf(msgOut, sizeof(msgOut), "xy:%.05f,%.05f|q:%.05f,%.05f\n", target_xy[X_AXIS], target_xy[Y_AXIS], q.q1, q.q2);
-    hal.stream.write(msgOut);
-
-    target_q_steps[A_MOTOR] = q.q1 ;// * settings.axis[A_MOTOR].steps_per_mm;
-    target_q_steps[B_MOTOR] = q.q2 ;// * settings.axis[B_MOTOR].steps_per_mm;
-
-    return target_q_steps;
-}
-
+// Returns machine position in mm converted from system joint angles
 static float *scara_transform_to_cartesian(float *position, float *angles)
 {
-    hal.stream.write("scara_transform_to_cartesian\n");
-    // do not change higher axis
+    // higher axis dont need to be modified
     uint_fast8_t idx = N_AXIS-1;
     do {
         position[idx] = angles[idx];
@@ -150,9 +104,60 @@ static float *scara_transform_to_cartesian(float *position, float *angles)
     return position;
 }
 
+// Returns machine position in mm converted from system position steps.
+static float *scara_transform_steps_to_cartesian(float *position, int32_t *steps)
+{
+    uint_fast8_t idx = N_AXIS;
+    do {
+        idx--;
+        position[idx] = steps[idx] / settings.axis[idx].steps_per_mm;
+    } while (idx);
+    
+    // apply forward kinematics
+    xy_t xy = q_to_xy(position[A_MOTOR], position[B_MOTOR]);
+
+    position[X_AXIS] = xy.x;
+    position[Y_AXIS] = xy.y;
+
+    char msgOut[100] = {0};
+    snprintf(msgOut, sizeof(msgOut), "steps_to_car: steps:%d,%d|xy:%.05f,%.05f\n", steps[A_MOTOR], steps[B_MOTOR], xy.x, xy.y);
+    hal.stream.write(msgOut);
+
+    return position;
+}
+
+// Returns join angles in rad, converted from machine position in mm
+static float *scara_transform_from_cartesian(float *target_q, float *position_xy)
+{
+    hal.stream.write("scara_transform_from_cartesian: ");
+    // do not change higher axis
+    uint_fast8_t idx = N_AXIS-1;
+    do {
+        target_q[idx] = position_xy[idx];
+        idx--;
+    } while (idx > Y_AXIS);
+
+    // apply inverse kinematics
+    q_t q = xy_to_q(position_xy[A_MOTOR], position_xy[B_MOTOR]);
+
+    // Check if out of reach
+    if (isnan(q.q1) || isnan(q.q2)) {
+        // trigger soft limit 
+    }
+
+    char msgOut[100] = {0};
+    snprintf(msgOut, sizeof(msgOut), "xy:%.05f,%.05f|q:%.05f,%.05f\n", position_xy[X_AXIS], position_xy[Y_AXIS], q.q1, q.q2);
+    hal.stream.write(msgOut);
+
+    target_q[A_MOTOR] = q.q1 ;
+    target_q[B_MOTOR] = q.q2 ;
+
+    return target_q;
+}
+
 
 // segment long lines into smaller segments for non-linear kinematics
-// target is cartesian, position transformed (joint steps)
+// target is cartesian, position transformed (joint angles)
 // first call: init = true, position is current motor steps, target is cartesian coordinates
 // later calls: init = false, position is null, target = init return value, now return: next segment target in joint steps
 static float *scara_segment_line (float *target, float *position, plan_line_data_t *plan_data, bool init)
@@ -207,7 +212,7 @@ static float *scara_segment_line (float *target, float *position, plan_line_data
         iterations++;
 
         // print debug info
-        snprintf(msgOut, sizeof(msgOut), "seg_line: itrs=%d, do_segments=%d, distance=%f, delta=%f,%f,%f\n", iterations, do_segments, distance, delta.x, delta.y, delta.z);
+        snprintf(msgOut, sizeof(msgOut), "seg_line|itrs=%d,do_segments=%d,dist=%f,delta=%f,%f,%f\n", iterations, do_segments, distance, delta.x, delta.y, delta.z);
         hal.stream.write(msgOut);
     } 
     else {
@@ -224,15 +229,15 @@ static float *scara_segment_line (float *target, float *position, plan_line_data
             // last segment: segment target matches final target
             memcpy(&segment_target, &final_target, sizeof(coord_data_t));
         }
-
-        // convert to joint steps
-        scara_transform_from_cartesian(current_position.values, segment_target.values);
-
-        // print debug info
-        snprintf(msgOut, sizeof(msgOut), "seg_line: itrs=%d, do_segments=%d, segment_target=%f,%f steps=%f,%f\n", 
-            iterations, do_segments, segment_target.x, segment_target.y, current_position.x, current_position.y);
-        hal.stream.write(msgOut);
     }
+    
+    // convert to joint angles
+    scara_transform_from_cartesian(current_position.values, segment_target.values);
+
+    // more debug info
+    snprintf(msgOut, sizeof(msgOut), "seg_line|itrs=%d|target_xy=%0.4f,%0.4f|target_q=%0.6f,%0.6f\n", 
+        iterations, segment_target.x, segment_target.y, current_position.x, current_position.y);
+    hal.stream.write(msgOut);
 
     if (iterations == 0 || jog_cancel) {
         return NULL;
@@ -247,7 +252,6 @@ static uint_fast8_t scara_limits_get_axis_mask (uint_fast8_t idx)
     hal.stream.write("scara_limits_get_axis_mask\n");
     return ((idx == A_MOTOR) || (idx == B_MOTOR)) ? (bit(X_AXIS) | bit(Y_AXIS)) : bit(idx);
 }
-
 
 static void scara_limits_set_target_pos (uint_fast8_t idx)
 {
@@ -308,6 +312,7 @@ static void scara_limits_set_machine_positions (axes_signals_t cycle)
     } while (idx);
 }
 
+
 // ********************* other functions ********************** //
 
 static void cancel_jog (sys_state_t state)
@@ -325,14 +330,10 @@ static void report_options (bool newopt)
 
 static void report_angles (stream_write_ptr stream_write, report_tracking_flags_t report)
 {
-    if (true) { // on report.status_report?
-        char *q1 = ftoa(sys.position[A_MOTOR] / settings.axis[A_MOTOR].steps_per_mm, 3);
-        char *q2 = ftoa(sys.position[B_MOTOR] / settings.axis[B_MOTOR].steps_per_mm, 3);
-        stream_write("|Qj:");
-        stream_write(q1);
-        stream_write(",");
-        stream_write(q2);
-    }
+    stream_write("|Qj:");
+    stream_write(ftoa(sys.position[A_MOTOR] / settings.axis[A_MOTOR].steps_per_mm, 3));
+    stream_write(",");
+    stream_write(ftoa(sys.position[B_MOTOR] / settings.axis[B_MOTOR].steps_per_mm, 3));
     
     if (on_realtime_report){
         on_realtime_report(stream_write, report);
@@ -343,11 +344,11 @@ static void report_angles (stream_write_ptr stream_write, report_tracking_flags_
 // Initialize API pointers for scara kinematics
 void scara_init(void){
     // set initial angles:
-    sys.position[A_MOTOR] = (int32_t)(-3.14159/0.5f);  //*settings.axis[A_MOTOR].steps_per_mm
-    sys.position[B_MOTOR] = 0; //(int32_t)(3.14159/0.5f*settings.axis[B_MOTOR].steps_per_mm);
+    sys.position[A_MOTOR] = (int32_t)(-3.14159*0.5 * settings.axis[A_MOTOR].steps_per_mm );
+    sys.position[B_MOTOR] = 0; //(int32_t)( 3.14159*0.5 * settings.axis[B_MOTOR].steps_per_mm );
 
     // specify custom kinematics functions
-    kinematics.transform_steps_to_cartesian = scara_convert_array_steps_to_mpos;
+    kinematics.transform_steps_to_cartesian = scara_transform_steps_to_cartesian;
     kinematics.transform_from_cartesian = scara_transform_from_cartesian;
     kinematics.segment_line = scara_segment_line;
     
