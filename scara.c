@@ -32,26 +32,7 @@
 #include "report.h"
 #include "system.h"
 
-#define A_MOTOR X_AXIS // Must be X_AXIS
-#define B_MOTOR Y_AXIS // Must be Y_AXIS
-
-#define MAX_SEG_LENGTH_MM 2.0f // mm
-
-#define SCARA_L1 500.0f // mm    TODO: read from settings
-#define SCARA_L2 450.0f // mm
-#define SCARA_REACH (SCARA_L1 + SCARA_L2)
-
-// struct to hold the xy coordinates
-typedef struct {
-    float x;
-    float y;
-} xy_t;
-
-// struct to hold the joint angles q
-typedef struct {
-    float q1;
-    float q2;
-} q_t;
+#include "scara.h"
 
 static bool jog_cancel = false;
 static on_report_options_ptr on_report_options;
@@ -71,13 +52,17 @@ static xy_t q_to_xy(float q1, float q2) {
 static q_t xy_to_q(float x, float y) {
     q_t q;
     float r_sq = x*x + y*y;
-    if (r_sq > SCARA_REACH*SCARA_REACH) {
+    if (r_sq > (SCARA_L1 + SCARA_L2)*(SCARA_L1 + SCARA_L2)) {
         q.q1 = q.q2 = NAN;
     } else {
         float cos_q12 = (r_sq - SCARA_L1*SCARA_L1 - SCARA_L2*SCARA_L2) / (2.0f * SCARA_L1 * SCARA_L2);
         float q12 = acosf(cos_q12); //relative angle between l1 and l2
         q.q1 = atan2f(y, x) - atan2f(SCARA_L2*sinf(q12), SCARA_L1 + SCARA_L2*cos_q12);
-        q.q2 = q.q1 + q12;
+        #if SCARA_ABSOLUTE_JOINT_ANGLES
+            q.q2 = q.q1 + q12;
+        #else
+            q.q2 = q12;
+        #endif
     }
     return q;
 }
@@ -142,7 +127,9 @@ static float *scara_transform_from_cartesian(float *target_q, float *position_xy
 
     // Check if out of reach
     if (isnan(q.q1) || isnan(q.q2)) {
-        // trigger soft limit 
+        // trigger soft limit
+        system_raise_alarm(Alarm_SoftLimit);
+        return NULL;
     }
 
     char msgOut[100] = {0};

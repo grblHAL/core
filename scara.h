@@ -24,6 +24,30 @@
 #ifndef _SCARA_H_
 #define _SCARA_H_
 
+
+#define A_MOTOR X_AXIS // Must be X_AXIS
+#define B_MOTOR Y_AXIS // Must be Y_AXIS
+
+#define MAX_SEG_LENGTH_MM 2.0f // segmenting long lines due to non-linear motions [mm]
+
+#define SCARA_L1 500.0f // Length of first arm [mm]
+#define SCARA_L2 450.0f // Length of second arm [mm]
+
+// if defined, q2 is absolute joint angle, otherwise relative
+#define SCARA_ABSOLUTE_JOINT_ANGLES On
+
+// struct to hold the xy coordinates
+typedef struct {
+    float x;
+    float y;
+} xy_t;
+
+// struct to hold the joint angles q
+typedef struct {
+    float q1;
+    float q2;
+} q_t;
+
 // Initialize HAL pointers for scara kinematics
 void scara_init(void);
 
