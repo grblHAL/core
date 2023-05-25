@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+<a name="20230525"/>Build 20230525
+
+Core:
+
+* Expanded ioports API with some configuration and PWM related functions.
+
+Drivers:
+
+* RP2040: added low-level ioports driver layer for analog output \(PWM\). NOTE: not yet used by any board map files.
+
+---
+
 <a name="20230521"/>20230521
 
 Drivers:

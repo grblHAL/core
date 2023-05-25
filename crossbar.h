@@ -343,6 +343,8 @@ typedef enum {
     PinGroup_StepperStep,
     PinGroup_StepperDir,
     PinGroup_AuxOutput,
+    PinGroup_AuxInputAnalog,
+    PinGroup_AuxOutputAnalog,
     PinGroup_SdCard,
     PinGroup_MotorChipSelect,
     PinGroup_MotorUART,
@@ -409,9 +411,9 @@ typedef enum {
 #endif
 #define PINMODE_PULLUP   (PullMode_Up<<3)
 #define PINMODE_PULLDOWN (PullMode_Down<<3)
-#define PINMODE_REMAP    (1U<<10)
-#define PINMODE_PWM      (1U<<11)
-#define PINMODE_ANALOG   (1U<<12)
+#define PINMODE_PWM      (1U<<10)
+#define PINMODE_ANALOG   (1U<<11)
+#define PINMODE_REMAP    (1U<<14)
 
 typedef union {
     uint16_t mask;
@@ -433,6 +435,8 @@ typedef union {
 //! /a cfg_data argument to /a xbar_config_ptr for PWM pins
 typedef struct {
     float freq_hz;   //
+    float min;
+    float max;
     float off_value; // percent of period
     float min_value; // percent of period
     float max_value; // percent of period

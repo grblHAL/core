@@ -124,4 +124,35 @@ uint8_t ioports_available (io_port_type_t type, io_port_direction_t dir);
 bool ioport_claim (io_port_type_t type, io_port_direction_t dir, uint8_t *port, const char *description);
 bool ioport_can_claim_explicit (void);
 
+//
+
+struct io_ports_data;
+
+typedef struct io_ports_data {
+    char *pnum;
+    uint8_t n_in_start, n_in, n_out_start, n_out, *in_map, *out_map;
+    char input_ports[50], output_ports[50];
+    ioport_bus_t out;
+    char *(*get_pnum)(struct io_ports_data *data, uint8_t port);
+} io_ports_data_t;
+
+//!* \brief Precalculated values that may be set/used by HAL driver to speed up analog input to PWM conversions. */
+typedef struct {
+    uint_fast16_t period;
+    uint_fast16_t off_value;    //!< NOTE: this value holds the inverted version if software PWM inversion is enabled by the driver.
+    uint_fast16_t min_value;
+    uint_fast16_t max_value;
+    float min;                  //!< Minimum analog input value.
+    float pwm_gradient;
+    bool invert_pwm;            //!< NOTE: set (by driver) when inversion is done in code
+    bool always_on;
+} ioports_pwm_t;
+
+bool ioports_add (io_ports_data_t *ports, io_port_type_t type, uint8_t n_in, uint8_t n_out);
+#define iports_get_pnum(type, port) type.get_pnum(&type, port)
+#define ioports_map_input(type, port) ( type.in_map ? type.in_map[port] : port )
+#define ioports_map_output(type, port) ( type.out_map ? type.out_map[port] : port )
+bool ioports_precompute_pwm_values (pwm_config_t *config, ioports_pwm_t *pwm_data, uint32_t clock_hz);
+uint_fast16_t ioports_compute_pwm_value (ioports_pwm_t *pwm_data, float value);
+
 /*EOF*/
