@@ -104,6 +104,8 @@ typedef void (*ioport_interrupt_callback_ptr)(uint8_t port, bool state);
 */
 typedef bool (*ioport_register_interrupt_handler_ptr)(uint8_t port, pin_irq_mode_t irq_mode, ioport_interrupt_callback_ptr interrupt_callback);
 
+typedef bool (*ioports_enumerate_callback_ptr)(xbar_t *properties, uint8_t port);
+
 //! Properties and handlers for auxiliary digital and analog I/O.
 typedef struct {
     uint8_t num_digital_in;                         //!< Number of digital inputs available.
@@ -123,16 +125,22 @@ typedef struct {
 uint8_t ioports_available (io_port_type_t type, io_port_direction_t dir);
 bool ioport_claim (io_port_type_t type, io_port_direction_t dir, uint8_t *port, const char *description);
 bool ioport_can_claim_explicit (void);
+bool ioports_enumerate (io_port_type_t type, io_port_direction_t dir, pin_mode_t filter, bool claimable, ioports_enumerate_callback_ptr callback);
 
 //
 
 struct io_ports_data;
 
+typedef struct {
+    uint8_t n_ports;
+    uint8_t n_start;
+    uint8_t *map;
+} io_ports_detail_t;
+
 typedef struct io_ports_data {
     char *pnum;
-    uint8_t n_in_start, n_in, n_out_start, n_out, *in_map, *out_map;
-    char input_ports[50], output_ports[50];
-    ioport_bus_t out;
+    io_ports_detail_t in;
+    io_ports_detail_t out;
     char *(*get_pnum)(struct io_ports_data *data, uint8_t port);
 } io_ports_data_t;
 
@@ -149,9 +157,10 @@ typedef struct {
 } ioports_pwm_t;
 
 bool ioports_add (io_ports_data_t *ports, io_port_type_t type, uint8_t n_in, uint8_t n_out);
+void ioports_add_settings (driver_settings_load_ptr settings_loaded, setting_changed_ptr setting_changed);
 #define iports_get_pnum(type, port) type.get_pnum(&type, port)
-#define ioports_map_input(type, port) ( type.in_map ? type.in_map[port] : port )
-#define ioports_map_output(type, port) ( type.out_map ? type.out_map[port] : port )
+#define ioports_map(type, port) ( type.map ? type.map[port] : port )
+uint8_t ioports_map_reverse (io_ports_detail_t *type, uint8_t port);
 bool ioports_precompute_pwm_values (pwm_config_t *config, ioports_pwm_t *pwm_data, uint32_t clock_hz);
 uint_fast16_t ioports_compute_pwm_value (ioports_pwm_t *pwm_data, float value);
 

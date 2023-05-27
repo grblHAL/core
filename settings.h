@@ -818,6 +818,8 @@ typedef float (*setting_get_float_ptr)(setting_id_t id);
 typedef char *(*setting_get_string_ptr)(setting_id_t id);
 typedef bool (*setting_output_ptr)(const setting_detail_t *setting, uint_fast16_t offset, void *data);
 
+typedef void (*setting_changed_ptr)(setting_id_t id);
+
 /*! \brief Pointer to callback function to be called when settings are loaded or changed.
 \param settings pointer to \a settings_t struct containing the settings.
 \param changed a \a settings_changed_flags_t union containing the changed setting groups.

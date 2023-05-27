@@ -1,5 +1,25 @@
 ## grblHAL changelog
 
+<a name="20230526"/>Build 20230526
+
+Core:
+
+* Expanded ioports API with generalized settings handling++.
+
+Drivers:
+
+* RP2040, iMXRT1062, STM32F4xx: added/updated low-level ioports driver layer for analog output \(PWM\). NOTE: not yet used by any board map files.
+
+* STM32F4xx: workaround for [issue #121](https://github.com/grblHAL/STM32F4xx/issues/121), settings write failure.
+
+* iMXRT1062, STM32F1xx, STM32F4xx, STM32F7xx: Improved frequency range for spindle PWM.
+
+Plugins:
+
+* Networking (WIZnet option): reduced memory footprint, [issue #7](https://github.com/grblHAL/Plugin_networking/issues/7).
+
+---
+
 <a name="20230525"/>Build 20230525
 
 Core:
