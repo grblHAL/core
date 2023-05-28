@@ -27,6 +27,9 @@
 #include "probe.h"
 #include "alarms.h"
 #include "messages.h"
+#if NGC_EXPRESSIONS_ENABLE
+#include "vfs.h"
+#endif
 
 /*! @name System executor bit map.
 \anchor rt_exec
@@ -282,7 +285,10 @@ typedef struct system {
     volatile probing_state_t probing_state; //!< Probing state value. Used to coordinate the probing cycle with stepper ISR.
     volatile rt_exec_t rt_exec_state;       //!< Realtime executor bitflag variable for state management. See EXEC bitmasks.
     volatile uint_fast16_t rt_exec_alarm;   //!< Realtime executor bitflag variable for setting various alarms.
-    int32_t var5399;                        //!< Last result from M66 - wait on input
+    int32_t var5399;                        //!< Last result from M66 - wait on input.
+#if NGC_EXPRESSIONS_ENABLE
+    vfs_file_t *macro_file;                 //!< File handle of current G65 macro executing.
+#endif
 #ifdef PID_LOG
     pid_data_t pid_log;
 #endif

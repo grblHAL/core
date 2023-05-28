@@ -33,6 +33,7 @@
 #if NGC_EXPRESSIONS_ENABLE
 #include "ngc_expr.h"
 #include "ngc_params.h"
+#include "ngc_flowctrl.h"
 #endif
 
 // NOTE: Max line number is defined by the g-code standard to be 99999. It seems to be an
@@ -458,7 +459,7 @@ char *gc_normalize_block (char *block, char **message)
                 break;
 
             case ')':
-                if(comment) {
+                if(comment && !gc_state.skip_blocks) {
                     *s1 = '\0';
                     if(!hal.driver_cap.no_gcode_message_handling) {
                         size_t len = s1 - comment - 4;
@@ -543,6 +544,8 @@ static status_code_t read_parameter (char *line, uint_fast8_t *char_counter, flo
 
 #endif
 
+extern status_code_t ngc_parse_command (uint32_t o_label, char *line, uint_fast8_t *pos, bool *skip);
+
 // Parses and executes one block (line) of 0-terminated G-Code.
 // In this function, all units and positions are converted and exported to internal functions
 // in terms of (mm, mm/min) and absolute machine coordinates, respectively.
@@ -599,6 +602,10 @@ status_code_t gc_execute_block (char *block)
     static parser_block_t gc_block;
 
 #if NGC_EXPRESSIONS_ENABLE
+
+    static const parameter_words_t o_label = {
+        .o = On
+    };
 
     uint_fast8_t ngc_param_count = 0;
 
@@ -776,11 +783,19 @@ status_code_t gc_execute_block (char *block)
             continue;
         }
 
+        if((gc_block.words.mask & o_label.mask) && (gc_block.words.mask & ~o_label.mask) == 0) {
+            char_counter--;
+            return ngc_flowctrl(gc_block.values.o, block, &char_counter, &gc_state.skip_blocks);
+        }
+
         if((letter < 'A' && letter != '$') || letter > 'Z')
             FAIL(Status_ExpectedCommandLetter); // [Expected word letter]
 
         if((status = read_parameter(block, &char_counter, &value)) != Status_OK)
             return status;
+
+        if(gc_state.skip_blocks && letter != 'O')
+            return Status_OK;
 
         if(!is_user_mcode && isnanf(value))
             FAIL(Status_BadNumberFormat);   // [Expected word value]
@@ -3118,6 +3133,10 @@ status_code_t gc_execute_block (char *block)
 
         case NonModal_MacroCall:
             {
+#if NGC_EXPRESSIONS_ENABLE
+                ngc_named_param_set("_value", 0.0f);
+                ngc_named_param_set("_value_returned", 0.0f);
+#endif
                 status_code_t status = grbl.on_macro_execute((macro_id_t)gc_block.values.p);
 
                 return status == Status_Unhandled ? Status_GcodeValueOutOfRange : status;

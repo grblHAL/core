@@ -107,6 +107,11 @@ typedef enum {
     Status_AccessDenied = 78,
     Status_NotAllowedCriticalEvent = 79,
 
+    Status_FlowControlNotExecutingMacro = 80,
+    Status_FlowControlSyntaxError = 81,
+    Status_FlowControlStackOverflow = 82,
+    Status_FlowControlOutOfMemory = 83,
+
     Status_Unhandled, // For internal use only
     Status_StatusMax = Status_Unhandled
 } __attribute__ ((__packed__)) status_code_t;

@@ -530,6 +530,7 @@ typedef struct {
     bool is_laser_ppi_mode;
     bool is_rpm_rate_adjusted;
     bool tool_change;
+    bool skip_blocks;                   //!< true if skipping conditional blocks
     status_code_t last_error;           //!< last return value from parser
     //!< The following variables are not cleared upon warm restart when COMPATIBILITY_LEVEL <= 1
     bool g92_coord_offset_applied;      //!< true when G92 offset applied

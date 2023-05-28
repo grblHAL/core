@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+<a name="20230529"/>Build 20230529
+
+Core:
+
+* Added experimental support for [program flow control](https://github.com/grblHAL/core/discussions/309), mainly available for use in [G65 macros](https://github.com/grblHAL/core/wiki/Additional-G--and-M-codes#codes-available-if-driver-or-plugins-supports-them) stored on SD card or in littlefs.
+
+Drivers:
+
+* STM32F4xx: fix for [issue # 116](https://github.com/grblHAL/STM32F4xx/issues/116#issuecomment-1565369604), incorrect spindle RPM reported from encoder.
+
+--
+
 <a name="20230526"/>Build 20230526
 
 Core:
