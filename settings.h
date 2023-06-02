@@ -357,6 +357,28 @@ typedef enum {
     Setting_MQTTBrokerUserName  = 532,
     Setting_MQTTBrokerPassword  = 533,
 
+    Setting_Panel_SpindleSpeed       = 540,  // NOTE: Reserving settings values 540 to 579 for panel settings.
+    Setting_Panel_ModbusAddress      = 541,
+    Setting_Panel_UpdateInterval     = 542,
+    Setting_Panel_JogSpeed_x1        = 543,
+    Setting_Panel_JogSpeed_x10       = 544,
+    Setting_Panel_JogSpeed_x100      = 545,
+    Setting_Panel_JogSpeed_Keypad    = 546,
+    Setting_Panel_JogDistance_x1     = 547,
+    Setting_Panel_JogDistance_x10    = 548,
+    Setting_Panel_JogDistance_x100   = 549,
+    Setting_Panel_JogDistance_Keypad = 550,
+    Setting_Panel_JogAccelRamp       = 551,
+    Setting_Panel_Encoder0_Mode      = 552,
+    Setting_Panel_Encoder0_Cpd       = 553,
+    Setting_Panel_Encoder1_Mode      = 554,
+    Setting_Panel_Encoder1_Cpd       = 555,
+    Setting_Panel_Encoder2_Mode      = 556,
+    Setting_Panel_Encoder2_Cpd       = 557,
+    Setting_Panel_Encoder3_Mode      = 558,
+    Setting_Panel_Encoder3_Cpd       = 559,
+    Setting_Panel_SettingsMax        = 579,
+
     Setting_SettingsMax,
     Setting_SettingsAll = Setting_SettingsMax,
 
@@ -710,26 +732,27 @@ typedef enum {
     Group_VFD,                  //!< 29
     Group_CANbus,               //!< 30
     Group_Embroidery,           //!< 31
-    Group_Axis,                 //!< 32
+    Group_Panel,                //!< 32
+    Group_Axis,                 //!< 33
 // NOTE: axis groups MUST be sequential AND last
-    Group_Axis0,                //!< 33
-    Group_XAxis = Group_Axis0,  //!< 34
-    Group_YAxis,                //!< 35
-    Group_ZAxis,                //!< 36
+    Group_Axis0,                //!< 34
+    Group_XAxis = Group_Axis0,  //!< 35
+    Group_YAxis,                //!< 36
+    Group_ZAxis,                //!< 37
 #ifdef A_AXIS
-    Group_AAxis,                //!< 37
+    Group_AAxis,                //!< 38
 #endif
 #ifdef B_AXIS
-    Group_BAxis,                //!< 38
+    Group_BAxis,                //!< 39
 #endif
 #ifdef C_AXIS
-    Group_CAxis,                //!< 39
+    Group_CAxis,                //!< 40
 #endif
 #ifdef U_AXIS
-    Group_UAxis,                //!< 40
+    Group_UAxis,                //!< 41
 #endif
 #ifdef V_AXIS
-    Group_VAxis,                //!< 41
+    Group_VAxis,                //!< 42
 #endif
     Group_All = Group_Root      //!< 0
 } setting_group_t;
