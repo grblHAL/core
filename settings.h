@@ -357,6 +357,8 @@ typedef enum {
     Setting_MQTTBrokerUserName  = 532,
     Setting_MQTTBrokerPassword  = 533,
 
+    Setting_NGCDebugOut = 534,
+
     Setting_Panel_SpindleSpeed       = 540,  // NOTE: Reserving settings values 540 to 579 for panel settings.
     Setting_Panel_ModbusAddress      = 541,
     Setting_Panel_UpdateInterval     = 542,
@@ -441,7 +443,7 @@ typedef union {
                  force_initialization_alarm      :1,
                  legacy_rt_commands              :1,
                  restore_after_feed_hold         :1,
-                 unused1                         :1,
+                 ngc_debug_out                   :1,
                  g92_is_volatile                 :1,
                  compatibility_level             :4,
                  no_restore_position_after_M6    :1,

@@ -158,7 +158,7 @@ static float g30_home (ngc_param_id_t id)
 
 static float coord_system (ngc_param_id_t id)
 {
-    return (float)gc_state.modal.coord_system.id;
+    return (float)gc_state.modal.coord_system.id + 1;
 }
 
 static float coord_system_offset (ngc_param_id_t id)

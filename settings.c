@@ -405,6 +405,9 @@ static float get_float (setting_id_t setting);
 static uint32_t get_int (setting_id_t id);
 static bool is_setting_available (const setting_detail_t *setting);
 static bool is_group_available (const setting_detail_t *setting);
+#if NGC_EXPRESSIONS_ENABLE
+static status_code_t set_ngc_debug_out (setting_id_t id, uint_fast16_t int_value);
+#endif
 
 static bool machine_mode_changed = false;
 static char control_signals[] = "Reset,Feed hold,Cycle start,Safety door,Block delete,Optional stop,EStop,Probe connected,Motor fault";
@@ -580,6 +583,9 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_PlannerBlocks, Group_General, "Planner buffer blocks", NULL, Format_Int16, "####0", "30", "1000", Setting_IsExtended, &settings.planner_buffer_blocks, NULL, NULL, { .reboot_required = On } },
      { Setting_AutoReportInterval, Group_General, "Autoreport interval", "ms", Format_Int16, "###0", "100", "1000", Setting_IsExtendedFn, set_report_interval, get_int, NULL, { .reboot_required = On, .allow_null = On } },
 //     { Setting_TimeZoneOffset, Group_General, "Timezone offset", NULL, Format_Decimal, "-#0.00", "0", "12", Setting_IsExtended, &settings.timezone, NULL, NULL },
+#if NGC_EXPRESSIONS_ENABLE
+     { Setting_NGCDebugOut, Group_General, "Output NGC debug messages", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_ngc_debug_out, get_int, NULL },
+#endif
 };
 
 #ifndef NO_SETTINGS_DESCRIPTIONS
@@ -744,7 +750,10 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_SpindleType, "Spindle selected on startup." },
     { Setting_PlannerBlocks, "Number of blocks in the planner buffer." },
     { Setting_AutoReportInterval, "Interval the real time report will be sent, set to 0 to disable." },
-    { Setting_TimeZoneOffset, "Offset in hours from UTC." }
+    { Setting_TimeZoneOffset, "Offset in hours from UTC." },
+#if NGC_EXPRESSIONS_ENABLE
+    { Setting_NGCDebugOut, "Example: (debug, metric mode: #<_metric>, coord system: #5220)" },
+#endif
 };
 
 #endif
@@ -906,6 +915,19 @@ static status_code_t set_report_inches (setting_id_t id, uint_fast16_t int_value
 
     return Status_OK;
 }
+
+#if NGC_EXPRESSIONS_ENABLE
+
+static status_code_t set_ngc_debug_out (setting_id_t id, uint_fast16_t int_value)
+{
+    settings.flags.ngc_debug_out = int_value != 0;
+    report_init();
+    system_flag_wco_change(); // Make sure WCO is immediately updated.
+
+    return Status_OK;
+}
+
+#endif
 
 static status_code_t set_control_invert (setting_id_t id, uint_fast16_t int_value)
 {
@@ -1544,6 +1566,12 @@ static uint32_t get_int (setting_id_t id)
 #if N_AXIS > 3
         case Settings_Axis_Rotational:
             value = (settings.steppers.is_rotational.mask & AXES_BITMASK) >> 3;
+            break;
+#endif
+
+#if NGC_EXPRESSIONS_ENABLE
+        case Setting_NGCDebugOut:
+            value = settings.flags.ngc_debug_out;
             break;
 #endif
 

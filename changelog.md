@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+<a name="20230601"/>Build 20230601
+
+Core:
+
+* Improved experimental support for [program flow control](https://github.com/grblHAL/core/wiki/Expressions-and-flow-control).
+
+Drivers:
+
+* STM32F4xx: added alternative Blackpill map with I2C support and optional spindle sync support. From [issue 121](https://github.com/grblHAL/STM32F4xx/issues/121#issuecomment-1569128257).
+
+* ESP32: Fixed typo in MKS Tinybee 1.0 map.
+
+Plugins:
+
+* SD Card: improved macro support.
+
+---
+
 <a name="20230529"/>Build 20230529
 
 Core:
@@ -8,9 +26,9 @@ Core:
 
 Drivers:
 
-* STM32F4xx: fix for [issue # 116](https://github.com/grblHAL/STM32F4xx/issues/116#issuecomment-1565369604), incorrect spindle RPM reported from encoder.
+* STM32F4xx: fix for [issue #116](https://github.com/grblHAL/STM32F4xx/issues/116#issuecomment-1565369604), incorrect spindle RPM reported from encoder.
 
---
+---
 
 <a name="20230526"/>Build 20230526
 
@@ -76,7 +94,7 @@ __NOTE:__ Build support for ethernet is not yet ready!
 
 Web Builder:
 
-Added options for spindle sync and WIZnet networking for relevant driver and boards combinations.
+* Added options for spindle sync and WIZnet networking for relevant driver and boards combinations.
 
 ---
 
