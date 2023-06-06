@@ -752,7 +752,6 @@ void st_prep_buffer (void)
                 // spindle off.
                 if ((st_prep_block->dynamic_rpm = pl_block->condition.is_rpm_rate_adjusted)) {
                     // Pre-compute inverse programmed rate to speed up RPM updating per step segment.
-                    st_prep_block->spindle = pl_block->spindle.hal;
                     prep.inv_feedrate = pl_block->condition.is_laser_ppi_mode ? 1.0f : 1.0f / pl_block->programmed_rate;
                 } else
                     st_prep_block->dynamic_rpm = !!pl_block->spindle.css;
@@ -979,7 +978,11 @@ void st_prep_buffer (void)
         */
 
         if (sys.step_control.update_spindle_rpm || st_prep_block->dynamic_rpm) {
+
             float rpm;
+
+            st_prep_block->spindle = pl_block->spindle.hal;
+
             if (pl_block->spindle.state.on) {
                 if(pl_block->spindle.css) {
                     float npos = (float)(pl_block->step_event_count - prep.steps_remaining) / (float)pl_block->step_event_count;

@@ -162,6 +162,16 @@ ISR_CODE bool ISR_FUNC(stream_enqueue_realtime_command)(char c)
     return hal.stream.enqueue_rt_command ? hal.stream.enqueue_rt_command(c) : protocol_enqueue_realtime_command(c);
 }
 
+static bool is_connected (void)
+{
+    return true;
+}
+
+static bool is_not_connected (void)
+{
+    return false;
+}
+
 static bool connection_is_up (io_stream_t *stream)
 {
     if(stream->is_connected)
@@ -172,8 +182,13 @@ static bool connection_is_up (io_stream_t *stream)
     while(connection) {
         if(connection->stream->type == stream->type &&
             connection->stream->instance == stream->instance &&
-             connection->stream->state.is_usb == stream->state.is_usb)
+             connection->stream->state.is_usb == stream->state.is_usb) {
+
+            if(connection->stream->state.is_usb)
+                connection->is_up = is_not_connected;
+
             return connection->is_up();
+        }
         connection = connection->next;
     }
 
@@ -189,16 +204,6 @@ static void stream_write_all (const char *s)
             connection->stream->write(s);
         connection = connection->next;
     }
-}
-
-static bool is_connected (void)
-{
-    return true;
-}
-
-static bool is_not_connected (void)
-{
-    return false;
 }
 
 static stream_connection_t *add_connection (const io_stream_t *stream)
@@ -221,7 +226,9 @@ static stream_connection_t *add_connection (const io_stream_t *stream)
         last->next = connection;
     }
 
-    connection->is_up = stream->is_connected ? stream->is_connected : (stream->state.is_usb ? is_not_connected : is_connected);
+    connection->is_up = stream->is_connected ?
+                         stream->is_connected :
+                          (stream->state.is_usb && base.stream != stream ? is_not_connected : is_connected);
 
     return connection;
 }
@@ -306,6 +313,9 @@ static bool stream_select (const io_stream_t *stream, bool add)
 
     if(!hal.stream.write_all)
         hal.stream.write_all = base.next != NULL ? stream_write_all : hal.stream.write;
+
+    if(stream == base.stream && base.is_up == is_not_connected)
+        base.is_up = is_connected;
 
     if(stream->type == StreamType_WebSocket && !stream->state.webui_connected)
         hal.stream.state.webui_connected = webui_connected;
