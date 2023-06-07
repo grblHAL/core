@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2022 Terje Io
+  Copyright (c) 2022-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -413,6 +413,9 @@ bool vfs_mount (const char *path, const vfs_t *fs)
         mount->next = vfs;
     }
 
+    if(fs && grbl.on_vfs_mount)
+        grbl.on_vfs_mount(path, fs);
+
     return fs != NULL;
 }
 
@@ -439,6 +442,9 @@ bool vfs_unmount (const char *path)
             free(mount);
         }
     }
+
+    if(grbl.on_vfs_unmount)
+        grbl.on_vfs_unmount(path);
 
     return true;
 }

@@ -513,7 +513,7 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             break;
 
         case NGCParam_selected_tool:
-            value = gc_state.tool_change ? (float)gc_state.tool_pending : -1.0f;
+            value = gc_state.tool_pending != gc_state.tool->tool ? (float)gc_state.tool_pending : -1.0f;
             break;
 
         case NGCParam_selected_pocket:

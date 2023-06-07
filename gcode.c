@@ -365,6 +365,29 @@ spindle_ptrs_t *gc_spindle_get (void)
     return gc_state.spindle.hal;
 }
 
+static tool_data_t *tool_get_pending (uint32_t tool)
+{
+#if N_TOOLS
+    return &tool_table[tool];
+#else
+    static tool_data_t tool_data = {0};
+
+    memcpy(&tool_data, gc_state.tool, sizeof(tool_data_t));
+    tool_data.tool = tool;
+
+    return &tool_data;
+#endif
+}
+
+static inline void tool_set (tool_data_t *tool)
+{
+#if N_TOOLS
+    gc_state.tool = tool;
+#else
+    gc_state.tool->tool = tool->tool;
+#endif
+}
+
 // Add output command to linked list
 static bool add_output_command (output_command_t *command)
 {
@@ -441,7 +464,7 @@ static status_code_t read_parameter (char *line, uint_fast8_t *char_counter, flo
         if(*(line + *char_counter) == '<') {
 
             (*char_counter)++;
-            char *pos = line + *char_counter;
+            char *pos = line = line + *char_counter;
 
             while(*line && *line != '>')
                 line++;
@@ -1692,6 +1715,18 @@ status_code_t gc_execute_block (char *block)
 
         gc_block.values.t = (uint32_t)gc_block.values.q;
         gc_block.words.q = Off;
+#if NGC_EXPRESSIONS_ENABLE
+        if(sys.macro_file) {
+            gc_state.tool_pending = 0; // force set tool
+  #if N_TOOLS
+            if(gc_state.g43_pending) {
+                gc_block.values.h = gc_state.g43_pending;
+                command_words.G8 = On;
+            }
+            gc_state.g43_pending = 0;
+  #endif
+        }
+#endif
     } else if (!gc_block.words.t)
         gc_block.values.t = gc_state.tool_pending;
 
@@ -2914,15 +2949,13 @@ status_code_t gc_execute_block (char *block)
     // [5. Select tool ]: Only tracks tool value if ATC or manual tool change is not possible.
     if(gc_state.tool_pending != gc_block.values.t && !check_mode) {
 
-        gc_state.tool_pending = gc_block.values.t;
+        tool_data_t *pending_tool = tool_get_pending((gc_state.tool_pending = gc_block.values.t));
 
         // If M6 not available or M61 commanded set new tool immediately
         if(set_tool || settings.tool_change.mode == ToolChange_Ignore || !(hal.stream.suspend_read || hal.tool.change)) {
-#if N_TOOLS
-            gc_state.tool = &tool_table[gc_state.tool_pending];
-#else
-            gc_state.tool->tool = gc_state.tool_pending;
-#endif
+
+            tool_set(pending_tool);
+
             if(grbl.on_tool_selected) {
 
                 spindle_state_t state = gc_state.modal.spindle.state;
@@ -2937,13 +2970,9 @@ status_code_t gc_execute_block (char *block)
         }
 
         // Prepare tool carousel when available
-        if(hal.tool.select) {
-#if N_TOOLS
-            hal.tool.select(&tool_table[gc_state.tool_pending], !set_tool);
-#else
-            hal.tool.select(gc_state.tool, !set_tool);
-#endif
-        } else
+        if(hal.tool.select)
+            hal.tool.select(pending_tool, !set_tool);
+        else
             system_add_rt_report(Report_Tool);
     }
 
@@ -2981,6 +3010,8 @@ status_code_t gc_execute_block (char *block)
     // [6. Change tool ]: Delegated to (possible) driver implementation
     if (command_words.M6 && !set_tool && !check_mode) {
 
+        tool_data_t *pending_tool = tool_get_pending(gc_state.tool_pending);
+
         protocol_buffer_synchronize();
 
         if(plan_data.message) {
@@ -2988,31 +3019,42 @@ status_code_t gc_execute_block (char *block)
             plan_data.message = NULL;
         }
 
-#if N_TOOLS
-        gc_state.tool = &tool_table[gc_state.tool_pending];
-#else
-        gc_state.tool->tool = gc_state.tool_pending;
-#endif
-
         if(grbl.on_tool_selected) {
 
             spindle_state_t state = gc_state.modal.spindle.state;
 
-            grbl.on_tool_selected(gc_state.tool);
+            grbl.on_tool_selected(pending_tool);
 
             if(state.value != gc_state.modal.spindle.state.value)
                 gc_block.modal.spindle.state = gc_state.modal.spindle.state;
         }
 
         if(hal.tool.change) { // ATC
-            if((int_value = (uint_fast16_t)hal.tool.change(&gc_state)) != Status_OK)
-                FAIL((status_code_t)int_value);
+            if((int_value = (uint_fast16_t)hal.tool.change(&gc_state)) != Status_OK) {
+#if NGC_EXPRESSIONS_ENABLE
+                if(int_value != Status_Unhandled)
+#endif
+                    FAIL((status_code_t)int_value);
+            }
             system_add_rt_report(Report_Tool);
         } else { // Manual
+            int_value = (uint_fast16_t)Status_OK;
             gc_state.tool_change = true;
             system_set_exec_state_flag(EXEC_TOOL_CHANGE);   // Set up program pause for manual tool change
             protocol_execute_realtime();                    // Execute...
         }
+#if NGC_EXPRESSIONS_ENABLE
+        if((status_code_t)int_value != Status_Unhandled)
+            tool_set(pending_tool);
+  #if N_TOOLS
+        else if(command_words.G8 && gc_block.modal.tool_offset_mode && ToolLengthOffset_Enable) {
+            gc_state.g43_pending = gc_block.values.h;
+            command_words.G8 = Off;
+        }
+  #endif
+#else
+        tool_set(pending_tool);
+#endif
     }
 
     // [7. Spindle control ]:

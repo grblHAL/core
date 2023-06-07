@@ -526,6 +526,9 @@ typedef struct {
     //  float blending_tolerance;       //!< Motion blending tolerance
     int32_t line_number;                //!< Last line number sent
     uint32_t tool_pending;              //!< Tool to be selected on next M6
+#if N_TOOLS && NGC_EXPRESSIONS_ENABLE
+    uint32_t g43_pending;               //!< Tool offset to be selected on next M6, for macro ATC
+#endif
     bool file_run;                      //!< Tracks % command
     bool is_laser_ppi_mode;
     bool is_rpm_rate_adjusted;

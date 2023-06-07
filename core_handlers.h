@@ -108,6 +108,8 @@ typedef bool (*on_spindle_select_ptr)(spindle_ptrs_t *spindle);
 typedef void (*on_spindle_selected_ptr)(spindle_ptrs_t *spindle);
 typedef void (*on_gcode_message_ptr)(char *msg);
 typedef void (*on_rt_reports_added_ptr)(report_tracking_flags_t report);
+typedef void (*on_vfs_mount_ptr)(const char *path, const vfs_t *fs);
+typedef void (*on_vfs_unmount_ptr)(const char *path);
 typedef status_code_t (*on_file_open_ptr)(const char *fname, vfs_file_t *handle, bool stream);
 typedef status_code_t (*on_unknown_sys_command_ptr)(sys_state_t state, char *line); // return Status_Unhandled.
 typedef status_code_t (*on_user_command_ptr)(char *line);
@@ -156,6 +158,8 @@ typedef struct {
     on_spindle_select_ptr on_spindle_select;            //!< Called before spindle is selected, hook in HAL overrides here
     on_spindle_selected_ptr on_spindle_selected;        //!< Called when spindle is selected, do not change HAL pointers here!
     on_reset_ptr on_reset;                              //!< Called from interrupt context.
+    on_vfs_mount_ptr on_vfs_mount;                      //!< Called when a file system is mounted.
+    on_vfs_unmount_ptr on_vfs_unmount;                  //!< Called when a file system is unmounted.
     on_file_open_ptr on_file_open;                      //!< Called when a file is opened for streaming.
     // core entry points - set up by core before driver_init() is called.
     enqueue_gcode_ptr enqueue_gcode;

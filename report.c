@@ -953,13 +953,8 @@ void report_build_info (char *line, bool extended)
         strcat(buf, "EXPR,");
     #endif
 
-    #if N_TOOLS
-        if(hal.driver_cap.atc && hal.tool.change)
-            strcat(buf, "ATC,");
-        else
-    #endif
-        if(hal.stream.suspend_read)
-            strcat(buf, "TC,"); // Manual tool change supported (M6)
+        if(hal.tool.change)
+            strcat(buf, hal.driver_cap.atc ? "ATC," : "TC,"); // Tool change supported (M6)
 
         if(hal.driver_cap.spindle_sync)
             strcat(buf, "SS,");
