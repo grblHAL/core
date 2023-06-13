@@ -1427,8 +1427,23 @@ static void write_quoted (const char *s, const char *sep)
         hal.stream.write(sep);
 }
 
+static void write_name (const char *s, uint_fast8_t offset)
+{
+    char *q = hal.stream.write_n ? strchr(s, '?') : NULL;
+
+    if(q) {
+        if(q != s)
+            hal.stream.write_n(s, q - s);
+        hal.stream.write(uitoa(offset + 1));
+        hal.stream.write(q + 1);
+    } else
+        hal.stream.write(s);
+}
+
 static void report_settings_detail (settings_format_t format, const setting_detail_t *setting, uint_fast8_t offset)
 {
+    uint_fast8_t suboffset = setting->flags.subgroups ? offset / setting->flags.increment : offset;
+
     switch(format)
     {
         case SettingsFormat_HumanReadable:
@@ -1437,7 +1452,7 @@ static void report_settings_detail (settings_format_t format, const setting_deta
             hal.stream.write(": ");
             if(setting->group == Group_Axis0)
                 hal.stream.write(axis_letter[offset]);
-            hal.stream.write(setting->name[0] == '?' ? &setting->name[1] : setting->name); // temporary hack for ? prefix...
+            write_name(setting->name, suboffset);
 
             switch(setting_datatype_to_external(setting->datatype)) {
 
@@ -1526,11 +1541,11 @@ static void report_settings_detail (settings_format_t format, const setting_deta
             hal.stream.write("[SETTING:");
             hal.stream.write(uitoa(setting->id + offset));
             hal.stream.write(vbar);
-            hal.stream.write(uitoa(setting->group + (setting->group == Group_Axis0 ? offset : 0)));
+            hal.stream.write(uitoa(setting->group + (setting->flags.subgroups ? suboffset : 0)));
             hal.stream.write(vbar);
             if(setting->group == Group_Axis0)
                 hal.stream.write(axis_letter[offset]);
-            hal.stream.write(setting->name[0] == '?' ? &setting->name[1] : setting->name); // temporary hack for ? prefix...
+            write_name(setting->name, suboffset);
             hal.stream.write(vbar);
             if(setting->unit)
                 hal.stream.write(setting->unit);
@@ -1558,7 +1573,7 @@ static void report_settings_detail (settings_format_t format, const setting_deta
                 hal.stream.write("\"");
                 if(setting->group == Group_Axis0)
                     hal.stream.write(axis_letter[offset]);
-                hal.stream.write(setting->name[0] == '?' ? &setting->name[1] : setting->name); // temporary hack for ? prefix...
+                write_name(setting->name, suboffset);
                 hal.stream.write("\",");
                 if(setting->unit) {
                     write_quoted(setting->unit, ",");
@@ -1582,7 +1597,7 @@ static void report_settings_detail (settings_format_t format, const setting_deta
 
                 if(setting->group == Group_Axis0)
                     hal.stream.write(axis_letter[offset]);
-                hal.stream.write(setting->name[0] == '?' ? &setting->name[1] : setting->name); // temporary hack for ? prefix...
+                write_name(setting->name, suboffset);
 
                 hal.stream.write("\t");
 
@@ -1949,7 +1964,7 @@ static void print_setting_group (const setting_group_detail_t *group, char *pref
             hal.stream.write(vbar);
             hal.stream.write(group->name);
             hal.stream.write("]" ASCII_EOL);
-        } else if(group->id != Group_Root && settings_is_group_available(group->id)) {
+        } else if(group->id != Group_Root) {
             hal.stream.write(prefix);
             hal.stream.write(group->name);
             hal.stream.write(ASCII_EOL);
@@ -1959,12 +1974,23 @@ static void print_setting_group (const setting_group_detail_t *group, char *pref
 
 static int cmp_setting_group_id (const void *a, const void *b)
 {
-    return (*(setting_detail_t **)(a))->id - (*(setting_detail_t **)(b))->id;
+    return (*(setting_group_detail_t **)(a))->id - (*(setting_group_detail_t **)(b))->id;
 }
 
 static int cmp_setting_group_name (const void *a, const void *b)
 {
-    return strcmp((*(setting_detail_t **)(a))->name, (*(setting_detail_t **)(b))->name);
+    return strcmp((*(setting_group_detail_t **)(a))->name, (*(setting_group_detail_t **)(b))->name);
+}
+
+static bool group_is_dup (setting_group_detail_t **groups, setting_group_t group)
+{
+    while(*groups) {
+        if((*groups)->id == group)
+            return true;
+        groups++;
+    }
+
+    return false;
 }
 
 status_code_t report_setting_group_details (bool by_id, char *prefix)
@@ -1984,8 +2010,10 @@ status_code_t report_setting_group_details (bool by_id, char *prefix)
         uint_fast16_t idx;
 
         do {
-            for(idx = 0; idx < details->n_groups; idx++)
-                *group++ = (setting_group_detail_t *)&details->groups[idx];
+            for(idx = 0; idx < details->n_groups; idx++) {
+                if(!group_is_dup(all_groups, details->groups[idx].id))
+                    *group++ = (setting_group_detail_t *)&details->groups[idx];
+            }
         } while((details = details->next));
 
         qsort(all_groups, n_groups, sizeof(setting_group_detail_t *), by_id ? cmp_setting_group_id : cmp_setting_group_name);

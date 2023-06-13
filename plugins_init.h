@@ -28,9 +28,9 @@
     trinamic_init();
 #endif
 
-#if MODBUS_ENABLE
-    extern void modbus_init (void);
-    modbus_init();
+#if MODBUS_ENABLE && MODBUS_ENABLE & 0x01
+    extern void modbus_rtu_init (void);
+    modbus_rtu_init();
 #endif
 
 #if CANBUS_ENABLE

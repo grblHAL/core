@@ -381,6 +381,12 @@ typedef enum {
     Setting_Panel_Encoder3_Cpd       = 559,
     Setting_Panel_SettingsMax        = 579,
 
+    Setting_ModbusTCPBase       = 600,    // Reserving settings values 600 to 639 for ModBus TCP (8 sets)
+    Setting_ModbusIpAddressBase = Setting_ModbusTCPBase + Setting_ModbusIpAddress,
+    Setting_ModbusPortBase      = Setting_ModbusTCPBase + Setting_ModbusPort,
+    Setting_ModbusIdBase        = Setting_ModbusTCPBase + Setting_ModbusId,
+    Setting_ModbusTCPMax        = 639,
+
     Setting_SettingsMax,
     Setting_SettingsAll = Setting_SettingsMax,
 
@@ -722,40 +728,49 @@ typedef enum {
     Group_Bluetooth,            //!< 17
     Group_AuxPorts,             //!< 18
     Group_ModBus,               //!< 19
-    Group_Encoders,             //!< 20
-    Group_Encoder0,             //!< 21
-    Group_Encoder1,             //!< 22
-    Group_Encoder2,             //!< 23
-    Group_Encoder3,             //!< 24
-    Group_Encoder4,             //!< 25
-    Group_UserSettings,         //!< 26
-    Group_Stepper,              //!< 27
-    Group_MotorDriver,          //!< 28
-    Group_VFD,                  //!< 29
-    Group_CANbus,               //!< 30
-    Group_Embroidery,           //!< 31
-    Group_Panel,                //!< 32
-    Group_Axis,                 //!< 33
+    Group_ModBusUnit0,          //!< 20
+    Group_ModBusUnit1,          //!< 21
+    Group_ModBusUnit2,          //!< 22
+    Group_ModBusUnit3,          //!< 23
+    Group_ModBusUnit4,          //!< 24
+    Group_ModBusUnit5,          //!< 25
+    Group_ModBusUnit6,          //!< 26
+    Group_ModBusUnit7,          //!< 27
+    Group_Encoders,             //!< 28
+    Group_Encoder0,             //!< 29
+    Group_Encoder1,             //!< 30
+    Group_Encoder2,             //!< 31
+    Group_Encoder3,             //!< 32
+    Group_Encoder4,             //!< 33
+    Group_UserSettings,         //!< 34
+    Group_Stepper,              //!< 35
+    Group_MotorDriver,          //!< 36
+    Group_VFD,                  //!< 37
+    Group_CANbus,               //!< 38
+    Group_Embroidery,           //!< 39
+    Group_Panel,                //!< 40
+    Group_Axis,                 //!< 41
 // NOTE: axis groups MUST be sequential AND last
-    Group_Axis0,                //!< 34
-    Group_XAxis = Group_Axis0,  //!< 35
-    Group_YAxis,                //!< 36
-    Group_ZAxis,                //!< 37
+    Group_Axis0,                //!< 42
+    Group_XAxis = Group_Axis0,  //!< 43
+    Group_YAxis,                //!< 44
+    Group_ZAxis,                //!< 45
 #ifdef A_AXIS
-    Group_AAxis,                //!< 38
+    Group_AAxis,                //!< 46
 #endif
 #ifdef B_AXIS
-    Group_BAxis,                //!< 39
+    Group_BAxis,                //!< 47
 #endif
 #ifdef C_AXIS
-    Group_CAxis,                //!< 40
+    Group_CAxis,                //!< 48
 #endif
 #ifdef U_AXIS
-    Group_UAxis,                //!< 41
+    Group_UAxis,                //!< 49
 #endif
 #ifdef V_AXIS
-    Group_VAxis,                //!< 42
+    Group_VAxis,                //!< 50
 #endif
+    Group_Unknown = 99,         //!< 99
     Group_All = Group_Root      //!< 0
 } setting_group_t;
 
@@ -775,10 +790,11 @@ typedef enum {
     Format_Int16,
 } setting_datatype_t;
 
-typedef struct {
+typedef struct setting_group_detail {
     setting_group_t parent;
     setting_group_t id;
     const char *name;
+    bool (*is_available)(const struct setting_group_detail *group);
 } setting_group_detail_t;
 
 typedef enum {
@@ -801,8 +817,10 @@ typedef union {
     uint8_t value;
     struct {
         uint8_t reboot_required :1,
-                allow_null: 1,
-                unused :6;
+                allow_null      :1,
+                subgroups       :1,
+                increment       :4,
+                unused          :1;
     };
 } setting_detail_flags_t;
 
@@ -854,6 +872,7 @@ typedef void (*settings_changed_ptr)(settings_t *settings, settings_changed_flag
 typedef void (*driver_settings_load_ptr)(void);
 typedef void (*driver_settings_save_ptr)(void);
 typedef void (*driver_settings_restore_ptr)(void);
+typedef bool (*driver_settings_iterator_ptr)(const setting_detail_t *setting, setting_output_ptr callback, void *data);
 
 typedef struct setting_details {
     const uint8_t n_groups;
@@ -870,6 +889,7 @@ typedef struct setting_details {
     driver_settings_save_ptr save;
     driver_settings_load_ptr load;
     driver_settings_restore_ptr restore;
+    driver_settings_iterator_ptr iterator;
 } setting_details_t;
 
 // NOTE: this must match the signature of on_get_settings in the setting_details_t structure above!

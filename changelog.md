@@ -1,18 +1,46 @@
 ## grblHAL changelog
 
+<a name="20230610"/>Build 20230610
+
+Core:
+
+Added virtual Modbus API. Some internal settings handling improvements.
+
+Drivers:
+
+* iMXRT1062, STM32F7xx and RP2040: added Modbus TCP network support.
+
+* STM32F1xx: rerouted _Reset_ signal as _Emergency stop_ per default. Can be overriden in _my_machine.h_ or by setting `COMPATIBILITY_LEVEL` > 1.
+
+* STM32F4xx, ESP32, SAM3X8E and MSP432P401R: minor changes to handle new location of Modbus API.
+
+Plugins:
+
+* Spindle: refactored and renamed Modbus RTU code as a driver implementation for the core Modbus API.
+
+* Networking: added Modbus TCP driver for core Modbus API with support for up to 8 devices. Default is four.  
+Added WIZNet support for Modbus TCP.  
+Modbus TCP is enabled by bit 2 in the `MODBUS_ENABLE` symbol in _my_machine.h_: `#define MOBUS_ENABLE 4`. This can be added to the previous define values for enabling Modbus RTU with or without RS 485 direction signal support.  
+__NOTE:__ The new core API only supports the Modbus RTU protocol, this will be translated to/from Modbus TCP by the driver implementation.  
+User code _can_ bypass the core API and transmit Modbus TCP messages directly if it wants/needs to.  
+__NOTE:__ VFD spindle Modbus communication will be routed to Modbus TCP if the VFD device id \(unit id\) matches the Modbus TCP device id.  
+For now this is untested and may lock up the controller since the networking stack comes up too late to avoid power up selftest \(POS\) failure.  
+To be addressed in a later revision if someone with a Modbus TCP capable spindle is willing to test.
+
+* Motors and encoder: updated for core setting handling improvements.
+
 <a name="20230607"/>Build 20230607
 
 Core:
 
 * Added initial support for macro based automatic tool changes (ATC).  
 Currently macros has to be stored on a SD card or in littlefs and [expression support](https://github.com/grblHAL/core/wiki/Expressions-and-flow-control) has to be enabled.
-
 * Added core events for file system mount/unmount.
 
 Plugins:
 
-* SD Card, macro plugin: Implemented automatic hook to tool change functions when tool change macros are found in the root mount directory.  
-Tool change macro: _tc.macro_, called on `M6`. \(required\)  
+* SD Card, macro plugin: implemented automatic hook to tool change functions when tool change macros are found in the root mount directory.  
+Tool change macro: _tc.macro_, called on `M6`. \(required\).  
 Tool select macro: _ts.macro_, called on `T`. \(optional\).  
 __NOTE:__ This functionality needs to be extensively tested by users having access to ATC hardware! [Discuss here](https://github.com/grblHAL/core/discussions/309).
 

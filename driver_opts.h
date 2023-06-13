@@ -218,6 +218,15 @@
 #endif
 #endif
 
+#define MODBUS_RTU_ENABLED     0b001
+#define MODBUS_RTU_DIR_ENABLED 0b010
+#define MODBUS_TCP_ENABLED     0b100
+
+#if MODBUS_ENABLE == 2
+#undef MOBUS_ENABLE
+#define MOBUS_ENABLE 0b011
+#endif
+
 #ifndef MODBUS_ENABLE
 #if VFD_ENABLE
 #define MODBUS_ENABLE       1
@@ -370,6 +379,9 @@
 #endif
 #ifndef NETWORK_HTTP_PORT
 #define NETWORK_HTTP_PORT       80
+#endif
+#ifndef NETWORK_MODBUS_PORT
+#define NETWORK_MODBUS_PORT     502
 #endif
 #ifndef NETWORK_MQTT_PORT
 #define NETWORK_MQTT_PORT       1883
