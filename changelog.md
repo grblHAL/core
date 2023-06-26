@@ -1,16 +1,28 @@
 ## grblHAL changelog
 
+<a name="20230626"/>Build 20230626
+
+Core:
+
+* Added `|$C=1` to full realtime report \(requested by `0x87`\) when controller is in a blocking state \(after a critical event\) but still accepts some `$` commands.
+
+Drivers:
+
+* ESP32: added missing file in _CMakeLists.txt_ and option to enable NGC expression support. Updated Bluetooth code for core changes and added minimum 2ms delay after stepper enable before any motion.
+
+---
+
 <a name="20230610"/>Build 20230610
 
 Core:
 
-Added virtual Modbus API. Some internal settings handling improvements.
+* Added virtual Modbus API. Some internal settings handling improvements.
 
 Drivers:
 
 * iMXRT1062, STM32F7xx and RP2040: added Modbus TCP network support.
 
-* STM32F1xx: rerouted _Reset_ signal as _Emergency stop_ per default. Can be overriden in _my_machine.h_ or by setting `COMPATIBILITY_LEVEL` > 1.
+* STM32F1xx: rerouted _Reset_ signal as _Emergency stop_ per default. Can be overridden in _my_machine.h_ or by setting `COMPATIBILITY_LEVEL` > 1.
 
 * STM32F4xx, ESP32, SAM3X8E and MSP432P401R: minor changes to handle new location of Modbus API.
 
@@ -24,7 +36,7 @@ Modbus TCP is enabled by bit 2 in the `MODBUS_ENABLE` symbol in _my_machine.h_: 
 __NOTE:__ The new core API only supports the Modbus RTU protocol, this will be translated to/from Modbus TCP by the driver implementation.  
 User code _can_ bypass the core API and transmit Modbus TCP messages directly if it wants/needs to.  
 __NOTE:__ VFD spindle Modbus communication will be routed to Modbus TCP if the VFD device id \(unit id\) matches the Modbus TCP device id.  
-For now this is untested and may lock up the controller since the networking stack comes up too late to avoid power up selftest \(POS\) failure.  
+For now this is untested and may lock up the controller since the networking stack comes up too late to avoid power up selftest \(POS\) failure.
 To be addressed in a later revision if someone with a Modbus TCP capable spindle is willing to test.
 
 * Motors and encoder: updated for core setting handling improvements.

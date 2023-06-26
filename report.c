@@ -1347,8 +1347,11 @@ void report_realtime_status (void)
             if(sys.flags.auto_reporting)
                 hal.stream.write_all(uitoa(settings.report_interval));
         }
+        if(sys.blocking_event)
+            hal.stream.write_all("|$C:1");
     } else
 #endif
+
     if(settings.status_report.parser_state) {
 
         static uint32_t tool;
