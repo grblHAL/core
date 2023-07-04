@@ -1,5 +1,20 @@
 ## grblHAL changelog
 
+<a name="20230704"/>Build 20230704
+
+Core:
+
+* Skip calling tool change code if current and selected tool number are equal.
+* Added 5s timeout/abort handling when waiting for index pulses prior to startiong spindle synchronized motion.
+* Added definitions for M401 (deploy probe) and M402 (stow probe) for plugin use.
+* Added core support for probe protected message and alarm. Requires driver support for interrupt handled probe input.
+
+Drivers:
+
+*STM32F1xx, STM32F4xx and STM32F7xx: simplified and made GPIO interrupt handling more generic/flexible. Fixes [issue #116](https://github.com/grblHAL/STM32F4xx/issues/116).
+
+---
+
 <a name="20230626"/>Build 20230626
 
 Core:

@@ -34,6 +34,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define MODBUS_SET_MSB16(v) ((v) >> 8)
+#define MODBUS_SET_LSB16(v) ((v) & 0xFF)
+
 typedef enum {
     Modbus_InterfaceRTU = 0,
     Modbus_InterfaceASCII,
@@ -96,6 +99,8 @@ bool modbus_enabled (void);
 void modbus_flush_queue (void);
 void modbus_set_silence (const modbus_silence_timeout_t *timeout);
 bool modbus_send (modbus_message_t *msg, const modbus_callbacks_t *callbacks, bool block);
+uint16_t modbus_read_u16 (uint8_t *p);
+void modbus_write_u16 (uint8_t *p, uint16_t value);
 bool modbus_register_api (const modbus_api_t *api);
 
 #endif

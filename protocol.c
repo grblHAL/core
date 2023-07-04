@@ -137,6 +137,9 @@ bool protocol_main_loop (void)
         // Check for motor fault active. Blocks everything until cleared.
         system_raise_alarm(Alarm_MotorFault);
         grbl.report.feedback_message(Message_MotorFault);
+    } else if(settings.probe.enable_protection && hal.control.get_state().probe_triggered) {
+        system_raise_alarm(Alarm_ProbeProtect);
+        grbl.report.feedback_message(Message_ProbeProtected);
     } else if (limits_homing_required()) {
         // Check for power-up and set system alarm if homing is enabled to force homing cycle
         // by setting Grbl's alarm state. Alarm locks out all g-code commands, including the

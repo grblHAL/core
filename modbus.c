@@ -72,6 +72,17 @@ bool modbus_send (modbus_message_t *msg, const modbus_callbacks_t *callbacks, bo
     return ok || (rtu_api != N_MODBUS_API && modbus[rtu_api].send(msg, callbacks, block));
 }
 
+uint16_t modbus_read_u16 (uint8_t *p)
+{
+    return (*p << 8) | *(p + 1);
+}
+
+void modbus_write_u16 (uint8_t *p, uint16_t value)
+{
+    *p = (uint8_t)(value >> 8);
+    *(p + 1) = (uint8_t)(value & 0x00FF);
+}
+
 bool modbus_register_api (const modbus_api_t *api)
 {
     bool ok;

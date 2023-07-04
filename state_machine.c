@@ -260,12 +260,26 @@ void state_set (sys_state_t new_state)
                         st_prep_buffer();                   // Initialize step segment buffer before beginning cycle.
                         if (block->spindle.state.synchronized) {
 
+                            uint32_t ms = hal.get_elapsed_ticks();
+
                             if (block->spindle.hal->reset_data)
                                 block->spindle.hal->reset_data();
 
                             uint32_t index = block->spindle.hal->get_data(SpindleData_Counters)->index_count + 2;
 
-                            while(index != block->spindle.hal->get_data(SpindleData_Counters)->index_count); // check for abort in this loop?
+                            while(index != block->spindle.hal->get_data(SpindleData_Counters)->index_count) {
+
+                                if(hal.get_elapsed_ticks() - ms > 5000) {
+                                    system_raise_alarm(Alarm_Spindle);
+                                    return;
+                                }
+
+                                if(sys.rt_exec_state & (EXEC_RESET|EXEC_STOP)) {
+                                    system_set_exec_state_flag(EXEC_RESET);
+                                    return;
+                                }
+                                // TODO: allow real time reporting?
+                            }
 
                         }
                         st_wake_up();

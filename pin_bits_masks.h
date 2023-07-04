@@ -193,16 +193,71 @@
 #define COOLANT_MIST_BIT (1<<COOLANT_MIST_PIN)
 #endif
 
-#if defined(I2C_STROBE_PIN) && !defined(I2C_STROBE_BIT)
+#if defined(RTS_PIN) && !defined(RTS_BIT)
+#define RTS_BIT (1<<RTS_PIN)
+#endif
+
+// IRQ enabled input singnals
+
+#if SAFETY_DOOR_ENABLE
+#ifndef SAFETY_DOOR_BIT
+#define SAFETY_DOOR_BIT (1<<SAFETY_DOOR_PIN)
+#endif
+#else
+#define SAFETY_DOOR_BIT 0
+#endif
+
+#ifndef MPG_MODE_PIN
+#define MPG_MODE_BIT 0
+#elif !defined(MPG_MODE_BIT)
+#define MPG_MODE_BIT (1<<MPG_MODE_PIN)
+#endif
+
+#ifndef I2C_STROBE_PIN
+#define I2C_STROBE_BIT 0
+#elif !defined(I2C_STROBE_BIT)
 #define I2C_STROBE_BIT (1<<I2C_STROBE_PIN)
 #endif
 
-#if defined(SPI_IRQ_PIN) && !defined(SPI_IRQ_BIT)
+#ifndef SPI_IRQ_PIN
+#define SPI_IRQ_BIT 0
+#elif !defined(SPI_IRQ_BIT)
 #define SPI_IRQ_BIT (1<<SPI_IRQ_PIN)
 #endif
 
-#if defined(RTS_PIN) && !defined(RTS_BIT)
-#define RTS_BIT (1<<RTS_PIN)
+#if SPINDLE_SYNC_ENABLE
+#ifndef SPINDLE_INDEX_BIT
+#define SPINDLE_INDEX_BIT (1<<SPINDLE_INDEX_PIN)
+#endif
+#ifndef SPINDLE_PULSE_BIT
+#define SPINDLE_PULSE_BIT (1<<SPINDLE_PULSE_PIN)
+#endif
+#else
+#define SPINDLE_INDEX_BIT 0
+#define SPINDLE_PULSE_BIT 0
+#endif
+
+#if QEI_ENABLE
+#ifndef QEI_A_BIT
+#define QEI_A_BIT (1<<QEI_A_PIN)
+#endif
+#ifndef QEI_B_BIT
+#define QEI_B_BIT (1<<QEI_B_PIN)
+#endif
+#ifndef QEI_SELECT_PIN
+#define QEI_SELECT_BIT 0
+#elif !defined(QEI_SELECT_BIT)
+#define QEI_SELECT_BIT (1<<QEI_SELECT_PIN)
+#endif
+#else
+#define QEI_A_BIT 0
+#define QEI_B_BIT 0
+#define QEI_SELECT_BIT 0
+#endif
+
+#ifndef DEVICES_IRQ_MASK
+#define DEVICES_IRQ_MASK (MPG_MODE_BIT|I2C_STROBE_BIT|SPI_IRQ_BIT|SPINDLE_INDEX_BIT|QEI_A_BIT|QEI_B_BIT|QEI_SELECT_BIT)
+#define DEVICES_IRQ_MASK_SUM (MPG_MODE_BIT+I2C_STROBE_BIT+SPI_IRQ_BIT+SPINDLE_INDEX_BIT+QEI_A_BIT+QEI_B_BIT+QEI_SELECT_BIT)
 #endif
 
 // Auxillary input signals

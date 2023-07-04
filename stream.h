@@ -77,6 +77,8 @@ Helper functions for saving away and restoring a stream input buffer. _Not refer
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "vfs.h"
+
 typedef enum {
     StreamType_Serial = 0,
     StreamType_MPG,
@@ -245,6 +247,7 @@ typedef struct {
     get_stream_buffer_count_ptr get_tx_buffer_count;        //!< Optional handler for getting number of characters in the output buffer(s). Count shall include any unsent characters in any transmit FIFO and/or transmit register. Required for Modbus support.
     flush_stream_buffer_ptr reset_write_buffer;             //!< Optional handler for flushing the output buffer. Any transmit FIFO shall be flushed as well. Required for Modbus support.
     set_baud_rate_ptr set_baud_rate;                        //!< Optional handler for setting the stream baud rate. Required for Modbus support, recommended for Bluetooth support.
+//    vfs_file_t *file;                                       //!< File handle, non-null if streaming from a file.
 } io_stream_t;
 
 typedef const io_stream_t *(*stream_claim_ptr)(uint32_t baud_rate);
