@@ -1,17 +1,31 @@
 ## grblHAL changelog
 
+<a name="20230708"/>20230708
+
+Drivers:
+
+* STM32F4xx: added four lane SDIO SD card support \(for BTT SKR 2.0 - only tested with a NUCLEO-F446ZE dev board\). [Issue #123](https://github.com/grblHAL/STM32F4xx/issues/123).
+
+* ESP32 and RP2040: fixed "bug" in $I `NEWOPT` string, "FTP" was added even if the FTP protocol was not active.
+
+Plugins:
+
+* SD card: added `.cnc` and `.ncc` file types to default filter.
+
+---
+
 <a name="20230704"/>Build 20230704
 
 Core:
 
 * Skip calling tool change code if current and selected tool number are equal.
-* Added 5s timeout/abort handling when waiting for index pulses prior to startiong spindle synchronized motion.
+* Added 5s timeout/abort handling when waiting for index pulses prior to starting spindle synchronized motion.
 * Added definitions for M401 (deploy probe) and M402 (stow probe) for plugin use.
 * Added core support for probe protected message and alarm. Requires driver support for interrupt handled probe input.
 
 Drivers:
 
-*STM32F1xx, STM32F4xx and STM32F7xx: simplified and made GPIO interrupt handling more generic/flexible. Fixes [issue #116](https://github.com/grblHAL/STM32F4xx/issues/116).
+* STM32F1xx, STM32F4xx and STM32F7xx: simplified and made GPIO interrupt handling more generic/flexible. Fixes [issue #116](https://github.com/grblHAL/STM32F4xx/issues/116).
 
 ---
 
