@@ -1039,6 +1039,10 @@ void system_raise_alarm (alarm_code_t alarm)
         system_set_exec_alarm(alarm);
     else if(sys.alarm != alarm) {
         sys.alarm = alarm;
+        sys.blocking_event = sys.alarm == Alarm_HardLimit ||
+                              sys.alarm == Alarm_SoftLimit ||
+                               sys.alarm == Alarm_EStop ||
+                                sys.alarm == Alarm_MotorFault;
         state_set(alarm == Alarm_EStop ? STATE_ESTOP : STATE_ALARM);
         if(sys.driver_started || sys.alarm == Alarm_SelftestFailed)
             grbl.report.alarm_message(alarm);

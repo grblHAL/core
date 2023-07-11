@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+<a name="20230711"/>20230711
+
+Core:
+
+* Improved handling of critical events for adding `|$C=1` to full realtime report.
+
+Drivers:
+
+* STM32F1xx: fix for [ioSender issue #312](https://github.com/terjeio/ioSender/issues/312), EStop event not triggered.
+
+Plugins:
+
+* Networking: fix for YModem upload to SD card failure via Telnet or WebSocket connection.
+
+---
+
 <a name="20230708"/>20230708
 
 Drivers:
