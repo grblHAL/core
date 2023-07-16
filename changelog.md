@@ -1,5 +1,26 @@
 ## grblHAL changelog
 
+<a name="20230714"/>20230714
+
+Core:
+
+* Added support for traversing directory structure across file system mounts. Allows access to littlefs mount via ftp.
+* Fixed inconsistent \(random\) real-time reporting of cycle start signal by adding a latch to ensure it is reported at least once.
+
+Drivers:
+
+* ESP32: added WiFi settings for country, AP channel and BSSID. Changed default AP password to make it legal, was too short.
+
+* STM32F7xx: added EStop signal handling. Driver now defaults to this for the reset input.
+
+Plugins:
+
+* Networking: improved telnet transmit handling.
+
+* WebUI: added file seek function for embedded files, may be used later by gcode macros.
+
+---
+
 <a name="20230711"/>20230711
 
 Core:

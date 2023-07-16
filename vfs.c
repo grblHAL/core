@@ -191,7 +191,7 @@ static const char *get_filename (vfs_mount_t *mount, const char *filename)
 {
     if(*filename == '/') {
         size_t len = strlen(mount->path);
-        return filename + (len == 1 ? 0 : len);
+        return filename + (len == 1 ? 0 : len - 1);
     } else
         return filename;
 }
@@ -306,8 +306,18 @@ int vfs_chdir (const char *path)
                 *s = '\0';
         }
     } else {
+
         strcpy(cwd, path);
-        cwdmount = get_mount(cwd);
+
+        if((cwdmount = get_mount(path)) && strchr(path + 1, '/') == NULL && cwdmount != &root) {
+
+            strcpy(cwd, cwdmount->path);
+            char *s;
+            if((s = strrchr(cwd, '/')))
+                *s = '\0';
+
+            return 0;
+        }
     }
 
     if((ret = cwdmount ? cwdmount->vfs->fchdir(path) : -1) != 0) { // + strlen(mount->path));))
@@ -322,10 +332,30 @@ int vfs_chdir (const char *path)
 vfs_dir_t *vfs_opendir (const char *path)
 {
     vfs_dir_t *dir = NULL;
-    vfs_mount_t *mount = get_mount(path);
+    vfs_mount_t *mount = get_mount(path), *add_mount;
+    vfs_mount_ll_entry_t *ml = NULL, *mln;
 
-    if(mount && (dir = mount->vfs->fopendir(get_filename(mount, path))))
+    if(mount && (dir = mount->vfs->fopendir(get_filename(mount, path)))) {
+
         dir->fs = mount->vfs;
+        dir->mounts = NULL;
+        add_mount = root.next;
+
+        do {
+            if(add_mount != mount && !strncmp(add_mount->path, path, strlen(path))) {
+                if(!add_mount->vfs->mode.hidden && (mln = malloc(sizeof(vfs_mount_ll_entry_t)))) {
+                    mln->mount = add_mount;
+                    mln->next = NULL;
+                    if(dir->mounts == NULL)
+                        dir->mounts = ml = mln;
+                    else {
+                        ml->next = mln;
+                        ml = mln;
+                    }
+                }
+            }
+        } while((add_mount = add_mount->next));
+    }
 
     return dir;
 }
@@ -338,6 +368,21 @@ vfs_dirent_t *vfs_readdir (vfs_dir_t *dir)
 
     ((vfs_t *)dir->fs)->readdir(dir, &dirent);
 
+    if(*dirent.name == '\0' && dir->mounts) {
+
+        char *s;
+        vfs_mount_ll_entry_t *ml = dir->mounts;
+
+        strcpy(dirent.name, ml->mount->path + 1);
+        if((s = strrchr(dirent.name, '/')))
+            *s = '\0';
+
+        dirent.st_mode = ml->mount->vfs->mode;
+        dirent.st_mode.directory = true;
+        dir->mounts = dir->mounts->next;
+        free(ml);
+    }
+
     return *dirent.name == '\0' ? NULL : &dirent;
 }
 
@@ -345,29 +390,56 @@ void vfs_closedir (vfs_dir_t *dir)
 {
     vfs_errno = 0;
 
+    while(dir->mounts) {
+        vfs_mount_ll_entry_t *ml = dir->mounts;
+        dir->mounts = dir->mounts->next;
+        free(ml);
+    }
+
     ((vfs_t *)dir->fs)->fclosedir(dir);
 }
 
 char *vfs_getcwd (char *buf, size_t len)
 {
-    char *cwd = root.vfs->fgetcwd(NULL, len);
+    char *cwds = cwdmount->vfs->fgetcwd ? cwdmount->vfs->fgetcwd(NULL, len) : cwd;
 
     vfs_errno = 0;
 
     if(buf == NULL)
-        buf = (char *)malloc(strlen(cwd) + 1);
+        buf = (char *)malloc(strlen(cwds) + 1);
 
     if(buf)
-        strcpy(buf, cwd);
+        strcpy(buf, cwds);
 
-    return buf ? buf : cwd;
+    return buf ? buf : cwds;
 }
 
 int vfs_stat (const char *filename, vfs_stat_t *st)
 {
     vfs_mount_t *mount = get_mount(filename);
 
-    return mount ? mount->vfs->fstat(get_filename(mount, filename), st) : -1;
+    int ret = mount ? mount->vfs->fstat(get_filename(mount, filename), st) : -1;
+
+    if(ret == -1 && strchr(filename, '/') == NULL && !strcmp("/", cwd)) {
+
+        strcat(cwd, filename);
+        mount = get_mount(cwd);
+        cwd[1] = '\0';
+
+        if(mount) {
+            st->st_size = 0;
+            st->st_mode.mode = 0;
+            st->st_mode.directory = true;
+#if defined(ESP_PLATFORM)
+            st->st_mtim = (time_t)0;
+#else
+            st->st_mtime = (time_t)0;
+#endif
+            ret = 0;
+        }
+    }
+
+    return ret;
 }
 
 int vfs_utime (const char *filename, struct tm *modified)

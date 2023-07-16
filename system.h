@@ -186,6 +186,7 @@ typedef enum {
     Report_Encoder = (1 << 14),
     Report_TLOReference = (1 << 15),
     Report_Fan = (1 << 16),
+    Report_CycleStart = (1 << 30),
     Report_All = 0x8001FFFF
 } report_tracking_t;
 
@@ -207,17 +208,18 @@ typedef union {
                  pwm           :1, //!< Add PWM information (optional: to be added by driver).
                  motor         :1, //!< Add motor information (optional: to be added by driver).
                  encoder       :1, //!< Add encoder information (optional: to be added by driver).
-                 tlo_reference :1, //!< Tool length offset reference changed
-                 fan           :1, //!< Fan on/off changed
-                 unassigned   :14, //
-                 all           :1; //!< Set when CMD_STATUS_REPORT_ALL is requested, may be used by user code
+                 tlo_reference :1, //!< Tool length offset reference changed.
+                 fan           :1, //!< Fan on/off changed.
+                 unassigned   :13, //
+                 cycle_start   :1, //!< Cycle start signal triggered. __NOTE:__ do __NOT__ add to Report_All enum above!
+                 all           :1; //!< Set when CMD_STATUS_REPORT_ALL is requested, may be used by user code.
     };
 } report_tracking_flags_t;
 
 typedef struct {
     override_t feed_rate;           //!< Feed rate override value in percent
     override_t rapid_rate;          //!< Rapids override value in percent
-    override_t spindle_rpm;         //!< __NOTE:_ Not used by the core, it maintain per spindle override in \ref spindle_param_t
+    override_t spindle_rpm;         //!< __NOTE:__ Not used by the core, it maintain per spindle override in \ref spindle_param_t
     spindle_stop_t spindle_stop;    //!< Tracks spindle stop override states
     gc_override_flags_t control;    //!< Tracks override control states.
 } overrides_t;
@@ -286,9 +288,6 @@ typedef struct system {
     volatile rt_exec_t rt_exec_state;       //!< Realtime executor bitflag variable for state management. See EXEC bitmasks.
     volatile uint_fast16_t rt_exec_alarm;   //!< Realtime executor bitflag variable for setting various alarms.
     int32_t var5399;                        //!< Last result from M66 - wait on input.
-#if NGC_EXPRESSIONS_ENABLE
-    vfs_file_t *macro_file;                 //!< File handle of current G65 macro executing.
-#endif
 #ifdef PID_LOG
     pid_data_t pid_log;
 #endif

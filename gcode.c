@@ -1716,7 +1716,7 @@ status_code_t gc_execute_block (char *block)
         gc_block.values.t = (uint32_t)gc_block.values.q;
         gc_block.words.q = Off;
 #if NGC_EXPRESSIONS_ENABLE
-        if(sys.macro_file) {
+        if(hal.stream.file) {
             gc_state.tool_pending = 0; // force set tool
   #if N_TOOLS
             if(gc_state.g43_pending) {

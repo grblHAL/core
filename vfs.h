@@ -80,10 +80,8 @@ typedef struct {
     uint8_t handle; // first byte of file handle structure
 } vfs_file_t;
 
-typedef struct {
-    const void *fs;
-    uint8_t handle;
-} vfs_dir_t;
+struct vfs_dir;
+typedef struct vfs_dir vfs_dir_t;
 
 typedef struct {
     char name[255];
@@ -159,6 +157,12 @@ typedef struct vfs_mount
     struct vfs_mount *next;
 } vfs_mount_t;
 
+typedef struct vfs_mount_ll_entry
+{
+    vfs_mount_t *mount;
+    struct vfs_mount_ll_entry *next;
+} vfs_mount_ll_entry_t;
+
 typedef struct {
     vfs_mount_t *mount;
 } vfs_drives_t;
@@ -170,6 +174,12 @@ typedef struct {
     vfs_st_mode_t mode;
     const void *fs;
 } vfs_drive_t;
+
+struct vfs_dir {
+    const void *fs;
+    vfs_mount_ll_entry_t *mounts;
+    uint8_t handle; // must be last!
+};
 
 extern int vfs_errno;
 

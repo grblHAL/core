@@ -430,7 +430,7 @@
 #define NETWORK_AP_SSID         "grblHAL_AP"
 #endif
 #ifndef NETWORK_AP_PASSWORD
-#define NETWORK_AP_PASSWORD     "grblHAL"
+#define NETWORK_AP_PASSWORD     "grblHALpwd"
 #endif
 #ifndef NETWORK_AP_HOSTNAME
 #define NETWORK_AP_HOSTNAME     "grblHAL_AP"

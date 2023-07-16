@@ -170,7 +170,7 @@ static status_code_t stack_push (uint32_t o_label, ngc_cmd_t operation)
 {
     if(stack_idx < (NGC_STACK_DEPTH - 1)) {
         stack[++stack_idx].o_label = o_label;
-        stack[stack_idx].file = sys.macro_file;
+        stack[stack_idx].file = hal.stream.file;
         stack[stack_idx].operation = operation;
         return Status_OK;
     }
@@ -259,9 +259,9 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
             break;
 
         case NGCFlowCtrl_Do:
-            if(sys.macro_file) {
+            if(hal.stream.file) {
                 if(!skipping && (status = stack_push(o_label, operation)) == Status_OK) {
-                    stack[stack_idx].file_pos = vfs_tell(sys.macro_file);
+                    stack[stack_idx].file_pos = vfs_tell(hal.stream.file);
                     stack[stack_idx].skip = false;
                 }
             } else
@@ -269,7 +269,7 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
             break;
 
         case NGCFlowCtrl_While:
-            if(sys.macro_file) {
+            if(hal.stream.file) {
                 char *expr = line + *pos;
                 if(stack[stack_idx].brk) {
                     if(last_op == NGCFlowCtrl_Do && o_label == stack[stack_idx].o_label)
@@ -286,8 +286,8 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
                         if(!(stack[stack_idx].skip = value == 0.0f)) {
                             if((stack[stack_idx].expr = malloc(strlen(expr) + 1))) {
                                 strcpy(stack[stack_idx].expr, expr);
-                                stack[stack_idx].file = sys.macro_file;
-                                stack[stack_idx].file_pos = vfs_tell(sys.macro_file);
+                                stack[stack_idx].file = hal.stream.file;
+                                stack[stack_idx].file_pos = vfs_tell(hal.stream.file);
                             } else
                                 status = Status_FlowControlOutOfMemory;
                         }
@@ -298,7 +298,7 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
             break;
 
         case NGCFlowCtrl_EndWhile:
-            if(sys.macro_file) {
+            if(hal.stream.file) {
                 if(last_op == NGCFlowCtrl_While) {
                     if(o_label == stack[stack_idx].o_label) {
                         uint_fast8_t pos = 0;
@@ -316,12 +316,12 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
             break;
 
         case NGCFlowCtrl_Repeat:
-            if(sys.macro_file) {
+            if(hal.stream.file) {
                 if(!skipping && (status = ngc_eval_expression(line, pos, &value)) == Status_OK) {
                     if((status = stack_push(o_label, operation)) == Status_OK) {
                         if(!(stack[stack_idx].skip = value == 0.0f)) {
-                            stack[stack_idx].file = sys.macro_file;
-                            stack[stack_idx].file_pos = vfs_tell(sys.macro_file);
+                            stack[stack_idx].file = hal.stream.file;
+                            stack[stack_idx].file_pos = vfs_tell(hal.stream.file);
                             stack[stack_idx].repeats = (uint32_t)value;
                         }
                     }
@@ -331,7 +331,7 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
             break;
 
         case NGCFlowCtrl_EndRepeat:
-            if(sys.macro_file) {
+            if(hal.stream.file) {
                 if(last_op == NGCFlowCtrl_Repeat) {
                     if(o_label == stack[stack_idx].o_label) {
                         if(stack[stack_idx].repeats && --stack[stack_idx].repeats)
@@ -346,7 +346,7 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
             break;
 
         case NGCFlowCtrl_Break:
-            if(sys.macro_file) {
+            if(hal.stream.file) {
                 if(!skipping) {
                     while(o_label != stack[stack_idx].o_label && stack_pull());
                     last_op = stack_idx >= 0 ? stack[stack_idx].operation : NGCFlowCtrl_NoOp;
@@ -363,7 +363,7 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
             break;
 
         case NGCFlowCtrl_Continue:
-            if(sys.macro_file) {
+            if(hal.stream.file) {
                 if(!skipping) {
                     while(o_label != stack[stack_idx].o_label && stack_pull());
                     if(stack_idx >= 0 && o_label == stack[stack_idx].o_label) switch(stack[stack_idx].operation) {

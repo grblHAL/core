@@ -1205,6 +1205,9 @@ void report_realtime_status (void)
         axes_signals_t lim_pin_state = limit_signals_merge(hal.limits.get_state());
         control_signals_t ctrl_pin_state = hal.control.get_state();
 
+        if(sys.report.cycle_start)
+            ctrl_pin_state.cycle_start = On;
+
         if (lim_pin_state.value | ctrl_pin_state.value | probe_state.triggered | !probe_state.connected | sys.flags.block_delete_enabled) {
 
             char *append = &buf[4];
