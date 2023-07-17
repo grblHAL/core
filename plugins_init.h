@@ -121,6 +121,11 @@
     status_light_init();
 #endif
 
+#if PANEL_ENABLE
+    extern void panel_init (void);
+    panel_init();
+#endif
+
 // End third party plugin definitions.
 
 #if ODOMETER_ENABLE
