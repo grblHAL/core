@@ -1,10 +1,17 @@
 ## grblHAL changelog
 
-<a name="20230714"/>20230714
+<a name="20230718"/>20230718
 
 Core:
 
 * Some tweaks for new Web Builder options++
+* Fixed regression in VFS file system handling cauing hardfault when only one mount is present.
+
+Plugins:
+
+* Fans: Updated for core change.
+
+* WebUI: Updated for core setting handling changes.
 
 ---
 

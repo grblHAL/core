@@ -339,9 +339,8 @@ vfs_dir_t *vfs_opendir (const char *path)
 
         dir->fs = mount->vfs;
         dir->mounts = NULL;
-        add_mount = root.next;
 
-        do {
+        if((add_mount = root.next)) do {
             if(add_mount != mount && !strncmp(add_mount->path, path, strlen(path))) {
                 if(!add_mount->vfs->mode.hidden && (mln = malloc(sizeof(vfs_mount_ll_entry_t)))) {
                     mln->mount = add_mount;
