@@ -308,9 +308,10 @@ static spindle_num_t spindle_get_num (spindle_id_t spindle_id)
 
 /*! \brief Enumerate registered spindles by calling a callback function for each of them.
 \param callback pointer to a \ref spindle_enumerate_callback_ptr type function.
+\param data pointer to optional data to pass to the callback function.
 \returns \a true if spindles are registered and a callback function was provided, \a false otherwise.
 */
-bool spindle_enumerate_spindles (spindle_enumerate_callback_ptr callback)
+bool spindle_enumerate_spindles (spindle_enumerate_callback_ptr callback, void *data)
 {
     if(callback == NULL || n_spindle == 0)
         return false;
@@ -327,7 +328,7 @@ bool spindle_enumerate_spindles (spindle_enumerate_callback_ptr callback)
         spindle.enabled = spindle.num != -1;
         spindle.is_current = spindle.enabled && sys_spindle[0].hal.id == idx;
 
-        callback(&spindle);
+        callback(&spindle, data);
     }
 
     return true;

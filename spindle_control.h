@@ -234,7 +234,7 @@ typedef struct {
 /*! \brief Pointer to callback function called by spindle_enumerate_spindles().
 \param spindle prointer to a \a spindle_info_t struct.
 */
-typedef void (*spindle_enumerate_callback_ptr)(spindle_info_t *spindle);
+typedef void (*spindle_enumerate_callback_ptr)(spindle_info_t *spindle, void *data);
 
 void spindle_set_override (spindle_ptrs_t *spindle, override_t speed_override);
 
@@ -281,7 +281,7 @@ spindle_id_t spindle_get_default (void);
 
 spindle_num_t spindle_enable (spindle_id_t spindle_id);
 
-bool spindle_enumerate_spindles (spindle_enumerate_callback_ptr callback);
+bool spindle_enumerate_spindles (spindle_enumerate_callback_ptr callback, void *data);
 
 //
 

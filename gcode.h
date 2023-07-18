@@ -236,6 +236,7 @@ typedef enum {
     LaserPPI_Rate = 127,                //!< 127 - M127
     LaserPPI_PulseLength = 128,         //!< 128 - M128
     OpenPNP_SetAcceleration = 204,      //!< 204 - M204
+    RGB_Inspection_Light = 356,         //!< 356 - M356
     OpenPNP_FinishMoves = 400,          //!< 400 - M400
     Probe_Deploy = 401,                 //!< 401 - M401, Marlin format
     Probe_Stow = 402,                   //!< 402 - M402, Marlin format

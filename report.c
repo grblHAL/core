@@ -2169,7 +2169,7 @@ status_code_t report_time (void)
     return ok ? Status_OK : Status_InvalidStatement;
 }
 
-static void report_spindle (spindle_info_t *spindle)
+static void report_spindle (spindle_info_t *spindle, void *data)
 {
     hal.stream.write(uitoa(spindle->id));
     hal.stream.write(" - ");
@@ -2187,7 +2187,7 @@ static void report_spindle (spindle_info_t *spindle)
 
 status_code_t report_spindles (void)
 {
-    if(!spindle_enumerate_spindles(report_spindle))
+    if(!spindle_enumerate_spindles(report_spindle, NULL))
         hal.stream.write("No spindles registered." ASCII_EOL);
 
     return Status_OK;

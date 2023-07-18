@@ -4,6 +4,14 @@
 
 Core:
 
+* Some tweaks for new Web Builder options++
+
+---
+
+<a name="20230714"/>20230714
+
+Core:
+
 * Added support for traversing directory structure across file system mounts. Allows access to littlefs mount via ftp.
 * Fixed inconsistent \(random\) real-time reporting of cycle start signal by adding a latch to ensure it is reported at least once.
 
