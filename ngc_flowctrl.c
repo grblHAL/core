@@ -271,7 +271,7 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
         case NGCFlowCtrl_While:
             if(hal.stream.file) {
                 char *expr = line + *pos;
-                if(stack[stack_idx].brk) {
+                if(stack_idx >= 0 && stack[stack_idx].brk) {
                     if(last_op == NGCFlowCtrl_Do && o_label == stack[stack_idx].o_label)
                         stack_pull();
                 } else if(!skipping && (status = ngc_eval_expression(line, pos, &value)) == Status_OK) {

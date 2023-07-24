@@ -1,11 +1,25 @@
 ## grblHAL changelog
 
+<a name="20230724"/>20230724
+
+Core:
+
+* Fixed bug in WHILE loop handling when first statement in macro.
+
+Drivers:
+
+* iMXRT1062: added [E5XMCS_T41](https://www.makerstore.com.au/product/elec-e5xmcst41/) board.
+
+* RP2040: fix to allow ModBus VFDs with BTT SKR Pico board. Issue (#68)[https://github.com/grblHAL/RP2040/issues/68]
+
+---
+
 <a name="20230718"/>20230718
 
 Core:
 
 * Some tweaks for new Web Builder options++
-* Fixed regression in VFS file system handling cauing hardfault when only one mount is present.
+* Fixed regression in VFS file system handling causing hardfault when only one mount is present.
 
 Plugins:
 
