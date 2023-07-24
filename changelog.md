@@ -10,7 +10,7 @@ Drivers:
 
 * iMXRT1062: added [E5XMCS_T41](https://www.makerstore.com.au/product/elec-e5xmcst41/) board.
 
-* RP2040: fix to allow ModBus VFDs with BTT SKR Pico board. Issue (#68)[https://github.com/grblHAL/RP2040/issues/68]
+* RP2040: fix to allow ModBus VFDs with BTT SKR Pico board. Issue [#68](https://github.com/grblHAL/RP2040/issues/68).
 
 ---
 
