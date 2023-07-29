@@ -1205,8 +1205,7 @@ void report_realtime_status (void)
         axes_signals_t lim_pin_state = limit_signals_merge(hal.limits.get_state());
         control_signals_t ctrl_pin_state = hal.control.get_state();
 
-        if(sys.report.cycle_start)
-            ctrl_pin_state.cycle_start = On;
+        ctrl_pin_state.cycle_start |= sys.report.cycle_start;
 
         if (lim_pin_state.value | ctrl_pin_state.value | probe_state.triggered | !probe_state.connected | sys.flags.block_delete_enabled) {
 
@@ -1214,16 +1213,16 @@ void report_realtime_status (void)
 
             strcpy(buf, "|Pn:");
 
-            if (probe_state.triggered)
+            if(probe_state.triggered)
                 *append++ = 'P';
 
             if(!probe_state.connected)
                 *append++ = 'O';
 
-            if (lim_pin_state.value && !hal.control.get_state().limits_override)
+            if(lim_pin_state.value && !ctrl_pin_state.limits_override)
                 append = axis_signals_tostring(append, lim_pin_state);
 
-            if (ctrl_pin_state.value)
+            if(ctrl_pin_state.value)
                 append = control_signals_tostring(append, ctrl_pin_state);
 
             *append = '\0';

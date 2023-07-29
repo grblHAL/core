@@ -159,7 +159,12 @@ ISR_CODE bool ISR_FUNC(stream_buffer_all)(char c)
 
 ISR_CODE bool ISR_FUNC(stream_enqueue_realtime_command)(char c)
 {
-    return hal.stream.enqueue_rt_command ? hal.stream.enqueue_rt_command(c) : protocol_enqueue_realtime_command(c);
+	bool drop = hal.stream.enqueue_rt_command ? hal.stream.enqueue_rt_command(c) : protocol_enqueue_realtime_command(c);
+
+    if(drop && (c == CMD_CYCLE_START || c == CMD_CYCLE_START_LEGACY))
+        sys.report.cycle_start = settings.status_report.pin_state;
+
+    return drop;
 }
 
 static bool is_connected (void)

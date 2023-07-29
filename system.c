@@ -140,8 +140,10 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
                 }
             } else if (signals.feed_hold)
                 system_set_exec_state_flag(EXEC_FEED_HOLD);
-            else if (signals.cycle_start)
+            else if (signals.cycle_start) {
                 system_set_exec_state_flag(EXEC_CYCLE_START);
+                sys.report.cycle_start = settings.status_report.pin_state;
+            }
         }
     }
 }

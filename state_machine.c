@@ -193,8 +193,6 @@ void state_update (rt_exec_t rt_exec)
 {
     if((rt_exec & EXEC_SAFETY_DOOR) && sys_state != STATE_SAFETY_DOOR)
         state_set(STATE_SAFETY_DOOR);
-    else if(rt_exec & EXEC_CYCLE_START)
-        sys.report.cycle_start = settings.status_report.pin_state;
 
     stateHandler(rt_exec);
 }

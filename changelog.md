@@ -1,5 +1,13 @@
 ## grblHAL changelog
 
+<a name="20230729"/>20230729
+
+Core:
+
+* Fix for ioSender issue [#319](https://github.com/terjeio/ioSender/issues/319), improved handling of sycle start input signal had side-effects.
+
+---
+
 <a name="20230724"/>20230724
 
 Core:
@@ -135,6 +143,8 @@ For now this is untested and may lock up the controller since the networking sta
 To be addressed in a later revision if someone with a Modbus TCP capable spindle is willing to test.
 
 * Motors and encoder: updated for core setting handling improvements.
+
+---
 
 <a name="20230607"/>Build 20230607
 
