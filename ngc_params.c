@@ -84,9 +84,18 @@ static float _relative_pos (uint_fast8_t axis)
 
 static float probe_coord (ngc_param_id_t id)
 {
-    uint_fast8_t axis = id % 10;
+    float value = 0.0f;
+    uint_fast8_t axis = (id % 10) - 1;
+    coord_system_t data;
 
-    return axis <= N_AXIS ? sys.probe_position[axis - 1] : 0.0f;
+    if(axis < N_AXIS && (sys.probe_coordsys_id == gc_state.modal.coord_system.id || settings_read_coord_data(sys.probe_coordsys_id, &data.xyz))) {
+        value = sys.probe_position[axis] / settings.axis[axis].steps_per_mm -
+                 (sys.probe_coordsys_id == gc_state.modal.coord_system.id ? gc_state.modal.coord_system.xyz[axis] : data.xyz[axis]);
+        if(settings.flags.report_inches)
+            value *= 25.4f;
+    }
+
+    return value;
 }
 
 static float scaling_factors (ngc_param_id_t id)

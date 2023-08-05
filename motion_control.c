@@ -1012,8 +1012,11 @@ gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_f
             memcpy(sys.probe_position, sys.position, sizeof(sys.position));
         else
             system_set_exec_alarm(Alarm_ProbeFailContact);
-    } else
-        sys.flags.probe_succeeded = On; // Indicate to system the probing cycle completed successfully.
+    } else {
+        // Indicate to system the probing cycle completed successfully.
+        sys.probe_coordsys_id = gc_state.modal.coord_system.id;
+        sys.flags.probe_succeeded = On;
+    }
 
     sys.probing_state = Probing_Off;    // Ensure probe state monitor is disabled.
     hal.probe.configure(false, false);  // Re-initialize invert mask.

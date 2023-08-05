@@ -986,6 +986,11 @@ void report_build_info (char *line, bool extended)
             if(hal.nvs.type == NVS_Emulated)
                 strcat(buf, "*");
             strcat(buf, nvs->type == NVS_Flash ? "FLASH" : (nvs->type == NVS_FRAM ? "FRAM" : "EEPROM"));
+            if(hal.nvs.size_max) {
+                strcat(buf, " ");
+                strcat(buf, uitoa(hal.nvs.size_max / 1024));
+                strcat(buf, "K");
+            }
             hal.stream.write(buf);
             hal.stream.write("]" ASCII_EOL);
         }

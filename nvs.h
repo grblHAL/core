@@ -127,7 +127,8 @@ typedef bool (*memcpy_to_flash_ptr)(uint8_t *source);
 //! \brief Handler functions and variables for NVS storage of settings and data.
 typedef struct {
     nvs_type type;                              //!< Type of NVS storage.
-    uint16_t size;                              //!< Actual size of non-volatile storage area.
+    uint32_t size;                              //!< Actual size of non-volatile storage area in bytes.
+    uint32_t size_max;                          //!< Physical size of non-volatile storage area in bytes.
     nvs_driver_area_t driver_area;
 //! @name Handler functions for EEPROM or FRAM based storage.
 //@{

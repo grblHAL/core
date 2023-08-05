@@ -1,10 +1,30 @@
 ## grblHAL changelog
 
+<a name="20230805"/>202300805
+
+Core:
+
+* Fix for issue #332, incorrect NGC parameter values returned for last probed position.
+
+Drivers:
+
+* RP2040: updated PicoCNC board map++ for WizNet module based ethernet support.
+
+* STM32F4xx: tentative fix for [issue #131](https://github.com/grblHAL/STM32F4xx/issues/131), Fysetc S6 board hangs when TMC2209 drivers are enabled. Untested.
+
+Plugins:
+
+* Spindle: fix for [issue #395](https://github.com/grblHAL/Plugins_spindle/issues/21#issuecomment-1660692589), missing VFD settings.
+
+* EEPROM: added option to select capacity by Kbits for 1:1 match with chip marking.
+
+---
+
 <a name="20230729"/>20230729
 
 Core:
 
-* Fix for ioSender issue [#319](https://github.com/terjeio/ioSender/issues/319), improved handling of sycle start input signal had side-effects.
+* Fix for ioSender issue [#319](https://github.com/terjeio/ioSender/issues/319), improved handling of cycle start input signal had side-effects.
 
 ---
 

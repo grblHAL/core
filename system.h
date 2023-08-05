@@ -283,6 +283,7 @@ typedef struct system {
     report_tracking_flags_t report;         //!< Tracks when to add data to status reports.
     parking_state_t parking_state;          //!< Tracks parking state
     hold_state_t holding_state;             //!< Tracks holding state
+    coord_system_id_t probe_coordsys_id;    //!< Coordinate system in which last probe took place.
     int32_t probe_position[N_AXIS];         //!< Last probe position in machine coordinates and steps.
     volatile probing_state_t probing_state; //!< Probing state value. Used to coordinate the probing cycle with stepper ISR.
     volatile rt_exec_t rt_exec_state;       //!< Realtime executor bitflag variable for state management. See EXEC bitmasks.
