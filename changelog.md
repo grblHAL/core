@@ -14,7 +14,7 @@ Drivers:
 
 Plugins:
 
-* Spindle: fix for [issue #395](https://github.com/grblHAL/Plugins_spindle/issues/21#issuecomment-1660692589), missing VFD settings.
+* Spindle: fix for [issue #21](https://github.com/grblHAL/Plugins_spindle/issues/21#issuecomment-1660692589), missing VFD settings.
 
 * EEPROM: added option to select capacity by Kbits for 1:1 match with chip marking.
 
