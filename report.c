@@ -995,6 +995,12 @@ void report_build_info (char *line, bool extended)
             hal.stream.write("]" ASCII_EOL);
         }
 
+        if(hal.get_free_mem) {
+            hal.stream.write("[FREE MEMORY:");
+            hal.stream.write(uitoa(hal.get_free_mem() / 1024));
+            hal.stream.write("K]" ASCII_EOL);
+        }
+
         if(hal.info) {
             hal.stream.write("[DRIVER:");
             hal.stream.write(hal.info);

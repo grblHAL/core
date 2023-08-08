@@ -2140,18 +2140,23 @@ status_code_t gc_execute_block (char *block)
                     if(gc_block.values.l == 11 && !settings_read_coord_data(CoordinateSystem_G59_3, &g59_3_offset))
                         FAIL(Status_SettingReadFail);
 
+                    if(gc_block.values.l == 1)
+                        settings_read_tool_data(p_value, &tool_table[p_value]);
+
                     idx = N_AXIS;
                     do {
-                        if (bit_istrue(axis_words.mask, bit(--idx))) {
+                        if(bit_istrue(axis_words.mask, bit(--idx))) {
                             if(gc_block.values.l == 1)
                                 tool_table[p_value].offset[idx] = gc_block.values.xyz[idx];
                             else if(gc_block.values.l == 10)
-                                tool_table[p_value].offset[idx] = gc_state.position[idx] - gc_state.g92_coord_offset[idx] - gc_block.values.xyz[idx];
+                                tool_table[p_value].offset[idx] = gc_state.position[idx] - gc_state.modal.coord_system.xyz[idx] - gc_state.g92_coord_offset[idx] - gc_block.values.xyz[idx];
                             else if(gc_block.values.l == 11)
                                 tool_table[p_value].offset[idx] = g59_3_offset[idx] - gc_block.values.xyz[idx];
-                            if (gc_block.values.l != 1)
-                                tool_table[p_value].offset[idx] -= gc_state.tool_length_offset[idx];
-                        }
+//                            if(gc_block.values.l != 1)
+//                                tool_table[p_value].offset[idx] -= gc_state.tool_length_offset[idx];
+                        } else if(gc_block.values.l == 10 || gc_block.values.l == 11)
+                            tool_table[p_value].offset[idx] = gc_state.tool_length_offset[idx];
+
                         // else, keep current stored value.
                     } while(idx);
 
@@ -3216,12 +3221,18 @@ status_code_t gc_execute_block (char *block)
     switch(gc_block.non_modal_command) {
 
         case NonModal_SetCoordinateData:
-            settings_write_coord_data(gc_block.values.coord_data.id, &gc_block.values.coord_data.xyz);
-            // Update system coordinate system if currently active.
-            if (gc_state.modal.coord_system.id == gc_block.values.coord_data.id) {
-                memcpy(gc_state.modal.coord_system.xyz, gc_block.values.coord_data.xyz, sizeof(gc_state.modal.coord_system.xyz));
-                system_flag_wco_change();
+#if N_TOOLS
+            if(gc_block.values.l == 2 || gc_block.values.l == 20) {
+#endif
+                settings_write_coord_data(gc_block.values.coord_data.id, &gc_block.values.coord_data.xyz);
+                // Update system coordinate system if currently active.
+                if (gc_state.modal.coord_system.id == gc_block.values.coord_data.id) {
+                    memcpy(gc_state.modal.coord_system.xyz, gc_block.values.coord_data.xyz, sizeof(gc_state.modal.coord_system.xyz));
+                    system_flag_wco_change();
+                }
+#if N_TOOLS
             }
+#endif
             break;
 
         case NonModal_GoHome_0:

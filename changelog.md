@@ -1,5 +1,27 @@
 ## grblHAL changelog
 
+<a name="20230808"/>202300808
+
+Core:
+
+* More fixes for issue #332: setting tool table data cleared current coordinate system offset, incomplete handling of G10 L10 and L11.
+
+* Added free memory to $I output when available, example: `[FREE MEMORY:102K]`
+
+* Changed reported position for failed probe to target. Parameters #5061 - #5069 returns position in coordinate system used when probing.
+
+Drivers:
+
+* RP2040: Added fans plugin.
+
+* STM32F4xx: implemented free memory call.
+
+Plugins:
+
+* Fans: fixed some bugs and typos.
+
+---
+
 <a name="20230805"/>202300805
 
 Core:
