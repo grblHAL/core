@@ -1,6 +1,18 @@
 ## grblHAL changelog
 
-<a name="20230808"/>202300808
+<a name="20230809"/>20230809
+
+Drivers:
+
+* ESP32: fix for compilation error when VFD is the only spindle specified.
+
+Plugins:
+
+* Many: added CMakeLists.txt for RP2040 builds.
+
+---
+
+<a name="20230808"/>Build 20230808
 
 Core:
 
@@ -12,7 +24,7 @@ Core:
 
 Drivers:
 
-* RP2040: Added fans plugin.
+* RP2040: added fans plugin.
 
 * STM32F4xx: implemented free memory call.
 
@@ -22,7 +34,7 @@ Plugins:
 
 ---
 
-<a name="20230805"/>202300805
+<a name="20230805"/> Build 20230805
 
 Core:
 
@@ -42,7 +54,7 @@ Plugins:
 
 ---
 
-<a name="20230729"/>20230729
+<a name="20230729"/>Build 20230729
 
 Core:
 
@@ -50,7 +62,7 @@ Core:
 
 ---
 
-<a name="20230724"/>20230724
+<a name="20230724"/>Build 20230724
 
 Core:
 
