@@ -1062,6 +1062,8 @@ void system_add_rt_report (report_tracking_t report)
 {
     if(report == Report_ClearAll)
         sys.report.value = 0;
+    else if(report == Report_MPGMode)
+        sys.report.mpg_mode = hal.driver_cap.mpg_mode;
     else
         sys.report.value |= (uint32_t)report;
 

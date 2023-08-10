@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+<a name="20230810"/>Build 20230810
+
+Core:
+
+* Fix for issue #340, CoreXY kinematics does not update position for axes A+.
+
+* Adds auto reporting state to realtime report sent on MPG mode change to off.
+
+Drivers:
+
+RP2040: fix for [issue #70](https://github.com/grblHAL/RP2040/issues/70), incorrect handling of I2C/SPI interrupt claims. 
+
+Many: updated EEPROM option definition to select capacity by Kbits for 1:1 match with chip marking.
+
+---
+
 <a name="20230809"/>20230809
 
 Drivers:
