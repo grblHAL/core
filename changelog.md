@@ -1,6 +1,6 @@
 ## grblHAL changelog
 
-<a name="20230811"/>Build 20230811
+<a name="20230815"/>Build 20230815
 
 Core:
 
@@ -10,7 +10,7 @@ Core:
 
 Drivers:
 
-* Many: replaced parts aux I/O driver code with calls to shared code in core. Digital aux input inversion bug fix.
+* Many: replaced parts of aux I/O driver code with calls to shared code in core. Digital aux input inversion bug fix.
 
 * ESP32: fix for incorrect Web Builder option handling for macros plugin.
 
@@ -48,7 +48,7 @@ Plugins:
 
 ---
 
-<a name="20230815"/>Build 20230815
+<a name="20230808"/>Build 20230808
 
 Core:
 
