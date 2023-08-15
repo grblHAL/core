@@ -147,7 +147,7 @@ bool protocol_main_loop (void)
         // Only a successful homing cycle '$H' will disable the alarm.
         // NOTE: The startup script will run after successful completion of the homing cycle. Prevents motion startup
         // blocks from crashing into things uncontrollably. Very bad.
-        system_raise_alarm(Alarm_HomingRequried);
+        system_raise_alarm(Alarm_HomingRequired);
         grbl.report.feedback_message(Message_HomingCycleRequired);
     } else if (settings.limits.flags.hard_enabled && settings.limits.flags.check_at_init && limit_signals_merge(hal.limits.get_state()).value) {
         if(sys.alarm == Alarm_LimitsEngaged && hal.control.get_state().limits_override)
@@ -164,8 +164,8 @@ bool protocol_main_loop (void)
         // Check for and report alarm state after a reset, error, or an initial power up.
         // NOTE: Sleep mode disables the stepper drivers and position can't be guaranteed.
         // Re-initialize the sleep state as an ALARM mode to ensure user homes or acknowledges.
-        if(sys.alarm == Alarm_HomingRequried)
-            sys.alarm = Alarm_None; // Clear Alarm_HomingRequried as the lock has been overridden by a soft reset.
+        if(sys.alarm == Alarm_HomingRequired)
+            sys.alarm = Alarm_None; // Clear Alarm_HomingRequired as the lock has been overridden by a soft reset.
         state_set(STATE_ALARM); // Ensure alarm state is set.
         grbl.report.feedback_message(Message_AlarmLock);
     } else {
@@ -567,7 +567,7 @@ bool protocol_exec_rt_system (void)
             gc_coolant_off();
 
             flush_override_buffers();
-            if(!((state_get() == STATE_ALARM) && (sys.alarm == Alarm_LimitsEngaged || sys.alarm == Alarm_HomingRequried)))
+            if(!((state_get() == STATE_ALARM) && (sys.alarm == Alarm_LimitsEngaged || sys.alarm == Alarm_HomingRequired)))
                 state_set(hal.control.get_state().safety_door_ajar ? STATE_SAFETY_DOOR : STATE_IDLE);
         }
 

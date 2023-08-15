@@ -273,7 +273,6 @@ plane_t *gc_get_plane_data (plane_t *plane, plane_select_t select)
 
 void gc_init (void)
 {
-
 #if COMPATIBILITY_LEVEL > 1
     memset(&gc_state, 0, sizeof(parser_state_t));
   #if N_TOOLS
@@ -331,6 +330,9 @@ void gc_init (void)
 
 //    if(settings.flags.lathe_mode)
 //        gc_state.modal.plane_select = PlaneSelect_ZX;
+
+    if(grbl.on_parser_init)
+        grbl.on_parser_init(&gc_state);
 }
 
 

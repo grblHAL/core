@@ -385,6 +385,7 @@ static status_code_t set_tool_restore_pos (setting_id_t id, uint_fast16_t int_va
 static status_code_t set_ganged_dir_invert (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_stepper_deenergize_mask (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_report_interval (setting_id_t setting, uint_fast16_t int_value);
+static status_code_t set_estop_unlock (setting_id_t id, uint_fast16_t int_value);
 #ifndef NO_SAFETY_DOOR_SUPPORT
 static status_code_t set_parking_enable (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_restore_overrides (setting_id_t id, uint_fast16_t int_value);
@@ -590,6 +591,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_PlannerBlocks, Group_General, "Planner buffer blocks", NULL, Format_Int16, "####0", "30", "1000", Setting_IsExtended, &settings.planner_buffer_blocks, NULL, NULL, { .reboot_required = On } },
      { Setting_AutoReportInterval, Group_General, "Autoreport interval", "ms", Format_Int16, "###0", "100", "1000", Setting_IsExtendedFn, set_report_interval, get_int, NULL, { .reboot_required = On, .allow_null = On } },
 //     { Setting_TimeZoneOffset, Group_General, "Timezone offset", NULL, Format_Decimal, "-#0.00", "0", "12", Setting_IsExtended, &settings.timezone, NULL, NULL },
+     { Setting_UnlockAfterEStop, Group_General, "Unlock required after E-Stop", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_estop_unlock, get_int, is_setting_available },
 #if NGC_EXPRESSIONS_ENABLE
      { Setting_NGCDebugOut, Group_General, "Output NGC debug messages", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_ngc_debug_out, get_int, NULL },
 #endif
@@ -758,6 +760,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_PlannerBlocks, "Number of blocks in the planner buffer." },
     { Setting_AutoReportInterval, "Interval the real time report will be sent, set to 0 to disable." },
     { Setting_TimeZoneOffset, "Offset in hours from UTC." },
+    { Setting_UnlockAfterEStop, "If set unlock (by sending $X) is required after resetting a cleared E-Stop condition." },
 #if NGC_EXPRESSIONS_ENABLE
     { Setting_NGCDebugOut, "Example: (debug, metric mode: #<_metric>, coord system: #5220)" },
 #endif
@@ -1009,10 +1012,20 @@ static status_code_t set_probe_disable_pullup (setting_id_t id, uint_fast16_t in
 
 static status_code_t set_soft_limits_enable (setting_id_t id, uint_fast16_t int_value)
 {
-    if (int_value && !settings.homing.flags.enabled)
+    if(int_value && !settings.homing.flags.enabled)
         return Status_SoftLimitError;
 
     settings.limits.flags.soft_enabled = int_value != 0;
+
+    return Status_OK;
+}
+
+static status_code_t set_estop_unlock (setting_id_t id, uint_fast16_t int_value)
+{
+    if(!hal.signals_cap.e_stop)
+        return Status_SettingDisabled;
+
+    settings.flags.no_unlock_after_estop = int_value != 0;
 
     return Status_OK;
 }
@@ -1344,7 +1357,7 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
             }
             settings.axis[idx].max_travel = -value; // Store as negative for grbl internal use.
             if(settings.homing.flags.init_lock && (sys.homing.mask & sys.homed.mask) != sys.homing.mask) {
-                system_raise_alarm(Alarm_HomingRequried);
+                system_raise_alarm(Alarm_HomingRequired);
                 grbl.report.feedback_message(Message_HomingCycleRequired);
             }
             break;
@@ -1578,6 +1591,10 @@ static uint32_t get_int (setting_id_t id)
             break;
 #endif
 
+        case Setting_UnlockAfterEStop:
+            value = settings.flags.no_unlock_after_estop ? 0 : 1;
+            break;
+
 #if NGC_EXPRESSIONS_ENABLE
         case Setting_NGCDebugOut:
             value = settings.flags.ngc_debug_out;
@@ -1684,7 +1701,7 @@ uint32_t setting_get_int_value (const setting_detail_t *setting, uint_fast16_t o
 {
     uint32_t value = 0;
 
-    switch(setting->type) {
+    if(setting) switch(setting->type) {
 
         case Setting_NonCore:
         case Setting_IsExtended:
@@ -1740,7 +1757,7 @@ float setting_get_float_value (const setting_detail_t *setting, uint_fast16_t of
 {
     float value = NAN;
 
-    if(setting->datatype == Format_Decimal) switch(setting->type) {
+    if(setting && setting->datatype == Format_Decimal) switch(setting->type) {
 
         case Setting_NonCore:
         case Setting_IsExtended:
@@ -1847,6 +1864,10 @@ static bool is_setting_available (const setting_detail_t *setting)
 
         case Setting_TimeZoneOffset:
             available = hal.rtc.set_datetime != NULL;
+            break;
+
+        case Setting_UnlockAfterEStop:
+            available = hal.signals_cap.e_stop;
             break;
 
         default:

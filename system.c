@@ -127,7 +127,12 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
                     system_set_exec_state_flag(EXEC_SAFETY_DOOR);
             }
 #endif
-            if (signals.probe_triggered) {
+
+            if(signals.probe_overtravel) {
+                limit_signals_t overtravel = { .min.z = On};
+                hal.limits.interrupt_callback(overtravel);
+                // TODO: add message?
+            } else if (signals.probe_triggered) {
                 if(sys.probing_state == Probing_Off && (state_get() & (STATE_CYCLE|STATE_JOG))) {
                     system_set_exec_state_flag(EXEC_STOP);
                     sys.alarm_pending = Alarm_ProbeProtect;
@@ -684,7 +689,7 @@ static status_code_t go_home (sys_state_t state, axes_signals_t axes)
         if (sys.homing.mask && (sys.homing.mask & sys.homed.mask) == sys.homing.mask)
             system_execute_startup();
         else if(limits_homing_required()) { // Keep alarm state active if homing is required and not all axes homed.
-            sys.alarm = Alarm_HomingRequried;
+            sys.alarm = Alarm_HomingRequired;
             state_set(STATE_ALARM);
         }
     }

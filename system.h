@@ -136,7 +136,8 @@ typedef union {
                  motor_warning      :1,
                  limits_override    :1,
                  single_block       :1,
-                 unassigned         :2,
+                 unassigned         :1,
+                 probe_overtravel   :1, //! used for probe protection
                  probe_triggered    :1, //! used for probe protection
                  deasserted         :1; //! this flag is set if signals are deasserted. Note: do NOT pass on to the control_interrupt_handler if set.
     };

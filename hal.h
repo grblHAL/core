@@ -336,7 +336,7 @@ typedef struct {
  ***********/
 
 /*! \brief Pointer to function for getting probe status.
-\returns probe state in a \a #probe_state_t enum.
+\returns probe state in a \a #probe_state_t union.
 
 __NOTE:__ this function will be called from an interrupt context.
 */

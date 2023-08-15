@@ -311,6 +311,8 @@ typedef enum {
     Setting_AutoReportInterval = 481,
     Setting_TimeZoneOffset = 482,
     Setting_FanToSpindleLink = 483,
+    Setting_UnlockAfterEStop = 484,
+    Setting_EnableToolPersistence = 485,
 
     Setting_Macro0 = 490,
     Setting_Macro1 = 491,
@@ -453,7 +455,7 @@ typedef union {
                  g92_is_volatile                 :1,
                  compatibility_level             :4,
                  no_restore_position_after_M6    :1,
-                 unassigned                      :1;
+                 no_unlock_after_estop           :1;
     };
 } settingflags_t;
 
@@ -678,7 +680,7 @@ typedef struct {
     toolchange_mode_t mode;
 } tool_change_settings_t;
 
-// Global persistent settings (Stored from byte persistent storage_ADDR_GLOBAL onwards)
+// Global persistent settings (Stored from byte NVS_ADDR_GLOBAL onwards)
 typedef struct {
     // Settings struct version
     uint32_t version;

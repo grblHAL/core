@@ -79,6 +79,7 @@ typedef struct {
 typedef bool (*enqueue_gcode_ptr)(char *data);
 typedef bool (*protocol_enqueue_realtime_command_ptr)(char c);
 
+typedef void (*on_parser_init_ptr)(parser_state_t *gc_state);
 typedef void (*on_state_change_ptr)(sys_state_t state);
 typedef void (*on_override_changed_ptr)(override_changed_t override);
 typedef void (*on_spindle_programmed_ptr)(spindle_ptrs_t *spindle, spindle_state_t state, float rpm, spindle_rpm_mode_t mode);
@@ -121,6 +122,7 @@ typedef struct {
     // report entry points set by core at reset.
     report_t report;
     // grbl core events - may be subscribed to by drivers or by the core.
+    on_parser_init_ptr on_parser_init;
     on_state_change_ptr on_state_change;
     on_override_changed_ptr on_override_changed;
     on_report_handlers_init_ptr on_report_handlers_init;
