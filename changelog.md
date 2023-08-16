@@ -1,5 +1,13 @@
 ## grblHAL changelog
 
+<a name="20230816"/>20230816
+
+Plugins:
+
+* WebUI: updated to handle blank commands, used to clear any repeating grblHAL errors. Needs the [latest WebUI build](https://github.com/luc-github/ESP3D-WEBUI/issues/364).
+
+---
+
 <a name="20230815"/>Build 20230815
 
 Core:
