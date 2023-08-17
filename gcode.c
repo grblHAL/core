@@ -33,6 +33,7 @@
 #if NGC_EXPRESSIONS_ENABLE
 #include "ngc_expr.h"
 #include "ngc_params.h"
+#include "ngc_flowctrl.h"
 #endif
 
 // NOTE: Max line number is defined by the g-code standard to be 99999. It seems to be an
@@ -272,7 +273,6 @@ plane_t *gc_get_plane_data (plane_t *plane, plane_select_t select)
 
 void gc_init (void)
 {
-
 #if COMPATIBILITY_LEVEL > 1
     memset(&gc_state, 0, sizeof(parser_state_t));
   #if N_TOOLS
@@ -324,8 +324,15 @@ void gc_init (void)
                                  !is0_position_vector(gc_state.g92_coord_offset)))
         grbl.on_wco_changed();
 
+#if NGC_EXPRESSIONS_ENABLE
+    ngc_flowctrl_init();
+#endif
+
 //    if(settings.flags.lathe_mode)
 //        gc_state.modal.plane_select = PlaneSelect_ZX;
+
+    if(grbl.on_parser_init)
+        grbl.on_parser_init(&gc_state);
 }
 
 
@@ -358,6 +365,29 @@ void gc_coolant_off (void)
 spindle_ptrs_t *gc_spindle_get (void)
 {
     return gc_state.spindle.hal;
+}
+
+static tool_data_t *tool_get_pending (uint32_t tool)
+{
+#if N_TOOLS
+    return &tool_table[tool];
+#else
+    static tool_data_t tool_data = {0};
+
+    memcpy(&tool_data, gc_state.tool, sizeof(tool_data_t));
+    tool_data.tool = tool;
+
+    return &tool_data;
+#endif
+}
+
+static inline void tool_set (tool_data_t *tool)
+{
+#if N_TOOLS
+    gc_state.tool = tool;
+#else
+    gc_state.tool->tool = tool->tool;
+#endif
 }
 
 // Add output command to linked list
@@ -418,6 +448,55 @@ static void output_message (char *message)
     free(message);
 }
 
+#if NGC_EXPRESSIONS_ENABLE
+
+#define NGC_N_ASSIGN_PARAMETERS_PER_BLOCK 10
+
+static ngc_param_t ngc_params[NGC_N_ASSIGN_PARAMETERS_PER_BLOCK];
+
+static status_code_t read_parameter (char *line, uint_fast8_t *char_counter, float *value)
+{
+    char c = *(line + *char_counter);
+    status_code_t status = Status_OK;
+
+    if(c == '#') {
+
+        (*char_counter)++;
+
+        if(*(line + *char_counter) == '<') {
+
+            (*char_counter)++;
+            char *pos = line = line + *char_counter;
+
+            while(*line && *line != '>')
+                line++;
+
+            *char_counter += line - pos + 1;
+
+            if(*line == '>') {
+                *line = '\0';
+                if(!ngc_named_param_get(pos, value))
+                    status = Status_BadNumberFormat;
+                *line = '>';
+            } else
+                status = Status_BadNumberFormat;
+
+        } else if (read_float(line, char_counter, value)) {
+            if(!ngc_param_get((ngc_param_id_t)*value, value))
+                status = Status_BadNumberFormat;
+        } else
+            status = Status_BadNumberFormat;
+
+    } else if(c == '[')
+        status = ngc_eval_expression(line, char_counter, value);
+    else if(!read_float(line, char_counter, value))
+        *value = NAN;
+
+    return status;
+}
+
+#endif // NGC_EXPRESSIONS_ENABLE
+
 // Remove whitespace, control characters, comments and if block delete is active block delete lines
 // else the block delete character. Remaining characters are converted to upper case.
 // If the driver handles message comments then the first is extracted and returned in a dynamically
@@ -458,20 +537,78 @@ char *gc_normalize_block (char *block, char **message)
                 break;
 
             case ')':
-                if(comment) {
+                if(comment && !gc_state.skip_blocks) {
                     *s1 = '\0';
                     if(!hal.driver_cap.no_gcode_message_handling) {
+
                         size_t len = s1 - comment - 4;
+
                         if(message && *message == NULL && !strncmp(comment, "(MSG,", 5) && (*message = malloc(len))) {
                             comment += 5;
-                            // trim leading spaces
+                            // Trim leading spaces
                             while(*comment == ' ') {
                                 comment++;
                                 len--;
                             }
                             memcpy(*message, comment, len);
                         }
+
+#if NGC_EXPRESSIONS_ENABLE
+                        // Debug message string substitution
+                        if(message && *message == NULL && !strncmp(comment, "(DEBUG,", 7)) {
+
+                            if(settings.flags.ngc_debug_out) {
+
+                                float value;
+                                char *s3;
+                                uint_fast8_t char_counter = 0;
+
+                                len = 0;
+                                comment += 7;
+
+                                // Trim leading spaces
+                                while(*comment == ' ')
+                                    comment++;
+
+                                // Calculate length of substituted string
+                                while((c = comment[char_counter++])) {
+                                    if(c == '#') {
+                                        char_counter--;
+                                        if(read_parameter(comment, &char_counter, &value) == Status_OK)
+                                            len += strlen(ftoa(value, 6));
+                                        else
+                                            len += 3; // "N/A"
+                                    } else
+                                        len++;
+                                }
+
+                                // Perform substitution
+                                if((s3 = *message = malloc(len + 1))) {
+
+                                    *s3 = '\0';
+                                    char_counter = 0;
+
+                                    while((c = comment[char_counter++])) {
+                                        if(c == '#') {
+                                            char_counter--;
+                                            if(read_parameter(comment, &char_counter, &value) == Status_OK)
+                                                strcat(s3, ftoa(value, 6));
+                                            else
+                                                strcat(s3, "N/A");
+                                            s3 = strchr(s3, '\0');
+                                        } else {
+                                            *s3++ = c;
+                                            *s3 = '\0';
+                                        }
+                                    }
+                                }
+                            }
+
+                            *comment = '\0'; // Do not generate grbl.on_gcode_comment event!
+                        }
+#endif // NGC_EXPRESSIONS_ENABLE
                     }
+
                     if(*comment && *message == NULL && grbl.on_gcode_comment)
                         grbl.on_gcode_comment(comment);
                 }
@@ -484,9 +621,13 @@ char *gc_normalize_block (char *block, char **message)
                 break;
         }
 
+#if NGC_EXPRESSIONS_ENABLE
+        if(comment && s1 - comment < (strncmp(comment, "(DEBU,", 5) ? 5 : 7))
+            *s1 = CAPS(c);
+#else
         if(comment && s1 - comment < 5)
             *s1 = CAPS(c);
-
+#endif
         s1++;
     }
 
@@ -494,54 +635,6 @@ char *gc_normalize_block (char *block, char **message)
 
     return block;
 }
-
-#if NGC_EXPRESSIONS_ENABLE
-
-#define NGC_N_ASSIGN_PARAMETERS_PER_BLOCK 10
-
-static ngc_param_t ngc_params[NGC_N_ASSIGN_PARAMETERS_PER_BLOCK];
-
-static status_code_t read_parameter (char *line, uint_fast8_t *char_counter, float *value)
-{
-    char c = *(line + *char_counter);
-    status_code_t status = Status_OK;
-
-    if(c == '#') {
-
-        (*char_counter)++;
-
-        if(*(line + *char_counter) == '<') {
-
-            (*char_counter)++;
-            char *pos = line + *char_counter;
-
-            while(*line && *line != '>')
-                line++;
-
-            *char_counter += line - pos + 1;
-
-            if(*line == '>') {
-                *line = '\0';
-                if(!ngc_named_param_get(pos, value))
-                    status = Status_BadNumberFormat;
-            } else
-                status = Status_BadNumberFormat;
-
-        } else if (read_float(line, char_counter, value)) {
-            if(!ngc_param_get((ngc_param_id_t)*value, value))
-                status = Status_BadNumberFormat;
-        } else
-            status = Status_BadNumberFormat;
-
-    } else if(c == '[')
-        status = ngc_eval_expression(line, char_counter, value);
-    else if(!read_float(line, char_counter, value))
-        *value = NAN;
-
-    return status;
-}
-
-#endif
 
 // Parses and executes one block (line) of 0-terminated G-Code.
 // In this function, all units and positions are converted and exported to internal functions
@@ -599,6 +692,10 @@ status_code_t gc_execute_block (char *block)
     static parser_block_t gc_block;
 
 #if NGC_EXPRESSIONS_ENABLE
+
+    static const parameter_words_t o_label = {
+        .o = On
+    };
 
     uint_fast8_t ngc_param_count = 0;
 
@@ -736,6 +833,9 @@ status_code_t gc_execute_block (char *block)
 
         if(letter == '#') {
 
+            if(gc_state.skip_blocks)
+                return Status_OK;
+
             if(block[char_counter] == '<') {
 
                 char *s = &block[++char_counter];
@@ -776,11 +876,19 @@ status_code_t gc_execute_block (char *block)
             continue;
         }
 
+        if((gc_block.words.mask & o_label.mask) && (gc_block.words.mask & ~o_label.mask) == 0) {
+            char_counter--;
+            return ngc_flowctrl(gc_block.values.o, block, &char_counter, &gc_state.skip_blocks);
+        }
+
         if((letter < 'A' && letter != '$') || letter > 'Z')
             FAIL(Status_ExpectedCommandLetter); // [Expected word letter]
 
         if((status = read_parameter(block, &char_counter, &value)) != Status_OK)
             return status;
+
+        if(gc_state.skip_blocks && letter != 'O')
+            return Status_OK;
 
         if(!is_user_mcode && isnanf(value))
             FAIL(Status_BadNumberFormat);   // [Expected word value]
@@ -1609,6 +1717,18 @@ status_code_t gc_execute_block (char *block)
 
         gc_block.values.t = (uint32_t)gc_block.values.q;
         gc_block.words.q = Off;
+#if NGC_EXPRESSIONS_ENABLE
+        if(hal.stream.file) {
+            gc_state.tool_pending = 0; // force set tool
+  #if N_TOOLS
+            if(gc_state.g43_pending) {
+                gc_block.values.h = gc_state.g43_pending;
+                command_words.G8 = On;
+            }
+            gc_state.g43_pending = 0;
+  #endif
+        }
+#endif
     } else if (!gc_block.words.t)
         gc_block.values.t = gc_state.tool_pending;
 
@@ -2022,18 +2142,23 @@ status_code_t gc_execute_block (char *block)
                     if(gc_block.values.l == 11 && !settings_read_coord_data(CoordinateSystem_G59_3, &g59_3_offset))
                         FAIL(Status_SettingReadFail);
 
+                    if(gc_block.values.l == 1)
+                        settings_read_tool_data(p_value, &tool_table[p_value]);
+
                     idx = N_AXIS;
                     do {
-                        if (bit_istrue(axis_words.mask, bit(--idx))) {
+                        if(bit_istrue(axis_words.mask, bit(--idx))) {
                             if(gc_block.values.l == 1)
                                 tool_table[p_value].offset[idx] = gc_block.values.xyz[idx];
                             else if(gc_block.values.l == 10)
-                                tool_table[p_value].offset[idx] = gc_state.position[idx] - gc_state.g92_coord_offset[idx] - gc_block.values.xyz[idx];
+                                tool_table[p_value].offset[idx] = gc_state.position[idx] - gc_state.modal.coord_system.xyz[idx] - gc_state.g92_coord_offset[idx] - gc_block.values.xyz[idx];
                             else if(gc_block.values.l == 11)
                                 tool_table[p_value].offset[idx] = g59_3_offset[idx] - gc_block.values.xyz[idx];
-                            if (gc_block.values.l != 1)
-                                tool_table[p_value].offset[idx] -= gc_state.tool_length_offset[idx];
-                        }
+//                            if(gc_block.values.l != 1)
+//                                tool_table[p_value].offset[idx] -= gc_state.tool_length_offset[idx];
+                        } else if(gc_block.values.l == 10 || gc_block.values.l == 11)
+                            tool_table[p_value].offset[idx] = gc_state.tool_length_offset[idx];
+
                         // else, keep current stored value.
                     } while(idx);
 
@@ -2831,15 +2956,13 @@ status_code_t gc_execute_block (char *block)
     // [5. Select tool ]: Only tracks tool value if ATC or manual tool change is not possible.
     if(gc_state.tool_pending != gc_block.values.t && !check_mode) {
 
-        gc_state.tool_pending = gc_block.values.t;
+        tool_data_t *pending_tool = tool_get_pending((gc_state.tool_pending = gc_block.values.t));
 
         // If M6 not available or M61 commanded set new tool immediately
         if(set_tool || settings.tool_change.mode == ToolChange_Ignore || !(hal.stream.suspend_read || hal.tool.change)) {
-#if N_TOOLS
-            gc_state.tool = &tool_table[gc_state.tool_pending];
-#else
-            gc_state.tool->tool = gc_state.tool_pending;
-#endif
+
+            tool_set(pending_tool);
+
             if(grbl.on_tool_selected) {
 
                 spindle_state_t state = gc_state.modal.spindle.state;
@@ -2854,13 +2977,9 @@ status_code_t gc_execute_block (char *block)
         }
 
         // Prepare tool carousel when available
-        if(hal.tool.select) {
-#if N_TOOLS
-            hal.tool.select(&tool_table[gc_state.tool_pending], !set_tool);
-#else
-            hal.tool.select(gc_state.tool, !set_tool);
-#endif
-        } else
+        if(hal.tool.select)
+            hal.tool.select(pending_tool, !set_tool);
+        else
             system_add_rt_report(Report_Tool);
     }
 
@@ -2898,6 +3017,8 @@ status_code_t gc_execute_block (char *block)
     // [6. Change tool ]: Delegated to (possible) driver implementation
     if (command_words.M6 && !set_tool && !check_mode) {
 
+        tool_data_t *pending_tool = tool_get_pending(gc_state.tool_pending);
+
         protocol_buffer_synchronize();
 
         if(plan_data.message) {
@@ -2905,30 +3026,44 @@ status_code_t gc_execute_block (char *block)
             plan_data.message = NULL;
         }
 
-#if N_TOOLS
-        gc_state.tool = &tool_table[gc_state.tool_pending];
-#else
-        gc_state.tool->tool = gc_state.tool_pending;
+        if(pending_tool->tool != gc_state.tool->tool) {
+
+            if(grbl.on_tool_selected) {
+
+                spindle_state_t state = gc_state.modal.spindle.state;
+
+                grbl.on_tool_selected(pending_tool);
+
+                if(state.value != gc_state.modal.spindle.state.value)
+                    gc_block.modal.spindle.state = gc_state.modal.spindle.state;
+            }
+
+            if(hal.tool.change) { // ATC
+                if((int_value = (uint_fast16_t)hal.tool.change(&gc_state)) != Status_OK) {
+#if NGC_EXPRESSIONS_ENABLE
+                    if(int_value != Status_Unhandled)
 #endif
-
-        if(grbl.on_tool_selected) {
-
-            spindle_state_t state = gc_state.modal.spindle.state;
-
-            grbl.on_tool_selected(gc_state.tool);
-
-            if(state.value != gc_state.modal.spindle.state.value)
-                gc_block.modal.spindle.state = gc_state.modal.spindle.state;
-        }
-
-        if(hal.tool.change) { // ATC
-            if((int_value = (uint_fast16_t)hal.tool.change(&gc_state)) != Status_OK)
-                FAIL((status_code_t)int_value);
-            system_add_rt_report(Report_Tool);
-        } else { // Manual
-            gc_state.tool_change = true;
-            system_set_exec_state_flag(EXEC_TOOL_CHANGE);   // Set up program pause for manual tool change
-            protocol_execute_realtime();                    // Execute...
+                        FAIL((status_code_t)int_value);
+                }
+                system_add_rt_report(Report_Tool);
+            } else { // Manual
+                int_value = (uint_fast16_t)Status_OK;
+                gc_state.tool_change = true;
+                system_set_exec_state_flag(EXEC_TOOL_CHANGE);   // Set up program pause for manual tool change
+                protocol_execute_realtime();                    // Execute...
+            }
+#if NGC_EXPRESSIONS_ENABLE
+            if((status_code_t)int_value != Status_Unhandled)
+                tool_set(pending_tool);
+  #if N_TOOLS
+            else if(command_words.G8 && gc_block.modal.tool_offset_mode && ToolLengthOffset_Enable) {
+                gc_state.g43_pending = gc_block.values.h;
+                command_words.G8 = Off;
+            }
+  #endif
+#else
+            tool_set(pending_tool);
+#endif
         }
     }
 
@@ -3088,12 +3223,18 @@ status_code_t gc_execute_block (char *block)
     switch(gc_block.non_modal_command) {
 
         case NonModal_SetCoordinateData:
-            settings_write_coord_data(gc_block.values.coord_data.id, &gc_block.values.coord_data.xyz);
-            // Update system coordinate system if currently active.
-            if (gc_state.modal.coord_system.id == gc_block.values.coord_data.id) {
-                memcpy(gc_state.modal.coord_system.xyz, gc_block.values.coord_data.xyz, sizeof(gc_state.modal.coord_system.xyz));
-                system_flag_wco_change();
+#if N_TOOLS
+            if(gc_block.values.l == 2 || gc_block.values.l == 20) {
+#endif
+                settings_write_coord_data(gc_block.values.coord_data.id, &gc_block.values.coord_data.xyz);
+                // Update system coordinate system if currently active.
+                if (gc_state.modal.coord_system.id == gc_block.values.coord_data.id) {
+                    memcpy(gc_state.modal.coord_system.xyz, gc_block.values.coord_data.xyz, sizeof(gc_state.modal.coord_system.xyz));
+                    system_flag_wco_change();
+                }
+#if N_TOOLS
             }
+#endif
             break;
 
         case NonModal_GoHome_0:
@@ -3118,6 +3259,10 @@ status_code_t gc_execute_block (char *block)
 
         case NonModal_MacroCall:
             {
+#if NGC_EXPRESSIONS_ENABLE
+                ngc_named_param_set("_value", 0.0f);
+                ngc_named_param_set("_value_returned", 0.0f);
+#endif
                 status_code_t status = grbl.on_macro_execute((macro_id_t)gc_block.values.p);
 
                 return status == Status_Unhandled ? Status_GcodeValueOutOfRange : status;

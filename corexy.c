@@ -52,9 +52,13 @@ inline static int32_t corexy_convert_to_b_motor_steps (int32_t *steps)
 // Returns machine position of axis 'idx'. Must be sent a 'step' array.
 static float *corexy_convert_array_steps_to_mpos (float *position, int32_t *steps)
 {
+    uint_fast8_t idx;
+
     position[X_AXIS] = corexy_convert_to_a_motor_steps(steps) / settings.axis[X_AXIS].steps_per_mm;
     position[Y_AXIS] = corexy_convert_to_b_motor_steps(steps) / settings.axis[Y_AXIS].steps_per_mm;
-    position[Z_AXIS] = steps[Z_AXIS] / settings.axis[Z_AXIS].steps_per_mm;
+
+    for(idx = Z_AXIS; idx < N_AXIS; idx++)
+        position[idx] = steps[idx] / settings.axis[idx].steps_per_mm;
 
     return position;
 }

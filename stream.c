@@ -37,15 +37,15 @@ typedef struct {
 typedef union {
     uint8_t value;
     struct {
-        uint8_t is_up     :1,
-                is_mpg    :1,
+        uint8_t is_mpg    :1,
                 is_mpg_tx :1,
-                unused    :5;
+                unused    :6;
     };
 } stream_connection_flags_t;
 
 typedef struct stream_connection {
     const io_stream_t *stream;
+    stream_is_connected_ptr is_up;
     stream_connection_flags_t flags;
     struct stream_connection *next;
 } stream_connection_t;
@@ -159,7 +159,45 @@ ISR_CODE bool ISR_FUNC(stream_buffer_all)(char c)
 
 ISR_CODE bool ISR_FUNC(stream_enqueue_realtime_command)(char c)
 {
-    return hal.stream.enqueue_rt_command ? hal.stream.enqueue_rt_command(c) : protocol_enqueue_realtime_command(c);
+	bool drop = hal.stream.enqueue_rt_command ? hal.stream.enqueue_rt_command(c) : protocol_enqueue_realtime_command(c);
+
+    if(drop && (c == CMD_CYCLE_START || c == CMD_CYCLE_START_LEGACY))
+        sys.report.cycle_start = settings.status_report.pin_state;
+
+    return drop;
+}
+
+static bool is_connected (void)
+{
+    return true;
+}
+
+static bool is_not_connected (void)
+{
+    return false;
+}
+
+static bool connection_is_up (io_stream_t *stream)
+{
+    if(stream->is_connected)
+        return stream->is_connected();
+
+    stream_connection_t *connection = connections;
+
+    while(connection) {
+        if(connection->stream->type == stream->type &&
+            connection->stream->instance == stream->instance &&
+             connection->stream->state.is_usb == stream->state.is_usb) {
+
+            if(connection->stream->state.is_usb)
+                connection->is_up = is_not_connected;
+
+            return connection->is_up();
+        }
+        connection = connection->next;
+    }
+
+    return false;
 }
 
 static void stream_write_all (const char *s)
@@ -167,7 +205,7 @@ static void stream_write_all (const char *s)
     stream_connection_t *connection = connections;
 
     while(connection) {
-        if(connection->flags.is_up)
+        if(connection->is_up())
             connection->stream->write(s);
         connection = connection->next;
     }
@@ -179,11 +217,9 @@ static stream_connection_t *add_connection (const io_stream_t *stream)
 
     if(base.stream == NULL) {
         base.stream = stream;
-        base.flags.is_up = stream->state.connected == On;
         connection = &base;
     } else if((connection = malloc(sizeof(stream_connection_t)))) {
         connection->stream = stream;
-        connection->flags.is_up = stream->state.connected == On || stream->state.is_usb == On; // TODO: add connect/disconnect event to driver code
         connection->next = NULL;
         while(last->next) {
             last = last->next;
@@ -195,6 +231,10 @@ static stream_connection_t *add_connection (const io_stream_t *stream)
         last->next = connection;
     }
 
+    connection->is_up = stream->is_connected ?
+                         stream->is_connected :
+                          (stream->state.is_usb && base.stream != stream ? is_not_connected : is_connected);
+
     return connection;
 }
 
@@ -203,7 +243,7 @@ static bool stream_select (const io_stream_t *stream, bool add)
     static const io_stream_t *active_stream = NULL;
 
     if(stream == base.stream) {
-        base.flags.is_up = add;
+        base.is_up = add ? (stream->is_connected ? stream->is_connected : is_connected) : is_not_connected;
         return true;
     }
 
@@ -237,14 +277,14 @@ static bool stream_select (const io_stream_t *stream, bool add)
     switch(stream->type) {
 
         case StreamType_Serial:
-            if(active_stream && active_stream->type != StreamType_Serial && stream->state.connected) {
+            if(active_stream && active_stream->type != StreamType_Serial && connection_is_up((io_stream_t *)stream)) {
                 hal.stream.write = stream->write;
                 report_message("SERIAL STREAM ACTIVE", Message_Plain);
             }
             break;
 
         case StreamType_Telnet:
-            if(hal.stream.state.connected)
+            if(connection_is_up(&hal.stream))
                 report_message("TELNET STREAM ACTIVE", Message_Plain);
             if(add && sys.driver_started) {
                 hal.stream.write_all = stream->write;
@@ -253,7 +293,7 @@ static bool stream_select (const io_stream_t *stream, bool add)
             break;
 
         case StreamType_WebSocket:
-            if(hal.stream.state.connected)
+            if(connection_is_up(&hal.stream))
                 report_message("WEBSOCKET STREAM ACTIVE", Message_Plain);
             if(add && sys.driver_started && !hal.stream.state.webui_connected) {
                 hal.stream.write_all = stream->write;
@@ -262,7 +302,7 @@ static bool stream_select (const io_stream_t *stream, bool add)
             break;
 
         case StreamType_Bluetooth:
-            if(hal.stream.state.connected)
+            if(connection_is_up(&hal.stream))
                 report_message("BLUETOOTH STREAM ACTIVE", Message_Plain);
             if(add && sys.driver_started) {
                 hal.stream.write_all = stream->write;
@@ -278,6 +318,9 @@ static bool stream_select (const io_stream_t *stream, bool add)
 
     if(!hal.stream.write_all)
         hal.stream.write_all = base.next != NULL ? stream_write_all : hal.stream.write;
+
+    if(stream == base.stream && base.is_up == is_not_connected)
+        base.is_up = is_connected;
 
     if(stream->type == StreamType_WebSocket && !stream->state.webui_connected)
         hal.stream.state.webui_connected = webui_connected;
@@ -321,9 +364,9 @@ io_stream_flags_t stream_get_flags (io_stream_t stream)
 
 bool stream_connect (const io_stream_t *stream)
 {
-    bool ok = hal.stream_select ? hal.stream_select(stream) : stream_select(stream, true);
+    bool ok;
 
-    if(ok && stream->type == StreamType_Serial && hal.periph_port.set_pin_description) {
+    if((ok = stream_select(stream, true)) && stream->type == StreamType_Serial && !stream->state.is_usb && hal.periph_port.set_pin_description) {
         hal.periph_port.set_pin_description(Input_RX, (pin_group_t)(PinGroup_UART + stream->instance), "Primary UART");
         hal.periph_port.set_pin_description(Output_TX, (pin_group_t)(PinGroup_UART + stream->instance), "Primary UART");
     }
@@ -356,9 +399,7 @@ bool stream_connect_instance (uint8_t instance, uint32_t baud_rate)
 
 void stream_disconnect (const io_stream_t *stream)
 {
-    if(hal.stream_select)
-        hal.stream_select(NULL);
-    else if(stream)
+    if(stream)
         stream_select(stream, false);
 }
 
@@ -381,14 +422,14 @@ bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stream_write_
     if(stream == NULL || stream->type != StreamType_Serial || stream->disable_rx == NULL)
         return false;
 
-    base.flags.is_up = On;
+//    base.flags.is_up = On;
 
     mpg_write_char = write_char;
 
     if(stream->write == NULL || rx_only) {
 
         mpg.stream = stream;
-        mpg.flags.is_up = stream->state.connected;
+        mpg.is_up = is_connected;
 
         return true;
     }
@@ -527,7 +568,7 @@ const io_stream_t *stream_null_init (uint32_t baud_rate)
 {
     static const io_stream_t stream = {
         .type = StreamType_Null,
-        .state.connected = On,
+        .is_connected = is_connected,
         .read = stream_get_null,
         .write = null_write_string,
         .write_n =  null_write,

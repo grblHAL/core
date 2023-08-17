@@ -79,6 +79,7 @@ typedef struct {
 typedef bool (*enqueue_gcode_ptr)(char *data);
 typedef bool (*protocol_enqueue_realtime_command_ptr)(char c);
 
+typedef void (*on_parser_init_ptr)(parser_state_t *gc_state);
 typedef void (*on_state_change_ptr)(sys_state_t state);
 typedef void (*on_override_changed_ptr)(override_changed_t override);
 typedef void (*on_spindle_programmed_ptr)(spindle_ptrs_t *spindle, spindle_state_t state, float rpm, spindle_rpm_mode_t mode);
@@ -108,6 +109,8 @@ typedef bool (*on_spindle_select_ptr)(spindle_ptrs_t *spindle);
 typedef void (*on_spindle_selected_ptr)(spindle_ptrs_t *spindle);
 typedef void (*on_gcode_message_ptr)(char *msg);
 typedef void (*on_rt_reports_added_ptr)(report_tracking_flags_t report);
+typedef void (*on_vfs_mount_ptr)(const char *path, const vfs_t *fs);
+typedef void (*on_vfs_unmount_ptr)(const char *path);
 typedef status_code_t (*on_file_open_ptr)(const char *fname, vfs_file_t *handle, bool stream);
 typedef status_code_t (*on_unknown_sys_command_ptr)(sys_state_t state, char *line); // return Status_Unhandled.
 typedef status_code_t (*on_user_command_ptr)(char *line);
@@ -119,6 +122,7 @@ typedef struct {
     // report entry points set by core at reset.
     report_t report;
     // grbl core events - may be subscribed to by drivers or by the core.
+    on_parser_init_ptr on_parser_init;
     on_state_change_ptr on_state_change;
     on_override_changed_ptr on_override_changed;
     on_report_handlers_init_ptr on_report_handlers_init;
@@ -156,6 +160,8 @@ typedef struct {
     on_spindle_select_ptr on_spindle_select;            //!< Called before spindle is selected, hook in HAL overrides here
     on_spindle_selected_ptr on_spindle_selected;        //!< Called when spindle is selected, do not change HAL pointers here!
     on_reset_ptr on_reset;                              //!< Called from interrupt context.
+    on_vfs_mount_ptr on_vfs_mount;                      //!< Called when a file system is mounted.
+    on_vfs_unmount_ptr on_vfs_unmount;                  //!< Called when a file system is unmounted.
     on_file_open_ptr on_file_open;                      //!< Called when a file is opened for streaming.
     // core entry points - set up by core before driver_init() is called.
     enqueue_gcode_ptr enqueue_gcode;

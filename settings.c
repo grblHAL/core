@@ -304,51 +304,56 @@ PROGMEM const settings_t defaults = {
     .safety_door.coolant_on_delay = DEFAULT_SAFETY_DOOR_COOLANT_DELAY
 };
 
+static bool group_is_available (const setting_group_detail_t *group)
+{
+    return true;
+}
+
 PROGMEM static const setting_group_detail_t setting_group_detail [] = {
-     { Group_Root, Group_Root, "Root"},
-     { Group_Root, Group_General, "General"},
-     { Group_Root, Group_ControlSignals, "Control signals"},
-     { Group_Root, Group_Limits, "Limits"},
-     { Group_Limits, Group_Limits_DualAxis, "Dual axis"},
-     { Group_Root, Group_Coolant, "Coolant"},
-     { Group_Root, Group_Spindle, "Spindle"},
-     { Group_Spindle, Group_Spindle_Sync, "Spindle sync"},
-     { Group_Root, Group_Toolchange, "Tool change"},
-     { Group_Root, Group_Homing, "Homing"},
-     { Group_Root, Group_Probing, "Probing"},
-     { Group_Root, Group_SafetyDoor, "Safety door"},
+     { Group_Root, Group_Root, "Root", group_is_available },
+     { Group_Root, Group_General, "General", group_is_available },
+     { Group_Root, Group_ControlSignals, "Control signals" },
+     { Group_Root, Group_Limits, "Limits" },
+     { Group_Limits, Group_Limits_DualAxis, "Dual axis" },
+     { Group_Root, Group_Coolant, "Coolant" },
+     { Group_Root, Group_Spindle, "Spindle" },
+     { Group_Spindle, Group_Spindle_Sync, "Spindle sync" },
+     { Group_Root, Group_Toolchange, "Tool change" },
+     { Group_Root, Group_Homing, "Homing" },
+     { Group_Root, Group_Probing, "Probing" },
+     { Group_Root, Group_SafetyDoor, "Safety door" },
      { Group_Root, Group_Jogging, "Jogging"},
-     { Group_Root, Group_Stepper, "Stepper"},
-     { Group_Root, Group_MotorDriver, "Stepper driver"},
-     { Group_Root, Group_Axis, "Axis"},
-     { Group_Axis, Group_XAxis, "X-axis"},
-     { Group_Axis, Group_YAxis, "Y-axis"},
-     { Group_Axis, Group_ZAxis, "Z-axis"},
+     { Group_Root, Group_Stepper, "Stepper" },
+     { Group_Root, Group_MotorDriver, "Stepper driver" },
+     { Group_Root, Group_Axis, "Axis", group_is_available },
+     { Group_Axis, Group_XAxis, "X-axis", group_is_available },
+     { Group_Axis, Group_YAxis, "Y-axis", group_is_available },
+     { Group_Axis, Group_ZAxis, "Z-axis", group_is_available },
 #if !AXIS_REMAP_ABC2UVW
   #ifdef A_AXIS
-     { Group_Axis, Group_AAxis, "A-axis"},
+     { Group_Axis, Group_AAxis, "A-axis", group_is_available },
   #endif
   #ifdef B_AXIS
-     { Group_Axis, Group_BAxis, "B-axis"},
+     { Group_Axis, Group_BAxis, "B-axis", group_is_available },
   #endif
   #ifdef C_AXIS
-     { Group_Axis, Group_CAxis, "C-axis"},
+     { Group_Axis, Group_CAxis, "C-axis", group_is_available },
   #endif
   #ifdef U_AXIS
-     { Group_Axis, Group_UAxis, "U-axis"},
+     { Group_Axis, Group_UAxis, "U-axis", group_is_available },
   #endif
   #ifdef V_AXIS
-     { Group_Axis, Group_VAxis, "V-axis"}
+     { Group_Axis, Group_VAxis, "V-axis", group_is_available }
   #endif
 #else
   #ifdef A_AXIS
-     { Group_Axis, Group_AAxis, "U-axis"},
+     { Group_Axis, Group_AAxis, "U-axis", group_is_available },
   #endif
   #ifdef B_AXIS
-     { Group_Axis, Group_BAxis, "V-axis"},
+     { Group_Axis, Group_BAxis, "V-axis", group_is_available },
   #endif
   #ifdef C_AXIS
-     { Group_Axis, Group_CAxis, "W-axis"},
+     { Group_Axis, Group_CAxis, "W-axis", group_is_available },
   #endif
 #endif
 };
@@ -380,6 +385,7 @@ static status_code_t set_tool_restore_pos (setting_id_t id, uint_fast16_t int_va
 static status_code_t set_ganged_dir_invert (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_stepper_deenergize_mask (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_report_interval (setting_id_t setting, uint_fast16_t int_value);
+static status_code_t set_estop_unlock (setting_id_t id, uint_fast16_t int_value);
 #ifndef NO_SAFETY_DOOR_SUPPORT
 static status_code_t set_parking_enable (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_restore_overrides (setting_id_t id, uint_fast16_t int_value);
@@ -405,6 +411,9 @@ static float get_float (setting_id_t setting);
 static uint32_t get_int (setting_id_t id);
 static bool is_setting_available (const setting_detail_t *setting);
 static bool is_group_available (const setting_detail_t *setting);
+#if NGC_EXPRESSIONS_ENABLE
+static status_code_t set_ngc_debug_out (setting_id_t id, uint_fast16_t int_value);
+#endif
 
 static bool machine_mode_changed = false;
 static char control_signals[] = "Reset,Feed hold,Cycle start,Safety door,Block delete,Optional stop,EStop,Probe connected,Motor fault";
@@ -416,6 +425,8 @@ static char axis_dist[4] = "mm";
 static char axis_rate[8] = "mm/min";
 static char axis_accel[10] = "mm/sec^2";
 static char axis_steps[9] = "step/mm";
+
+#define AXIS_OPTS { .subgroups = On, .increment = 1 }
 
 PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_PulseMicroseconds, Group_Stepper, "Step pulse time", "microseconds", Format_Decimal, "#0.0", "2.0", NULL, Setting_IsLegacy, &settings.steppers.pulse_microseconds, NULL, NULL },
@@ -529,14 +540,14 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_PositionIGain, Group_Spindle_Sync, "Spindle sync I-gain", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.position.pid.i_gain, NULL, is_group_available },
      { Setting_PositionDGain, Group_Spindle_Sync, "Spindle sync D-gain", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.position.pid.d_gain, NULL, is_group_available },
      { Setting_PositionIMaxError, Group_Spindle_Sync, "Spindle sync PID max I error", NULL, Format_Decimal, "###0.000", NULL, NULL, Setting_IsExtended, &settings.position.pid.i_max_error, NULL, is_group_available },
-     { Setting_AxisStepsPerMM, Group_Axis0, "?-axis travel resolution", axis_steps, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL },
-     { Setting_AxisMaxRate, Group_Axis0, "?-axis maximum rate", axis_rate, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL },
-     { Setting_AxisAcceleration, Group_Axis0, "?-axis acceleration", axis_accel, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL },
-     { Setting_AxisMaxTravel, Group_Axis0, "?-axis maximum travel", axis_dist, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL },
+     { Setting_AxisStepsPerMM, Group_Axis0, "-axis travel resolution", axis_steps, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL, AXIS_OPTS },
+     { Setting_AxisMaxRate, Group_Axis0, "-axis maximum rate", axis_rate, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL, AXIS_OPTS },
+     { Setting_AxisAcceleration, Group_Axis0, "-axis acceleration", axis_accel, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL, AXIS_OPTS },
+     { Setting_AxisMaxTravel, Group_Axis0, "-axis maximum travel", axis_dist, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL, AXIS_OPTS },
 #if ENABLE_BACKLASH_COMPENSATION
-     { Setting_AxisBacklash, Group_Axis0, "?-axis backlash compensation", axis_dist, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsExtendedFn, set_axis_setting, get_float, NULL },
+     { Setting_AxisBacklash, Group_Axis0, "-axis backlash compensation", axis_dist, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsExtendedFn, set_axis_setting, get_float, NULL, AXIS_OPTS },
 #endif
-     { Setting_AxisAutoSquareOffset, Group_Axis0, "?-axis dual axis offset", "mm", Format_Decimal, "-0.000", "-10", "10", Setting_IsExtendedFn, set_axis_setting, get_float, is_setting_available },
+     { Setting_AxisAutoSquareOffset, Group_Axis0, "-axis dual axis offset", "mm", Format_Decimal, "-0.000", "-10", "10", Setting_IsExtendedFn, set_axis_setting, get_float, is_setting_available, AXIS_OPTS },
      { Setting_SpindleAtSpeedTolerance, Group_Spindle, "Spindle at speed tolerance", "percent", Format_Decimal, "##0.0", NULL, NULL, Setting_IsExtended, &settings.spindle.at_speed_tolerance, NULL, is_setting_available },
      { Setting_ToolChangeMode, Group_Toolchange, "Tool change mode", NULL, Format_RadioButtons, "Normal,Manual touch off,Manual touch off @ G59.3,Automatic touch off @ G59.3,Ignore M6", NULL, NULL, Setting_IsExtendedFn, set_tool_change_mode, get_int, NULL },
      { Setting_ToolChangeProbingDistance, Group_Toolchange, "Tool change probing distance", "mm", Format_Decimal, "#####0.0", NULL, NULL, Setting_IsExtendedFn, set_tool_change_probing_distance, get_float, NULL },
@@ -580,6 +591,10 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_PlannerBlocks, Group_General, "Planner buffer blocks", NULL, Format_Int16, "####0", "30", "1000", Setting_IsExtended, &settings.planner_buffer_blocks, NULL, NULL, { .reboot_required = On } },
      { Setting_AutoReportInterval, Group_General, "Autoreport interval", "ms", Format_Int16, "###0", "100", "1000", Setting_IsExtendedFn, set_report_interval, get_int, NULL, { .reboot_required = On, .allow_null = On } },
 //     { Setting_TimeZoneOffset, Group_General, "Timezone offset", NULL, Format_Decimal, "-#0.00", "0", "12", Setting_IsExtended, &settings.timezone, NULL, NULL },
+     { Setting_UnlockAfterEStop, Group_General, "Unlock required after E-Stop", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_estop_unlock, get_int, is_setting_available },
+#if NGC_EXPRESSIONS_ENABLE
+     { Setting_NGCDebugOut, Group_General, "Output NGC debug messages", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_ngc_debug_out, get_int, NULL },
+#endif
 };
 
 #ifndef NO_SETTINGS_DESCRIPTIONS
@@ -744,7 +759,11 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_SpindleType, "Spindle selected on startup." },
     { Setting_PlannerBlocks, "Number of blocks in the planner buffer." },
     { Setting_AutoReportInterval, "Interval the real time report will be sent, set to 0 to disable." },
-    { Setting_TimeZoneOffset, "Offset in hours from UTC." }
+    { Setting_TimeZoneOffset, "Offset in hours from UTC." },
+    { Setting_UnlockAfterEStop, "If set unlock (by sending $X) is required after resetting a cleared E-Stop condition." },
+#if NGC_EXPRESSIONS_ENABLE
+    { Setting_NGCDebugOut, "Example: (debug, metric mode: #<_metric>, coord system: #5220)" },
+#endif
 };
 
 #endif
@@ -907,6 +926,19 @@ static status_code_t set_report_inches (setting_id_t id, uint_fast16_t int_value
     return Status_OK;
 }
 
+#if NGC_EXPRESSIONS_ENABLE
+
+static status_code_t set_ngc_debug_out (setting_id_t id, uint_fast16_t int_value)
+{
+    settings.flags.ngc_debug_out = int_value != 0;
+    report_init();
+    system_flag_wco_change(); // Make sure WCO is immediately updated.
+
+    return Status_OK;
+}
+
+#endif
+
 static status_code_t set_control_invert (setting_id_t id, uint_fast16_t int_value)
 {
     settings.control_invert.mask = int_value & hal.signals_cap.mask;
@@ -980,10 +1012,20 @@ static status_code_t set_probe_disable_pullup (setting_id_t id, uint_fast16_t in
 
 static status_code_t set_soft_limits_enable (setting_id_t id, uint_fast16_t int_value)
 {
-    if (int_value && !settings.homing.flags.enabled)
+    if(int_value && !settings.homing.flags.enabled)
         return Status_SoftLimitError;
 
     settings.limits.flags.soft_enabled = int_value != 0;
+
+    return Status_OK;
+}
+
+static status_code_t set_estop_unlock (setting_id_t id, uint_fast16_t int_value)
+{
+    if(!hal.signals_cap.e_stop)
+        return Status_SettingDisabled;
+
+    settings.flags.no_unlock_after_estop = int_value != 0;
 
     return Status_OK;
 }
@@ -1260,6 +1302,8 @@ inline static setting_id_t normalize_id (setting_id_t id)
         id -= id % AXIS_SETTINGS_INCREMENT;
     else if(id > Setting_EncoderSettingsBase && id <= Setting_EncoderSettingsMax)
         id = (setting_id_t)(Setting_EncoderSettingsBase + (id % ENCODER_SETTINGS_INCREMENT));
+    else if(id > Setting_ModbusTCPBase && id <= Setting_ModbusTCPMax)
+        id = (setting_id_t)(Setting_ModbusTCPBase + (id % MODBUS_TCP_SETTINGS_INCREMENT));
 
     return id;
 }
@@ -1313,7 +1357,7 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
             }
             settings.axis[idx].max_travel = -value; // Store as negative for grbl internal use.
             if(settings.homing.flags.init_lock && (sys.homing.mask & sys.homed.mask) != sys.homing.mask) {
-                system_raise_alarm(Alarm_HomingRequried);
+                system_raise_alarm(Alarm_HomingRequired);
                 grbl.report.feedback_message(Message_HomingCycleRequired);
             }
             break;
@@ -1547,6 +1591,16 @@ static uint32_t get_int (setting_id_t id)
             break;
 #endif
 
+        case Setting_UnlockAfterEStop:
+            value = settings.flags.no_unlock_after_estop ? 0 : 1;
+            break;
+
+#if NGC_EXPRESSIONS_ENABLE
+        case Setting_NGCDebugOut:
+            value = settings.flags.ngc_debug_out;
+            break;
+#endif
+
         default:
             break;
     }
@@ -1647,7 +1701,7 @@ uint32_t setting_get_int_value (const setting_detail_t *setting, uint_fast16_t o
 {
     uint32_t value = 0;
 
-    switch(setting->type) {
+    if(setting) switch(setting->type) {
 
         case Setting_NonCore:
         case Setting_IsExtended:
@@ -1703,7 +1757,7 @@ float setting_get_float_value (const setting_detail_t *setting, uint_fast16_t of
 {
     float value = NAN;
 
-    if(setting->datatype == Format_Decimal) switch(setting->type) {
+    if(setting && setting->datatype == Format_Decimal) switch(setting->type) {
 
         case Setting_NonCore:
         case Setting_IsExtended:
@@ -1810,6 +1864,10 @@ static bool is_setting_available (const setting_detail_t *setting)
 
         case Setting_TimeZoneOffset:
             available = hal.rtc.set_datetime != NULL;
+            break;
+
+        case Setting_UnlockAfterEStop:
+            available = hal.signals_cap.e_stop;
             break;
 
         default:
@@ -2043,19 +2101,19 @@ static bool is_group_available (const setting_detail_t *setting)
     return settings_is_group_available(setting->group);
 }
 
-bool settings_is_group_available (setting_group_t group)
+bool settings_is_group_available (setting_group_t id)
 {
-    bool available = false;
+    const setting_group_detail_t *group = setting_get_group_details(id);
 
-    switch(group) {
+    if(!group)
+        return false;
+
+    bool available = group->is_available ? group->is_available(group) : false;
+
+    if(!available) switch(group->id) {
 
         case Group_Probing:
             available = hal.probe.get_state != NULL;
-            break;
-
-        case Group_Encoders:
-        case Group_Encoder0:
-            available = hal.encoder.get_n_encoders && hal.encoder.get_n_encoders() > 0;
             break;
 
         case Group_Spindle_Sync:
@@ -2070,42 +2128,23 @@ bool settings_is_group_available (setting_group_t group)
             available = hal.stepper.get_ganged && hal.stepper.get_ganged(true).mask != 0;
             break;
 
-        case Group_General:
         case Group_Homing:
         case Group_Jogging:
         case Group_Limits:
         case Group_ControlSignals:
         case Group_Spindle:
-        case Group_Axis:
-        case Group_XAxis:
-        case Group_YAxis:
-        case Group_ZAxis:
-        #ifdef A_AXIS
-        case Group_AAxis:
-        #endif
-        #ifdef B_AXIS
-        case Group_BAxis:
-        #endif
-        #ifdef C_AXIS
-        case Group_CAxis:
-        #endif
-        #ifdef U_AXIS
-        case Group_UAxis:
-        #endif
-        #ifdef V_AXIS
-        case Group_VAxis:
-        #endif
             available = true;
             break;
 
         default:
             {
                 uint_fast16_t idx;
-                setting_details_t *details = settings_get_details();
+                setting_details_t *details = &setting_details;
+
                 do {
                     if(details->settings) {
                         for(idx = 0; idx < details->n_settings; idx++) {
-                            if(details->settings[idx].group == group && (available = is_available(&details->settings[idx])))
+                            if(details->settings[idx].group == id && (available = is_available(&details->settings[idx])))
                                 break;
                         }
                     }
@@ -2122,78 +2161,28 @@ setting_group_t settings_normalize_group (setting_group_t group)
     return (group > Group_Axis0 && group < Group_Axis0 + N_AXIS) ? Group_Axis0 : group;
 }
 
-/*
-setting_group_t settings_get_parent_group (setting_group_t group)
-{
-    uint_fast16_t idx;
-    setting_details_t *settings = settings_get_details();
-
-    for(idx = 0; idx < settings->n_groups; idx++) {
-        if(settings->groups[idx].id == group) {
-            group = settings->groups[idx].parent;
-            break;
-        }
-    }
-
-    return group;
-}
-*/
-
 bool settings_iterator (const setting_detail_t *setting, setting_output_ptr callback, void *data)
 {
     bool ok = false;
 
-    switch(setting->id) {
+    if(setting->group == Group_Axis0) {
 
-        case Setting_AxisStepsPerMM:
-        case Setting_AxisMaxRate:
-        case Setting_AxisAcceleration:
-        case Setting_AxisMaxTravel:
-        case Setting_AxisStepperCurrent:
-        case Setting_AxisMicroSteps:
-        case Setting_AxisBacklash:
-        case Setting_AxisAutoSquareOffset:
-        case Setting_AxisHomingFeedRate:
-        case Setting_AxisHomingSeekRate:
-        case Setting_AxisExtended0:
-        case Setting_AxisExtended1:
-        case Setting_AxisExtended2:
-        case Setting_AxisExtended3:
-        case Setting_AxisExtended4:
-        case Setting_AxisExtended5:
-        case Setting_AxisExtended6:
-        case Setting_AxisExtended7:
-        case Setting_AxisExtended8:
-        case Setting_AxisExtended9:
-            {
-                uint_fast8_t axis_idx = 0;
-                for(axis_idx = 0; axis_idx < N_AXIS; axis_idx++) {
+        uint_fast8_t axis_idx = 0;
+
+        for(axis_idx = 0; axis_idx < N_AXIS; axis_idx++) {
 #if N_AXIS > 3
-                    set_axis_setting_unit(setting, axis_idx);
+            set_axis_setting_unit(setting, axis_idx);
 #endif
-                    if(callback(setting, axis_idx, data))
-                        ok = true;
-                }
-            }
-            break;
-
-        case Setting_EncoderModeBase:
-        case Setting_EncoderCPRBase:
-        case Setting_EncoderCPDBase:
-        case Setting_EncoderDblClickWindowBase:
-            {
-                uint_fast8_t encoder_idx = 0, n_encoders = hal.encoder.get_n_encoders();
-                for(encoder_idx = 0; encoder_idx < n_encoders; encoder_idx++) {
-                    if(callback(setting, encoder_idx * ENCODER_SETTINGS_INCREMENT, data))
-                        ok = true;
-                }
-            }
-            break;
-
-        default:
-            ok = callback(setting, 0, data);
-            break;
-    }
+            if(callback(setting, axis_idx, data))
+                ok = true;
+        }
+    } else if(setting->flags.increment) {
+        setting_details_t *set;
+        setting = setting_get_details(setting->id, &set);
+        if(set->iterator)
+            ok = set->iterator(setting, callback, data);
+    } else
+        ok = callback(setting, 0, data);
 
     return ok;
 }
@@ -2212,7 +2201,7 @@ const setting_detail_t *setting_get_details (setting_id_t id, setting_details_t 
                 if(details->settings[idx].group == Group_Axis0)
                     set_axis_setting_unit(&details->settings[idx], offset);
 #endif
-                if(offset && offset >= (details->settings[idx].group == Group_Encoder0 ? hal.encoder.get_n_encoders() : N_AXIS))
+                if(offset && details->iterator == NULL && offset >= (details->settings[idx].group == Group_Encoder0 ? hal.encoder.get_n_encoders() : N_AXIS))
                     return NULL;
                 if(set)
                     *set = details;
@@ -2269,6 +2258,15 @@ const setting_group_detail_t *setting_get_group_details (setting_group_t id)
 
     return detail;
 }
+
+/*
+setting_group_t setting_get_parent_group (setting_group_t id)
+{
+    const setting_group_detail_t *group = setting_get_group_details(id);
+
+    return group ? group->parent : Group_Unknown;
+}
+*/
 
 static status_code_t validate_value (const setting_detail_t *setting, float value)
 {

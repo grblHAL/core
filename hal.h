@@ -65,7 +65,8 @@ typedef union {
                  no_gcode_message_handling :1,
                  odometers                 :1,
                  pwm_spindle               :1,
-                 unassigned                :12;
+                 probe_latch               :1,
+                 unassigned                :11;
     };
 } driver_cap_t;
 
@@ -78,14 +79,6 @@ typedef void (*driver_reset_ptr)(void);
 
 /*! \brief Pointer to function for getting free memory (as sum of all free blocks in the heap). */
 typedef uint32_t (*get_free_mem_ptr)(void);
-
-/*! \brief Optional pointer to function for switching between I/O streams.
-\param stream pointer to io_stream_t
-\returns true if switch was successful
-
-__NOTE:__ required if the networking plugin is to be supported.
-*/
-typedef bool (*stream_select_ptr)(const io_stream_t *stream);
 
 /*! \brief Pointer to function for registering information about a peripheral pin.
 \param pin as periph_pin_t struct containing pin information.
@@ -240,7 +233,7 @@ typedef void (*stepper_wake_up_ptr)(void);
 
 \param clear_signals when true stepper motor outputs can be reset to the default state. This parameter can often be ignored.
 
-__NOTE:__ this function will be called from an interrupt context
+__NOTE:__ this function will be called from an interrupt context.
 */
 typedef void (*stepper_go_idle_ptr)(bool clear_signals);
 
@@ -248,7 +241,7 @@ typedef void (*stepper_go_idle_ptr)(bool clear_signals);
 
 \param enable a \a axes_signals_t union containing separate flags for each motor to enable/disable.
 
-__NOTE:__ this function may be called from an interrupt context
+__NOTE:__ this function may be called from an interrupt context.
 */
 typedef void (*stepper_enable_ptr)(axes_signals_t enable);
 
@@ -282,7 +275,7 @@ If the driver is to support spindle synced motion many more needs to be referenc
 
 \param stepper pointer to a \ref stepper struct containing information about the stepper signals to be output.
 
-__NOTE:__ this function will be called from an interrupt context
+__NOTE:__ this function will be called from an interrupt context.
 */
 typedef void (*stepper_pulse_start_ptr)(stepper_t *stepper);
 
@@ -293,7 +286,7 @@ This is for an experimental implementation of plasma Torch Height Control (THC) 
 \param step_outbits a \a #axes_signals_t union containing the axes to output a step signal for.
 \param dir_outbits a \a #axes_signals_t union containing the axes to output a direction signal for.
 
-__NOTE:__ this function will be called from an interrupt context
+__NOTE:__ this function will be called from an interrupt context.
 */
 typedef void (*stepper_output_step_ptr)(axes_signals_t step_outbits, axes_signals_t dir_outbits);
 
@@ -312,14 +305,14 @@ typedef void (*stepper_interrupt_callback_ptr)(void);
 //! Stepper motor handlers
 typedef struct {
     stepper_wake_up_ptr wake_up;                        //!< Handler for enabling stepper motor power and main stepper interrupt.
-    stepper_go_idle_ptr go_idle;                        //!< Handler for disabling main stepper interrupt and optionally reset stepper signals.
-    stepper_enable_ptr enable;                          //!< Handler for enabling/disabling stepper motor power for individual motors.
+    stepper_go_idle_ptr go_idle;                        //!< Handler for disabling main stepper interrupt and optionally reset stepper signals. Called from interrupt context.
+    stepper_enable_ptr enable;                          //!< Handler for enabling/disabling stepper motor power for individual motors. Called from interrupt context.
     stepper_disable_motors_ptr disable_motors;          //!< Optional handler for enabling/disabling stepper motor step signals for individual motors.
-    stepper_cycles_per_tick_ptr cycles_per_tick;        //!< Handler for setting the step pulse rate for the next motion segment.
-    stepper_pulse_start_ptr pulse_start;                //!< Handler for starting outputting direction signals and a step pulse.
+    stepper_cycles_per_tick_ptr cycles_per_tick;        //!< Handler for setting the step pulse rate for the next motion segment. Called from interrupt context.
+    stepper_pulse_start_ptr pulse_start;                //!< Handler for starting outputting direction signals and a step pulse. Called from interrupt context.
     stepper_interrupt_callback_ptr interrupt_callback;  //!< Callback for informing about the next step pulse to output. _Set by the core at startup._
     stepper_get_ganged_ptr get_ganged;                  //!< Optional handler getting which axes are configured for ganging or auto squaring.
-    stepper_output_step_ptr output_step;                //!< Optional handler for outputting a single step pulse. _Experimental._
+    stepper_output_step_ptr output_step;                //!< Optional handler for outputting a single step pulse. _Experimental._ Called from interrupt context.
     motor_iterator_ptr motor_iterator;                  //!< Optional handler iteration over motor vs. axis mappings. Required for the motors plugin (Trinamic drivers).
 } stepper_ptrs_t;
 
@@ -343,7 +336,9 @@ typedef struct {
  ***********/
 
 /*! \brief Pointer to function for getting probe status.
-\returns probe state in a \a #probe_state_t enum.
+\returns probe state in a \a #probe_state_t union.
+
+__NOTE:__ this function will be called from an interrupt context.
 */
 typedef probe_state_t (*probe_get_state_ptr)(void);
 
@@ -363,7 +358,7 @@ typedef void (*probe_connected_toggle_ptr)(void);
 //! Handlers for probe input(s).
 typedef struct {
     probe_configure_ptr configure;                  //!< Optional handler for setting probe operation mode.
-    probe_get_state_ptr get_state;                  //!< Optional handler for getting probe status.
+    probe_get_state_ptr get_state;                  //!< Optional handler for getting probe status. Called from interrupt context.
     probe_connected_toggle_ptr connected_toggle;    //!< Optional handler for toggling probe connected status.
 } probe_ptrs_t;
 
@@ -585,7 +580,6 @@ typedef struct {
     spindle_data_ptrs_t spindle_data;       //!< Handlers for getting/resetting spindle data (RPM, angular position, ...).
     stepper_ptrs_t stepper;                 //!< Handlers for stepper motors.
     io_stream_t stream;                     //!< Handlers for stream I/O.
-    stream_select_ptr stream_select;        //!< Optional handler for switching between I/O streams.
     settings_changed_ptr settings_changed;  //!< Callback handler to be called on settings loaded or settings changed events.
     probe_ptrs_t probe;                     //!< Optional handlers for probe input(s).
     tool_ptrs_t tool;                       //!< Optional handlers for tool changes.

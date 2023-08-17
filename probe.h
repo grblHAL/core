@@ -26,7 +26,7 @@
 
 typedef enum {
     Probing_Off = 0, //!< 0
-    Probing_Active   //!< 0
+    Probing_Active   //!< 1
 } probing_state_t;
 
 typedef union {

@@ -306,7 +306,7 @@ int grbl_enter (void)
         // Print welcome message. Indicates an initialization has occurred at power-up or with a reset.
         grbl.report.init_message();
 
-        if(state_get() == STATE_ESTOP)
+        if(!settings.flags.no_unlock_after_estop && state_get() == STATE_ESTOP)
             state_set(STATE_ALARM);
 
         if(hal.driver_cap.mpg_mode)

@@ -127,7 +127,12 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
                     system_set_exec_state_flag(EXEC_SAFETY_DOOR);
             }
 #endif
-            if (signals.probe_triggered) {
+
+            if(signals.probe_overtravel) {
+                limit_signals_t overtravel = { .min.z = On};
+                hal.limits.interrupt_callback(overtravel);
+                // TODO: add message?
+            } else if (signals.probe_triggered) {
                 if(sys.probing_state == Probing_Off && (state_get() & (STATE_CYCLE|STATE_JOG))) {
                     system_set_exec_state_flag(EXEC_STOP);
                     sys.alarm_pending = Alarm_ProbeProtect;
@@ -140,8 +145,10 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
                 }
             } else if (signals.feed_hold)
                 system_set_exec_state_flag(EXEC_FEED_HOLD);
-            else if (signals.cycle_start)
+            else if (signals.cycle_start) {
                 system_set_exec_state_flag(EXEC_CYCLE_START);
+                sys.report.cycle_start = settings.status_report.pin_state;
+            }
         }
     }
 }
@@ -682,7 +689,7 @@ static status_code_t go_home (sys_state_t state, axes_signals_t axes)
         if (sys.homing.mask && (sys.homing.mask & sys.homed.mask) == sys.homing.mask)
             system_execute_startup();
         else if(limits_homing_required()) { // Keep alarm state active if homing is required and not all axes homed.
-            sys.alarm = Alarm_HomingRequried;
+            sys.alarm = Alarm_HomingRequired;
             state_set(STATE_ALARM);
         }
     }
@@ -1039,6 +1046,10 @@ void system_raise_alarm (alarm_code_t alarm)
         system_set_exec_alarm(alarm);
     else if(sys.alarm != alarm) {
         sys.alarm = alarm;
+        sys.blocking_event = sys.alarm == Alarm_HardLimit ||
+                              sys.alarm == Alarm_SoftLimit ||
+                               sys.alarm == Alarm_EStop ||
+                                sys.alarm == Alarm_MotorFault;
         state_set(alarm == Alarm_EStop ? STATE_ESTOP : STATE_ALARM);
         if(sys.driver_started || sys.alarm == Alarm_SelftestFailed)
             grbl.report.alarm_message(alarm);
@@ -1056,6 +1067,8 @@ void system_add_rt_report (report_tracking_t report)
 {
     if(report == Report_ClearAll)
         sys.report.value = 0;
+    else if(report == Report_MPGMode)
+        sys.report.mpg_mode = hal.driver_cap.mpg_mode;
     else
         sys.report.value |= (uint32_t)report;
 

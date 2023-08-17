@@ -37,7 +37,7 @@ typedef enum {
     Alarm_FailPulloff = 8,                      //!< 8
     Alarm_HomingFailApproach = 9,               //!< 9
     Alarm_EStop = 10,                           //!< 10
-    Alarm_HomingRequried = 11,                  //!< 11
+    Alarm_HomingRequired = 11,                  //!< 11
     Alarm_LimitsEngaged = 12,                   //!< 12
     Alarm_ProbeProtect = 13,                    //!< 13
     Alarm_Spindle = 14,                         //!< 14

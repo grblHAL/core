@@ -136,6 +136,20 @@ typedef struct {
     uint32_t rx_timeout;
 } modbus_settings_t;
 
+#define MODBUS_TCP_SETTINGS_INCREMENT 5
+
+typedef enum {
+    Setting_ModbusIpAddress = 0,
+    Setting_ModbusPort      = 1,
+    Setting_ModbusId        = 2
+} modbus_tcp_setting_id_t;
+
+typedef struct {
+    char ip[16];
+    uint16_t port;
+    uint8_t id;
+} modbus_tcp_settings_t;
+
 // Quadrature encoder interface
 
 typedef enum {

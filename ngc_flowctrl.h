@@ -1,9 +1,11 @@
 /*
-  platform.h - platform specific definitions
+  ngc_flowctrl.h - An embedded CNC Controller with rs274/ngc (g-code) support
+
+  Program flow control, for filesystem macros
 
   Part of grblHAL
 
-  Copyright (c) 2021 Terje Io
+  Copyright (c) 2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -19,16 +21,10 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#pragma once
+#ifndef _NGC_FLOWCTRL_H_
+#define _NGC_FLOWCTRL_H_
 
-#if defined(STM32F103xB) || defined(STM32F103xE) || defined(STM32F401xC) || defined(STM32F401xE) ||  defined(STM32F407xx) || defined(STM32F411xE) || defined(STM32F446xx) || defined(STM32F756xx) || defined(STM32H743xx) || defined(STM32H723xx)
-#define STM32_PLATFORM
-#endif
+void ngc_flowctrl_init (void);
+status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, bool *skip);
 
-#if defined(STM32_PLATFORM) || defined(__LPC17XX__) ||  defined(__IMXRT1062__)
-#define UINT32FMT "%lu"
-#define UINT32SFMT "lu"
-#else
-#define UINT32FMT "%u"
-#define UINT32SFMT "u"
 #endif

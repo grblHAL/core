@@ -101,6 +101,8 @@ static float get_axis_setting (setting_id_t setting);
 static void maslow_settings_load (void);
 static void maslow_settings_restore (void);
 
+#define AXIS_OPTS { .subgroups = On, .iterations = 1 }
+
 static const setting_detail_t maslow_settings[] = {
 #if maslow_MIXED_DRIVERS
     { Setting_maslowDriver, Group_MotorDriver, "maslow driver", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_NonCore, &maslow.driver_enable.mask },
@@ -112,10 +114,10 @@ static const setting_detail_t maslow_settings[] = {
     { (setting_id_t)Maslow_MotorOffsetY, Group_MotorDriver, "Motor offset Y", "mm", Format_Decimal, "###0.0", NULL, NULL, Setting_NonCore, &maslow.motorOffsetY, NULL },
     { (setting_id_t)Maslow_AcorrScaling, Group_MotorDriver, "Acorr Scaling", NULL, Format_Decimal, "###0.0", NULL, NULL, Setting_NonCore, &maslow.XcorrScaling, NULL },
     { (setting_id_t)Maslow_BcorrScaling, Group_MotorDriver, "BcorrScaling", NULL, Format_Decimal, "###0.0", NULL, NULL, Setting_NonCore, &maslow.XcorrScaling, NULL },
-    { (setting_id_t)AxisSetting_MaslowKP, Group_Axis0, "?-axis KP", NULL, Format_Decimal, "###0.0", NULL, NULL, Setting_NonCoreFn, set_axis_setting, get_axis_setting },
-    { (setting_id_t)AxisSetting_MaslowKI, Group_Axis0, "?-axis KI", NULL, Format_Decimal, "###0.0", NULL, NULL, Setting_NonCoreFn, set_axis_setting, get_axis_setting },
-    { (setting_id_t)AxisSetting_MaslowKD, Group_Axis0, "?-axis KIt", NULL, Format_Decimal, "###0.0", NULL, NULL, Setting_NonCoreFn, set_axis_setting, get_axis_setting },
-    { (setting_id_t)AxisSetting_MaslowIMax, Group_Axis0, "?-axis I Max", "ma", Format_Decimal, "###0.0", NULL, NULL, Setting_NonCoreFn, set_axis_setting, get_axis_setting }
+    { (setting_id_t)AxisSetting_MaslowKP, Group_Axis0, "-axis KP", NULL, Format_Decimal, "###0.0", NULL, NULL, Setting_NonCoreFn, set_axis_setting, get_axis_setting, AXIS_OPTS },
+    { (setting_id_t)AxisSetting_MaslowKI, Group_Axis0, "-axis KI", NULL, Format_Decimal, "###0.0", NULL, NULL, Setting_NonCoreFn, set_axis_setting, get_axis_setting, AXIS_OPTS },
+    { (setting_id_t)AxisSetting_MaslowKD, Group_Axis0, "-axis KIt", NULL, Format_Decimal, "###0.0", NULL, NULL, Setting_NonCoreFn, set_axis_setting, get_axis_setting, AXIS_OPTS },
+    { (setting_id_t)AxisSetting_MaslowIMax, Group_Axis0, "-axis I Max", "ma", Format_Decimal, "###0.0", NULL, NULL, Setting_NonCoreFn, set_axis_setting, get_axis_setting, AXIS_OPTS }
 };
 
 static void maslow_settings_save (void)

@@ -93,7 +93,13 @@ PROGMEM static const status_detail_t status_detail[] = {
 #endif
     { Status_AuthenticationRequired, "Authentication required." },
     { Status_AccessDenied, "Access denied." },
-    { Status_NotAllowedCriticalEvent, "Not allowed while critical event is active." }
+    { Status_NotAllowedCriticalEvent, "Not allowed while critical event is active." },
+#if NGC_EXPRESSIONS_ENABLE
+    { Status_FlowControlNotExecutingMacro, "Flow statement only allowed in filesystem macro." },
+    { Status_FlowControlSyntaxError, "Unknown flow statement." },
+    { Status_FlowControlStackOverflow, "Stack overflow while executing flow statement." },
+    { Status_FlowControlOutOfMemory, "Out of memory while executing flow statement." }
+#endif
 };
 
 static error_details_t details = {

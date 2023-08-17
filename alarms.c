@@ -37,7 +37,7 @@ PROGMEM static const alarm_detail_t alarm_detail[] = {
     { Alarm_FailPulloff, "Homing fail. Pull off travel failed to clear limit switch. Try increasing pull-off setting or check wiring." },
     { Alarm_HomingFailApproach, "Homing fail. Could not find limit switch within search distances. Try increasing max travel, decreasing pull-off distance, or check wiring." },
     { Alarm_EStop, "EStop asserted. Clear and reset" },
-    { Alarm_HomingRequried, "Homing required. Execute homing command ($H) to continue." },
+    { Alarm_HomingRequired, "Homing required. Execute homing command ($H) to continue." },
     { Alarm_LimitsEngaged, "Limit switch engaged. Clear before continuing." },
     { Alarm_ProbeProtect, "Probe protection triggered. Clear before continuing." },
     { Alarm_Spindle, "Spindle at speed timeout. Clear before continuing." },

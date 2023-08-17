@@ -236,7 +236,10 @@ typedef enum {
     LaserPPI_Rate = 127,                //!< 127 - M127
     LaserPPI_PulseLength = 128,         //!< 128 - M128
     OpenPNP_SetAcceleration = 204,      //!< 204 - M204
+    RGB_Inspection_Light = 356,         //!< 356 - M356
     OpenPNP_FinishMoves = 400,          //!< 400 - M400
+    Probe_Deploy = 401,                 //!< 401 - M401, Marlin format
+    Probe_Stow = 402,                   //!< 402 - M402, Marlin format
     OpenPNP_SettingsReset = 502,        //!< 502 - M502
     Trinamic_ModeToggle = 569,          //!< 569 - M569, Marlin format
     Trinamic_StepperCurrent = 906,      //!< 906 - M906, Marlin format
@@ -526,10 +529,14 @@ typedef struct {
     //  float blending_tolerance;       //!< Motion blending tolerance
     int32_t line_number;                //!< Last line number sent
     uint32_t tool_pending;              //!< Tool to be selected on next M6
+#if N_TOOLS && NGC_EXPRESSIONS_ENABLE
+    uint32_t g43_pending;               //!< Tool offset to be selected on next M6, for macro ATC
+#endif
     bool file_run;                      //!< Tracks % command
     bool is_laser_ppi_mode;
     bool is_rpm_rate_adjusted;
     bool tool_change;
+    bool skip_blocks;                   //!< true if skipping conditional blocks
     status_code_t last_error;           //!< last return value from parser
     //!< The following variables are not cleared upon warm restart when COMPATIBILITY_LEVEL <= 1
     bool g92_coord_offset_applied;      //!< true when G92 offset applied

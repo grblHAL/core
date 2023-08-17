@@ -41,6 +41,7 @@ static void sleep_execute()
     uint16_t rx_initial = hal.stream.get_rx_buffer_free();
 
     do {
+        grbl.on_execute_realtime(state_get());
         // Monitor for any new input stream data or external events (queries, buttons, alarms) to exit.
         if ((hal.stream.get_rx_buffer_free() != rx_initial) || sys.rt_exec_state || sys.rt_exec_alarm ) {
             // Disable sleep timeout and return to normal operation.

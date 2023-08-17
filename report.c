@@ -953,13 +953,8 @@ void report_build_info (char *line, bool extended)
         strcat(buf, "EXPR,");
     #endif
 
-    #if N_TOOLS
-        if(hal.driver_cap.atc && hal.tool.change)
-            strcat(buf, "ATC,");
-        else
-    #endif
-        if(hal.stream.suspend_read)
-            strcat(buf, "TC,"); // Manual tool change supported (M6)
+        if(hal.tool.change)
+            strcat(buf, hal.driver_cap.atc ? "ATC," : "TC,"); // Tool change supported (M6)
 
         if(hal.driver_cap.spindle_sync)
             strcat(buf, "SS,");
@@ -991,8 +986,19 @@ void report_build_info (char *line, bool extended)
             if(hal.nvs.type == NVS_Emulated)
                 strcat(buf, "*");
             strcat(buf, nvs->type == NVS_Flash ? "FLASH" : (nvs->type == NVS_FRAM ? "FRAM" : "EEPROM"));
+            if(hal.nvs.size_max) {
+                strcat(buf, " ");
+                strcat(buf, uitoa(hal.nvs.size_max / 1024));
+                strcat(buf, "K");
+            }
             hal.stream.write(buf);
             hal.stream.write("]" ASCII_EOL);
+        }
+
+        if(hal.get_free_mem) {
+            hal.stream.write("[FREE MEMORY:");
+            hal.stream.write(uitoa(hal.get_free_mem() / 1024));
+            hal.stream.write("K]" ASCII_EOL);
         }
 
         if(hal.info) {
@@ -1210,22 +1216,24 @@ void report_realtime_status (void)
         axes_signals_t lim_pin_state = limit_signals_merge(hal.limits.get_state());
         control_signals_t ctrl_pin_state = hal.control.get_state();
 
+        ctrl_pin_state.cycle_start |= sys.report.cycle_start;
+
         if (lim_pin_state.value | ctrl_pin_state.value | probe_state.triggered | !probe_state.connected | sys.flags.block_delete_enabled) {
 
             char *append = &buf[4];
 
             strcpy(buf, "|Pn:");
 
-            if (probe_state.triggered)
+            if(probe_state.triggered)
                 *append++ = 'P';
 
             if(!probe_state.connected)
                 *append++ = 'O';
 
-            if (lim_pin_state.value && !hal.control.get_state().limits_override)
+            if(lim_pin_state.value && !ctrl_pin_state.limits_override)
                 append = axis_signals_tostring(append, lim_pin_state);
 
-            if (ctrl_pin_state.value)
+            if(ctrl_pin_state.value)
                 append = control_signals_tostring(append, ctrl_pin_state);
 
             *append = '\0';
@@ -1314,7 +1322,15 @@ void report_realtime_status (void)
             hal.stream.write_all(buf);
         }
 
-        if(report.mpg_mode && hal.driver_cap.mpg_mode)
+#if COMPATIBILITY_LEVEL <= 1
+        if((report.all || report.mpg_mode) && settings.report_interval) {
+            hal.stream.write_all(sys.flags.auto_reporting ? "|AR:" : "|AR");
+            if(sys.flags.auto_reporting)
+                hal.stream.write_all(uitoa(settings.report_interval));
+        }
+#endif
+
+        if(report.mpg_mode)
             hal.stream.write_all(sys.mpg_mode ? "|MPG:1" : "|MPG:0");
 
         if(report.homed && (sys.homing.mask || settings.homing.flags.single_axis_commands || settings.homing.flags.manual)) {
@@ -1347,13 +1363,11 @@ void report_realtime_status (void)
 #if COMPATIBILITY_LEVEL <= 1
     if(report.all) {
         hal.stream.write_all("|FW:grblHAL");
-        if(settings.report_interval) {
-            hal.stream.write_all(sys.flags.auto_reporting ? "|AR:" : "|AR");
-            if(sys.flags.auto_reporting)
-                hal.stream.write_all(uitoa(settings.report_interval));
-        }
+        if(sys.blocking_event)
+            hal.stream.write_all("|$C:1");
     } else
 #endif
+
     if(settings.status_report.parser_state) {
 
         static uint32_t tool;
@@ -1432,8 +1446,23 @@ static void write_quoted (const char *s, const char *sep)
         hal.stream.write(sep);
 }
 
+static void write_name (const char *s, uint_fast8_t offset)
+{
+    char *q = hal.stream.write_n ? strchr(s, '?') : NULL;
+
+    if(q) {
+        if(q != s)
+            hal.stream.write_n(s, q - s);
+        hal.stream.write(uitoa(offset + 1));
+        hal.stream.write(q + 1);
+    } else
+        hal.stream.write(s);
+}
+
 static void report_settings_detail (settings_format_t format, const setting_detail_t *setting, uint_fast8_t offset)
 {
+    uint_fast8_t suboffset = setting->flags.subgroups ? offset / setting->flags.increment : offset;
+
     switch(format)
     {
         case SettingsFormat_HumanReadable:
@@ -1442,7 +1471,7 @@ static void report_settings_detail (settings_format_t format, const setting_deta
             hal.stream.write(": ");
             if(setting->group == Group_Axis0)
                 hal.stream.write(axis_letter[offset]);
-            hal.stream.write(setting->name[0] == '?' ? &setting->name[1] : setting->name); // temporary hack for ? prefix...
+            write_name(setting->name, suboffset);
 
             switch(setting_datatype_to_external(setting->datatype)) {
 
@@ -1531,11 +1560,11 @@ static void report_settings_detail (settings_format_t format, const setting_deta
             hal.stream.write("[SETTING:");
             hal.stream.write(uitoa(setting->id + offset));
             hal.stream.write(vbar);
-            hal.stream.write(uitoa(setting->group + (setting->group == Group_Axis0 ? offset : 0)));
+            hal.stream.write(uitoa(setting->group + (setting->flags.subgroups ? suboffset : 0)));
             hal.stream.write(vbar);
             if(setting->group == Group_Axis0)
                 hal.stream.write(axis_letter[offset]);
-            hal.stream.write(setting->name[0] == '?' ? &setting->name[1] : setting->name); // temporary hack for ? prefix...
+            write_name(setting->name, suboffset);
             hal.stream.write(vbar);
             if(setting->unit)
                 hal.stream.write(setting->unit);
@@ -1563,7 +1592,7 @@ static void report_settings_detail (settings_format_t format, const setting_deta
                 hal.stream.write("\"");
                 if(setting->group == Group_Axis0)
                     hal.stream.write(axis_letter[offset]);
-                hal.stream.write(setting->name[0] == '?' ? &setting->name[1] : setting->name); // temporary hack for ? prefix...
+                write_name(setting->name, suboffset);
                 hal.stream.write("\",");
                 if(setting->unit) {
                     write_quoted(setting->unit, ",");
@@ -1587,7 +1616,7 @@ static void report_settings_detail (settings_format_t format, const setting_deta
 
                 if(setting->group == Group_Axis0)
                     hal.stream.write(axis_letter[offset]);
-                hal.stream.write(setting->name[0] == '?' ? &setting->name[1] : setting->name); // temporary hack for ? prefix...
+                write_name(setting->name, suboffset);
 
                 hal.stream.write("\t");
 
@@ -1954,7 +1983,7 @@ static void print_setting_group (const setting_group_detail_t *group, char *pref
             hal.stream.write(vbar);
             hal.stream.write(group->name);
             hal.stream.write("]" ASCII_EOL);
-        } else if(group->id != Group_Root && settings_is_group_available(group->id)) {
+        } else if(group->id != Group_Root) {
             hal.stream.write(prefix);
             hal.stream.write(group->name);
             hal.stream.write(ASCII_EOL);
@@ -1964,12 +1993,23 @@ static void print_setting_group (const setting_group_detail_t *group, char *pref
 
 static int cmp_setting_group_id (const void *a, const void *b)
 {
-    return (*(setting_detail_t **)(a))->id - (*(setting_detail_t **)(b))->id;
+    return (*(setting_group_detail_t **)(a))->id - (*(setting_group_detail_t **)(b))->id;
 }
 
 static int cmp_setting_group_name (const void *a, const void *b)
 {
-    return strcmp((*(setting_detail_t **)(a))->name, (*(setting_detail_t **)(b))->name);
+    return strcmp((*(setting_group_detail_t **)(a))->name, (*(setting_group_detail_t **)(b))->name);
+}
+
+static bool group_is_dup (setting_group_detail_t **groups, setting_group_t group)
+{
+    while(*groups) {
+        if((*groups)->id == group)
+            return true;
+        groups++;
+    }
+
+    return false;
 }
 
 status_code_t report_setting_group_details (bool by_id, char *prefix)
@@ -1989,8 +2029,10 @@ status_code_t report_setting_group_details (bool by_id, char *prefix)
         uint_fast16_t idx;
 
         do {
-            for(idx = 0; idx < details->n_groups; idx++)
-                *group++ = (setting_group_detail_t *)&details->groups[idx];
+            for(idx = 0; idx < details->n_groups; idx++) {
+                if(!group_is_dup(all_groups, details->groups[idx].id))
+                    *group++ = (setting_group_detail_t *)&details->groups[idx];
+            }
         } while((details = details->next));
 
         qsort(all_groups, n_groups, sizeof(setting_group_detail_t *), by_id ? cmp_setting_group_id : cmp_setting_group_name);
@@ -2140,7 +2182,7 @@ status_code_t report_time (void)
     return ok ? Status_OK : Status_InvalidStatement;
 }
 
-static void report_spindle (spindle_info_t *spindle)
+static void report_spindle (spindle_info_t *spindle, void *data)
 {
     hal.stream.write(uitoa(spindle->id));
     hal.stream.write(" - ");
@@ -2158,7 +2200,7 @@ static void report_spindle (spindle_info_t *spindle)
 
 status_code_t report_spindles (void)
 {
-    if(!spindle_enumerate_spindles(report_spindle))
+    if(!spindle_enumerate_spindles(report_spindle, NULL))
         hal.stream.write("No spindles registered." ASCII_EOL);
 
     return Status_OK;
