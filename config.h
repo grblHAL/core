@@ -131,6 +131,23 @@ Experimental - testing required and homing needs to be worked out.
 #define WALL_PLOTTER Off
 #endif
 
+/*! \def DELTA_ROBOT
+\brief Enable delta kinematics.
+Experimental - testing required and homing needs to be worked out.
+*/
+#if !defined DELTA_ROBOT || defined __DOXYGEN__
+#define DELTA_ROBOT Off
+#endif
+
+/*! \def POLAR_ROBOT
+\brief Enable polar kinematics.
+Experimental - testing required and homing needs to be worked out.
+*/
+#if !defined POLAR_ROBOT || defined __DOXYGEN__
+#define POLAR_ROBOT Off
+#endif
+
+
 /*! \def COREXY
 \brief Enable CoreXY kinematics. Use ONLY with CoreXY machines.
 <br>__IMPORTANT:__ If homing is enabled, you must reconfigure the homing cycle \#defines above to

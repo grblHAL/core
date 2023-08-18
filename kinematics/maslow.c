@@ -26,7 +26,7 @@
   It has been adapted for grblHAL by Terje Io.
 */
 
-#include "grbl.h"
+#include "../grbl.h"
 
 #if MASLOW_ROUTER
 
@@ -34,12 +34,12 @@
 
 #include "driver.h"
 
-#include "settings.h"
-#include "planner.h"
-#include "nvs_buffer.h"
-#include "kinematics.h"
-#include "maslow.h"
-#include "report.h"
+#include "../settings.h"
+#include "../planner.h"
+#include "../nvs_buffer.h"
+#include "../kinematics.h"
+#include "../maslow.h"
+#include "../report.h"
 
 #define A_MOTOR X_AXIS // Must be X_AXIS
 #define B_MOTOR Y_AXIS // Must be Y_AXIS

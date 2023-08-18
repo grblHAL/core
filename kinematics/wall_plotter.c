@@ -24,17 +24,17 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "grbl.h"
+#include "../grbl.h"
 
 #if WALL_PLOTTER
 
 #include <math.h>
 #include <string.h>
 
-#include "hal.h"
-#include "settings.h"
-#include "planner.h"
-#include "kinematics.h"
+#include "../hal.h"
+#include "../settings.h"
+#include "../planner.h"
+#include "../kinematics.h"
 
 #define A_MOTOR X_AXIS // Must be X_AXIS
 #define B_MOTOR Y_AXIS // Must be Y_AXIS

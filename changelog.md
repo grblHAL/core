@@ -1,5 +1,15 @@
 ## grblHAL changelog
 
+<a name="20230818"/>20230818
+
+Core:
+
+* Moved kinematics implementations to separate folder and added initial implementation of delta and polar kinematics.  
+__NOTE:__ Delta and polar kinematics is WIP \(work in progress\) and incomplete. Feedback is required as I do not have machines at hand for testing.
+Ref. issue #341 and #346.
+
+---
+
 <a name="20230816"/>20230816
 
 Plugins:

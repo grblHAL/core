@@ -20,16 +20,16 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "grbl.h"
+#include "../grbl.h"
 
 #if COREXY
 
 #include <math.h>
 
-#include "hal.h"
-#include "settings.h"
-#include "planner.h"
-#include "kinematics.h"
+#include "../hal.h"
+#include "../settings.h"
+#include "../planner.h"
+#include "../kinematics.h"
 
 // CoreXY motor assignments. DO NOT ALTER.
 // NOTE: If the A and B motor axis bindings are changed, this effects the CoreXY equations.

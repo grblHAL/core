@@ -351,6 +351,10 @@
 #ifndef SSDP_ENABLE
 #define SSDP_ENABLE         0
 #endif
+#if SSDP_ENABLE && !HTTP_ENABLE
+#undef HTTP_ENABLE
+#define HTTP_ENABLE         1
+#endif
 #ifndef MQTT_ENABLE
 #define MQTT_ENABLE         0
 #endif
