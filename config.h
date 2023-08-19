@@ -147,7 +147,7 @@ have the same steps per mm internally.
 /*! \def SCARA
 \brief Enable scara kinematics.
 Experimental - needs to be tested and extended to support more than 2 axes.
-DEFAULT_X_STEPS_PER_MM and DEFAULT_Y_STEPS_PER_MM are now steps per radian
+DEFAULT_X_STEPS_PER_MM and DEFAULT_Y_STEPS_PER_MM are now steps per degree
 */
 #if !defined SCARA || defined __DOXYGEN__
 #define SCARA On
@@ -265,6 +265,7 @@ machines, perhaps to 0.1mm/min, but your success may vary based on multiple fact
 #if !defined MINIMUM_FEED_RATE || defined __DOXYGEN__
 #define MINIMUM_FEED_RATE 1.0f // (mm/min)
 #endif
+
 
 /*! \def N_ARC_CORRECTION
 \brief
