@@ -135,9 +135,9 @@ static float *scara_transform_to_cartesian(float *coords, float *angles)
     coords[X_AXIS] = xy.x;
     coords[Y_AXIS] = xy.y;
 
-    char msgOut[100] = {0};
-    snprintf(msgOut, sizeof(msgOut), "[tf_to_car] q:%0.05f,%0.05f|xy:%.05f,%.05f\n", angles[A_MOTOR], angles[B_MOTOR], xy.x, xy.y);
-    hal.stream.write(msgOut);
+    // char msgOut[100] = {0};
+    // snprintf(msgOut, sizeof(msgOut), "[degree2cartesian] q:%0.05f,%0.05f|xy:%.05f,%.05f\n", angles[A_MOTOR], angles[B_MOTOR], xy.x, xy.y);
+    // hal.stream.write(msgOut);
 
     return coords;
 }
@@ -160,7 +160,6 @@ static float *scara_transform_steps_to_cartesian(float *position, int32_t *steps
 // Returns join angles in rad, converted from machine position in mm
 static float *scara_transform_from_cartesian(float *target_q, float *position_xy)
 {
-    hal.stream.write("scara_transform_from_cartesian: ");
     // do not change higher axis
     uint_fast8_t idx = N_AXIS-1;
     do {
@@ -178,9 +177,9 @@ static float *scara_transform_from_cartesian(float *target_q, float *position_xy
         return NULL;
     }
 
-    char msgOut[100] = {0};
-    snprintf(msgOut, sizeof(msgOut), "xy:%.05f,%.05f|q:%.05f,%.05f\n", position_xy[X_AXIS], position_xy[Y_AXIS], q.q1, q.q2);
-    hal.stream.write(msgOut);
+    // char msgOut[100] = {0};
+    // snprintf(msgOut, sizeof(msgOut), "[cartesian2degree] xy:%.05f,%.05f|q:%.05f,%.05f\n", position_xy[X_AXIS], position_xy[Y_AXIS], q.q1, q.q2);
+    // hal.stream.write(msgOut);
 
     target_q[A_MOTOR] = q.q1 ;
     target_q[B_MOTOR] = q.q2 ;
@@ -268,9 +267,9 @@ static float *scara_segment_line (float *target, float *position, plan_line_data
     scara_transform_from_cartesian(current_position.values, segment_target.values);
 
     // more debug info
-    snprintf(msgOut, sizeof(msgOut), "seg_line|itrs=%d|target_xy=%0.4f,%0.4f|target_q=%0.6f,%0.6f\n", 
-        iterations, segment_target.x, segment_target.y, current_position.x, current_position.y);
-    hal.stream.write(msgOut);
+    // snprintf(msgOut, sizeof(msgOut), "seg_line|itrs=%d|target_xy=%0.4f,%0.4f|target_q=%0.6f,%0.6f\n", 
+    //     iterations, segment_target.x, segment_target.y, current_position.x, current_position.y);
+    // hal.stream.write(msgOut);
 
     if (iterations == 0 || jog_cancel) {
         return NULL;
