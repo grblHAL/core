@@ -524,6 +524,9 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
         block->programmed_rate = block->rapid_rate;
     else {
         block->programmed_rate = pl_data->feed_rate;
+#ifdef KINEMATICS_API
+        block->rate_multiplier = pl_data->rate_multiplier;
+#endif
         if (block->condition.inverse_time)
             block->programmed_rate *= block->millimeters;
     }

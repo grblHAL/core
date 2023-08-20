@@ -1,6 +1,20 @@
 ## grblHAL changelog
 
-<a name="20230818"/>20230818
+<a name="20230820"/>Build 20230820
+
+Core:
+
+* Delta kinematics improvements. Added setting for base > floor distance, `$DELTA` command for work envelope info. Still WIP.
+
+* Changed signature of `grbl.on_homing_completed` event.
+
+Drivers:
+
+* RP2040: Fix for [issue #72](https://github.com/grblHAL/RP2040/discussions/72) \(typo\), improved SPI chip select handling.
+
+---
+
+<a name="20230818"/>Build 20230818
 
 Core:
 

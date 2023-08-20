@@ -424,8 +424,11 @@ static char spindle_types[100] = "";
 static char axis_dist[4] = "mm";
 static char axis_rate[8] = "mm/min";
 static char axis_accel[10] = "mm/sec^2";
+#if DELTA_ROBOT
+static char axis_steps[9] = "step/rev";
+#else
 static char axis_steps[9] = "step/mm";
-
+#endif
 #define AXIS_OPTS { .subgroups = On, .increment = 1 }
 
 PROGMEM static const setting_detail_t setting_detail[] = {
@@ -721,7 +724,11 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_PositionIGain, "" },
     { Setting_PositionDGain, "" },
     { Setting_PositionIMaxError, "Spindle sync PID max integrator error." },
+#if DELTA_ROBOT
+    { Setting_AxisStepsPerMM, "Travel resolution in steps per revolution." },
+#else
     { Setting_AxisStepsPerMM, "Travel resolution in steps per millimeter." },
+#endif
     { (setting_id_t)(Setting_AxisStepsPerMM + 1), "Travel resolution in steps per degree." }, // "Hack" to get correct description for rotary axes
     { Setting_AxisMaxRate, "Maximum rate. Used as G0 rapid rate." },
     { Setting_AxisAcceleration, "Acceleration. Used for motion planning to not exceed motor torque and lose steps." },

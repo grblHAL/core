@@ -125,6 +125,9 @@ typedef struct {
     float current_speed;    // Current speed at the end of the segment buffer (mm/min)
     float maximum_speed;    // Maximum speed of executing block. Not always nominal speed. (mm/min)
     float exit_speed;       // Exit speed of executing block (mm/min)
+#ifdef KINEMATICS_API
+    float rate_multiplier;  // Rate multiplier of executing block.
+#endif
     float accelerate_until; // Acceleration ramp end measured from end of block (mm)
     float decelerate_after; // Deceleration ramp start measured from end of block (mm)
     float target_position;  //
@@ -726,6 +729,7 @@ void st_prep_buffer (void)
 
                 st_prep_block->direction_bits = pl_block->direction_bits;
                 st_prep_block->programmed_rate = pl_block->programmed_rate;
+//                st_prep_block->r = pl_block->programmed_rate;
                 st_prep_block->millimeters = pl_block->millimeters;
                 st_prep_block->steps_per_mm = (float)pl_block->step_event_count / pl_block->millimeters;
                 st_prep_block->output_commands = pl_block->output_commands;
@@ -739,7 +743,9 @@ void st_prep_buffer (void)
                 prep.steps_remaining = pl_block->step_event_count;
                 prep.req_mm_increment = REQ_MM_INCREMENT_SCALAR / prep.steps_per_mm;
                 prep.dt_remainder = prep.target_position = 0.0f; // Reset for new segment block
-
+#ifdef KINEMATICS_API
+                prep.rate_multiplier = pl_block->rate_multiplier;
+#endif
                 if (sys.step_control.execute_hold || prep.recalculate.decel_override) {
                     // New block loaded mid-hold. Override planner block entry speed to enforce deceleration.
                     prep.current_speed = prep.exit_speed;
@@ -1116,5 +1122,11 @@ void st_prep_buffer (void)
 // divided by the ACCELERATION TICKS PER SECOND in seconds.
 float st_get_realtime_rate (void)
 {
-    return state_get() & (STATE_CYCLE|STATE_HOMING|STATE_HOLD|STATE_JOG|STATE_SAFETY_DOOR) ? prep.current_speed : 0.0f;
+    return state_get() & (STATE_CYCLE|STATE_HOMING|STATE_HOLD|STATE_JOG|STATE_SAFETY_DOOR)
+#ifdef KINEMATICS_API
+            ? prep.current_speed * prep.rate_multiplier
+#else
+            ? prep.current_speed
+#endif
+            : 0.0f;
 }
