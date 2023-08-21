@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+<a name="20230821-2"/>20230821-2
+
+Plugins:
+
+* Networking: increased WizChip temp packet buffer size, "hardened" code.
+
+Drivers:
+
+* RP2040: use DMA for FatFs transfers, increased WizChip SPI clock to 33 MHz.
+
+* ESP32: updated for change of `grbl.on_homing_completed` signature.
+
+---
+
 <a name="20230821"/>Build 20230821
 
 Core:
