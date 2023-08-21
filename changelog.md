@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+<a name="20230821"/>Build 20230821
+
+Core:
+
+* Fix for issue #349 - active feed rate override caused jog motions to hang on some drivers \(STM32F4xx and possibly others\).
+
+Drivers:
+
+* RP2040: fix for regression: ethernet was incorrectly left enabled in CMakeLists.txt.
+
+---
+
 <a name="20230820"/>Build 20230820
 
 Core:
@@ -10,7 +22,7 @@ Core:
 
 Drivers:
 
-* RP2040: Fix for [issue #72](https://github.com/grblHAL/RP2040/discussions/72) \(typo\), improved SPI chip select handling.
+* RP2040: fix for [issue #72](https://github.com/grblHAL/RP2040/discussions/72) \(typo\), improved SPI chip select handling.
 
 ---
 

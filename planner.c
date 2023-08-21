@@ -342,19 +342,6 @@ inline static float plan_compute_profile_parameters (plan_block_t *block, float 
     return nominal_speed;
 }
 
-// Re-calculates buffered motions profile parameters upon a motion-based override change.
-void plan_update_velocity_profile_parameters (void)
-{
-    plan_block_t *block = block_buffer_tail;
-    float prev_nominal_speed = SOME_LARGE_VALUE; // Set high for first block nominal speed calculation.
-
-    while (block != block_buffer_head) {
-        prev_nominal_speed = plan_compute_profile_parameters(block, plan_compute_profile_nominal_speed(block), prev_nominal_speed);
-        block = block->next;
-    }
-    pl.previous_nominal_speed = prev_nominal_speed; // Update prev nominal speed for next incoming block.
-}
-
 static inline float limit_acceleration_by_axis_maximum (float *unit_vec)
 {
     uint_fast8_t idx = N_AXIS;
@@ -656,6 +643,25 @@ void plan_cycle_reinitialize (void)
     planner_recalculate();
 }
 
+// Re-calculates buffered motions profile parameters upon a motion-based override change.
+static bool plan_update_velocity_profile_parameters (void)
+{
+    if(block_buffer_tail != block_buffer_head) {
+
+        plan_block_t *block = block_buffer_tail;
+        float prev_nominal_speed = SOME_LARGE_VALUE; // Set high for first block nominal speed calculation.
+
+        while (block != block_buffer_head) {
+            prev_nominal_speed = plan_compute_profile_parameters(block, plan_compute_profile_nominal_speed(block), prev_nominal_speed);
+            block = block->next;
+        }
+
+        pl.previous_nominal_speed = prev_nominal_speed; // Update prev nominal speed for next incoming block.
+    }
+
+    return block_buffer_tail != block_buffer_head;
+}
+
 // Set feed overrides
 void plan_feed_override (override_t feed_override, override_t rapid_override)
 {
@@ -666,13 +672,13 @@ void plan_feed_override (override_t feed_override, override_t rapid_override)
 
     feed_override = constrain(feed_override, MIN_FEED_RATE_OVERRIDE, MAX_FEED_RATE_OVERRIDE);
 
-    if ((feedrate_changed = feed_override != sys.override.feed_rate) ||
+    if((feedrate_changed = feed_override != sys.override.feed_rate) ||
          (rapidrate_changed = rapid_override != sys.override.rapid_rate)) {
         sys.override.feed_rate = feed_override;
         sys.override.rapid_rate = rapid_override;
         system_add_rt_report(Report_Overrides); // Set to report change immediately
-        plan_update_velocity_profile_parameters();
-        plan_cycle_reinitialize();
+        if(plan_update_velocity_profile_parameters())
+            plan_cycle_reinitialize();
         if(grbl.on_override_changed) {
             if(feedrate_changed)
                 grbl.on_override_changed(OverrideChanged_FeedRate);
