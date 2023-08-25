@@ -692,4 +692,7 @@ void plan_data_init (plan_line_data_t *plan_data)
 {
     memset(plan_data, 0, sizeof(plan_line_data_t));
     plan_data->spindle.hal = gc_state.spindle.hal ? gc_state.spindle.hal : spindle_get(0);
+#ifdef KINEMATICS_API
+    plan_data->rate_multiplier = 1.0;
+#endif
 }

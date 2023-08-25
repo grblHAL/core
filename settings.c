@@ -1961,10 +1961,10 @@ bool settings_read_coord_data (coord_system_id_t id, float (*coord_data)[N_AXIS]
 bool settings_write_tool_data (tool_data_t *tool_data)
 {
 #if N_TOOLS
-    assert(tool_data->tool > 0 && tool_data->tool <= N_TOOLS); // NOTE: idx 0 is a non-persistent entry for tools not in tool table
+    assert(tool_data->tool_id > 0 && tool_data->tool_id <= N_TOOLS); // NOTE: idx 0 is a non-persistent entry for tools not in tool table
 
     if(hal.nvs.type != NVS_None)
-        hal.nvs.memcpy_to_nvs(NVS_ADDR_TOOL_TABLE + (tool_data->tool - 1) * (sizeof(tool_data_t) + NVS_CRC_BYTES), (uint8_t *)tool_data, sizeof(tool_data_t), true);
+        hal.nvs.memcpy_to_nvs(NVS_ADDR_TOOL_TABLE + (tool_data->tool_id - 1) * (sizeof(tool_data_t) + NVS_CRC_BYTES), (uint8_t *)tool_data, sizeof(tool_data_t), true);
 
     return true;
 #else
@@ -1973,17 +1973,18 @@ bool settings_write_tool_data (tool_data_t *tool_data)
 }
 
 // Read selected tool data from persistent storage.
-bool settings_read_tool_data (uint32_t tool, tool_data_t *tool_data)
+bool settings_read_tool_data (tool_id_t tool_id, tool_data_t *tool_data)
 {
 #if N_TOOLS
-    assert(tool > 0 && tool <= N_TOOLS); // NOTE: idx 0 is a non-persistent entry for tools not in tool table
+    assert(tool_id > 0 && tool_id <= N_TOOLS); // NOTE: idx 0 is a non-persistent entry for tools not in tool table
 
-    if (!(hal.nvs.type != NVS_None && hal.nvs.memcpy_from_nvs((uint8_t *)tool_data, NVS_ADDR_TOOL_TABLE + (tool - 1) * (sizeof(tool_data_t) + NVS_CRC_BYTES), sizeof(tool_data_t), true) == NVS_TransferResult_OK && tool_data->tool == tool)) {
+    if (!(hal.nvs.type != NVS_None && hal.nvs.memcpy_from_nvs((uint8_t *)tool_data, NVS_ADDR_TOOL_TABLE + (tool_id - 1) * (sizeof(tool_data_t) + NVS_CRC_BYTES),
+                                                               sizeof(tool_data_t), true) == NVS_TransferResult_OK && tool_data->tool_id == tool_id)) {
         memset(tool_data, 0, sizeof(tool_data_t));
-        tool_data->tool = tool;
+        tool_data->tool_id = tool_id;
     }
 
-    return tool_data->tool == tool;
+    return tool_data->tool_id == tool_id;
 #else
     return false;
 #endif
@@ -2072,7 +2073,7 @@ void settings_restore (settings_restore_t restore)
         tool_data_t tool_data;
         memset(&tool_data, 0, sizeof(tool_data_t));
         for (idx = 1; idx <= N_TOOLS; idx++) {
-            tool_data.tool = idx;
+            tool_data.tool_id = (tool_id_t)idx;
             settings_write_tool_data(&tool_data);
         }
 #endif

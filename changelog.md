@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+<a name="20230825"/>Build 20230825
+
+Core:
+
+* Added `grbl.on_tool_changed` event and removed help for disabled $-commands.
+
+Drivers:
+
+* LPC176x: added option to use reset input as E-stop, added support for Bluetooth plugin for some boards and fixed ioports IRQ issue.
+
+Templates:
+
+* Added _my_plugin_ example for keeping last selected tool number across a reboot. Enable by setting `$485=1`.
+
+---
+
 <a name="20230821-2"/>20230821-2
 
 Plugins:

@@ -278,6 +278,9 @@ void system_command_help (void)
 {
     hal.stream.write("$I - output system information" ASCII_EOL);
     hal.stream.write("$I+ - output extended system information" ASCII_EOL);
+#if !DISABLE_BUILD_INFO_WRITE_COMMAND
+    hal.stream.write("$I=<string> set build info string" ASCII_EOL);
+#endif
     hal.stream.write("$<n> - output setting <n> value" ASCII_EOL);
     hal.stream.write("$<n>=<value> - assign <value> to settings <n>" ASCII_EOL);
     hal.stream.write("$$ - output all setting values" ASCII_EOL);
@@ -296,16 +299,23 @@ void system_command_help (void)
     hal.stream.write("$HELP - output help topics" ASCII_EOL);
     hal.stream.write("$HELP <topic> - output help for <topic>" ASCII_EOL);
     hal.stream.write("$SPINDLES - output spindle list" ASCII_EOL);
+#if ENABLE_RESTORE_NVS_WIPE_ALL
     hal.stream.write("$RST=* - restore/reset all settings" ASCII_EOL);
+#endif
+#if ENABLE_RESTORE_NVS_DEFAULT_SETTINGS
     hal.stream.write("$RST=$ - restore default settings" ASCII_EOL);
+#endif
+#if ENABLE_RESTORE_NVS_DRIVER_PARAMETERS
     if(settings_get_details()->next)
         hal.stream.write("$RST=& - restore driver and plugin default settings" ASCII_EOL);
-#if N_TOOLS
-    hal.stream.write("$RST=# - reset offsets and tool data" ASCII_EOL);
-#else
-    hal.stream.write("$RST=# - reset offsets" ASCII_EOL);
 #endif
-
+#if ENABLE_RESTORE_NVS_CLEAR_PARAMETERS
+  #if N_TOOLS
+    hal.stream.write("$RST=# - reset offsets and tool data" ASCII_EOL);
+  #else
+    hal.stream.write("$RST=# - reset offsets" ASCII_EOL);
+  #endif
+#endif
     spindle_ptrs_t *spindle = gc_spindle_get();
     if(spindle->reset_data)
         hal.stream.write("$SR - reset spindle encoder data" ASCII_EOL);

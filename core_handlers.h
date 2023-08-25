@@ -102,6 +102,7 @@ typedef bool (*on_probe_fixture_ptr)(tool_data_t *tool, bool at_g59_3, bool on);
 typedef bool (*on_probe_start_ptr)(axes_signals_t axes, float *target, plan_line_data_t *pl_data);
 typedef void (*on_probe_completed_ptr)(void);
 typedef void (*on_tool_selected_ptr)(tool_data_t *tool);
+typedef void (*on_tool_changed_ptr)(tool_data_t *tool);
 typedef void (*on_toolchange_ack_ptr)(void);
 typedef void (*on_reset_ptr)(void);
 typedef void (*on_jog_cancel_ptr)(sys_state_t state);
@@ -154,6 +155,7 @@ typedef struct {
     on_gcode_message_ptr on_gcode_message;              //!< Called on output of message parsed from gcode. NOTE: string pointed to is freed after this call.
     on_gcode_message_ptr on_gcode_comment;              //!< Called when a plain gcode comment has been parsed.
     on_tool_selected_ptr on_tool_selected;              //!< Called prior to executing M6 or after executing M61.
+    on_tool_changed_ptr on_tool_changed;                //!< Called after executing M6 or M61.
     on_toolchange_ack_ptr on_toolchange_ack;            //!< Called from interrupt context.
     on_jog_cancel_ptr on_jog_cancel;                    //!< Called from interrupt context.
     on_laser_ppi_enable_ptr on_laser_ppi_enable;

@@ -29,6 +29,7 @@
 #include "spindle_control.h"
 #include "errors.h"
 
+typedef uint32_t tool_id_t;
 typedef uint16_t macro_id_t;
 
 // Define command actions for within execution-type modal groups (motion, stopping, non-modal). Used
@@ -385,8 +386,8 @@ typedef struct {
     int32_t $;                 //!< Spindle id - single-meaning word
     int32_t n;                 //!< Line number - single-meaning word
     uint32_t o;                //!< Subroutine identifier - single-meaning word (not used by the core)
-    uint32_t h;                //!< Tool number - single-meaning word
-    uint32_t t;                //!< Tool selection
+    uint32_t h;                //!< Tool number or number of G76 thread spring passes
+    tool_id_t t;               //!< Tool selection - single-meaning word
     uint8_t l;                 //!< G10 or canned cycles parameters
 } gc_values_t;
 
@@ -506,7 +507,7 @@ typedef struct {
 typedef struct {
     float offset[N_AXIS];   //!< Tool offset
     float radius;           //!< Radius of tool (currently unsupported)
-    uint32_t tool;          //!< Tool number
+    tool_id_t tool_id;      //!< Tool number
 } tool_data_t;
 
 typedef struct {
@@ -528,7 +529,7 @@ typedef struct {
     float position[N_AXIS];             //!< Where the interpreter considers the tool to be at this point in the code
     //  float blending_tolerance;       //!< Motion blending tolerance
     int32_t line_number;                //!< Last line number sent
-    uint32_t tool_pending;              //!< Tool to be selected on next M6
+    tool_id_t tool_pending;             //!< Tool to be selected on next M6
 #if N_TOOLS && NGC_EXPRESSIONS_ENABLE
     uint32_t g43_pending;               //!< Tool offset to be selected on next M6, for macro ATC
 #endif

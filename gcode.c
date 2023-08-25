@@ -292,7 +292,7 @@ void gc_init (void)
       #endif
     } else {
         memset(&gc_state, 0, offsetof(parser_state_t, g92_coord_offset));
-        gc_state.tool_pending = gc_state.tool->tool;
+        gc_state.tool_pending = gc_state.tool->tool_id;
         if(hal.tool.select)
             hal.tool.select(gc_state.tool, false);
         // TODO: restore offsets, tool offset mode?
@@ -367,15 +367,15 @@ spindle_ptrs_t *gc_spindle_get (void)
     return gc_state.spindle.hal;
 }
 
-static tool_data_t *tool_get_pending (uint32_t tool)
+static tool_data_t *tool_get_pending (tool_id_t tool_id)
 {
 #if N_TOOLS
-    return &tool_table[tool];
+    return &tool_table[tool_id];
 #else
     static tool_data_t tool_data = {0};
 
     memcpy(&tool_data, gc_state.tool, sizeof(tool_data_t));
-    tool_data.tool = tool;
+    tool_data.tool_id = tool_id;
 
     return &tool_data;
 #endif
@@ -386,7 +386,7 @@ static inline void tool_set (tool_data_t *tool)
 #if N_TOOLS
     gc_state.tool = tool;
 #else
-    gc_state.tool->tool = tool->tool;
+    gc_state.tool->tool_id = tool->tool_id;
 #endif
 }
 
@@ -2131,7 +2131,7 @@ status_code_t gc_execute_block (char *block)
                     if(p_value == 0 || p_value > MAX_TOOL_NUMBER)
                        FAIL(Status_GcodeIllegalToolTableEntry); // [Greater than MAX_TOOL_NUMBER]
 
-                    tool_table[p_value].tool = p_value;
+                    tool_table[p_value].tool_id = (tool_id_t)p_value;
 
                     if(gc_block.words.r) {
                         tool_table[p_value].radius = gc_block.values.r;
@@ -2973,6 +2973,9 @@ status_code_t gc_execute_block (char *block)
                     gc_block.modal.spindle.state = gc_state.modal.spindle.state;
             }
 
+            if(grbl.on_tool_changed)
+                grbl.on_tool_changed(gc_state.tool);
+
             system_add_rt_report(Report_Tool);
         }
 
@@ -3026,7 +3029,7 @@ status_code_t gc_execute_block (char *block)
             plan_data.message = NULL;
         }
 
-        if(pending_tool->tool != gc_state.tool->tool) {
+        if(pending_tool->tool_id != gc_state.tool->tool_id) {
 
             if(grbl.on_tool_selected) {
 
@@ -3064,6 +3067,8 @@ status_code_t gc_execute_block (char *block)
 #else
             tool_set(pending_tool);
 #endif
+            if(grbl.on_tool_changed && state_get() != STATE_TOOL_CHANGE)
+                grbl.on_tool_changed(gc_state.tool);
         }
     }
 
