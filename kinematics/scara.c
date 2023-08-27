@@ -17,7 +17,7 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "grbl.h"
+#include "../grbl.h"
 
 #if SCARA
 
@@ -25,13 +25,13 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "hal.h"
-#include "settings.h"
-#include "nuts_bolts.h"
-#include "planner.h"
-#include "kinematics.h"
-#include "report.h"
-#include "system.h"
+#include "../hal.h"
+#include "../settings.h"
+#include "../nuts_bolts.h"
+#include "../planner.h"
+#include "../kinematics.h"
+#include "../report.h"
+#include "../system.h"
 
 #include "scara.h"
 

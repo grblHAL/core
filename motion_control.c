@@ -80,6 +80,7 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
 
 #ifdef KINEMATICS_API
     float feed_rate = pl_data->feed_rate;
+    pl_data->rate_multiplier = 1.0;
     target = kinematics.segment_line(target, plan_get_position(), pl_data, true);
 #endif
 
@@ -894,13 +895,21 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
 
     if(cycle.mask) {
 
-        if(!protocol_execute_realtime()) // Check for reset and set system abort.
-            return Status_Unhandled;     // Did not complete. Alarm state set by mc_alarm.
+        if(!protocol_execute_realtime()) {  // Check for reset and set system abort.
+
+            if(grbl.on_homing_completed)
+                grbl.on_homing_completed(false);
+
+            return Status_Unhandled;        // Did not complete. Alarm state set by mc_alarm.
+        }
 
         if(homed_status != Status_OK) {
 
             if(state_get() == STATE_HOMING)
                 state_set(STATE_IDLE);
+
+            if(grbl.on_homing_completed)
+                grbl.on_homing_completed(false);
 
             return homed_status;
         }
@@ -929,13 +938,11 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
                     ? Status_LimitsEngaged
                     : Status_OK;
 
-    if(homed_status == Status_OK) {
-
+    if(homed_status == Status_OK)
         limits_set_work_envelope();
 
-        if(grbl.on_homing_completed)
-            grbl.on_homing_completed();
-    }
+    if(grbl.on_homing_completed)
+        grbl.on_homing_completed(homed_status == Status_OK);
 
     return homed_status;
 }

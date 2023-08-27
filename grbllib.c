@@ -43,15 +43,23 @@
 #endif
 
 #if COREXY
-#include "corexy.h"
+#include "kinematics/corexy.h"
 #endif
 
 #if WALL_PLOTTER
-#include "wall_plotter.h"
+#include "kinematics/wall_plotter.h"
+#endif
+
+#if DELTA_ROBOT
+#include "kinematics/delta.h"
+#endif
+
+#if POLAR_ROBOT
+#include "kinematics/polar.h"
 #endif
 
 #if SCARA
-#include "scara.h"
+#include "kinematics/scara.h"
 #endif
 
 typedef union {
@@ -183,6 +191,26 @@ int grbl_enter (void)
     hal.signals_cap.safety_door_ajar = Off;
 #endif
 
+#if COREXY
+    corexy_init();
+#endif
+
+#if WALL_PLOTTER
+    wall_plotter_init();
+#endif
+
+#if DELTA_ROBOT
+    delta_robot_init();
+#endif
+
+#if POLAR_ROBOT
+    polar_init();
+#endif
+
+#if SCARA
+    scara_init();
+#endif
+
   #if NVSDATA_BUFFER_ENABLE
     nvs_buffer_init();
   #endif
@@ -231,17 +259,6 @@ int grbl_enter (void)
     if(hal.get_position)
         hal.get_position(&sys.position); // TODO: restore on abort when returns true?
 
-#if COREXY
-    corexy_init();
-#endif
-
-#if WALL_PLOTTER
-    wall_plotter_init();
-#endif
-
-#if SCARA
-    scara_init();
-#endif
 
 #if ENABLE_BACKLASH_COMPENSATION
     mc_backlash_init((axes_signals_t){AXES_BITMASK});

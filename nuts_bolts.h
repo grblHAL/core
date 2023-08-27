@@ -42,9 +42,15 @@
 
 #define TOLERANCE_EQUAL 0.0001f
 
-#define TAN_30 0.57735f         // Used for threading calculations (60 degree inserts)
-#define RADDEG 0.0174532925f    // Radians per degree
-#define DEGRAD 57.29577951f     // Degrees per radians
+#define RADDEG  0.01745329251994329577f // Radians per degree
+#define DEGRAD 57.29577951308232087680f // Degrees per radians
+#define SQRT3   1.73205080756887729353f
+#define SIN120  0.86602540378443864676f
+#define COS120 -0.5f
+#define TAN60   1.73205080756887729353f
+#define SIN30   0.5f
+#define TAN30   0.57735026918962576451f
+#define TAN30_2 0.28867513459481288225f
 
 #define ABORTED (sys.abort || sys.cancel)
 

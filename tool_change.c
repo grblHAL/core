@@ -93,17 +93,17 @@ static void reset (void)
     if(next_tool) { //TODO: move to gc_xxx() function?
         // Restore previous tool if reset is during change
 #if N_TOOLS
-        if(current_tool.tool != next_tool->tool) {
+        if(current_tool.tool_id != next_tool->tool_id) {
             memcpy(gc_state.tool, &current_tool, sizeof(tool_data_t));
             system_add_rt_report(Report_Tool);
         }
 #else
-        if(current_tool.tool != next_tool->tool) {
+        if(current_tool.tool_id != next_tool->tool_id) {
             memcpy(next_tool, &current_tool, sizeof(tool_data_t));
             system_add_rt_report(Report_Tool);
         }
 #endif
-        gc_state.tool_pending = gc_state.tool->tool;
+        gc_state.tool_pending = gc_state.tool->tool_id;
         next_tool = NULL;
     }
 
@@ -304,7 +304,7 @@ static status_code_t tool_change (parser_state_t *parser_state)
     if(next_tool == NULL)
         return Status_GCodeToolError;
 
-    if(current_tool.tool == next_tool->tool)
+    if(current_tool.tool_id == next_tool->tool_id)
         return Status_OK;
 
 #if COMPATIBILITY_LEVEL > 1
@@ -417,7 +417,7 @@ void tc_init (void)
         system_add_rt_report(Report_TLOReference);
     }
 
-gc_set_tool_offset(ToolLengthOffset_Cancel, 0, 0.0f);
+    gc_set_tool_offset(ToolLengthOffset_Cancel, 0, 0.0f);
 
     if(settings.tool_change.mode == ToolChange_Disabled || settings.tool_change.mode == ToolChange_Ignore) {
         hal.tool.select = NULL;

@@ -769,7 +769,7 @@ void report_gcode_modes (void)
     if (settings.parking.flags.enable_override_control && sys.override.control.parking_disable)
         hal.stream.write(" M56");
 
-    hal.stream.write(appendbuf(2, " T", uitoa((uint32_t)gc_state.tool->tool)));
+    hal.stream.write(appendbuf(2, " T", uitoa((uint32_t)gc_state.tool->tool_id)));
 
     hal.stream.write(appendbuf(2, " F", get_rate_value(gc_state.feed_rate)));
 
@@ -1344,7 +1344,7 @@ void report_realtime_status (void)
             hal.stream.write_all(gc_state.modal.diameter_mode ? "|D:1" : "|D:0");
 
         if(report.tool)
-            hal.stream.write_all(appendbuf(2, "|T:", uitoa(gc_state.tool->tool)));
+            hal.stream.write_all(appendbuf(2, "|T:", uitoa((uint32_t)gc_state.tool->tool_id)));
 
         if(report.tlo_reference)
             hal.stream.write_all(appendbuf(2, "|TLR:", uitoa(sys.tlo_reference_set.mask != 0)));
@@ -1370,16 +1370,16 @@ void report_realtime_status (void)
 
     if(settings.status_report.parser_state) {
 
-        static uint32_t tool;
+        static tool_id_t tool_id;
         static float feed_rate, spindle_rpm;
         static gc_modal_t last_state;
         static bool g92_active;
 
-        bool is_changed = feed_rate != gc_state.feed_rate || spindle_rpm != gc_state.spindle.rpm || tool != gc_state.tool->tool;
+        bool is_changed = feed_rate != gc_state.feed_rate || spindle_rpm != gc_state.spindle.rpm || tool_id != gc_state.tool->tool_id;
 
         if(is_changed) {
             feed_rate = gc_state.feed_rate;
-            tool = gc_state.tool->tool;
+            tool_id = gc_state.tool->tool_id;
             spindle_rpm = gc_state.spindle.rpm;
         } else if ((is_changed = g92_active != is_g92_active()))
             g92_active = !g92_active;

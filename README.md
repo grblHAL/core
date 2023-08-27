@@ -1,19 +1,5 @@
 # grblHAL
 
-## Scara kinematics
-
-This version of the grblHAL core includes the kinematics for a Scara robot (2 rotational joints in series).
-
-Link lengths can be set in [scara.h](scara.h) and absolute/relative joint angles can be selected. Also note that the steps/mm setting for x and y (`$100` and `$101`) are now steps/radian and should be in the 10.000-100.000 range for decent accuracy.
-
-Current version only tested on the RP2040, and not yet with a physical system.
-
-Stuff still to be added:
-
-- Add additional '`$`' settings.
-- Fix homing/limits related functionality
-- (closed-loop functionality)
-
 ## About GrblHAL
 
 __New:__ A web app for [building for some drivers](http://svn.io-engineering.com:8080/) is now available, feedback will be appreciated.
@@ -29,7 +15,7 @@ It has been written to complement grblHAL and has features such as proper keyboa
 
 ---
 
-Latest build date is 20230808, see the [changelog](changelog.md) for details.  
+Latest build date is 20230821, see the [changelog](changelog.md) for details.  
 __NOTE:__ A settings reset will be performed on an update of builds earlier than 20230125. Backup and restore of settings is recommended.  
 __IMPORTANT!__  A new setting has been introduced for ganged axes motors in build 20211121.  
 I have only bench tested this for a couple of drivers, correct function should be verified after updating by those who have more than three motors configured.  

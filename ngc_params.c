@@ -125,7 +125,7 @@ static float m66_result (ngc_param_id_t id)
 
 static float tool_number (ngc_param_id_t id)
 {
-    return (float)gc_state.tool->tool;
+    return (float)gc_state.tool->tool_id;
 }
 
 static float tool_offset (ngc_param_id_t id)
@@ -514,7 +514,7 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             break;
 
         case NGCParam_current_tool:
-            value = (float)gc_state.tool->tool;
+            value = (float)gc_state.tool->tool_id;
             break;
 
         case NGCParam_current_pocket:
@@ -522,7 +522,7 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             break;
 
         case NGCParam_selected_tool:
-            value = gc_state.tool_pending != gc_state.tool->tool ? (float)gc_state.tool_pending : -1.0f;
+            value = gc_state.tool_pending != gc_state.tool->tool_id ? (float)gc_state.tool_pending : -1.0f;
             break;
 
         case NGCParam_selected_pocket:

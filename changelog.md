@@ -1,5 +1,71 @@
 ## grblHAL changelog
 
+<a name="20230825"/>Build 20230825
+
+Core:
+
+* Added `grbl.on_tool_changed` event and removed help for disabled $-commands.
+
+Drivers:
+
+* LPC176x: added option to use reset input as E-stop, added support for Bluetooth plugin for some boards and fixed ioports IRQ issue.
+
+Templates:
+
+* Added _my_plugin_ example for keeping last selected tool number across a reboot. Enable by setting `$485=1`.
+
+---
+
+<a name="20230821-2"/>20230821-2
+
+Plugins:
+
+* Networking: increased WizChip temp packet buffer size, "hardened" code.
+
+Drivers:
+
+* RP2040: use DMA for FatFs transfers, increased WizChip SPI clock to 33 MHz.
+
+* ESP32: updated for change of `grbl.on_homing_completed` signature.
+
+---
+
+<a name="20230821"/>Build 20230821
+
+Core:
+
+* Fix for issue #349 - active feed rate override caused jog motions to hang on some drivers \(STM32F4xx and possibly others\).
+
+Drivers:
+
+* RP2040: fix for regression: ethernet was incorrectly left enabled in CMakeLists.txt.
+
+---
+
+<a name="20230820"/>Build 20230820
+
+Core:
+
+* Delta kinematics improvements. Added setting for base > floor distance, `$DELTA` command for work envelope info. Still WIP.
+
+* Changed signature of `grbl.on_homing_completed` event.
+
+Drivers:
+
+* RP2040: fix for [issue #72](https://github.com/grblHAL/RP2040/discussions/72) \(typo\), improved SPI chip select handling.
+
+---
+
+<a name="20230818"/>Build 20230818
+
+Core:
+
+* Moved kinematics implementations to separate folder and added initial implementation of delta and polar kinematics.  
+__NOTE:__ Delta and polar kinematics is WIP \(work in progress\) and incomplete. Feedback is required as I do not have machines at hand for testing.
+Ref. issue #341 and #346.
+
+---
+
 <a name="20230816"/>20230816
 
 Plugins:

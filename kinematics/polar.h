@@ -1,9 +1,9 @@
 /*
-  scara.h - scara kinematics implementation
+  corexy.c - polar kinematics implementation
 
   Part of grblHAL
 
-  Copyright (c) 2019 Terje Io
+  Copyright (c) 2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -19,12 +19,10 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "grbl.h"
+#ifndef _POLAR_H_
+#define _POLAR_H_
 
-#ifndef _SCARA_H_
-#define _SCARA_H_
+// Initialize HAL pointers for Polar kinematics
+void polar_init (void);
 
-// Initialize HAL pointers for scara kinematics
-void scara_init(void);
-
-#endif
+#endif // _POLAR_H_

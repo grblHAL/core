@@ -445,8 +445,13 @@ static void state_await_toolchanged (uint_fast16_t rt_exec)
 {
     if (rt_exec & EXEC_CYCLE_START) {
         if (!gc_state.tool_change) {
+
             if (hal.stream.suspend_read)
                 hal.stream.suspend_read(false); // Tool change complete, restore "normal" stream input.
+
+            if(grbl.on_tool_changed)
+                grbl.on_tool_changed(gc_state.tool);
+
             system_add_rt_report(Report_Tool);
         }
         pending_state = gc_state.tool_change ? STATE_TOOL_CHANGE : STATE_IDLE;

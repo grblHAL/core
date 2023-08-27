@@ -67,7 +67,9 @@ typedef struct plan_block {
     float max_junction_speed_sqr;   // Junction entry speed limit based on direction vectors in (mm/min)^2
     float rapid_rate;               // Axis-limit adjusted maximum rate for this block direction in (mm/min)
     float programmed_rate;          // Programmed rate of this block (mm/min).
-
+#ifdef KINEMATICS_API
+    float rate_multiplier;          // Rate multiplier of this block.
+#endif
     // Stored spindle speed data used by spindle overrides and resuming methods.
     spindle_t spindle;              // Block spindle parameters. Copied from pl_line_data.
 
@@ -80,6 +82,9 @@ typedef struct plan_block {
 // Planner data prototype. Must be used when passing new motions to the planner.
 typedef struct {
     float feed_rate;                // Desired feed rate for line motion. Value is ignored, if rapid motion.
+#ifdef KINEMATICS_API
+    float rate_multiplier;          // Feed rate multiplier.
+#endif
     //  float blending_tolerance;   // Motion blending tolerance
     spindle_t spindle;              // Desired spindle parameters, such as RPM, through line motion.
     planner_cond_t condition;       // Bitfield variable to indicate planner conditions. See defines above.

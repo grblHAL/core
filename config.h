@@ -111,7 +111,7 @@ generate a solution.
 
 #include "nuts_bolts.h"
 
-//#define KINEMATICS_API // Uncomment to add HAL entry points for custom kinematics
+#define KINEMATICS_API // Uncomment to add HAL entry points for custom kinematics
 
 /*! \def MASLOW_ROUTER
 \brief Enable Maslow router kinematics.
@@ -130,6 +130,26 @@ Experimental - testing required and homing needs to be worked out.
 #if !defined WALL_PLOTTER || defined __DOXYGEN__
 #define WALL_PLOTTER Off
 #endif
+
+/*! \def DELTA_ROBOT
+\brief Enable delta kinematics.
+Experimental - testing required and homing needs to be worked out.
+*/
+#if !defined DELTA_ROBOT || defined __DOXYGEN__
+#define DELTA_ROBOT Off
+#if !defined MINIMUM_FEED_RATE
+#define MINIMUM_FEED_RATE 0.1f // (radians/min)
+#endif
+#endif
+
+/*! \def POLAR_ROBOT
+\brief Enable polar kinematics.
+Experimental - testing required and homing needs to be worked out.
+*/
+#if !defined POLAR_ROBOT || defined __DOXYGEN__
+#define POLAR_ROBOT Off
+#endif
+
 
 /*! \def COREXY
 \brief Enable CoreXY kinematics. Use ONLY with CoreXY machines.

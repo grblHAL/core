@@ -29,7 +29,7 @@
 
 */
 
-#include "grbl.h"
+#include "../grbl.h"
 
 #ifndef _MASLOW_H_
 #define _MASLOW_H_

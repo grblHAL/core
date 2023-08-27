@@ -42,7 +42,7 @@
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_BUILD 20230815
+#define GRBL_BUILD 20230825
 
 #define GRBL_URL "https://github.com/grblHAL"
 
@@ -70,7 +70,7 @@
 #define PROGMEM
 #endif
 
-#if (COREXY || WALL_PLOTTER || MASLOW_ROUTER || SCARA) && !defined(KINEMATICS_API)
+#if (COREXY || WALL_PLOTTER || DELTA_ROBOT || POLAR_ROBOT || SCARA || MASLOW_ROUTER) && !defined(KINEMATICS_API)
 #define KINEMATICS_API
 #endif
 
