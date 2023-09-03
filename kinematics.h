@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2019-2022 Terje Io
+  Copyright (c) 2019-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ typedef struct {
     void (*limits_set_target_pos)(uint_fast8_t idx);
     void (*limits_set_machine_positions)(axes_signals_t cycle);
     bool (*homing_cycle_validate)(axes_signals_t cycle);
-    float (*homing_cycle_get_feedrate)(float feedrate, axes_signals_t cycle);
+    float (*homing_cycle_get_feedrate)(axes_signals_t axes, float rate, homing_mode_t mode);
 } kinematics_t;
 
 extern kinematics_t kinematics;

@@ -343,12 +343,12 @@ static bool is_setting_available (const setting_detail_t *setting)
 
         case Settings_IoPort_InvertIn:
         case Settings_IoPort_Pullup_Disable:
-            available = digital.in.ports->n_ports > 0;
+            available = digital.in.ports && digital.in.ports->n_ports > 0;
             break;
 
         case Settings_IoPort_InvertOut:
         case Settings_IoPort_OD_Enable:
-            available = digital.out.ports->n_ports > 0;
+            available = digital.out.ports && digital.out.ports->n_ports > 0;
             break;
 
         default:

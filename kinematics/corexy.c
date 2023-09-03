@@ -197,7 +197,7 @@ static bool homing_cycle_validate (axes_signals_t cycle)
     return (cycle.mask & (X_AXIS_BIT|Y_AXIS_BIT)) == 0 || cycle.mask < 3;
 }
 
-static float homing_cycle_get_feedrate (float feedrate, axes_signals_t cycle)
+static float homing_cycle_get_feedrate (axes_signals_t cycle, float feedrate, homing_mode_t mode)
 {
     return feedrate * sqrtf(2.0f);
 }

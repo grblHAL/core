@@ -126,6 +126,30 @@ static void auto_realtime_report (sys_state_t state)
     on_execute_realtime(state);
 }
 
+// "Wire" homing signals to limit signals, used when max limit inputs not available.
+ISR_CODE static home_signals_t ISR_FUNC(get_homing_status)(void)
+{
+    home_signals_t home;
+    limit_signals_t limits = hal.limits.get_state();
+
+    home.a.value = limits.min.value;
+    home.b.value = limits.min2.value;
+
+    return home;
+}
+
+// "Wire" homing signals to limit signals, used when max limit inputs available.
+ISR_CODE static home_signals_t ISR_FUNC(get_homing_status2)(void)
+{
+    home_signals_t home;
+    limit_signals_t source = xbar_get_homing_source(), limits = hal.limits.get_state();
+
+    home.a.value = (limits.min.value & source.min.mask) | (limits.max.value & source.max.mask);
+    home.b.value = (limits.min2.value & source.min2.mask) | (limits.max2.value & source.max2.mask);
+
+    return home;
+}
+
 // main entry point
 
 int grbl_enter (void)
@@ -161,6 +185,8 @@ int grbl_enter (void)
     hal.signals_cap.reset = hal.signals_cap.feed_hold = hal.signals_cap.cycle_start = On;
 
     sys.cold_start = true;
+
+    limits_init();
 
 #if NVSDATA_BUFFER_ENABLE
     nvs_buffer_alloc(); // Allocate memory block for NVS buffer
@@ -251,7 +277,6 @@ int grbl_enter (void)
     if(hal.get_position)
         hal.get_position(&sys.position); // TODO: restore on abort when returns true?
 
-
 #if ENABLE_BACKLASH_COMPENSATION
     mc_backlash_init((axes_signals_t){AXES_BITMASK});
 #endif
@@ -260,7 +285,7 @@ int grbl_enter (void)
 
     // "Wire" homing switches to limit switches if not provided by the driver.
     if(hal.homing.get_state == NULL)
-        hal.homing.get_state = hal.limits.get_state;
+        hal.homing.get_state = hal.limits_cap.max.mask ? get_homing_status2 : get_homing_status;
 
     if(settings.report_interval) {
         on_execute_realtime = grbl.on_execute_realtime;
@@ -298,7 +323,7 @@ int grbl_enter (void)
         // Reset Grbl primary systems.
         hal.stream.reset_read_buffer(); // Clear input stream buffer
         gc_init();                      // Set g-code parser to default state
-        hal.limits.enable(settings.limits.flags.hard_enabled, false);
+        hal.limits.enable(settings.limits.flags.hard_enabled, (axes_signals_t){0});
         plan_reset();                   // Clear block buffer and planner variables
         st_reset();                     // Clear stepper subsystem variables.
         limits_set_homing_axes();       // Set axes to be homed from settings.

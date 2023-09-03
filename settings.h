@@ -970,5 +970,6 @@ bool setting_is_list (const setting_detail_t *setting);
 bool setting_is_integer (const setting_detail_t *setting);
 void setting_remove_elements (setting_id_t id, uint32_t mask);
 bool settings_add_spindle_type (const char *type);
+limit_signals_t settings_get_homing_source (void);
 
 #endif

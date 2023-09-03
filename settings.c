@@ -724,11 +724,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_PositionIGain, "" },
     { Setting_PositionDGain, "" },
     { Setting_PositionIMaxError, "Spindle sync PID max integrator error." },
-#if DELTA_ROBOT
-    { Setting_AxisStepsPerMM, "Travel resolution in steps per revolution." },
-#else
     { Setting_AxisStepsPerMM, "Travel resolution in steps per millimeter." },
-#endif
     { (setting_id_t)(Setting_AxisStepsPerMM + 1), "Travel resolution in steps per degree." }, // "Hack" to get correct description for rotary axes
     { Setting_AxisMaxRate, "Maximum rate. Used as G0 rapid rate." },
     { Setting_AxisAcceleration, "Acceleration. Used for motion planning to not exceed motor torque and lose steps." },
@@ -1043,7 +1039,7 @@ static status_code_t set_hard_limits_enable (setting_id_t id, uint_fast16_t int_
 #if COMPATIBILITY_LEVEL <= 1
     settings.limits.flags.check_at_init = bit_istrue(int_value, bit(1));
 #endif
-    hal.limits.enable(settings.limits.flags.hard_enabled, false); // Change immediately. NOTE: Nice to have but could be problematic later.
+    hal.limits.enable(settings.limits.flags.hard_enabled, (axes_signals_t){0}); // Change immediately. NOTE: Nice to have but could be problematic later.
 
     return Status_OK;
 }
@@ -1219,6 +1215,13 @@ static status_code_t set_tool_restore_pos (setting_id_t id, uint_fast16_t int_va
     return Status_OK;
 }
 
+static inline void set_axis_unit (const setting_detail_t *setting, const char *unit)
+{
+    // TODO: add length check
+    if(unit)
+        strcpy((char *)setting->unit, unit);
+}
+
 #if N_AXIS > 3
 
 static status_code_t set_rotational_axes (setting_id_t id, uint_fast16_t int_value)
@@ -1233,32 +1236,36 @@ static inline bool axis_is_rotary (uint_fast8_t axis_idx)
     return bit_istrue(settings.steppers.is_rotational.mask, bit(axis_idx));
 }
 
-static void set_axis_setting_unit (const setting_detail_t *setting, uint_fast8_t axis_idx)
+static const char *set_axis_setting_unit (setting_id_t setting_id, uint_fast8_t axis_idx)
 {
+    char *unit = NULL;
+
     bool is_rotary = axis_is_rotary(axis_idx);
 
-    switch(setting->id) {
+    switch(setting_id) {
 
         case Setting_AxisStepsPerMM:
-            strcpy((char *)setting->unit, is_rotary ? "step/deg" : "step/mm");
+            unit = is_rotary ? "step/deg" : "step/mm";
             break;
 
         case Setting_AxisMaxRate:
-            strcpy((char *)setting->unit, is_rotary ? "deg/min" : "mm/min");
+            unit = is_rotary ? "deg/min" : "mm/min";
             break;
 
         case Setting_AxisAcceleration:
-            strcpy((char *)setting->unit, is_rotary ? "deg/sec^2" : "mm/sec^2");
+            unit = is_rotary ? "deg/sec^2" : "mm/sec^2";
             break;
 
         case Setting_AxisMaxTravel:
         case Setting_AxisBacklash:
-            strcpy((char *)setting->unit, is_rotary ? "deg" : "mm");
+            unit = is_rotary ? "deg" : "mm";
             break;
 
         default:
             break;
     }
+
+    return unit;
 }
 
 #endif
@@ -2178,9 +2185,10 @@ bool settings_iterator (const setting_detail_t *setting, setting_output_ptr call
         uint_fast8_t axis_idx = 0;
 
         for(axis_idx = 0; axis_idx < N_AXIS; axis_idx++) {
-#if N_AXIS > 3
-            set_axis_setting_unit(setting, axis_idx);
-#endif
+
+            if(grbl.on_set_axis_setting_unit)
+                set_axis_unit(setting, grbl.on_set_axis_setting_unit(setting->id, axis_idx));
+
             if(callback(setting, axis_idx, data))
                 ok = true;
         }
@@ -2205,14 +2213,16 @@ const setting_detail_t *setting_get_details (setting_id_t id, setting_details_t 
     do {
         for(idx = 0; idx < details->n_settings; idx++) {
             if(details->settings[idx].id == id && is_available(&details->settings[idx])) {
-#if N_AXIS > 3
-                if(details->settings[idx].group == Group_Axis0)
-                    set_axis_setting_unit(&details->settings[idx], offset);
-#endif
+
+                if(details->settings[idx].group == Group_Axis0 && grbl.on_set_axis_setting_unit)
+                    set_axis_unit(&details->settings[idx], grbl.on_set_axis_setting_unit(details->settings[idx].id, offset));
+
                 if(offset && details->iterator == NULL && offset >= (details->settings[idx].group == Group_Encoder0 ? hal.encoder.get_n_encoders() : N_AXIS))
                     return NULL;
+
                 if(set)
                     *set = details;
+
                 return &details->settings[idx];
             }
         }
@@ -2227,24 +2237,27 @@ const char *setting_get_description (setting_id_t id)
 
 #ifndef NO_SETTINGS_DESCRIPTIONS
 
-    uint_fast16_t idx;
-    setting_details_t *settings = settings_get_details();
-    const setting_detail_t *setting = setting_get_details(id, NULL);
+    if(grbl.on_setting_get_description == NULL || (description = grbl.on_setting_get_description(id)) == NULL) {
 
-    if(setting) do {
-        if(settings->descriptions) {
-            idx = settings->n_descriptions;
-            do {
-                if(settings->descriptions[--idx].id == setting->id) {
-#if N_AXIS > 3
-                    if(setting->id == Setting_AxisStepsPerMM && axis_is_rotary(id - setting->id))
-                        idx++;
-#endif
-                    description = settings->descriptions[idx].description;
-                }
-            } while(idx && description == NULL);
-        }
-    } while(description == NULL && (settings = settings->next));
+        uint_fast16_t idx;
+        setting_details_t *settings = settings_get_details();
+        const setting_detail_t *setting = setting_get_details(id, NULL);
+
+        if(setting) do {
+            if(settings->descriptions) {
+                idx = settings->n_descriptions;
+                do {
+                    if(settings->descriptions[--idx].id == setting->id) {
+  #if N_AXIS > 3
+                        if(setting->id == Setting_AxisStepsPerMM && axis_is_rotary(id - setting->id))
+                            idx++;
+  #endif
+                        description = settings->descriptions[idx].description;
+                    }
+                } while(idx && description == NULL);
+            }
+        } while(description == NULL && (settings = settings->next));
+    }
 
 #endif
 
@@ -2651,6 +2664,8 @@ status_code_t settings_store_setting (setting_id_t id, char *svalue)
 
     if(status == Status_OK) {
 
+        xbar_set_homing_source();
+
         if(set->save)
             set->save();
 
@@ -2693,6 +2708,11 @@ void settings_init (void)
 {
     settings_changed_flags_t changed = {0};
 
+#if N_AXIS > 3
+    if(grbl.on_set_axis_setting_unit == NULL)
+        grbl.on_set_axis_setting_unit = set_axis_setting_unit;
+#endif
+
     if(!read_global_settings()) {
 
         settings_restore_t settings = settings_all;
@@ -2726,6 +2746,8 @@ void settings_init (void)
         if(hal.probe.configure) // Initialize probe invert mask.
             hal.probe.configure(false, false);
     }
+
+    xbar_set_homing_source();
 
     if(spindle_get_count() == 0)
         spindle_add_null();

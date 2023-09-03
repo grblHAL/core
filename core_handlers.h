@@ -78,6 +78,8 @@ typedef struct {
 
 typedef bool (*enqueue_gcode_ptr)(char *data);
 typedef bool (*protocol_enqueue_realtime_command_ptr)(char c);
+typedef bool (*travel_limits_ptr)(float *target, bool is_cartesian);
+typedef bool (*home_machine_ptr)(axes_signals_t cycle, axes_signals_t auto_square);
 
 typedef void (*on_parser_init_ptr)(parser_state_t *gc_state);
 typedef void (*on_state_change_ptr)(sys_state_t state);
@@ -91,6 +93,7 @@ typedef bool (*on_unknown_realtime_cmd_ptr)(char c);
 typedef void (*on_report_handlers_init_ptr)(void);
 typedef void (*on_report_options_ptr)(bool newopt);
 typedef void (*on_report_command_help_ptr)(void);
+typedef const char *(*on_setting_get_description_ptr)(setting_id_t id);
 typedef void (*on_global_settings_restore_ptr)(void);
 typedef void (*on_realtime_report_ptr)(stream_write_ptr stream_write, report_tracking_flags_t report);
 typedef void (*on_unknown_feedback_message_ptr)(stream_write_ptr stream_write);
@@ -112,6 +115,7 @@ typedef void (*on_gcode_message_ptr)(char *msg);
 typedef void (*on_rt_reports_added_ptr)(report_tracking_flags_t report);
 typedef void (*on_vfs_mount_ptr)(const char *path, const vfs_t *fs);
 typedef void (*on_vfs_unmount_ptr)(const char *path);
+typedef const char *(*on_set_axis_setting_unit_ptr)(setting_id_t setting_id, uint_fast8_t axis_idx);
 typedef status_code_t (*on_file_open_ptr)(const char *fname, vfs_file_t *handle, bool stream);
 typedef status_code_t (*on_unknown_sys_command_ptr)(sys_state_t state, char *line); // return Status_Unhandled.
 typedef status_code_t (*on_user_command_ptr)(char *line);
@@ -137,6 +141,7 @@ typedef struct {
     on_report_command_help_ptr on_report_command_help;
     on_rt_reports_added_ptr on_rt_reports_added;
     on_global_settings_restore_ptr on_global_settings_restore;
+    on_setting_get_description_ptr on_setting_get_description;
     on_get_alarms_ptr on_get_alarms;
     on_get_errors_ptr on_get_errors;
     on_get_settings_ptr on_get_settings;
@@ -152,6 +157,7 @@ typedef struct {
     on_probe_fixture_ptr on_probe_fixture;
     on_probe_start_ptr on_probe_start;
     on_probe_completed_ptr on_probe_completed;
+    on_set_axis_setting_unit_ptr on_set_axis_setting_unit;
     on_gcode_message_ptr on_gcode_message;              //!< Called on output of message parsed from gcode. NOTE: string pointed to is freed after this call.
     on_gcode_message_ptr on_gcode_comment;              //!< Called when a plain gcode comment has been parsed.
     on_tool_selected_ptr on_tool_selected;              //!< Called prior to executing M6 or after executing M61.
@@ -166,6 +172,9 @@ typedef struct {
     on_vfs_unmount_ptr on_vfs_unmount;                  //!< Called when a file system is unmounted.
     on_file_open_ptr on_file_open;                      //!< Called when a file is opened for streaming.
     // core entry points - set up by core before driver_init() is called.
+    home_machine_ptr home_machine;
+    travel_limits_ptr check_travel_limits;
+    travel_limits_ptr apply_jog_limits;
     enqueue_gcode_ptr enqueue_gcode;
     enqueue_realtime_command_ptr enqueue_realtime_command;
     on_macro_execute_ptr on_macro_execute;

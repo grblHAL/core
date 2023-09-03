@@ -41,22 +41,30 @@ typedef enum {
     Input_LimitX,
     Input_LimitX_2,
     Input_LimitX_Max,
+    Input_HomeX,
     Input_LimitY,
     Input_LimitY_2,
     Input_LimitY_Max,
+    Input_HomeY,
     Input_LimitZ,
     Input_LimitZ_2,
     Input_LimitZ_Max,
+    Input_HomeZ,
     Input_LimitA,
     Input_LimitA_Max,
+    Input_HomeA,
     Input_LimitB,
     Input_LimitB_Max,
+    Input_HomeB,
     Input_LimitC,
     Input_LimitC_Max,
+    Input_HomeC,
     Input_LimitU,
     Input_LimitU_Max,
+    Input_HomeU,
     Input_LimitV,
     Input_LimitV_Max,
+    Input_HomeV,
     Input_MISO,
     Input_SPIIRQ,
     Input_RX,
@@ -195,12 +203,15 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Input_LimitX,              .name = "X limit min" },
     { .function = Input_LimitX_2,            .name = "X limit min 2" },
     { .function = Input_LimitX_Max,          .name = "X limit max" },
+    { .function = Input_HomeX,               .name = "X home" },
     { .function = Input_LimitY,              .name = "Y limit min" },
     { .function = Input_LimitY_2,            .name = "Y limit min 2" },
     { .function = Input_LimitY_Max,          .name = "Y limit max" },
+    { .function = Input_HomeY,               .name = "Y home" },
     { .function = Input_LimitZ,              .name = "Z limit min" },
     { .function = Input_LimitZ_2,            .name = "Z limit min 2" },
     { .function = Input_LimitZ_Max,          .name = "Z limit max" },
+    { .function = Input_HomeZ,               .name = "Z home" },
     { .function = Input_MISO,                .name = "MISO" },
     { .function = Input_SPIIRQ,              .name = "SPI IRQ" },
     { .function = Input_RX,                  .name = "RX" },
@@ -254,6 +265,7 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Output_StepperEnableA,     .name = "A enable" },
     { .function = Input_LimitA,              .name = "A limit min" },
     { .function = Input_LimitA_Max,          .name = "A limit max" },
+    { .function = Input_HomeA,               .name = "A home" },
 #endif
 #ifdef B_AXIS
     { .function = Output_StepB,              .name = "B step" },
@@ -262,6 +274,7 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Output_StepperEnableAB,    .name = "AB enable" },
     { .function = Input_LimitB,              .name = "B limit min" },
     { .function = Input_LimitB_Max,          .name = "B limit max" },
+    { .function = Input_HomeB,               .name = "B home" },
 #endif
 #ifdef C_AXIS
     { .function = Output_StepC,              .name = "C step" },
@@ -269,6 +282,7 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Output_StepperEnableC,     .name = "C enable" },
     { .function = Input_LimitC,              .name = "C limit min" },
     { .function = Input_LimitC_Max,          .name = "C limit max" },
+    { .function = Input_HomeC,               .name = "C home" },
 #endif
 #ifdef U_AXIS
     { .function = Output_StepU,              .name = "U step" },
@@ -276,6 +290,7 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Output_StepperEnableU,     .name = "U enable" },
     { .function = Input_LimitU,              .name = "U limit min" },
     { .function = Input_LimitU_Max,          .name = "U limit max" },
+    { .function = Input_HomeU,               .name = "U home" },
 #endif
 #ifdef V_AXIS
     { .function = Output_StepV,              .name = "V step" },
@@ -283,6 +298,7 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Output_StepperEnableV,     .name = "V enable" },
     { .function = Input_LimitV,              .name = "V limit min" },
     { .function = Input_LimitV_Max,          .name = "V limit max" },
+    { .function = Input_HomeV,               .name = "V home" },
 #endif
     { .function = Output_MotorChipSelect,    .name = "Motor CS" },
     { .function = Output_MotorChipSelectX,   .name = "Motor CSX" },
@@ -357,18 +373,20 @@ typedef enum {
     PinGroup_UART4,
     PinGroup_USB,
     PinGroup_CAN,
+    PinGroup_Home,
 // Interrupt capable pins that may have debounce processing enabled
     PinGroup_Control       = (1<<8),
     PinGroup_Limit         = (1<<9),
-    PinGroup_Probe         = (1<<10),
-    PinGroup_Keypad        = (1<<11),
-    PinGroup_MPG           = (1<<12),
-    PinGroup_QEI           = (1<<13),
-    PinGroup_QEI_Select    = (1<<14),
-    PinGroup_QEI_Index     = (1<<15),
-    PinGroup_Motor_Warning = (1<<16),
-    PinGroup_Motor_Fault   = (1<<17),
-    PinGroup_AuxInput      = (1<<18)
+    PinGroup_LimitMax      = (1<<10),
+    PinGroup_Probe         = (1<<11),
+    PinGroup_Keypad        = (1<<12),
+    PinGroup_MPG           = (1<<13),
+    PinGroup_QEI           = (1<<14),
+    PinGroup_QEI_Select    = (1<<15),
+    PinGroup_QEI_Index     = (1<<16),
+    PinGroup_Motor_Warning = (1<<17),
+    PinGroup_Motor_Fault   = (1<<18),
+    PinGroup_AuxInput      = (1<<19)
 } pin_group_t;
 
 //! Pin interrupt modes, may be or'ed when reporting pin capability.
@@ -478,5 +496,10 @@ typedef struct periph_signal {
     periph_pin_t pin;
     struct periph_signal *next;
 } periph_signal_t;
+
+void xbar_set_homing_source (void);
+limit_signals_t xbar_get_homing_source (void);
+limit_signals_t xbar_get_homing_source_from_cycle (axes_signals_t homing_cycle);
+axes_signals_t xbar_fn_to_axismask (pin_function_t id);
 
 #endif

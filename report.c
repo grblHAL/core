@@ -2093,6 +2093,25 @@ status_code_t report_current_limit_state (sys_state_t state, char *args)
     return Status_OK;
 }
 
+status_code_t report_current_home_signal_state (sys_state_t state, char *args)
+{
+    char *append = &buf[7];
+    home_signals_t home = hal.homing.get_state();
+
+    strcpy(buf, "[HOMES:");
+
+    append = axis_signals_tostring(append, home.a);
+    *append++ = ',';
+    append = axis_signals_tostring(append, home.b);
+
+    strcat(append, hal.home_cap.a.mask ? ":H" : ":L");
+
+    hal.stream.write(buf);
+    hal.stream.write("]" ASCII_EOL);
+
+    return Status_OK;
+}
+
 // Prints spindle data (encoder pulse and index count, angular position).
 status_code_t report_spindle_data (sys_state_t state, char *args)
 {

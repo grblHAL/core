@@ -33,6 +33,8 @@ typedef enum
     HomingMode_Pulloff
 } homing_mode_t;
 
+void limits_init (void);
+
 // Perform one portion of the homing cycle based on the input settings.
 status_code_t limits_go_home (axes_signals_t cycle);
 

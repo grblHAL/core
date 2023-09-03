@@ -137,9 +137,11 @@ Experimental - testing required and homing needs to be worked out.
 */
 #if !defined DELTA_ROBOT || defined __DOXYGEN__
 #define DELTA_ROBOT Off
-#if !defined MINIMUM_FEED_RATE
-#define MINIMUM_FEED_RATE 0.1f // (radians/min)
 #endif
+
+// Reduce minimum feedrate for delta robots
+#if DELTA_ROBOT && !defined MINIMUM_FEED_RATE
+#define MINIMUM_FEED_RATE 0.1f // (radians/min)
 #endif
 
 /*! \def POLAR_ROBOT

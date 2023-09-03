@@ -865,6 +865,27 @@
 #ifndef Z_LIMIT_BIT
 #define Z_LIMIT_BIT (1<<Z_LIMIT_PIN)
 #endif
+#ifndef X_LIMIT_BIT_MAX
+#ifdef X_LIMIT_PIN_MAX
+#define X_LIMIT_BIT_MAX (1<<X_LIMIT_PIN_MAX)
+#else
+#define X_LIMIT_BIT_MAX 0
+#endif
+#endif
+#ifndef Y_LIMIT_BIT_MAX
+#ifdef Y_LIMIT_PIN_MAX
+#define Y_LIMIT_BIT_MAX (1<<Y_LIMIT_PIN_MAX)
+#else
+#define Y_LIMIT_BIT_MAX 0
+#endif
+#endif
+#ifndef Z_LIMIT_BIT_MAX
+#ifdef Z_LIMIT_PIN_MAX
+#define Z_LIMIT_BIT_MAX (1<<Z_LIMIT_PIN_MAX)
+#else
+#define Z_LIMIT_BIT_MAX 0
+#endif
+#endif
 
 #if !defined(X_ENABLE_BIT) && defined(X_ENABLE_PIN)
 #define X_ENABLE_BIT (1<<X_ENABLE_PIN)
@@ -918,10 +939,10 @@
 #define STEPPERS_ENABLE_MASK STEPPERS_ENABLE_BIT
 #else
 
-#if N_AXIS >=4 && !defined(A_ENABLE_BIT)
+#if N_AXIS >= 4 && !defined(A_ENABLE_BIT)
 #define A_ENABLE_BIT 0
 #endif
-#if N_AXIS >=5 && !defined(B_ENABLE_BIT)
+#if N_AXIS >= 5 && !defined(B_ENABLE_BIT)
 #define B_ENABLE_BIT 0
 #endif
 #if N_AXIS >= 6 && !defined(C_ENABLE_BIT)
@@ -987,8 +1008,8 @@
 #define LIMIT_MASK_BASE (X_LIMIT_BIT|Y_LIMIT_BIT|LIMIT2_MASK)
 #define LIMIT_MASK_BASE_SUM (X_LIMIT_BIT+Y_LIMIT_BIT+LIMIT2_MASK_SUM)
 #else
-#define LIMIT_MASK_BASE (X_LIMIT_BIT|Y_LIMIT_BIT|Z_LIMIT_BIT)
-#define LIMIT_MASK_BASE_SUM (X_LIMIT_BIT+Y_LIMIT_BIT+Z_LIMIT_BIT)
+#define LIMIT_MASK_BASE (X_LIMIT_BIT|Y_LIMIT_BIT|Z_LIMIT_BIT|X_LIMIT_BIT_MAX|Y_LIMIT_BIT_MAX|Z_LIMIT_BIT_MAX)
+#define LIMIT_MASK_BASE_SUM (X_LIMIT_BIT+Y_LIMIT_BIT+Z_LIMIT_BIT+X_LIMIT_BIT_MAX+Y_LIMIT_BIT_MAX+Z_LIMIT_BIT_MAX)
 #endif
 
 #if N_AXIS == 3
@@ -1013,6 +1034,10 @@
 #endif
 
 #endif // LIMIT_MASK
+
+#ifndef HOME_MASK
+#define HOME_MASK 0
+#endif
 
 #ifndef N_GANGED
 #define N_GANGED 0
@@ -1112,6 +1137,52 @@ static limit_signals_t get_limits_cap (void)
 #endif
 
     return limits;
+}
+
+static home_signals_t get_home_cap (void)
+{
+    home_signals_t home = {0};
+
+#if HOME_MASK
+
+#if X_HOME_BIT
+    home.primary.x = On;
+#endif
+#if Y_HOME_BIT
+    home.primary.y = On;
+#endif
+#if Z_HOME_BIT
+    home.primary.z = On;
+#endif
+#if A_HOME_BIT
+    home.primary.a = On;
+#endif
+#if B_HOME_BIT
+    home.primary.b = On;
+#endif
+#if C_HOME_BIT
+    home.primary.c = On;
+#endif
+#if U_HOME_BIT
+    home.primary.u = On;
+#endif
+#if V_HOME_BIT
+    home.primary.v = On;
+#endif
+
+#if X2_HOME_BIT
+    home.secondary.x = On;
+#endif
+#if Y2_HOME_BIT
+    home.secondary.y = On;
+#endif
+#if Z2_HOME_BIT
+    home.secondary.z = On;
+#endif
+
+#endif // HOME_MASK
+
+    return home;
 }
 
 /*EOF*/

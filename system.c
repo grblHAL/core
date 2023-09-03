@@ -242,6 +242,7 @@ PROGMEM static const sys_command_t sys_commands[] = {
 #ifdef V_AXIS
     { "HV", home_v },
 #endif
+    { "HSS", report_current_home_signal_state, { .noargs = On, .allow_blocking = On } },
     { "HELP", output_help, { .allow_blocking = On } },
     { "SPINDLES", output_spindles },
     { "SLP", enter_sleep, { .noargs = On } },
@@ -294,6 +295,7 @@ void system_command_help (void)
         hal.stream.write("$H - home configured axes" ASCII_EOL);
     if(settings.homing.flags.single_axis_commands)
         hal.stream.write("$H<axisletter> - home single axis" ASCII_EOL);
+    hal.stream.write("$HSS - report homing switches status" ASCII_EOL);
     hal.stream.write("$X - unlock machine" ASCII_EOL);
     hal.stream.write("$SLP - enter sleep mode" ASCII_EOL);
     hal.stream.write("$HELP - output help topics" ASCII_EOL);
@@ -1021,33 +1023,6 @@ bool system_xy_at_fixture (coord_system_id_t id, float tolerance)
     }
 
     return ok;
-}
-
-// Checks and reports if target array exceeds machine travel limits. Returns false if check failed.
-bool system_check_travel_limits (float *target)
-{
-    bool failed = false;
-    uint_fast8_t idx = N_AXIS;
-
-    if(sys.homed.mask) do {
-        idx--;
-        if(bit_istrue(sys.homed.mask, bit(idx)) && settings.axis[idx].max_travel < -0.0f)
-            failed = target[idx] < sys.work_envelope.min[idx] || target[idx] > sys.work_envelope.max[idx];
-    } while(!failed && idx);
-
-    return !failed;
-}
-
-// Limits jog commands to be within machine limits, homed axes only.
-void system_apply_jog_limits (float *target)
-{
-    uint_fast8_t idx = N_AXIS;
-
-    if(sys.homed.mask) do {
-        idx--;
-        if(bit_istrue(sys.homed.mask, bit(idx)) && settings.axis[idx].max_travel < -0.0f)
-            target[idx] = max(min(target[idx], sys.work_envelope.max[idx]), sys.work_envelope.min[idx]);
-    } while(idx);
 }
 
 void system_raise_alarm (alarm_code_t alarm)

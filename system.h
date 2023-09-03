@@ -353,12 +353,6 @@ void system_convert_array_steps_to_mpos (float *position, int32_t *steps);
 //! Checks if XY position is within coordinate system XY with given tolerance.
 bool system_xy_at_fixture (coord_system_id_t id, float tolerance);
 
-//! Checks and reports if target array exceeds machine travel limits.
-bool system_check_travel_limits (float *target);
-
-//! Checks and limit jog commands to within machine travel limits.
-void system_apply_jog_limits (float *target);
-
 //! Raise and report alarm state
 void system_raise_alarm (alarm_code_t alarm);
 

@@ -90,6 +90,7 @@ status_code_t report_setting_description (settings_format_t format, setting_id_t
 
 status_code_t report_last_signals_event (sys_state_t state, char *args);
 status_code_t report_current_limit_state (sys_state_t state, char *args);
+status_code_t report_current_home_signal_state (sys_state_t state, char *args);
 
 // Prints spindle data (encoder pulse and index count, angular position).
 status_code_t report_spindle_data (sys_state_t state, char *args);
