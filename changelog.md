@@ -24,6 +24,10 @@ Plugins:
 
 * Motors: fixed bug that would cause a hard fault if the X driver is not configured as Trinamic when others are. Updated for core event signature change.
 
+* Plasma: relaxed I/O requirements, will now start if up/down signals or arc voltage input is available. Still work in progress.
+
+* SD card: added option for named pallet shuttle macro to be called on M60.
+
 ---
 
 <a name="20230825"/>Build 20230825
