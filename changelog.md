@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+<a name="20230825"/>Build 20230905
+
+Core:
+
+* The method for constraining continuous multi-axis jogs \(XYZ\) \(when enabled by `$40=1`\) will now use clipping of the motion vector to the work envelope instead of limiting the target to min/max separately for each axis.
+The signature of the new core handler introduced in build 20230903 for constraining jog motions has been changed to accomodate this.
+
+* Delta robot kinematics tuning, added new setting for max allowed arm angle. Constraining jog movements to the full work envelope may now work \(I do not have a machine to test with\).
+Still work in progress.
+
+Drivers:
+
+ESP32: fix for Modbus RTU serial port board definitions.
+
+STM32F4xx: removed unused code.
+ 
+---
+
 <a name="20230825"/>Build 20230903
 
 Core:

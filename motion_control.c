@@ -87,7 +87,7 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
     // If enabled, check for soft limit violations. Placed here all line motions are picked up
     // from everywhere in Grbl.
     // NOTE: Block jog motions. Jogging is a special case and soft limits are handled independently.
-    if (!pl_data->condition.jog_motion && settings.limits.flags.soft_enabled)
+    if (!pl_data->condition.target_validated && settings.limits.flags.soft_enabled)
         limits_soft_check(target);
 
     // If in check gcode mode, prevent motion by blocking planner. Soft limits still work.
@@ -756,17 +756,18 @@ void mc_thread (plan_line_data_t *pl_data, float *position, gc_thread_data *thre
 }
 
 // Sets up valid jog motion received from g-code parser, checks for soft-limits, and executes the jog.
-status_code_t mc_jog_execute (plan_line_data_t *pl_data, parser_block_t *gc_block)
+status_code_t mc_jog_execute (plan_line_data_t *pl_data, parser_block_t *gc_block, float *position)
 {
     // Initialize planner data struct for jogging motions.
     // NOTE: Spindle and coolant are allowed to fully function with overrides during a jog.
     pl_data->feed_rate = gc_block->values.f;
     pl_data->condition.no_feed_override = On;
     pl_data->condition.jog_motion = On;
+    pl_data->condition.target_validated = On;
     pl_data->line_number = gc_block->values.n;
 
     if(settings.limits.flags.jog_soft_limited)
-        grbl.apply_jog_limits(gc_block->values.xyz, true);
+        grbl.apply_jog_limits(gc_block->values.xyz, position);
     else if (settings.limits.flags.soft_enabled && !grbl.check_travel_limits(gc_block->values.xyz, true))
         return Status_TravelExceeded;
 

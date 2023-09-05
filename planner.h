@@ -35,7 +35,8 @@ typedef union {
                  inverse_time         :1,
                  is_rpm_rate_adjusted :1,
                  is_laser_ppi_mode    :1,
-                 unassigned           :8;
+                 target_validated     :1,
+                 unassigned           :7;
         coolant_state_t coolant;
     };
 } planner_cond_t;

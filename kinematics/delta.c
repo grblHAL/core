@@ -60,6 +60,7 @@ typedef struct {
     float b;    // base to floor
     float sl;   // max segment length TODO: replace with calculated value?
     float home_angle;
+    float max_angle;
     delta_settings_flags_t flags;
 } delta_settings_t;
 
@@ -70,39 +71,45 @@ typedef struct {
     float envelope_midz;
     float min_angle[3];
     float max_angle[3];
+    coord_data_t last_pos;
+    float t;
+    float y1;
+    float y1_sqr;
+    float fe;
+    float rf_sqr;   // bicep length ^ 2
+    float re_sqr;   // forearm length ^ 2
     delta_settings_t cfg;
 } delta_properties_t;
 
 static bool jog_cancel = false;
-static coord_data_t last_pos = {0};
 static delta_settings_t delta_settings;
-static delta_properties_t machine;
+static delta_properties_t machine = {0};
 static homing_mode_t homing_mode;
 static on_report_options_ptr on_report_options;
 static on_homing_completed_ptr on_homing_completed;
 static on_report_command_help_ptr on_report_command_help;
 static on_set_axis_setting_unit_ptr on_set_axis_setting_unit;
 static on_setting_get_description_ptr on_setting_get_description;
+static jog_limits_ptr apply_jog_limits;
 static nvs_address_t nvs_address;
 
 // inverse kinematics
 // helper functions, calculates angle position[X_AXIS] (for YZ-pane)
 int delta_calcAngleYZ (float x0, float y0, float z0, float *theta)
 {
-    float y1 = -0.5f * TAN30 * machine.cfg.f; // f/2 * tg 30
-    y0 -= 0.5f * TAN30 * machine.cfg.e;    // shift center to edge
+    y0 -= machine.fe;    // shift center to edge
     // z = a + b*y
-    float a = (x0 * x0 + y0 * y0 + z0 * z0 + machine.cfg.rf * machine.cfg.rf - machine.cfg.re * machine.cfg.re - y1 * y1) / (2.0f * z0);
-    float b = (y1 - y0) / z0;
+    float a = (x0 * x0 + y0 * y0 + z0 * z0 + machine.rf_sqr - machine.re_sqr - machine.y1_sqr) / (2.0f * z0);
+    float b = (machine.y1 - y0) / z0;
     // discriminant
-    float d = -(a + b * y1) * (a + b * y1) + machine.cfg.rf * (b * b * machine.cfg.rf + machine.cfg.rf);
+    float d = -(a + b * machine.y1) * (a + b * machine.y1) + machine.cfg.rf * (b * b * machine.cfg.rf + machine.cfg.rf);
     if (d < 0.0f)
         return -1; // non-existing point
 
-    float yj = (y1 - a * b - sqrt(d)) / (b * b + 1); // choosing outer point
+    float yj = (machine.y1 - a * b - sqrt(d)) / (b * b + 1); // choosing outer point
     float zj = a + b * yj;
  //   *theta = 180.0f * atanf(-zj / (y1 - yj)) / M_PI + ((yj > y1) ? 180.0f : 0.0f);
-    *theta = atanf(-zj / (y1 - yj)) + ((yj > y1) ? M_PI : 0.0f);
+    *theta = atanf(-zj / (machine.y1 - yj)) + ((yj > machine.y1) ? M_PI : 0.0f);
 
     return 0;
 }
@@ -125,21 +132,14 @@ int delta_calcInverse (coord_data_t *mpos, float *position)
 // Returns machine position in mm converted from system position.
 static float *transform_to_cartesian (float *target, float *position)
 {
-    float t = (machine.cfg.f - machine.cfg.e) * TAN30_2;
-/*    float dtr = M_PI / 180.0f;
-
-    position[X_AXIS] *= dtr;
-    position[Y_AXIS] *= dtr;
-    position[Z_AXIS] *= dtr;
-*/
-    float y1 = -(t + machine.cfg.rf * cosf(position[X_AXIS]));
+    float y1 = -(machine.t + machine.cfg.rf * cosf(position[X_AXIS]));
     float z1 = -machine.cfg.rf * sinf(position[X_AXIS]);
 
-    float y2 = (t + machine.cfg.rf * cosf(position[Y_AXIS])) * SIN30;
+    float y2 = (machine.t + machine.cfg.rf * cosf(position[Y_AXIS])) * SIN30;
     float x2 = y2 * TAN60;
     float z2 = -machine.cfg.rf * sinf(position[Y_AXIS]);
 
-    float y3 = (t + machine.cfg.rf * cosf(position[Z_AXIS])) * SIN30;
+    float y3 = (machine.t + machine.cfg.rf * cosf(position[Z_AXIS])) * SIN30;
     float x3 = -y3 * TAN60;
     float z3 = -machine.cfg.rf * sinf(position[Z_AXIS]);
 
@@ -160,7 +160,7 @@ static float *transform_to_cartesian (float *target, float *position)
     // a*z^2 + b*z + c = 0
     float a = a1 * a1 + a2 * a2 + dnm * dnm;
     float b = 2.0f * (a1 * b1 + a2 * (b2 - y1 * dnm) - z1 * dnm * dnm);
-    float c = (b2 - y1 * dnm) * (b2 - y1 * dnm) + b1 * b1 + dnm * dnm * (z1 * z1 - machine.cfg.re * machine.cfg.re);
+    float c = (b2 - y1 * dnm) * (b2 - y1 * dnm) + b1 * b1 + dnm * dnm * (z1 * z1 - machine.re_sqr);
 
     // discriminant
     float d = b * b - 4.0f * a * c;
@@ -235,7 +235,7 @@ static float *delta_segment_line (float *target, float *position, plan_line_data
 
             distance = sqrtf(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z);
 
-            if((segmented = distance > machine.cfg.sl && !(delta.x == 0.0f && delta.y == 0.0f && delta.z == 0.0f))) {
+            if((segmented = distance > machine.cfg.sl)) {
 
                 idx = N_AXIS;
                 iterations = (uint_fast16_t)ceilf(distance / machine.cfg.sl);
@@ -272,17 +272,17 @@ static float *delta_segment_line (float *target, float *position, plan_line_data
             memcpy(&segment_target, &final_target, sizeof(coord_data_t));
 
         if(delta_calcInverse(&segment_target, mpos.values) != 0) {
-            memcpy(&mpos, &last_pos, sizeof(coord_data_t));
+            memcpy(&mpos, &machine.last_pos, sizeof(coord_data_t));
             iterations = 0;
         }
 
         if(!pl_data->condition.rapid_motion && distance != 0.0f) {
-            float rate_multiplier = get_distance(mpos.values, last_pos.values) / distance;
+            float rate_multiplier = get_distance(mpos.values, machine.last_pos.values) / distance;
             pl_data->feed_rate *= rate_multiplier;
             pl_data->rate_multiplier = 1.0 / rate_multiplier;
         }
 
-        memcpy(&last_pos, &mpos, sizeof(coord_data_t));
+        memcpy(&machine.last_pos, &mpos, sizeof(coord_data_t));
     }
 
     return iterations == 0 || jog_cancel ? NULL : mpos.values;
@@ -290,9 +290,8 @@ static float *delta_segment_line (float *target, float *position, plan_line_data
 
 static void get_cuboid_envelope (void)
 {
-    float maxx = -machine.cfg.e - machine.cfg.f - machine.cfg.re - machine.cfg.rf;
-    float maxz = maxx;
-    float minz = -maxx;
+    float maxz = -machine.cfg.e - machine.cfg.f - machine.cfg.re - machine.cfg.rf;
+    float minz = -maxz;
     float sr = 1.0f / settings.axis[X_AXIS].steps_per_mm; // Steps/rev -> rad/step, XYZ motors should have the same setting!
     float pos[N_AXIS];
     uint32_t z;
@@ -302,7 +301,6 @@ static void get_cuboid_envelope (void)
         .z = machine.cfg.home_angle
     };
     struct {
-        int32_t res;
         float pos[N_AXIS];
     } r[8];
 
@@ -322,6 +320,11 @@ static void get_cuboid_envelope (void)
     }
 
     maxz = machine.home_z;
+    if(machine.cfg.max_angle != 0.0f) {
+        home.x = home.y = home.z = machine.cfg.max_angle;
+        transform_to_cartesian(mpos.values, home.values);
+        minz = mpos.z;
+    }
 
     float btf = -machine.cfg.b;
     if(minz < btf)
@@ -329,6 +332,7 @@ static void get_cuboid_envelope (void)
     if(maxz < btf)
         maxz = btf;
 
+    bool ok;
     float middlez = (maxz + minz) * 0.5f;
     float original_dist = (maxz - middlez);
     float dist = original_dist * 0.5f;
@@ -339,35 +343,46 @@ static void get_cuboid_envelope (void)
 
     do {
         sum += dist;
-
         mpos.x = sum;
         mpos.y = sum;
         mpos.z = middlez + sum;
-        r[0].res = delta_calcInverse(&mpos, r[0].pos);
+        if((ok = delta_calcInverse(&mpos, r[0].pos)) == 0) {
+            mpos.y = -sum;
+            ok = delta_calcInverse(&mpos, r[1].pos) == 0;
+        }
 
-        mpos.y = -sum;
-        r[1].res = delta_calcInverse(&mpos, r[1].pos);
+        if(ok) {
+            mpos.x = -sum;
+            ok = delta_calcInverse(&mpos, r[2].pos) == 0;
+        }
 
-        mpos.x = -sum;
-        r[2].res = delta_calcInverse(&mpos, r[2].pos);
+        if(ok) {
+            mpos.y = sum;
+            ok = delta_calcInverse(&mpos, r[3].pos) == 0;
+        }
 
-        mpos.y = sum;
-        r[3].res = delta_calcInverse(&mpos, r[3].pos);
+        if(ok) {
+            mpos.x = sum;
+            mpos.z = middlez - sum;
+            ok = delta_calcInverse(&mpos, r[4].pos) == 0;
+        }
 
-        mpos.x = sum;
-        mpos.z = middlez - sum;
-        r[4].res = delta_calcInverse(&mpos, r[4].pos);
+        if(ok) {
+            mpos.y = -sum;
+            ok = delta_calcInverse(&mpos, r[5].pos) == 0;
+        }
 
-        mpos.y = -sum;
-        r[5].res = delta_calcInverse(&mpos, r[5].pos);
+        if(ok) {
+            mpos.x = -sum;
+            ok = delta_calcInverse(&mpos, r[6].pos) == 0;
+        }
 
-        mpos.x = -sum;
-        r[6].res = delta_calcInverse(&mpos, r[6].pos);
+        if(ok) {
+            mpos.y = sum;
+            ok = delta_calcInverse(&mpos, r[7].pos) == 0;
+        }
 
-        mpos.y = sum;
-        r[7].res = delta_calcInverse(&mpos, r[7].pos);
-
-        if(r[0].res || r[1].res || r[2].res || r[3].res || r[4].res || r[5].res || r[6].res || r[7].res) {
+        if(!ok) {
             sum -= dist;
             dist *= 0.5f;
         } else {
@@ -389,12 +404,21 @@ static void get_cuboid_envelope (void)
         }
     } while(original_dist > sum && dist > 0.1f);
 
-    sys.work_envelope.min[X_AXIS] = -sum;
-    sys.work_envelope.min[Y_AXIS] = -sum;
-    sys.work_envelope.min[Z_AXIS] = middlez - sum;
-    sys.work_envelope.max[X_AXIS] = sum;
-    sys.work_envelope.max[Y_AXIS] = sum;
-    sys.work_envelope.max[Z_AXIS] = middlez + sum;
+    sys.work_envelope.min.x = -sum;
+    sys.work_envelope.min.y = -sum;
+    sys.work_envelope.min.z = middlez - sum;
+    sys.work_envelope.max.x = sum;
+    sys.work_envelope.max.y = sum;
+    sys.work_envelope.max.z = middlez + sum - settings.homing.pulloff;
+
+    home.x = home.y = 0;
+    home.z = sys.work_envelope.max.z;
+    if(delta_calcInverse(&home, pos) == 0)
+        machine.cfg.home_angle = pos[A_MOTOR];
+
+    machine.min_angle[A_MOTOR] = machine.min_angle[B_MOTOR] = machine.min_angle[C_MOTOR] = machine.cfg.home_angle;
+    if(machine.cfg.max_angle != 0.0f && machine.cfg.max_angle < machine.max_angle[A_MOTOR])
+        machine.max_angle[A_MOTOR] = machine.max_angle[B_MOTOR] = machine.max_angle[C_MOTOR] = machine.cfg.max_angle;
 
     // resolution
     pos[0] = pos[1] = pos[2] = 0.0f;
@@ -505,8 +529,8 @@ static void delta_homing_complete (bool success)
         sys.home_position[0] = .0f;
         sys.home_position[1] = .0f;
         sys.home_position[2] = machine.cfg.flags.home_to_cuboid_top
-                                ? sys.work_envelope.max[Z_AXIS]
-                                : machine.home_z; // + pulloff
+                                ? sys.work_envelope.max.z
+                                : machine.home_z - settings.homing.pulloff;
 
         if(machine.cfg.flags.home_to_cuboid_top)
             protocol_enqueue_rt_command(delta_go_home);
@@ -530,10 +554,17 @@ static bool is_target_inside_cuboid (float *target, bool is_cartesian)
     if(is_cartesian && sys.homed.mask) do {
         idx--;
         if(bit_istrue(sys.homed.mask, bit(idx)) && settings.axis[idx].max_travel < -0.0f)
-            failed = target[idx] < sys.work_envelope.min[idx] || target[idx] > sys.work_envelope.max[idx];
+            failed = target[idx] < sys.work_envelope.min.values[idx] || target[idx] > sys.work_envelope.max.values[idx];
     } while(!failed && idx);
 
     return is_cartesian && !failed;
+}
+
+static inline bool pos_ok (coord_data_t *pos)
+{
+    return !(pos->x < machine.min_angle[A_MOTOR] || pos->x > machine.max_angle[A_MOTOR] ||
+              pos->y < machine.min_angle[B_MOTOR] || pos->y > machine.max_angle[B_MOTOR] ||
+               pos->z < machine.min_angle[C_MOTOR] || pos->z > machine.max_angle[B_MOTOR]);
 }
 
 // Checks and reports if target array exceeds machine travel limits. Returns false if check failed.
@@ -554,7 +585,7 @@ static bool delta_check_travel_limits (float *target, bool is_cartesian)
     if(machine.cfg.flags.limit_to_cuboid)
         return false;
 
-    if(is_cartesian && delta_calcInverse((coord_data_t *)target, pos.values))
+    if(is_cartesian && (delta_calcInverse((coord_data_t *)target, pos.values) || !pos_ok(&pos)))
         return false;
 
     if(!is_cartesian)
@@ -564,7 +595,7 @@ static bool delta_check_travel_limits (float *target, bool is_cartesian)
         idx--;
         if(bit_istrue(sys.homed.mask, bit(idx)) && settings.axis[idx].max_travel < -0.0f) {
             if(idx > Z_AXIS)
-                failed = target[idx] < sys.work_envelope.min[idx] || target[idx] > sys.work_envelope.max[idx];
+                failed = target[idx] < sys.work_envelope.min.values[idx] || target[idx] > sys.work_envelope.max.values[idx];
             else
                 failed = pos.values[idx] < machine.min_angle[idx] || pos.values[idx] > machine.max_angle[idx];
         }
@@ -573,28 +604,65 @@ static bool delta_check_travel_limits (float *target, bool is_cartesian)
     return !failed;
 }
 
-static bool delta_apply_jog_limits (float *target, bool is_cartesian)
+static void delta_apply_jog_limits (float *target, float *position)
 {
-    uint_fast8_t idx = N_AXIS;
+    if(sys.homed.mask == 0)
+        return;
 
-    if(machine.cfg.flags.limit_to_cuboid) {
-        if(sys.homed.mask) do {
-            idx--;
-            if(bit_istrue(sys.homed.mask, bit(idx)) && settings.axis[idx].max_travel < -0.0f)
-                target[idx] = max(min(target[idx], sys.work_envelope.max[idx]), sys.work_envelope.min[idx]);
-        } while(idx);
+    if(machine.cfg.flags.limit_to_cuboid)
+        apply_jog_limits(target, position);
 
-        return true;
-    } else if(is_target_inside_cuboid(target, is_cartesian))
-        return true;
+    else if(!is_target_inside_cuboid(target, true)) {
 
-    coord_data_t mpos;
+        coord_data_t pos;
 
-    if(delta_calcInverse((coord_data_t *)target, mpos.values)) {
-// find and apply limits...
+//        if(delta_calcInverse((coord_data_t *)target, pos.values)) {
+
+            bool ok = false;
+            uint_fast8_t idx = N_AXIS;
+            coord_data_t delta;
+
+            do {
+                idx--;
+                delta.values[idx] = target[idx] - position[idx];
+            } while(idx);
+
+            float dist, length = sqrtf(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z);
+
+            delta.x /= length;
+            delta.y /= length;
+            delta.z /= length;
+            length = length * 0.5f;
+            dist = 0.0;
+
+            do {
+
+                if(ok)
+                    length += dist;
+                else
+                    length -= dist;
+
+                target[X_AXIS] = position[X_AXIS] + delta.x * length;
+                target[Y_AXIS] = position[Y_AXIS] + delta.y * length;
+                target[Z_AXIS] = position[Z_AXIS] + delta.z * length;
+
+                ok = delta_calcInverse((coord_data_t *)target, pos.values) == 0 && pos_ok(&pos);
+
+                if(dist > machine.resolution)
+                    dist *= 0.5f;
+                else if(!ok)
+                    dist += 0.1f;
+                else
+                    break;
+
+            } while(!ok || dist > machine.resolution);
+
+            if(!ok)
+                memcpy(target, position, sizeof(coord_data_t));
+
+            hal.stream.write("");
+//        }
     }
-
-    return true;
 }
 
 static const char *delta_set_axis_setting_unit (setting_id_t setting_id, uint_fast8_t axis_idx)
@@ -640,6 +708,7 @@ static const setting_detail_t kinematics_settings[] = {
     { Setting_Kinematics5, Group_Kinematics, "Base to floor", "mm", Format_Decimal, "###0.000", NULL, NULL, Setting_NonCore, &delta_settings.b, NULL, NULL },
     { Setting_Kinematics6, Group_Kinematics, "Home position", "deg", Format_Decimal, "-#0.000", "-90", "90", Setting_NonCore, &delta_settings.home_angle, NULL, NULL },
     { Setting_Kinematics7, Group_Kinematics, "Flags...", NULL, Format_Bitfield, "Home to cuboid top,Limit to cuboid", NULL, NULL, Setting_NonCore, &delta_settings.flags, NULL, NULL },
+    { Setting_Kinematics8, Group_Kinematics, "Max angle", "deg", Format_Decimal, "-#0.000", "-90", "135", Setting_NonCore, &delta_settings.max_angle, NULL, NULL },
 };
 
 #ifndef NO_SETTINGS_DESCRIPTIONS
@@ -649,7 +718,9 @@ static const setting_descr_t kinematics_settings_descr[] = {
     { Setting_Kinematics1, "Forearm length is the length of the connecting rod in millimeters." },
     { Setting_Kinematics2, "Bicep length is the length of the driven arm in millimeters." },
     { Setting_Kinematics3, "Base radius is the radius in millimeters from the center of the drive platform to the bicep drive axle." },
-    { Setting_Kinematics4, "End effector radius is the distance from the center of the end effector to the connection points of the main connecting rods." }
+    { Setting_Kinematics4, "End effector radius is the distance from the center of the end effector to the connection points of the main connecting rods." },
+    { Setting_Kinematics6, "Home position in degrees from biceps paralell to the floor." },
+    { Setting_Kinematics8, "Max travel in degrees from biceps paralell to the floor. Set to 0 to use calculated max." }
 };
 
 #endif
@@ -659,6 +730,15 @@ static void delta_settings_changed (settings_t *settings, settings_changed_flags
     memcpy(&machine.cfg, &delta_settings, sizeof(delta_settings_t));
 
     machine.cfg.home_angle = delta_settings.home_angle * RADDEG;
+    machine.cfg.max_angle = delta_settings.max_angle * RADDEG;
+
+    machine.t = (machine.cfg.f - machine.cfg.e) * TAN30_2;
+    machine.y1 = -0.5f * TAN30 * machine.cfg.f; // f/2 * tg 30
+    machine.y1_sqr = machine.y1 * machine.y1;
+    machine.fe = 0.5f * TAN30 * machine.cfg.e;    // shift center to edge
+
+    machine.rf_sqr = machine.cfg.rf * machine.cfg.rf;
+    machine.re_sqr = machine.cfg.re * machine.cfg.re;
 
     get_cuboid_envelope();
 }
@@ -720,17 +800,17 @@ static status_code_t delta_info (sys_state_t state, char *args)
 {
     hal.stream.write("Delta robot:" ASCII_EOL);
     hal.stream.write(" Rectangular cuboid envelope:" ASCII_EOL "  X: ");
-    hal.stream.write(ftoa(sys.work_envelope.min[X_AXIS], 3));
+    hal.stream.write(ftoa(sys.work_envelope.min.x, 3));
     hal.stream.write(" to ");
-    hal.stream.write(ftoa(sys.work_envelope.max[X_AXIS], 3));
+    hal.stream.write(ftoa(sys.work_envelope.max.x, 3));
     hal.stream.write(" mm" ASCII_EOL "  Y: ");
-    hal.stream.write(ftoa(sys.work_envelope.min[Y_AXIS], 3));
+    hal.stream.write(ftoa(sys.work_envelope.min.y, 3));
     hal.stream.write(" to ");
-    hal.stream.write(ftoa(sys.work_envelope.max[Y_AXIS], 3));
+    hal.stream.write(ftoa(sys.work_envelope.max.y, 3));
     hal.stream.write(" mm" ASCII_EOL "  Z: ");
-    hal.stream.write(ftoa(sys.work_envelope.min[Z_AXIS], 3));
+    hal.stream.write(ftoa(sys.work_envelope.min.z, 3));
     hal.stream.write(" to ");
-    hal.stream.write(ftoa(sys.work_envelope.max[Z_AXIS], 3));
+    hal.stream.write(ftoa(sys.work_envelope.max.z, 3));
     hal.stream.write(" mm" ASCII_EOL "  Mid Z:" ASCII_EOL "  ");
     hal.stream.write(ftoa(machine.envelope_midz, 3));
     hal.stream.write(" mm" ASCII_EOL " Resolution:" ASCII_EOL "  ");
@@ -783,6 +863,7 @@ void delta_robot_init (void)
         kinematics.homing_cycle_get_feedrate = homing_cycle_get_feedrate;
 
         grbl.on_jog_cancel = cancel_jog;
+        apply_jog_limits = grbl.apply_jog_limits;
         grbl.apply_jog_limits = delta_apply_jog_limits;
         grbl.check_travel_limits = delta_check_travel_limits;
 

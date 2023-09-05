@@ -258,8 +258,8 @@ typedef struct {
 } signal_event_t;
 
 typedef struct {
-    float min[N_AXIS];
-    float max[N_AXIS];
+    coord_data_t min;
+    coord_data_t max;
 } work_envelope_t;
 
 //! Global system variables struct.

@@ -38,18 +38,6 @@
 
 #include "config.h"
 
-// This is the Limit Pin Change Interrupt, which handles the hard limit feature. A bouncing
-// limit switch can cause a lot of problems, like false readings and multiple interrupt calls.
-// If a switch is triggered at all, something bad has happened and treat it as such, regardless
-// if a limit switch is being disengaged. It's impossible to reliably tell the state of a
-// bouncing pin because the microcontroller does not retain any state information when
-// detecting a pin change. If we poll the pins in the ISR, you can miss the correct reading if the
-// switch is bouncing.
-// NOTE: Do not attach an e-stop to the limit pins, because this interrupt is disabled during
-// homing cycles and will not respond correctly. Upon user request or need, there may be a
-// special pinout for an e-stop, but it is generally recommended to just directly connect
-// your e-stop switch to the microcontroller reset pin, since it is the most correct way to do this.
-
 // Merge (bitwise or) all limit switch inputs.
 ISR_CODE axes_signals_t ISR_FUNC(limit_signals_merge)(limit_signals_t signals)
 {
@@ -84,6 +72,13 @@ ISR_CODE static axes_signals_t ISR_FUNC(homing_signals_select)(home_signals_t si
     return state;
 }
 
+// This is the Limit Pin Change Interrupt, which handles the hard limit feature. A bouncing
+// limit switch can cause a lot of problems, like false readings and multiple interrupt calls.
+// If a switch is triggered at all, something bad has happened and treat it as such, regardless
+// if a limit switch is being disengaged. It's impossible to reliably tell the state of a
+// bouncing pin because the microcontroller does not retain any state information when
+// detecting a pin change. If we poll the pins in the ISR, you can miss the correct reading if the
+// switch is bouncing.
 ISR_CODE void ISR_FUNC(limit_interrupt_handler)(limit_signals_t state) // DEFAULT: Limit pin change interrupt process.
 {
     // Ignore limit switches if already in an alarm state or in-process of executing an alarm.
@@ -122,18 +117,18 @@ void limits_set_work_envelope (void)
 
             if(settings.homing.flags.force_set_origin) {
                 if(bit_isfalse(settings.homing.dir_mask.value, bit(idx))) {
-                    sys.work_envelope.min[idx] = settings.axis[idx].max_travel + pulloff;
-                    sys.work_envelope.max[idx] = 0.0f;
+                    sys.work_envelope.min.values[idx] = settings.axis[idx].max_travel + pulloff;
+                    sys.work_envelope.max.values[idx] = 0.0f;
                 } else {
-                    sys.work_envelope.min[idx] = 0.0f;
-                    sys.work_envelope.max[idx] = - (settings.axis[idx].max_travel + pulloff);
+                    sys.work_envelope.min.values[idx] = 0.0f;
+                    sys.work_envelope.max.values[idx] = - (settings.axis[idx].max_travel + pulloff);
                 }
             } else {
-                sys.work_envelope.min[idx] = settings.axis[idx].max_travel + pulloff;
-                sys.work_envelope.max[idx] = - pulloff;
+                sys.work_envelope.min.values[idx] = settings.axis[idx].max_travel + pulloff;
+                sys.work_envelope.max.values[idx] = - pulloff;
             }
         } else
-            sys.work_envelope.min[idx] = sys.work_envelope.max[idx] = 0.0f;
+            sys.work_envelope.min.values[idx] = sys.work_envelope.max.values[idx] = 0.0f;
     } while(idx);
 }
 
@@ -607,24 +602,80 @@ static bool check_travel_limits (float *target, bool is_cartesian)
     if(is_cartesian && sys.homed.mask) do {
         idx--;
         if(bit_istrue(sys.homed.mask, bit(idx)) && settings.axis[idx].max_travel < -0.0f)
-            failed = target[idx] < sys.work_envelope.min[idx] || target[idx] > sys.work_envelope.max[idx];
+            failed = target[idx] < sys.work_envelope.min.values[idx] || target[idx] > sys.work_envelope.max.values[idx];
     } while(!failed && idx);
 
     return is_cartesian && !failed;
 }
 
-// Limits jog commands to be within machine limits, homed axes only.
-static bool apply_jog_limits (float *target, bool is_cartesian)
+// Derived from code by Dimitrios Matthes & Vasileios Drakopoulos
+// https://www.mdpi.com/1999-4893/16/4/201
+static void clip_3d_target (coord_data_t *position, coord_data_t *target, work_envelope_t *envelope)
 {
-    uint_fast8_t idx = N_AXIS;
+    float a = target->x - position->x;
+    float b = target->y - position->y;
+    float c = target->z - position->z;
 
-    if(sys.homed.mask) do {
+    if(target->x < envelope->min.x) {
+        target->y = b / a * (envelope->min.x - position->x) + position->y;
+        target->z = c / a * (envelope->min.x - position->x) + position->z;
+        target->x = envelope->min.x;
+    } else if(target->x > envelope->max.x) {
+        target->y = b / a * (envelope->max.x - position->x) + position->y;
+        target->z = c / a * (envelope->max.x - position->x) + position->z;
+        target->x = envelope->max.x;
+    }
+
+    if(target->y < envelope->min.y) {
+        target->x = a / b * (envelope->min.y - position->y) + position->x;
+        target->z = c / b * (envelope->min.y - position->y) + position->z;
+        target->y = envelope->min.y;
+    } else if(target->y > envelope->max.y) {
+        target->x = a / b * (envelope->max.y - position->y) + position->x;
+        target->z = c / b * (envelope->max.y - position->y) + position->z;
+        target->y = envelope->max.y;
+    }
+
+    if(target->z < envelope->min.z) {
+        target->x = a / c * (envelope->min.z - position->z) + position->x;
+        target->y = b / c * (envelope->min.z - position->z) + position->y;
+        target->z = envelope->min.z;
+    } else if(target->z > envelope->max.z) {
+        target->x = a / c * (envelope->max.z - position->z) + position->x;
+        target->y = b / c * (envelope->max.z - position->z) + position->y;
+        target->z = envelope->max.z;
+    }
+}
+
+// Limits jog commands to be within machine limits, homed axes only.
+static void apply_jog_limits (float *target, float *position)
+{
+    if(sys.homed.mask == 0)
+        return;
+
+    uint_fast8_t idx;
+
+    if((sys.homed.mask & 0b111) == 0b111) {
+
+        uint_fast8_t n_axes = 0;
+
+        idx = Z_AXIS + 1;
+        do {
+            idx--;
+            if(fabs(target[idx] - position[idx]) > 0.001f)
+                n_axes++;
+        } while(idx && n_axes < 2);
+
+        if(n_axes > 1)
+            clip_3d_target((coord_data_t *)position, (coord_data_t *)target, &sys.work_envelope);
+    }
+
+    idx = N_AXIS;
+    do {
         idx--;
         if(bit_istrue(sys.homed.mask, bit(idx)) && settings.axis[idx].max_travel < -0.0f)
-            target[idx] = max(min(target[idx], sys.work_envelope.max[idx]), sys.work_envelope.min[idx]);
+            target[idx] = max(min(target[idx], sys.work_envelope.max.values[idx]), sys.work_envelope.min.values[idx]);
     } while(idx);
-
-    return is_cartesian;
 }
 
 void limits_init (void)
