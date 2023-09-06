@@ -1,6 +1,14 @@
 ## grblHAL changelog
 
-<a name="20230825"/>Build 20230905
+<a name="20230906"/>20230906
+
+Plugins:
+
+* Laser: LaserBurn clusters plugin updated for [new format variation encountered](https://github.com/grblHAL/ESP32/issues/77#issuecomment-1707125447).
+
+--
+
+<a name="20230905"/>Build 20230905
 
 Core:
 
