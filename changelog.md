@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+<a name="20230907"/>Build 20230907
+
+Core:
+
+* Delta robot kinematics tuning: soft limits checks, extended $DELTA command++. Still work in progress \(getting closer to working version\).
+
+Plugins:
+
+* Laser: LaserBurn clusters plugin regression fix, new format handling of end-of-line characters.
+
+---
+
 <a name="20230906"/>20230906
 
 Plugins:
@@ -26,7 +38,7 @@ STM32F4xx: removed unused code.
  
 ---
 
-<a name="20230825"/>Build 20230903
+<a name="20230903"/>Build 20230903
 
 Core:
 

@@ -542,13 +542,14 @@ status_code_t limits_go_home (axes_signals_t cycle)
 // Performs a soft limit check. Called from mc_line() only. Assumes the machine has been homed,
 // the workspace volume is in all negative space, and the system is in normal operation.
 // NOTE: Also used by jogging to block travel outside soft-limit volume.
-void limits_soft_check  (float *target)
+void limits_soft_check (float *target, planner_cond_t condition)
 {
 #ifdef KINEMATICS_API
-    if(!grbl.check_travel_limits(target, false)) {
+    if(condition.target_validated ? !condition.target_valid : !grbl.check_travel_limits(target, false)) {
 #else
-    if(!grbl.check_travel_limits(target, true)) {
+    if(condition.target_validated ? !condition.target_valid : !grbl.check_travel_limits(target, true)) {
 #endif
+
         sys.flags.soft_limit = On;
         // Force feed hold if cycle is active. All buffered blocks are guaranteed to be within
         // workspace volume so just come to a controlled stop so position is not lost. When complete
