@@ -1013,12 +1013,27 @@ static status_code_t set_probe_disable_pullup (setting_id_t id, uint_fast16_t in
     return Status_OK;
 }
 
+static void tmp_set_soft_limits (void)
+{
+    sys.soft_limits.mask = 0;
+
+    if(settings.limits.flags.soft_enabled) {
+        uint_fast8_t idx = N_AXIS;
+        do {
+            if(settings.axis[--idx].max_travel < -0.0f)
+                bit_true(sys.soft_limits.mask, bit(idx));
+        } while(idx);
+    }
+}
+
 static status_code_t set_soft_limits_enable (setting_id_t id, uint_fast16_t int_value)
 {
     if(int_value && !settings.homing.flags.enabled)
         return Status_SoftLimitError;
 
     settings.limits.flags.soft_enabled = int_value != 0;
+
+    tmp_set_soft_limits();
 
     return Status_OK;
 }
@@ -1374,6 +1389,7 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
                 system_raise_alarm(Alarm_HomingRequired);
                 grbl.report.feedback_message(Message_HomingCycleRequired);
             }
+            tmp_set_soft_limits();
             break;
 
         case Setting_AxisBacklash:
@@ -2748,6 +2764,8 @@ void settings_init (void)
     }
 
     xbar_set_homing_source();
+
+    tmp_set_soft_limits();
 
     if(spindle_get_count() == 0)
         spindle_add_null();

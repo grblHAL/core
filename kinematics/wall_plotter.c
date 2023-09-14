@@ -293,6 +293,13 @@ static void report_options (bool newopt)
         hal.stream.write("[KINEMATICS:WallPlotter v2.00]" ASCII_EOL);
 }
 
+static bool wp_homing_cycle (axes_signals_t cycle, axes_signals_t auto_square)
+{
+    report_message("Homing is not implemented!", Message_Warning);
+
+    return false;
+}
+
 // Initialize API pointers for Wall Plotter kinematics
 void wall_plotter_init (void)
 {
@@ -316,6 +323,7 @@ void wall_plotter_init (void)
     kinematics.transform_steps_to_cartesian = wp_convert_array_steps_to_mpos;
     kinematics.segment_line = wp_segment_line;
 
+    grbl.home_machine = wp_homing_cycle;
     grbl.on_jog_cancel = cancel_jog;
 
     on_report_options = grbl.on_report_options;

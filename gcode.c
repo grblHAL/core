@@ -2634,7 +2634,7 @@ status_code_t gc_execute_block (char *block)
                         float h_x2_div_d = 4.0f * gc_block.values.r * gc_block.values.r - x * x - y * y;
 
                         if (h_x2_div_d < 0.0f)
-                            FAIL(Status_GcodeArcRadiusError); // [Arc radius error]
+                            FAIL(Status_GcodeArcRadiusError); // [Arc radius error] TODO: this will fail due to limited float precision...
 
                         // Finish computing h_x2_div_d.
                         h_x2_div_d = -sqrtf(h_x2_div_d) / hypot_f(x, y); // == -(h * 2 / d)
@@ -2845,6 +2845,7 @@ status_code_t gc_execute_block (char *block)
     // Initialize planner data struct for motion blocks.
     plan_line_data_t plan_data;
     memset(&plan_data, 0, sizeof(plan_line_data_t)); // Zero plan_data struct
+    plan_data.condition.target_validated = plan_data.condition.target_valid = sys.soft_limits.mask == 0;
 
     // Intercept jog commands and complete error checking for valid jog commands and execute.
     // NOTE: G-code parser state is not updated, except the position to ensure sequential jog
@@ -3339,16 +3340,16 @@ status_code_t gc_execute_block (char *block)
             case MotionMode_CcwArc:
                 // fail if spindle synchronized motion?
                 mc_arc(gc_block.values.xyz, &plan_data, gc_state.position, gc_block.values.ijk, gc_block.values.r,
-                        plane, gc_parser_flags.arc_is_clockwise ? gc_block.arc_turns : - gc_block.arc_turns);
+                        plane, gc_parser_flags.arc_is_clockwise ? -gc_block.arc_turns : gc_block.arc_turns);
                 break;
 
             case MotionMode_CubicSpline:
                 {
-                    point_2d cp1 = {
+                    point_2d_t cp1 = {
                         .x = gc_state.position[X_AXIS] + gc_block.values.ijk[X_AXIS],
                         .y = gc_state.position[Y_AXIS] + gc_block.values.ijk[Y_AXIS]
                     };
-                    point_2d cp2 = {
+                    point_2d_t cp2 = {
                         .x = gc_block.values.xyz[X_AXIS] + gc_state.modal.spline_pq[X_AXIS],
                         .y = gc_block.values.xyz[Y_AXIS] + gc_state.modal.spline_pq[Y_AXIS]
                     };
@@ -3358,11 +3359,11 @@ status_code_t gc_execute_block (char *block)
 
             case MotionMode_QuadraticSpline:
                 {
-                    point_2d cp1 = {
+                    point_2d_t cp1 = {
                         .x = gc_state.position[X_AXIS] + (gc_block.values.ijk[X_AXIS] * 2.0f) / 3.0f,
                         .y = gc_state.position[Y_AXIS] + (gc_block.values.ijk[Y_AXIS] * 2.0f) / 3.0f
                     };
-                    point_2d cp2 = {
+                    point_2d_t cp2 = {
                         .x = gc_block.values.xyz[X_AXIS] + ((gc_state.position[X_AXIS] + gc_block.values.ijk[X_AXIS] - gc_block.values.xyz[X_AXIS]) * 2.0f) / 3.0f,
                         .y = gc_block.values.xyz[Y_AXIS] + ((gc_state.position[Y_AXIS] + gc_block.values.ijk[Y_AXIS] - gc_block.values.xyz[Y_AXIS]) * 2.0f) / 3.0f
                     };

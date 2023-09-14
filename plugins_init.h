@@ -78,6 +78,11 @@
     lb_clusters_init();
 #endif
 
+#if PROBE_PROTECT_ENABLE
+    extern void probe_protect_init (void);
+    probe_protect_init();
+#endif
+
 #if WEBUI_ENABLE
     extern void webui_init (void);
     webui_init();

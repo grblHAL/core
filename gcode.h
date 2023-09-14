@@ -357,10 +357,13 @@ typedef struct {
 } coord_system_t;
 
 //! Axis index to plane assignment.
-typedef struct {
-    uint8_t axis_0;
-    uint8_t axis_1;
-    uint8_t axis_linear;
+typedef union {
+    uint8_t axis[3];
+    struct {
+        uint8_t axis_0;
+        uint8_t axis_1;
+        uint8_t axis_linear;
+    };
 } plane_t;
 
 /*! \brief G- and M-code parameter values

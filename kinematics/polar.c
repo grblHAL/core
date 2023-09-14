@@ -212,7 +212,6 @@ static void polar_limits_set_target_pos (uint_fast8_t idx) // fn name?
     }
 }
 
-
 // Set machine positions for homed limit switches. Don't update non-homed axes.
 // NOTE: settings.max_travel[] is stored as a negative value.
 static void polar_limits_set_machine_positions (axes_signals_t cycle)
@@ -229,7 +228,14 @@ static void report_options (bool newopt)
     on_report_options(newopt);
 
     if(!newopt)
-        hal.stream.write("[KINEMATICS:Polar v0.00]" ASCII_EOL);
+        hal.stream.write("[KINEMATICS:Polar v0.01]" ASCII_EOL);
+}
+
+static bool polar_homing_cycle (axes_signals_t cycle, axes_signals_t auto_square)
+{
+    report_message("Homing is not implemented!", Message_Warning);
+
+    return false;
 }
 
 // Initialize API pointers for Wall Plotter kinematics
@@ -242,6 +248,7 @@ void polar_init (void)
     kinematics.transform_steps_to_cartesian = polar_convert_array_steps_to_mpos;
     kinematics.segment_line = polar_segment_line;
 
+    grbl.home_machine = polar_homing_cycle;
     grbl.on_jog_cancel = cancel_jog;
 
     on_report_options = grbl.on_report_options;

@@ -651,7 +651,23 @@ typedef struct {
     limit_settings_flags_t flags;
     axes_signals_t invert;
     axes_signals_t disable_pullup;
+//    axes_signals_t soft_enabled; // TODO: add per axis soft limits, replace soft_enabled flag
 } limit_settings_t;
+
+typedef union {
+    uint8_t value;
+    uint8_t mask;
+    struct {
+        uint8_t g55   :1,
+                g56   :1,
+                g57   :1,
+                g58   :1,
+                g59   :1,
+                g59_1 :1,
+                g59_2 :1,
+                g59_3 :1;
+    };
+} offset_lock_t;
 
 typedef union {
     uint8_t value;
@@ -718,6 +734,7 @@ typedef struct {
     safety_door_settings_t safety_door;
     position_pid_t position;    // Used for synchronized motion
     ioport_signals_t ioport;
+ // offset_lock_t offset_lock; // TODO: add in next settings version.
 } settings_t;
 
 typedef enum {

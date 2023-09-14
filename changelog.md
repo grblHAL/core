@@ -1,10 +1,30 @@
 ## grblHAL changelog
 
+<a name="20230913"/>Build 20230913
+
+Core:
+
+* Added faster soft limits check for arcs when work envelope is a cuboid, fixed some related obscure bugs. New/modified core entry points for soft limit checking.
+
+* More delta robot tuning, added setting warning in `$DELTA` output if some settings are inconsistent such as steps/rad, acceleration etc.
+
+* Fix for issue [#361](https://github.com/grblHAL/core/issues/361), `HOME` status is not reported or reported late when auto reporting is enabled with setting `$481`.
+
+Drivers:
+
+* iMXRT1062: fix for MCP3221 ADC regression, [issue #68](https://github.com/grblHAL/iMXRT1062/issues/68#).
+
+* STM32F4xx: SPI pin definition typo, [issue #139](https://github.com/grblHAL/STM32F4xx/issues/139).
+
+* RP2040: workaround for [issue #74](https://github.com/grblHAL/RP2040/issues/74), odd TMC driver addressing.
+
+* Remaining drivers updated for [improved handling of limit inputs](#20230903): 
+
 <a name="20230907"/>Build 20230907
 
 Core:
 
-* Delta robot kinematics tuning: soft limits checks, extended $DELTA command++. Still work in progress \(getting closer to working version\).
+* Delta robot kinematics tuning: soft limits checks, extended `$DELTA` command++. Still work in progress \(getting closer to working version\).
 
 Plugins:
 

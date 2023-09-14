@@ -178,7 +178,7 @@ static bool initiate_hold (uint_fast16_t new_state)
         park.flags.value = 0;
     }
 
-    sys.suspend = true;
+    sys.suspend = !sys.flags.soft_limit;
     pending_state = sys_state == STATE_JOG ? new_state : STATE_IDLE;
 
     return sys_state == STATE_CYCLE;
@@ -579,8 +579,12 @@ static void state_await_hold (uint_fast16_t rt_exec)
         }
 
         if (!handler_changed) {
-            sys.holding_state = Hold_Complete;
-            stateHandler = state_await_resume;
+            if(sys.flags.soft_limit)
+                state_set(STATE_IDLE);
+            else {
+                sys.holding_state = Hold_Complete;
+                stateHandler = state_await_resume;
+            }
         }
     }
 }

@@ -85,7 +85,7 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
 
     // If enabled, check for soft limit violations. Placed here all line motions are picked up
     // from everywhere in Grbl.
-    if(settings.limits.flags.soft_enabled)
+    if(!(pl_data->condition.target_validated && pl_data->condition.target_valid))
         limits_soft_check(target, pl_data->condition);
 
     // If in check gcode mode, prevent motion by blocking planner. Soft limits still work.
@@ -106,7 +106,7 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
         // parser and planner are separate from the system machine positions, this is doable.
 
 #ifdef KINEMATICS_API
-       while(kinematics.segment_line(target, NULL, pl_data, false)) {
+      while(kinematics.segment_line(target, NULL, pl_data, false)) {
 #endif
 
 #if ENABLE_BACKLASH_COMPENSATION
@@ -190,37 +190,59 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
         }
 
         pl_data->feed_rate = feed_rate;
-      }
+      } // while(kinematics.segment_line()
+
+      pl_data->feed_rate = feed_rate;
 #endif
     }
 
     return !ABORTED;
 }
 
-
 // Execute an arc in offset mode format. position == current xyz, target == target xyz,
-// offset == offset from current xyz, axis_X defines circle plane in tool space, axis_linear is
-// the direction of helical travel, radius == circle radius, isclockwise boolean. Used
-// for vector transformation direction.
+// offset == offset from current xyz, plane.axis_X defines circle plane in tool space, plane.axis_linear is
+// the direction of helical travel, radius == circle radius, turns > 0 for CCW arcs. Used
+// for vector transformation direction and number of full turns to add (abs(turns) - 1).
 // The arc is approximated by generating a huge number of tiny, linear segments. The chordal tolerance
 // of each segment is configured in settings.arc_tolerance, which is defined to be the maximum normal
 // distance from segment to the circle when the end points both lie on the circle.
 void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *offset, float radius, plane_t plane, int32_t turns)
 {
-    double center_axis0 = (double)position[plane.axis_0] + (double)offset[plane.axis_0];
-    double center_axis1 = (double)position[plane.axis_1] + (double)offset[plane.axis_1];
-    double r_axis0 = -(double)offset[plane.axis_0];  // Radius vector from center to current location
-    double r_axis1 = -(double)offset[plane.axis_1];
-    double rt_axis0 = (double)target[plane.axis_0] - center_axis0;
-    double rt_axis1 = (double)target[plane.axis_1] - center_axis1;
+    typedef union {
+        double values[2];
+        struct {
+            double x;
+            double y;
+        };
+    } point_2dd_t;
+
+    point_2dd_t rv = {  // Radius vector from center to current location
+        .x = -(double)offset[plane.axis_0],
+        .y = -(double)offset[plane.axis_1]
+    };
+    point_2dd_t center = {
+        .x = (double)position[plane.axis_0] - rv.x,
+        .y = (double)position[plane.axis_1] - rv.y
+    };
+    point_2dd_t rt = {
+        .x = (double)target[plane.axis_0] - center.x,
+        .y = (double)target[plane.axis_1] - center.y
+    };
     // CCW angle between position and target from circle center. Only one atan2() trig computation required.
-    float angular_travel = (float)atan2(r_axis0 * rt_axis1 - r_axis1 * rt_axis0, r_axis0 * rt_axis0 + r_axis1 * rt_axis1);
+    float angular_travel = (float)atan2(rv.x * rt.y - rv.y * rt.x, rv.x * rt.x + rv.y * rt.y);
 
     if (turns > 0) { // Correct atan2 output per direction
-        if (angular_travel >= -ARC_ANGULAR_TRAVEL_EPSILON)
-            angular_travel -= 2.0f * M_PI;
-    } else if (angular_travel <= ARC_ANGULAR_TRAVEL_EPSILON)
-        angular_travel += 2.0f * M_PI;
+        if (angular_travel <= ARC_ANGULAR_TRAVEL_EPSILON)
+            angular_travel += 2.0f * M_PI;
+    } else if (angular_travel >= -ARC_ANGULAR_TRAVEL_EPSILON)
+        angular_travel -= 2.0f * M_PI;
+
+    if(!pl_data->condition.target_validated && grbl.check_arc_travel_limits) {
+        pl_data->condition.target_validated = On;
+        pl_data->condition.target_valid = grbl.check_arc_travel_limits((coord_data_t *)target, (coord_data_t *)position,
+                                                                        (point_2d_t){ .x = (float)center.x, .y = (float)center.y },
+                                                                         radius, plane, turns);
+    }
 
     if(labs(turns) > 1) {
 
@@ -265,7 +287,7 @@ void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *o
     // (2x) settings.arc_tolerance. For 99% of users, this is just fine. If a different arc segment fit
     // is desired, i.e. least-squares, midpoint on arc, just change the mm_per_arc_segment calculation.
     // For the intended uses of Grbl, this value shouldn't exceed 2000 for the strictest of cases.
-    uint16_t segments = (uint16_t)floorf(fabsf(0.5f * angular_travel * radius) / sqrtf(settings.arc_tolerance * (2.0f * radius - settings.arc_tolerance)));
+    uint_fast16_t segments = (uint_fast16_t)floorf(fabsf(0.5f * angular_travel * radius) / sqrtf(settings.arc_tolerance * (2.0f * radius - settings.arc_tolerance)));
 
     if (segments) {
 
@@ -329,24 +351,24 @@ void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *o
         for (i = 1; i < segments; i++) { // Increment (segments-1).
 
             if (count < N_ARC_CORRECTION) {
-                // Apply vector rotation matrix. ~40 usec
-                r_axisi = r_axis0 * sin_T + r_axis1 * cos_T;
-                r_axis0 = r_axis0 * cos_T - r_axis1 * sin_T;
-                r_axis1 = r_axisi;
+                // Apply vector rotation matrix.
+                r_axisi = rv.x * sin_T + rv.y * cos_T;
+                rv.x = rv.x * cos_T - rv.y * sin_T;
+                rv.y = r_axisi;
                 count++;
             } else {
                 // Arc correction to radius vector. Computed only every N_ARC_CORRECTION increments.
                 // Compute exact location by applying transformation matrix from initial radius vector(=-offset).
                 cos_Ti = cosf(i * theta_per_segment);
                 sin_Ti = sinf(i * theta_per_segment);
-                r_axis0 = -offset[plane.axis_0] * cos_Ti + offset[plane.axis_1] * sin_Ti;
-                r_axis1 = -offset[plane.axis_0] * sin_Ti - offset[plane.axis_1] * cos_Ti;
+                rv.x = -offset[plane.axis_0] * cos_Ti + offset[plane.axis_1] * sin_Ti;
+                rv.y = -offset[plane.axis_0] * sin_Ti - offset[plane.axis_1] * cos_Ti;
                 count = 0;
             }
 
             // Update arc_target location
-            position[plane.axis_0] = center_axis0 + r_axis0;
-            position[plane.axis_1] = center_axis1 + r_axis1;
+            position[plane.axis_0] = center.x + rv.x;
+            position[plane.axis_1] = center.y + rv.y;
 #if N_AXIS > 3
             idx = N_AXIS;
             do {
@@ -767,7 +789,7 @@ status_code_t mc_jog_execute (plan_line_data_t *pl_data, parser_block_t *gc_bloc
 
     if(settings.limits.flags.jog_soft_limited)
         grbl.apply_jog_limits(gc_block->values.xyz, position);
-    else if(settings.limits.flags.soft_enabled && !grbl.check_travel_limits(gc_block->values.xyz, true))
+    else if(sys.soft_limits.mask && !grbl.check_travel_limits(gc_block->values.xyz, sys.soft_limits, true))
         return Status_TravelExceeded;
 
     // Valid jog command. Plan, set state, and execute.
@@ -853,10 +875,10 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
         }
 #endif
 
-        state_set(STATE_HOMING);                                // Set homing system state.
+        state_set(STATE_HOMING);                        // Set homing system state.
 #if COMPATIBILITY_LEVEL == 0
-        protocol_enqueue_realtime_command(CMD_STATUS_REPORT);   // Force a status report and
-        delay_sec(0.1f, DelayMode_Dwell);                       // delay a bit to get it sent (or perhaps wait a bit for a request?)
+        system_set_exec_state_flag(EXEC_STATUS_REPORT); // Force a status report and
+        delay_sec(0.1f, DelayMode_Dwell);               // delay a bit to get it sent (or perhaps wait a bit for a request?)
 #endif
         // Turn off spindle and coolant (and update parser state)
         if(spindle_is_on())
@@ -997,7 +1019,7 @@ gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_f
 
         do {
             idx--;
-            if(position.values[idx] != target[idx])
+            if(fabsf(target[idx] - position.values[idx]) > TOLERANCE_EQUAL)
                 bit_true(axes.mask, bit(idx));
         } while(idx--);
 
