@@ -33,9 +33,12 @@
 #include <time.h>
 
 #define vfs_load_plugin(x)
-#define bcopy(src, dest, len) memmove(dest, src, len)
 
-#if !(defined(__time_t_defined) || defined(__MSP432P401R__) || defined(PART_TM4C123GH6PM))
+#ifndef bcopy
+#define bcopy(src, dest, len) memmove(dest, src, len)
+#endif
+
+#if !(defined(__time_t_defined) || defined(_TIME_H_) || defined(__MSP432P401R__) || defined(PART_TM4C123GH6PM))
 typedef struct {
     short date;
     short time;
