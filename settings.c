@@ -386,6 +386,7 @@ static status_code_t set_ganged_dir_invert (setting_id_t id, uint_fast16_t int_v
 static status_code_t set_stepper_deenergize_mask (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_report_interval (setting_id_t setting, uint_fast16_t int_value);
 static status_code_t set_estop_unlock (setting_id_t id, uint_fast16_t int_value);
+static status_code_t set_offset_lock (setting_id_t id, uint_fast16_t int_value);
 #ifndef NO_SAFETY_DOOR_SUPPORT
 static status_code_t set_parking_enable (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_restore_overrides (setting_id_t id, uint_fast16_t int_value);
@@ -598,6 +599,9 @@ PROGMEM static const setting_detail_t setting_detail[] = {
 #if NGC_EXPRESSIONS_ENABLE
      { Setting_NGCDebugOut, Group_General, "Output NGC debug messages", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_ngc_debug_out, get_int, NULL },
 #endif
+#if COMPATIBILITY_LEVEL <= 1
+     { Setting_OffsetLock, Group_General, "Lock coordinate systems", NULL, Format_Bitfield, "G59.1,G59.2,G59.3", NULL, NULL, Setting_IsExtendedFn, set_offset_lock, get_int, NULL },
+#endif
 };
 
 #ifndef NO_SETTINGS_DESCRIPTIONS
@@ -764,6 +768,9 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_AutoReportInterval, "Interval the real time report will be sent, set to 0 to disable." },
     { Setting_TimeZoneOffset, "Offset in hours from UTC." },
     { Setting_UnlockAfterEStop, "If set unlock (by sending $X) is required after resetting a cleared E-Stop condition." },
+#if COMPATIBILITY_LEVEL <= 1
+     { Setting_OffsetLock, "Lock coordinate systems against accidental changes." },
+#endif
 #if NGC_EXPRESSIONS_ENABLE
     { Setting_NGCDebugOut, "Example: (debug, metric mode: #<_metric>, coord system: #5220)" },
 #endif
@@ -1044,6 +1051,13 @@ static status_code_t set_estop_unlock (setting_id_t id, uint_fast16_t int_value)
         return Status_SettingDisabled;
 
     settings.flags.no_unlock_after_estop = int_value != 0;
+
+    return Status_OK;
+}
+
+static status_code_t set_offset_lock (setting_id_t id, uint_fast16_t int_value)
+{
+    settings.parking.flags.offset_lock = int_value & 0x07;
 
     return Status_OK;
 }
@@ -1623,6 +1637,10 @@ static uint32_t get_int (setting_id_t id)
 
         case Setting_UnlockAfterEStop:
             value = settings.flags.no_unlock_after_estop ? 0 : 1;
+            break;
+
+        case Setting_OffsetLock:
+            value = settings.parking.flags.offset_lock;
             break;
 
 #if NGC_EXPRESSIONS_ENABLE

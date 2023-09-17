@@ -2111,6 +2111,13 @@ status_code_t gc_execute_block (char *block)
                     if (!settings_read_coord_data(gc_block.values.coord_data.id, &gc_block.values.coord_data.xyz))
                         FAIL(Status_SettingReadFail); // [non-volatile storage read fail]
 
+#if COMPATIBILITY_LEVEL <= 1
+                    if(settings.parking.flags.offset_lock && gc_block.values.coord_data.id >= CoordinateSystem_G59_1 && gc_block.values.coord_data.id <= CoordinateSystem_G59_3) {
+                        if(bit_istrue(settings.parking.flags.offset_lock, bit(gc_block.values.coord_data.id - CoordinateSystem_G59_1)))
+                            FAIL(Status_GCodeCoordSystemLocked);
+                    }
+#endif
+
                     // Pre-calculate the coordinate data changes.
                     idx = N_AXIS;
                     do { // Axes indices are consistent, so loop may be used.

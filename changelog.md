@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+<a name="20230917"/>Build 20230917
+
+Core:
+
+* Added setting `$486` that allows locking `G59.1` - `G59.3` coordinate system offsets against accidental changes. Use `$$=386` to list bitmask values.
+
+Drivers:
+
+* iMXRT1062: fix for plasma plugin [issue #2](https://github.com/grblHAL/Plugin_plasma/issues/2#issuecomment-1722313452): MCP3221 ADC driver code not allowing plugin code to claim the input.
+
+Plugins:
+
+* Plasma: made code more robust related to driver configuration changes. Still work in progress!
+
+---
+
 <a name="20230913"/>Build 20230913
 
 Core:
@@ -18,7 +34,7 @@ Drivers:
 
 * RP2040: workaround for [issue #74](https://github.com/grblHAL/RP2040/issues/74), odd TMC driver addressing.
 
-* Remaining drivers updated for [improved handling of limit inputs](#20230903): 
+* Remaining drivers updated for [improved handling of limit inputs](#20230903).
 
 <a name="20230907"/>Build 20230907
 

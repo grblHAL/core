@@ -313,6 +313,7 @@ typedef enum {
     Setting_FanToSpindleLink = 483,
     Setting_UnlockAfterEStop = 484,
     Setting_EnableToolPersistence = 485,
+    Setting_OffsetLock = 486,
 
     Setting_Macro0 = 490,
     Setting_Macro1 = 491,
@@ -523,7 +524,8 @@ typedef union {
         uint8_t enabled                 :1,
                 deactivate_upon_init    :1,
                 enable_override_control :1,
-                unassigned              :5;
+                unassigned              :2,
+                offset_lock             :3;
     };
 } parking_setting_flags_t;
 
@@ -658,14 +660,10 @@ typedef union {
     uint8_t value;
     uint8_t mask;
     struct {
-        uint8_t g55   :1,
-                g56   :1,
-                g57   :1,
-                g58   :1,
-                g59   :1,
-                g59_1 :1,
-                g59_2 :1,
-                g59_3 :1;
+        uint8_t g59_1  :1,
+                g59_2  :1,
+                g59_3  :1,
+                unused :5;
     };
 } offset_lock_t;
 
@@ -711,6 +709,7 @@ typedef struct {
 typedef struct {
     // Settings struct version
     uint32_t version;
+//    uint32_t build_date;  // TODO: add in next settings version?, set to GRBL_BUILD
     float junction_deviation;
     float arc_tolerance;
     float g73_retract;

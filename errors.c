@@ -83,6 +83,9 @@ PROGMEM static const status_detail_t status_detail[] = {
     { Status_SettingDisabled, "Setting is not available, possibly due to limited driver support." },
     { Status_GcodeInvalidRetractPosition, "Retract position is less than drill depth." },
     { Status_IllegalHomingConfiguration, "Attempt to home two auto squared axes at the same time." },
+#if COMPATIBILITY_LEVEL <= 1
+    { Status_GCodeCoordSystemLocked, "Coordinate system is locked." },
+#endif
 #if NGC_EXPRESSIONS_ENABLE
     { Status_ExpressionUknownOp, "Unknown operation found in expression." },
     { Status_ExpressionDivideByZero, "Divide by zero in expression attempted." },
