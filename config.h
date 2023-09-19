@@ -919,6 +919,9 @@ not throw an alarm message.
 #if !defined DEFAULT_CHECK_LIMITS_AT_INIT || defined __DOXYGEN__
 #define DEFAULT_CHECK_LIMITS_AT_INIT Off
 #endif
+#if !defined DEFAULT_HARD_LIMITS_DISABLE_FOR_ROTARY || defined __DOXYGEN__
+#define DEFAULT_HARD_LIMITS_DISABLE_FOR_ROTARY Off
+#endif
 
 /*! @name Group_Limits_DualAxis
 \brief Dual axis limits settings (Group_Limits_DualAxis)

@@ -954,7 +954,9 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
 
     system_add_rt_report(Report_Homed);
 
-    homed_status = settings.limits.flags.hard_enabled && settings.limits.flags.check_at_init && limit_signals_merge(hal.limits.get_state()).value
+    homed_status = settings.limits.flags.hard_enabled &&
+                    settings.limits.flags.check_at_init &&
+                     (limit_signals_merge(hal.limits.get_state()).value & sys.hard_limits.mask)
                     ? Status_LimitsEngaged
                     : Status_OK;
 

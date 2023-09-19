@@ -149,7 +149,9 @@ bool protocol_main_loop (void)
         // blocks from crashing into things uncontrollably. Very bad.
         system_raise_alarm(Alarm_HomingRequired);
         grbl.report.feedback_message(Message_HomingCycleRequired);
-    } else if (settings.limits.flags.hard_enabled && settings.limits.flags.check_at_init && limit_signals_merge(hal.limits.get_state()).value) {
+    } else if (settings.limits.flags.hard_enabled &&
+                settings.limits.flags.check_at_init &&
+                 (limit_signals_merge(hal.limits.get_state()).value & sys.hard_limits.mask)) {
         if(sys.alarm == Alarm_LimitsEngaged && hal.control.get_state().limits_override)
             state_set(STATE_IDLE); // Clear alarm state to enable limit switch pulloff.
         else {

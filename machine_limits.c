@@ -87,6 +87,11 @@ ISR_CODE void ISR_FUNC(limit_interrupt_handler)(limit_signals_t state) // DEFAUL
     // locked out until a homing cycle or a kill lock command. Allows the user to disable the hard
     // limit setting if their limits are constantly triggering after a reset and move their axes.
 
+#if N_AXIS > 3
+    if((limit_signals_merge(state).value & sys.hard_limits.mask) == 0)
+        return;
+#endif
+
     memcpy(&sys.last_event.limits, &state, sizeof(limit_signals_t));
 
     if (!(state_get() & (STATE_ALARM|STATE_ESTOP)) && !sys.rt_exec_alarm) {

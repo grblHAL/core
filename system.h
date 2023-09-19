@@ -307,6 +307,7 @@ typedef struct system {
     bool mpg_mode;                          //!< To be moved to system_flags_t
     signal_event_t last_event;              //!< Last signal events (control and limits signal).
     int32_t position[N_AXIS];               //!< Real-time machine (aka home) position vector in steps.
+    axes_signals_t hard_limits; //!< temporary?, will be removed when available in settings.
     axes_signals_t soft_limits; //!< temporary, will be removed when available in settings.
 //@}
 } system_t;

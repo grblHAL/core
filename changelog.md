@@ -1,5 +1,24 @@
 ## grblHAL changelog
 
+<a name="20230919"/>Build 20230919
+
+Core:
+
+* Added setting option to _$21 - Hard limit enable_ to enable exception for rotary axes.
+
+Plugins:
+
+* Spindle: fix for {issue #22](https://github.com/grblHAL/Plugins_spindle/issues/22), H100 VFD driver not working.
+
+Drivers:
+
+* Simulator: updates for core changes and for using native libraries for Windows build. Linux and Windows executables can now be built using the [Web Builder](http://svn.io-engineering.com:8080/?driver=Simulator).
+
+* STM32F1xx, STM32F4xx, LPC176x, RP2040: now keeps motor enable signals high until startup is completed to avoid current surges with Trinamic drivers.
+Ref [RP2040 issue #74](https://github.com/grblHAL/RP2040/issues/74)
+
+---
+
 <a name="20230917"/>Build 20230917
 
 Core:

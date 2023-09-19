@@ -143,6 +143,7 @@ PROGMEM const settings_t defaults = {
     .limits.flags.soft_enabled = DEFAULT_SOFT_LIMIT_ENABLE,
     .limits.flags.jog_soft_limited = DEFAULT_JOG_LIMIT_ENABLE,
     .limits.flags.check_at_init = DEFAULT_CHECK_LIMITS_AT_INIT,
+    .limits.flags.hard_disabled_rotary = DEFAULT_HARD_LIMITS_DISABLE_FOR_ROTARY,
     .limits.flags.two_switches = DEFAULT_LIMITS_TWO_SWITCHES_ON_AXES,
     .limits.invert.mask = DEFAULT_LIMIT_SIGNALS_INVERT_MASK,
     .limits.disable_pullup.mask = DEFAULT_LIMIT_SIGNALS_PULLUP_DISABLE_MASK,
@@ -467,7 +468,11 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_ProbePullUpDisable, Group_Probing, "Pullup disable probe pin", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_probe_disable_pullup, get_int, is_setting_available },
      { Setting_SoftLimitsEnable, Group_Limits, "Soft limits enable", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsLegacyFn, set_soft_limits_enable, get_int, NULL },
 #if COMPATIBILITY_LEVEL <= 1
+  #if N_AXIS > 3
+     { Setting_HardLimitsEnable, Group_Limits, "Hard limits enable", NULL, Format_XBitfield, "Enable,Strict mode,Disable for rotary axes", NULL, NULL, Setting_IsExpandedFn, set_hard_limits_enable, get_int, NULL },
+  #else
      { Setting_HardLimitsEnable, Group_Limits, "Hard limits enable", NULL, Format_XBitfield, "Enable,Strict mode", NULL, NULL, Setting_IsExpandedFn, set_hard_limits_enable, get_int, NULL },
+  #endif
 #else
      { Setting_HardLimitsEnable, Group_Limits, "Hard limits enable", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsLegacyFn, set_hard_limits_enable, get_int, NULL },
 #endif
@@ -1062,12 +1067,28 @@ static status_code_t set_offset_lock (setting_id_t id, uint_fast16_t int_value)
     return Status_OK;
 }
 
+static inline void tmp_set_hard_limits (void)
+{
+    sys.hard_limits.mask = settings.limits.flags.hard_enabled ? AXES_BITMASK : 0;
+  #if N_AXIS > 3
+    if(settings.limits.flags.hard_disabled_rotary)
+        sys.hard_limits.mask &= ~settings.steppers.is_rotational.mask;
+  #endif
+}
+
 static status_code_t set_hard_limits_enable (setting_id_t id, uint_fast16_t int_value)
 {
-    settings.limits.flags.hard_enabled = bit_istrue(int_value, bit(0));
+    if((settings.limits.flags.hard_enabled = bit_istrue(int_value, bit(0)))) {
 #if COMPATIBILITY_LEVEL <= 1
-    settings.limits.flags.check_at_init = bit_istrue(int_value, bit(1));
+        settings.limits.flags.check_at_init = bit_istrue(int_value, bit(1));
+  #if N_AXIS > 3
+        settings.limits.flags.hard_disabled_rotary = bit_istrue(int_value, bit(2));
+  #endif
 #endif
+    } else
+        settings.limits.flags.check_at_init = settings.limits.flags.hard_disabled_rotary = Off;
+
+    tmp_set_hard_limits();
     hal.limits.enable(settings.limits.flags.hard_enabled, (axes_signals_t){0}); // Change immediately. NOTE: Nice to have but could be problematic later.
 
     return Status_OK;
@@ -1553,7 +1574,9 @@ static uint32_t get_int (setting_id_t id)
             break;
 
         case Setting_HardLimitsEnable:
-            value = ((settings.limits.flags.hard_enabled & bit(0)) ? bit(0) | (settings.limits.flags.check_at_init ? bit(1) : 0) : 0);
+            value = ((settings.limits.flags.hard_enabled & bit(0)) ? bit(0) |
+                     (settings.limits.flags.check_at_init ? bit(1) : 0) |
+                      (settings.limits.flags.hard_disabled_rotary ? bit(2) : 0) : 0);
             break;
 
         case Setting_JogSoftLimited:
@@ -2784,6 +2807,7 @@ void settings_init (void)
     xbar_set_homing_source();
 
     tmp_set_soft_limits();
+    tmp_set_hard_limits();
 
     if(spindle_get_count() == 0)
         spindle_add_null();

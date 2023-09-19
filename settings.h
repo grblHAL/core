@@ -640,12 +640,13 @@ typedef struct {
 typedef union {
     uint8_t value;
     struct {
-        uint8_t hard_enabled     :1,
-                soft_enabled     :1,
-                check_at_init    :1,
-                jog_soft_limited :1,
-                two_switches     :1,
-                unassigned       :3;
+        uint8_t hard_enabled         :1,
+                soft_enabled         :1,
+                check_at_init        :1,
+                jog_soft_limited     :1,
+                two_switches         :1,
+                hard_disabled_rotary :1,
+                unassigned           :2;
     };
 } limit_settings_flags_t;
 
