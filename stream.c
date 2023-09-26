@@ -72,8 +72,10 @@ static stream_write_char_ptr mpg_write_char = NULL;
 
 void stream_register_streams (io_stream_details_t *details)
 {
-    details->next = streams;
-    streams = details;
+    if(details->n_streams) {
+        details->next = streams;
+        streams = details;
+    }
 }
 
 bool stream_enumerate_streams (stream_enumerate_callback_ptr callback)

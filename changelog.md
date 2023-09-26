@@ -1,5 +1,38 @@
 ## grblHAL changelog
 
+<a name="20230926"/>Build 20230926
+
+Core:
+
+* "hardened" serial stream registration, now allows empty descriptor.
+
+* now returns no data for alarm and error enums when firmware is compiled for 128K versions of STM32F1xx MCU.
+This frees up some flash space for plugins etc.
+
+Drivers:
+
+* STM32F1xx: refactored serial \(UART\) driver code.
+All ports enabled by a board is now registered with the core at startup and can be claimed by plugin code if unused. 
+
+* STM32F4xx: refactored serial \(UART\) driver code and added option for 3rd port/stream.
+All ports enabled by a board is now registered with the core at startup and can be claimed by plugin code if unused.  
+Switched to DMA for SD card transfers in SPI mode and increased clock frequency.
+Added tentative board map for MKS Robin Nano v3.
+
+* STM32F7xx: refactored serial \(UART\) driver code and added option for 3rd port/stream.
+All ports enabled by a board is now registered with the core at startup and can be claimed by plugin code if unused. 
+Added step injection code for plasma plugin.
+
+* iMXRT1062: extended step injection code for plasma plugin.
+
+Plugins:
+
+* Spindle: for developers; harmonized Modbus serial stream selection symbol, old symbol name retained and marked as deprecated.
+
+* Plasma: some minor bug fixes, added check for presence of driver step injection code.
+
+---
+
 <a name="20230919"/>Build 20230919
 
 Core:
@@ -8,7 +41,7 @@ Core:
 
 Plugins:
 
-* Spindle: fix for {issue #22](https://github.com/grblHAL/Plugins_spindle/issues/22), H100 VFD driver not working.
+* Spindle: fix for [issue #22](https://github.com/grblHAL/Plugins_spindle/issues/22), H100 VFD driver not working.
 
 Drivers:
 

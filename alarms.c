@@ -27,6 +27,7 @@
 #include "core_handlers.h"
 
 PROGMEM static const alarm_detail_t alarm_detail[] = {
+#ifndef NO_SETTINGS_DESCRIPTIONS
     { Alarm_HardLimit, "Hard limit has been triggered. Machine position is likely lost due to sudden halt. Re-homing is highly recommended." },
     { Alarm_SoftLimit, "Soft limit alarm. G-code motion target exceeds machine travel. Machine position retained. Alarm may be safely unlocked." },
     { Alarm_AbortCycle, "Reset while in motion. Machine position is likely lost due to sudden halt. Re-homing is highly recommended." },
@@ -45,6 +46,7 @@ PROGMEM static const alarm_detail_t alarm_detail[] = {
     { Alarm_SelftestFailed, "Power on selftest (POS) failed." },
     { Alarm_MotorFault, "Motor fault." },
     { Alarm_HomingFail, "Homing fail. Bad configuration." }
+#endif // NO_SETTINGS_DESCRIPTIONS
 };
 
 static alarm_details_t details = {
@@ -72,8 +74,7 @@ const char *alarms_get_description (alarm_code_t id)
     alarm_details_t *details = grbl.on_get_alarms();
 
     do {
-        n_alarms = details->n_alarms;
-        do {
+        if((n_alarms = details->n_alarms)) do {
             if(details->alarms[--n_alarms].id == id)
                 description = details->alarms[n_alarms].description;
         } while(description == NULL && n_alarms);

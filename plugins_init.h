@@ -28,6 +28,11 @@
     trinamic_init();
 #endif
 
+#if PLASMA_ENABLE
+    extern void plasma_init (void);
+    plasma_init();
+#endif
+
 #if MODBUS_ENABLE && MODBUS_ENABLE & 0x01
     extern void modbus_rtu_init (void);
     modbus_rtu_init();

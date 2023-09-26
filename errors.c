@@ -27,6 +27,7 @@
 #include "core_handlers.h"
 
 PROGMEM static const status_detail_t status_detail[] = {
+#ifndef NO_SETTINGS_DESCRIPTIONS
     { Status_OK, NULL },
     { Status_ExpectedCommandLetter, "G-code words consist of a letter and a value. Letter was not found." },
     { Status_BadNumberFormat, "Missing the expected G-code word value or numeric value format is not valid." },
@@ -103,6 +104,7 @@ PROGMEM static const status_detail_t status_detail[] = {
     { Status_FlowControlStackOverflow, "Stack overflow while executing flow statement." },
     { Status_FlowControlOutOfMemory, "Out of memory while executing flow statement." }
 #endif
+#endif // NO_SETTINGS_DESCRIPTIONS
 };
 
 static error_details_t details = {
@@ -130,8 +132,7 @@ const char *errors_get_description (status_code_t id)
     error_details_t *details = grbl.on_get_errors();
 
     do {
-        n_errors = details->n_errors;
-        do {
+        if((n_errors = details->n_errors)) do {
             if(details->errors[--n_errors].id == id)
                 description = details->errors[n_errors].description;
         } while(description == NULL && n_errors);

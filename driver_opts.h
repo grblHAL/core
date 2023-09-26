@@ -86,6 +86,10 @@
 #define USB_SERIAL_WAIT     0
 #endif
 
+#if USB_SERIAL_CDC == 0 && !defined(SERIAL_STREAM)
+#define SERIAL_STREAM       0
+#endif
+
 #ifndef KEYPAD_ENABLE
 #define KEYPAD_ENABLE       0
 #endif
@@ -162,8 +166,11 @@
   #define TRINAMIC_ENABLE   0
 #endif
 #if TRINAMIC_ENABLE == 2209
-  #if !defined(TRINAMIC_UART_ENABLE)
+  #ifndef TRINAMIC_UART_ENABLE)
     #define TRINAMIC_UART_ENABLE 1
+  #endif
+  #if !defined(TRINAMIC_STREAM) && TRINAMIC_UART_ENABLE == 1
+    #define TRINAMIC_STREAM 1
   #endif
 #else
   #define TRINAMIC_UART_ENABLE 0
@@ -196,9 +203,15 @@
 #endif
 #ifndef PLASMA_ENABLE
 #define PLASMA_ENABLE       0
+#else
+#define STEP_INJECT_ENABLE  1
 #endif
 #ifndef PPI_ENABLE
 #define PPI_ENABLE          0
+#endif
+
+#ifndef STEP_INJECT_ENABLE
+#define STEP_INJECT_ENABLE  1
 #endif
 
 #if EMBROIDERY_ENABLE
