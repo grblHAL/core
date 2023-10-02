@@ -166,7 +166,7 @@
   #define TRINAMIC_ENABLE   0
 #endif
 #if TRINAMIC_ENABLE == 2209
-  #ifndef TRINAMIC_UART_ENABLE)
+  #ifndef TRINAMIC_UART_ENABLE
     #define TRINAMIC_UART_ENABLE 1
   #endif
   #if !defined(TRINAMIC_STREAM) && TRINAMIC_UART_ENABLE == 1
@@ -203,7 +203,10 @@
 #endif
 #ifndef PLASMA_ENABLE
 #define PLASMA_ENABLE       0
-#else
+#elif PLASMA_ENABLE
+#if defined(STEP_INJECT_ENABLE)
+#undef STEP_INJECT_ENABLE
+#endif
 #define STEP_INJECT_ENABLE  1
 #endif
 #ifndef PPI_ENABLE
@@ -211,7 +214,7 @@
 #endif
 
 #ifndef STEP_INJECT_ENABLE
-#define STEP_INJECT_ENABLE  1
+#define STEP_INJECT_ENABLE  0
 #endif
 
 #if EMBROIDERY_ENABLE

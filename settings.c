@@ -1411,7 +1411,7 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
             break;
 
         case Setting_AxisAcceleration:
-            settings.axis[idx].acceleration = override_backup.acceleration[idx] = value * 60.0f * 60.0f; // Convert to mm/sec^2 for grbl internal use.
+            settings.axis[idx].acceleration = override_backup.acceleration[idx] = value * 60.0f * 60.0f; // Convert to mm/min^2 for grbl internal use.
             break;
 
         case Setting_AxisMaxTravel:
@@ -1474,7 +1474,7 @@ static float get_float (setting_id_t setting)
                 break;
 
             case Setting_AxisAcceleration:
-                value = settings.axis[idx].acceleration  / (60.0f * 60.0f); // Convert to mm/min^2 for grbl internal use.
+                value = settings.axis[idx].acceleration / (60.0f * 60.0f); // Convert from mm/min^2 to mm/sec^2.
                 break;
 
             case Setting_AxisMaxTravel:

@@ -1,5 +1,29 @@
 ## grblHAL changelog
 
+<a name="20231002"/>Build 20231002
+
+Core:
+
+* Fixed some typos that may cause compiler warnings.
+
+* Added initial secondary stepper driver code to be used for plasma THC and possibly later for stepper driven spindles.
+
+Drivers:
+
+* ESP32 and RP2040: refactored serial \(UART\) driver code.
+
+* iMXRT1062: improved I2C probe function.
+
+* STM32F1xx, STM32F4xx and STM32F7xx: simplified UART code, added guard to suppress compiler warning for some configurations.
+
+Plugins:
+
+* Plasma: enabled PID loop for voltage THC control.
+
+* Keypad: added 10ms delay before probing display I2C address, [issue #8](https://github.com/grblHAL/Plugin_keypad/issues/8).
+
+---
+
 <a name="20230926"/>Build 20230926
 
 Core:
@@ -20,7 +44,7 @@ Switched to DMA for SD card transfers in SPI mode and increased clock frequency.
 Added tentative board map for MKS Robin Nano v3.
 
 * STM32F7xx: refactored serial \(UART\) driver code and added option for 3rd port/stream.
-All ports enabled by a board is now registered with the core at startup and can be claimed by plugin code if unused. 
+All ports enabled by a board is now registered with the core at startup and can be claimed by plugin code if unused.  
 Added step injection code for plasma plugin.
 
 * iMXRT1062: extended step injection code for plasma plugin.
@@ -30,6 +54,8 @@ Plugins:
 * Spindle: for developers; harmonized Modbus serial stream selection symbol, old symbol name retained and marked as deprecated.
 
 * Plasma: some minor bug fixes, added check for presence of driver step injection code.
+
+* Keypad: added 10ms delay before probing display I2C address.
 
 ---
 
