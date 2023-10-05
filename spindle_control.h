@@ -82,7 +82,8 @@ typedef enum {
     SpindleType_Basic,      //!< 1 - on/off + optional direction
     SpindleType_VFD,        //!< 2
     SpindleType_Solenoid,   //!< 3
-    SpindleType_Null,       //!< 4
+    SpindleType_Stepper,    //!< 4
+    SpindleType_Null,       //!< 5
 } spindle_type_t;
 
 typedef enum {

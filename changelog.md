@@ -1,5 +1,27 @@
 ## grblHAL changelog
 
+<a name="20231005"/>Build 20231005
+
+Core:
+
+* Extended secondary stepper driver code and improved debug stream handling.
+
+Drivers:
+
+* iMXRT1062: refactored timer code, improved step injection support.
+
+* STM32F4xx: fixed typo in Trinamic soft serial code.
+
+Plugins:
+
+* Plasma: changed to use rapid rate for THC cutter motion.
+
+* Keypad: increased delay before probing display I2C address to 510ms, [issue #8](https://github.com/grblHAL/Plugin_keypad/issues/8).
+
+* Spindle: added experimental support for stepper spindle. Note: not yet enabled for compilation.
+
+---
+
 <a name="20231002"/>Build 20231002
 
 Core:
