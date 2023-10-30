@@ -482,7 +482,7 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
     // behave as if its doing a G93 inverse time mode move.
 
     if(!block->condition.inverse_time &&
-        !block->condition.rapid_motion &&el
+        !block->condition.rapid_motion &&
          (motion.mask & settings.steppers.is_rotational.mask) &&
           (motion.mask & ~settings.steppers.is_rotational.mask)) {
 
