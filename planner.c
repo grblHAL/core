@@ -355,6 +355,19 @@ static inline float limit_acceleration_by_axis_maximum (float *unit_vec)
     return limit_value;
 }
 
+static inline float limit_jerk_by_axis_maximum (float *unit_vec)
+{
+    uint_fast8_t idx = N_AXIS;
+    float limit_value = SOME_LARGE_VALUE;
+
+    do {
+        if (unit_vec[--idx] != 0.0f)  // Avoid divide by zero.
+            limit_value = min(limit_value, fabsf(settings.axis[idx].jerk / unit_vec[idx]));
+    } while(idx);
+
+    return limit_value;
+}
+
 static inline float limit_max_rate_by_axis_maximum (float *unit_vec)
 {
     uint_fast8_t idx = N_AXIS;
@@ -469,7 +482,7 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
     // behave as if its doing a G93 inverse time mode move.
 
     if(!block->condition.inverse_time &&
-        !block->condition.rapid_motion &&
+        !block->condition.rapid_motion &&el
          (motion.mask & settings.steppers.is_rotational.mask) &&
           (motion.mask & ~settings.steppers.is_rotational.mask)) {
 
@@ -493,7 +506,7 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
 #endif
 
     // Calculate the unit vector of the line move and the block maximum feed rate and acceleration scaled
-    // down such that no individual axes maximum values are exceeded with respect to the line direction.
+    // down such that no individual axes maximum values are exceeded with respect to the line direction.l
 #if N_AXIS > 3  && ROTARY_FIX
     // NOTE: This calculation assumes all block motion axes are orthogonal (Cartesian), and if also rotational, then
     // motion mode must be inverse time mode. Operates on the absolute value of the unit vector.
@@ -503,7 +516,8 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
 #endif
 
     block->millimeters = convert_delta_vector_to_unit_vector(unit_vec);
-    block->acceleration = limit_acceleration_by_axis_maximum(unit_vec);
+    block->max_acceleration = limit_acceleration_by_axis_maximum(unit_vec);
+    block->jerk = limit_jerk_by_axis_maximum(unit_vec);
     block->rapid_rate = limit_max_rate_by_axis_maximum(unit_vec);
 
     // Store programmed rate.
@@ -517,6 +531,11 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
         if (block->condition.inverse_time)
             block->programmed_rate *= block->millimeters;
     }
+    // Calculate effective acceleration over block. Since jerk acceleration takes longer to execute due to ramp up and 
+    // ramp down of the acceleration at the start and end of a ramp we need to adjust the acceleration value the planner 
+    // uses so it still calculates reasonable entry and exit speeds. We do this by adding 2x the time it takes to reach 
+    // full acceleration to the trapezoidal acceleration time and dividing the programmed rate by the value obtained.
+    block->acceleration = block->programmed_rate / ((block->programmed_rate / block->max_acceleration) + 2.0f * (block->max_acceleration / block->jerk))
 
     // TODO: Need to check this method handling zero junction speeds when starting from rest.
     if ((block_buffer_head == block_buffer_tail) || (block->condition.system_motion)) {
