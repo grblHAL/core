@@ -955,8 +955,8 @@ void st_prep_buffer (void)
 
                 default: // case Ramp_Decel:
                     // NOTE: mm_var used as a misc worker variable to prevent errors when near zero speed.
-                    if (((prep.decelerate_after - mm_remaining) / (prep.current_speed + 1.0f)) <= (pl_block->max_acceleration / pl_block->jerk)) { //+1.0f to avoid divide by 0 speed, minor effect on jerk ramp
-                        // Check if we are on ramp up or ramp down. Ramp down if time to end of acceleration is less than time needed to reach 0 acceleration.
+                    if ((mm_remaining / (prep.current_speed + 1.0f)) <= (pl_block->max_acceleration / pl_block->jerk)) { //+1.0f to avoid divide by 0 speed, minor effect on jerk ramp
+                        // Check if we are on ramp up or ramp down. Ramp down if time to end of deceleration is less than time needed to reach 0 acceleration.
                         // Then limit acceleration change by jerk up to max acceleration and update for next segment.
                         last_segment_accel = max(last_segment_accel - pl_block->jerk * time_var, 0.0f); 
                     } else {

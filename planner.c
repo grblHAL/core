@@ -506,7 +506,7 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
 #endif
 
     // Calculate the unit vector of the line move and the block maximum feed rate and acceleration scaled
-    // down such that no individual axes maximum values are exceeded with respect to the line direction.l
+    // down such that no individual axes maximum values are exceeded with respect to the line direction.
 #if N_AXIS > 3  && ROTARY_FIX
     // NOTE: This calculation assumes all block motion axes are orthogonal (Cartesian), and if also rotational, then
     // motion mode must be inverse time mode. Operates on the absolute value of the unit vector.
