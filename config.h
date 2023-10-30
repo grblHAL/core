@@ -1823,6 +1823,35 @@ Timezone offset from UTC in hours, allowed range is -12.0 - 12.0.
 #endif
 ///@}
 
+/*! @name 12x - Setting_AxisJerk
+*/
+///@{
+#if !defined DEFAULT_X_JERK|| defined __DOXYGEN__
+#define DEFAULT_X_Jerk 100.0f // mm/sec^2
+#endif
+#if !defined DEFAULT_Y_JERK|| defined __DOXYGEN__
+#define DEFAULT_Y_JERK 100.0f // mm/sec^2
+#endif
+#if !defined DEFAULT_Z_JERK || defined __DOXYGEN__
+#define DEFAULT_Z_JERK 100.0f // mm/sec^2
+#endif
+#if (defined A_AXIS && !defined DEFAULT_A_JERK) || defined __DOXYGEN__
+#define DEFAULT_A_JERK 100.0f // mm/sec^2
+#endif
+#if (defined B_AXIS && !defined DEFAULT_B_JERK) || defined __DOXYGEN__
+#define DEFAULT_B_JERK 100.0f // mm/sec^2
+#endif
+#if (defined C_AXIS && !defined DEFAULT_C_JERK) || defined __DOXYGEN__
+#define DEFAULT_C_JERK 100.0f // mm/sec^2
+#endif
+#if (defined U_AXIS && !defined DEFAULT_U_JERK) || defined __DOXYGEN__
+#define DEFAULT_U_JERK 100.0f // mm/sec^2
+#endif
+#if (defined V_AXIS && !defined DEFAULT_V_JERK) || defined __DOXYGEN__
+#define DEFAULT_V_JERK 100.0f // mm/sec^2
+#endif
+///@}
+
 /*! @name 13x - Setting_AxisMaxTravel
 __NOTE:__ Must be a positive values.
 */
