@@ -535,7 +535,7 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
     // ramp down of the acceleration at the start and end of a ramp we need to adjust the acceleration value the planner 
     // uses so it still calculates reasonable entry and exit speeds. We do this by adding 2x the time it takes to reach 
     // full acceleration to the trapezoidal acceleration time and dividing the programmed rate by the value obtained.
-    block->acceleration = block->programmed_rate / ((block->programmed_rate / block->max_acceleration) + 2.0f * (block->max_acceleration / block->jerk))
+    block->acceleration = block->programmed_rate / ((block->programmed_rate / block->max_acceleration) + 2.0f * (block->max_acceleration / block->jerk));
 
     // TODO: Need to check this method handling zero junction speeds when starting from rest.
     if ((block_buffer_head == block_buffer_tail) || (block->condition.system_motion)) {
