@@ -62,8 +62,8 @@ typedef struct plan_block {
     float max_entry_speed_sqr;      // Maximum allowable entry speed based on the minimum of junction limit and
                                     // neighboring nominal speeds with overrides in (mm/min)^2
     float acceleration;             // Effective acceleration over plannerblock calculated from trapezoidal movement plan.
-    float max_acceleration          // Axis-limit adjusted line acceleration in (mm/min^2). Does not change.
-    float jerk                      // Axis-limit adjusted jerk value in (mm/min^3). Does not change.
+    float max_acceleration;         // Axis-limit adjusted line acceleration in (mm/min^2). Does not change.
+    float jerk;                     // Axis-limit adjusted jerk value in (mm/min^3). Does not change.
     float millimeters;              // The remaining distance for this block to be executed in (mm).
                                     // NOTE: This value may be altered by stepper algorithm during execution.
 
