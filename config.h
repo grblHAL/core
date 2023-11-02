@@ -1827,7 +1827,7 @@ Timezone offset from UTC in hours, allowed range is -12.0 - 12.0.
 */
 ///@{
 #if !defined DEFAULT_X_JERK|| defined __DOXYGEN__
-#define DEFAULT_X_Jerk 100.0f // mm/sec^2
+#define DEFAULT_X_JERK 100.0f // mm/sec^2
 #endif
 #if !defined DEFAULT_Y_JERK|| defined __DOXYGEN__
 #define DEFAULT_Y_JERK 100.0f // mm/sec^2
