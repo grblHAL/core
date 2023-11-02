@@ -434,6 +434,7 @@ static char spindle_types[100] = "";
 static char axis_dist[4] = "mm";
 static char axis_rate[8] = "mm/min";
 static char axis_accel[10] = "mm/sec^2";
+static char axis_jerk[15] = "mm/sec^3";
 #if DELTA_ROBOT
 static char axis_steps[9] = "step/rev";
 #else
