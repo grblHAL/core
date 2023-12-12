@@ -466,7 +466,7 @@ struct xbar;
 typedef float (*xbar_get_value_ptr)(struct xbar *pin);
 typedef void (*xbar_set_value_ptr)(struct xbar *pin, float value);
 typedef void (*xbar_event_ptr)(bool on);
-typedef void (*xbar_config_ptr)(struct xbar *pin, void *cfg_data);
+typedef bool (*xbar_config_ptr)(struct xbar *pin, void *cfg_data);
 
 typedef struct xbar {
     pin_function_t function;

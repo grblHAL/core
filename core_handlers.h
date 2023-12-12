@@ -126,9 +126,23 @@ typedef sys_commands_t *(*on_get_commands_ptr)(void);
 typedef status_code_t (*on_macro_execute_ptr)(macro_id_t macro); // macro implementations _must_ claim hal.stream.read to stream macros!
 typedef void (*on_macro_return_ptr)(void);
 
+typedef bool (*write_tool_data_ptr)(tool_data_t *tool_data);
+typedef bool (*read_tool_data_ptr)(tool_id_t tool_id, tool_data_t *tool_data);
+typedef bool (*clear_tool_data_ptr)(void);
+
+typedef struct {
+    uint32_t n_tools;
+    tool_data_t *tool;          //!< Array of tool data, size _must_ be n_tools + 1
+    read_tool_data_ptr read;
+    write_tool_data_ptr write;
+    clear_tool_data_ptr clear;
+} tool_table_t;
+
 typedef struct {
     // report entry points set by core at reset.
     report_t report;
+    //
+    tool_table_t tool_table;
     // grbl core events - may be subscribed to by drivers or by the core.
     on_parser_init_ptr on_parser_init;
     on_state_change_ptr on_state_change;

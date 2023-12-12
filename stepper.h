@@ -68,7 +68,7 @@ typedef struct st_segment {
     bool cruising;                      //!< True when in cruising part of profile, only set for spindle synced moves
     uint_fast8_t amass_level;           //!< Indicates AMASS level for the ISR to execute this segment
     spindle_update_pwm_ptr update_pwm;  //!< Valid pointer to spindle.update_pwm() if set spindle speed at the start of the segment execution
-    spindle_update_rpm_ptr update_rpm;  //!< Valid pointer to spindle.update_rmp() if set spindle speed at the start of the segment execution
+    spindle_update_rpm_ptr update_rpm;  //!< Valid pointer to spindle.update_rpm() if set spindle speed at the start of the segment execution
 } segment_t;
 
 //! Stepper ISR data struct. Contains the running data for the main stepper ISR.

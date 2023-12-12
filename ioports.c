@@ -143,7 +143,7 @@ bool ioport_can_claim_explicit (void)
     return !(hal.port.claim == NULL || hal.port.get_pin_info == NULL);
 }
 
-bool ioports_enumerate (io_port_type_t type, io_port_direction_t dir, pin_mode_t filter, bool claimable, ioports_enumerate_callback_ptr callback)
+bool ioports_enumerate (io_port_type_t type, io_port_direction_t dir, pin_mode_t filter, bool claimable, ioports_enumerate_callback_ptr callback, void *data)
 {
     bool ok = false;
     uint8_t n_ports = ioports_available(type, dir);
@@ -153,7 +153,7 @@ bool ioports_enumerate (io_port_type_t type, io_port_direction_t dir, pin_mode_t
         portinfo = hal.port.get_pin_info(type, dir, --n_ports);
         if(claimable && portinfo->mode.claimed)
             continue;
-        if((portinfo->mode.mask & filter.mask) == filter.mask && (ok = callback(portinfo, n_ports)))
+        if((portinfo->mode.mask & filter.mask) == filter.mask && (ok = callback(portinfo, n_ports, data)))
             break;
     } while(n_ports);
 
@@ -290,6 +290,8 @@ static inline uint_fast16_t invert_pwm (ioports_pwm_t *pwm_data, uint_fast16_t p
 */
 bool ioports_precompute_pwm_values (pwm_config_t *config, ioports_pwm_t *pwm_data, uint32_t clock_hz)
 {
+    pwm_data->f_clock = clock_hz;
+
     if(config->max > config->min) {
         pwm_data->min = config->min;
         pwm_data->period = (uint_fast16_t)((float)clock_hz / config->freq_hz);

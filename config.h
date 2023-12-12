@@ -493,7 +493,7 @@ by a driver or a plugin.
 #if COMPATIBILITY_LEVEL == 0 || defined __DOXYGEN__
 /*! \def N_TOOLS
 \brief
-Number of tools in tool table, edit to enable (max. 16 allowed)
+Number of tools in tool table, edit to enable (max. 32 allowed)
 */
 #if !defined N_TOOLS || defined __DOXYGEN__
 #define N_TOOLS 0
@@ -516,6 +516,14 @@ Maximum number of parameters allowed in a block.
 */
 #if (NGC_EXPRESSIONS_ENABLE && !defined NGC_N_ASSIGN_PARAMETERS_PER_BLOCK) || defined __DOXYGEN__
 #define NGC_N_ASSIGN_PARAMETERS_PER_BLOCK 10
+#endif
+
+/*! \def LATHE_UVW_OPTION
+\brief
+Allow use of UVW axis words for non-modal relative lathe motion.
+*/
+#if !defined LATHE_UVW_OPTION || defined __DOXYGEN__
+#define LATHE_UVW_OPTION Off
 #endif
 
 // Max number of entries in log for PID data reporting, to be used for tuning
@@ -811,7 +819,7 @@ having trouble keeping up with planning new incoming motions as they are execute
  */
 ///@{
 #if !defined DEFAULT_PLANNER_BUFFER_BLOCKS || defined __DOXYGEN__
-#define DEFAULT_PLANNER_BUFFER_BLOCKS 35
+#define DEFAULT_PLANNER_BUFFER_BLOCKS 100
 #endif
 ///@}
 
@@ -1858,28 +1866,28 @@ __NOTE:__ Must be a positive values.
  */
 ///@{
 #if !defined DEFAULT_X_CURRENT || defined __DOXYGEN__
-#define DEFAULT_X_CURRENT 0.0 // mA
+#define DEFAULT_X_CURRENT 500.0f // mA RMS
 #endif
 #if !defined DEFAULT_Y_CURRENT || defined __DOXYGEN__
-#define DEFAULT_Y_CURRENT 0.0 // mA
+#define DEFAULT_Y_CURRENT 500.0f // mA RMS
 #endif
 #if !defined DEFAULT_Z_CURRENT || defined __DOXYGEN__
-#define DEFAULT_Z_CURRENT 0.0 // mA
+#define DEFAULT_Z_CURRENT 500.0f // mA RMS
 #endif
 #if (defined A_AXIS && !defined DEFAULT_A_CURRENT) || defined __DOXYGEN__
-#define DEFAULT_A_CURRENT 0.0 // mA
+#define DEFAULT_A_CURRENT 500.0f // mA RMS
 #endif
 #if (defined B_AXIS && !defined DEFAULT_B_CURRENT) || defined __DOXYGEN__
-#define DEFAULT_B_CURRENT 0.0 // mA
+#define DEFAULT_B_CURRENT 500.0f // mA RMS
 #endif
 #if (defined C_AXIS && !defined DEFAULT_C_CURRENT) || defined __DOXYGEN__
-#define DEFAULT_C_CURRENT 0.0 // mA
+#define DEFAULT_C_CURRENT 500.0f // mA RMS
 #endif
 #if (defined U_AXIS && !defined DEFAULT_U_CURRENT) || defined __DOXYGEN__
-#define DEFAULT_U_CURRENT 0.0 // mA
+#define DEFAULT_U_CURRENT 500.0f // mA RMS
 #endif
 #if (defined V_AXIS && !defined DEFAULT_V_CURRENT) || defined __DOXYGEN__
-#define DEFAULT_V_CURRENT 0.0 // mA
+#define DEFAULT_V_CURRENT 500.0f // mA RMS
 #endif
 ///@}
 
@@ -1890,9 +1898,9 @@ __NOTE:__ Must be a positive values.
 #undef N_TOOLS
 #endif
 
-#if defined(N_TOOLS) && N_TOOLS > 16
+#if defined(N_TOOLS) && N_TOOLS > 32
 #undef N_TOOLS
-#define N_TOOLS 16
+#define N_TOOLS 32
 #endif
 
 #if N_SYS_SPINDLE > N_SPINDLE
@@ -1925,6 +1933,12 @@ __NOTE:__ Must be a positive values.
 
 #if DEFAULT_LASER_MODE && DEFAULT_LATHE_MODE
 #error "Cannot enable laser and lathe mode at the same time!"
+#endif
+
+#if LATHE_UVW_OPTION && (N_AXIS > 6 || AXIS_REMAP_ABC2UVW)
+#warning "Cannot enable lathe UVW option when N_AXIS > 6 or ABC words are remapped!"
+#undef LATHE_UVW_OPTION
+#define LATHE_UVW_OPTION Off
 #endif
 
 #if DEFAULT_CONTROL_SIGNALS_INVERT_MASK < 0

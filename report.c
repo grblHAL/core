@@ -614,17 +614,15 @@ void report_ngc_parameters (void)
     hal.stream.write(get_axis_values(gc_state.g92_coord_offset));
     hal.stream.write("]" ASCII_EOL);
 
-#if N_TOOLS
-    for (idx = 1; idx <= N_TOOLS; idx++) {
+    for (idx = 1; idx <= grbl.tool_table.n_tools; idx++) {
         hal.stream.write("[T:");
         hal.stream.write(uitoa((uint32_t)idx));
         hal.stream.write("|");
-        hal.stream.write(get_axis_values(tool_table[idx].offset));
+        hal.stream.write(get_axis_values(grbl.tool_table.tool[idx].offset));
         hal.stream.write("|");
-        hal.stream.write(get_axis_value(tool_table[idx].radius));
+        hal.stream.write(get_axis_value(grbl.tool_table.tool[idx].radius));
         hal.stream.write("]" ASCII_EOL);
     }
-#endif
 
 #if COMPATIBILITY_LEVEL < 10
     if(settings.homing.flags.enabled)
@@ -892,11 +890,7 @@ void report_build_info (char *line, bool extended)
         hal.stream.write(",");
         hal.stream.write(uitoa((uint32_t)N_AXIS));
         hal.stream.write(",");
-  #if N_TOOLS
-        hal.stream.write(uitoa((uint32_t)N_TOOLS));
-  #else
-        hal.stream.write("0");
-  #endif
+        hal.stream.write(uitoa(grbl.tool_table.n_tools));
     }
     hal.stream.write("]" ASCII_EOL);
 
@@ -940,8 +934,12 @@ void report_build_info (char *line, bool extended)
         if(hal.driver_cap.mpg_mode)
             strcat(buf, "MPG,");
 
+#if LATHE_UVW_OPTION
+        strcat(buf, "LATHE,LATHEUVW,");
+#else
         if(settings.mode == Mode_Lathe)
             strcat(buf, "LATHE,");
+#endif
 
         if(hal.driver_cap.laser_ppi_mode)
             strcat(buf, "PPI,");
@@ -1180,7 +1178,7 @@ void report_realtime_status (void)
     spindle_state_t spindle_0_state;
 
     spindle_0 = spindle_get(0);
-    spindle_0_state = spindle_0->get_state();
+    spindle_0_state = spindle_0->get_state(spindle_0);
 
     // Report realtime feed speed
     if(settings.status_report.feed_speed) {
@@ -1201,7 +1199,7 @@ void report_realtime_status (void)
         spindle_state_t spindle_n_state;
 
         if((spindle_n = spindle_get(idx))) {
-            spindle_n_state = spindle_n->get_state();
+            spindle_n_state = spindle_n->get_state(spindle_n);
             hal.stream.write_all(appendbuf(3, "|SP", uitoa(idx), ":"));
             hal.stream.write_all(appendbuf(3, uitoa(spindle_n_state.on ? lroundf(spindle_n->param->rpm_overridden) : 0), ",,", spindle_n_state.on ? (spindle_n_state.ccw ? "C" : "S") : ""));
             if(settings.status_report.overrides)
@@ -2122,7 +2120,7 @@ status_code_t report_spindle_data (sys_state_t state, char *args)
         float apos = spindle->get_data(SpindleData_AngularPosition)->angular_position;
         spindle_data_t *data = spindle->get_data(SpindleData_Counters);
 
-        hal.stream.write("[SPINDLE:");
+        hal.stream.write("[SPINDLEENCODER:");
         hal.stream.write(uitoa(data->index_count));
         hal.stream.write(",");
         hal.stream.write(uitoa(data->pulse_count));
@@ -2203,23 +2201,69 @@ status_code_t report_time (void)
 
 static void report_spindle (spindle_info_t *spindle, void *data)
 {
-    hal.stream.write(uitoa(spindle->id));
-    hal.stream.write(" - ");
-    hal.stream.write(spindle->name);
-    if(spindle->enabled) {
-#if N_SPINDLE > 1
-        hal.stream.write(", enabled as spindle ");
-        hal.stream.write(uitoa(spindle->num));
-#else
-        hal.stream.write(", active");
+    if(data) {
+        char *caps = buf;
+        hal.stream.write("[SPINDLE:");
+        hal.stream.write(uitoa(spindle->id));
+        hal.stream.write("|");
+        hal.stream.write(spindle->enabled ? uitoa(spindle->num) : "-");
+        hal.stream.write("|");
+        hal.stream.write(uitoa(spindle->hal->type));
+        *caps++ = '|';
+#if N_SYS_SPINDLE == 1
+        if(spindle->is_current)
+            *caps++ = '*';
 #endif
+        if(spindle->hal->cap.at_speed)
+            *caps++ = 'S';
+        if(spindle->hal->cap.direction)
+            *caps++ = 'D';
+        if(spindle->hal->cap.laser)
+            *caps++ = 'L';
+        if(spindle->hal->cap.pid)
+            *caps++ = 'P';
+        if(spindle->hal->cap.pwm_invert)
+            *caps++ = 'I';
+        if(spindle->hal->cap.pwm_linearization)
+            *caps++ = 'N';
+        if(spindle->hal->cap.rpm_range_locked)
+            *caps++ = 'R';
+        if(spindle->hal->cap.variable)
+            *caps++ = 'V';
+        if(spindle->hal->get_data)
+            *caps++ = 'E';
+        *caps++ = '|';
+        *caps = '\0';
+        hal.stream.write(buf);
+        hal.stream.write(spindle->name);
+        if(spindle->hal->rpm_max > 0.0f) {
+            hal.stream.write("|");
+            hal.stream.write(ftoa(spindle->hal->rpm_min, 1));
+            hal.stream.write(",");
+            hal.stream.write(ftoa(spindle->hal->rpm_max, 1));
+        }
+        hal.stream.write("]" ASCII_EOL);
+    } else {
+        hal.stream.write(uitoa(spindle->id));
+        hal.stream.write(" - ");
+        hal.stream.write(spindle->name);
+        if(spindle->enabled) {
+#if N_SPINDLE > 1
+            hal.stream.write(", enabled as spindle ");
+            hal.stream.write(uitoa(spindle->num));
+ #if N_SYS_SPINDLE == 1
+            if(spindle->is_current)
+                hal.stream.write(", active");
+ #endif
+#endif
+        }
+        hal.stream.write(ASCII_EOL);
     }
-    hal.stream.write(ASCII_EOL);
 }
 
-status_code_t report_spindles (void)
+status_code_t report_spindles (bool machine_readable)
 {
-    if(!spindle_enumerate_spindles(report_spindle, NULL))
+    if(!spindle_enumerate_spindles(report_spindle, (void *)machine_readable) && !machine_readable)
         hal.stream.write("No spindles registered." ASCII_EOL);
 
     return Status_OK;

@@ -407,16 +407,16 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
          #endif
 
             if(st.exec_segment->update_pwm)
-                st.exec_segment->update_pwm(st.exec_segment->spindle_pwm);
+                st.exec_segment->update_pwm(st.exec_block->spindle, st.exec_segment->spindle_pwm);
             else if(st.exec_segment->update_rpm)
-                st.exec_segment->update_rpm(st.exec_segment->spindle_rpm);
+                st.exec_segment->update_rpm(st.exec_block->spindle, st.exec_segment->spindle_rpm);
         } else {
             // Segment buffer empty. Shutdown.
             st_go_idle();
 
             // Ensure pwm is set properly upon completion of rate-controlled motion.
             if (st.exec_block->dynamic_rpm && st.exec_block->spindle->cap.laser)
-                st.exec_block->spindle->update_pwm(st.exec_block->spindle->pwm_off_value);
+                st.exec_block->spindle->update_pwm(st.exec_block->spindle, st.exec_block->spindle->pwm_off_value);
 
             st.exec_block = NULL;
             system_set_exec_state_flag(EXEC_CYCLE_COMPLETE); // Flag main program for cycle complete
@@ -732,6 +732,7 @@ void st_prep_buffer (void)
 //                st_prep_block->r = pl_block->programmed_rate;
                 st_prep_block->millimeters = pl_block->millimeters;
                 st_prep_block->steps_per_mm = (float)pl_block->step_event_count / pl_block->millimeters;
+                st_prep_block->spindle = pl_block->spindle.hal;
                 st_prep_block->output_commands = pl_block->output_commands;
                 st_prep_block->overrides = pl_block->overrides;
                 st_prep_block->backlash_motion = pl_block->condition.backlash_motion;
@@ -987,8 +988,6 @@ void st_prep_buffer (void)
 
             float rpm;
 
-            st_prep_block->spindle = pl_block->spindle.hal;
-
             if (pl_block->spindle.state.on) {
                 if(pl_block->spindle.css) {
                     float npos = (float)(pl_block->step_event_count - prep.steps_remaining) / (float)pl_block->step_event_count;
@@ -1011,7 +1010,7 @@ void st_prep_buffer (void)
                 if(pl_block->spindle.hal->get_pwm != NULL) {
                     prep.current_spindle_rpm = rpm;
                     prep_segment->update_pwm = pl_block->spindle.hal->update_pwm;
-                    prep_segment->spindle_pwm = pl_block->spindle.hal->get_pwm(rpm);
+                    prep_segment->spindle_pwm = pl_block->spindle.hal->get_pwm(pl_block->spindle.hal, rpm);
                 } else {
                     prep_segment->update_rpm = pl_block->spindle.hal->update_rpm;
                     prep.current_spindle_rpm = prep_segment->spindle_rpm = rpm;

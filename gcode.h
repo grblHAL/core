@@ -385,6 +385,9 @@ typedef struct {
     float r;                   //!< Arc radius or retract position
     float s;                   //!< Spindle speed - single-meaning word
     float xyz[N_AXIS];         //!< X,Y,Z (and A,B,C,U,V when enabled) translational axes
+#if LATHE_UVW_OPTION
+    float uvw[3];              //!< U,V,W lathe mode incremental mode motion
+#endif
     coord_system_t coord_data; //!< Coordinate data
     int32_t $;                 //!< Spindle id - single-meaning word
     int32_t n;                 //!< Line number - single-meaning word
@@ -533,7 +536,7 @@ typedef struct {
     //  float blending_tolerance;       //!< Motion blending tolerance
     int32_t line_number;                //!< Last line number sent
     tool_id_t tool_pending;             //!< Tool to be selected on next M6
-#if N_TOOLS && NGC_EXPRESSIONS_ENABLE
+#if NGC_EXPRESSIONS_ENABLE
     uint32_t g43_pending;               //!< Tool offset to be selected on next M6, for macro ATC
 #endif
     bool file_run;                      //!< Tracks % command
@@ -557,11 +560,6 @@ typedef struct {
 } scale_factor_t;
 
 extern parser_state_t gc_state;
-#if N_TOOLS
-extern tool_data_t tool_table[N_TOOLS + 1];
-#else
-extern tool_data_t tool_table;
-#endif
 
 /*! \brief Parser block structure.
 

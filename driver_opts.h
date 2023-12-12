@@ -159,7 +159,15 @@
 #endif
 
 #ifndef SPINDLE_SYNC_ENABLE
-#define SPINDLE_SYNC_ENABLE 0
+#define SPINDLE_SYNC_ENABLE     0
+#endif
+
+#ifndef SPINDLE_ENCODER_ENABLE
+#if SPINDLE_SYNC_ENABLE
+#define SPINDLE_ENCODER_ENABLE  1
+#else
+#define SPINDLE_ENCODER_ENABLE  0
+#endif
 #endif
 
 #ifndef TRINAMIC_ENABLE
@@ -213,10 +221,6 @@
 #define PPI_ENABLE          0
 #endif
 
-#ifndef STEP_INJECT_ENABLE
-#define STEP_INJECT_ENABLE  0
-#endif
-
 #if EMBROIDERY_ENABLE
 #if defined(SDCARD_ENABLE) && SDCARD_ENABLE == 0
 #undef SDCARD_ENABLE
@@ -226,12 +230,100 @@
 #endif
 #endif
 
+// TODO: remove?
 #ifndef VFD_SPINDLE
 #if VFD_ENABLE
 #define VFD_SPINDLE         1
 #else
 #define VFD_SPINDLE         0
 #endif
+#endif
+
+#ifndef SPINDLE0_ENABLE
+  #if VFD_ENABLE
+    #define SPINDLE0_ENABLE VFD_ENABLE
+    #if N_SPINDLE > 1 && !defined(SPINDLE1_ENABLE)
+      #define SPINDLE1_ENABLE SPINDLE_PWM0
+    #endif
+  #else
+    #define SPINDLE0_ENABLE SPINDLE_PWM0
+  #endif
+#endif
+
+#ifndef SPINDLE1_ENABLE
+#define SPINDLE1_ENABLE     0
+#endif
+
+#ifndef SPINDLE2_ENABLE
+#define SPINDLE2_ENABLE     0
+#endif
+
+#ifndef SPINDLE3_ENABLE
+#define SPINDLE3_ENABLE     0
+#endif
+
+#if SPINDLE0_ENABLE == SPINDLE_ALL
+#define SPINDLE_ENABLE SPINDLE_ALL
+#else
+#define SPINDLE_ENABLE ((1<<SPINDLE0_ENABLE)|(1<<SPINDLE1_ENABLE)|(1<<SPINDLE2_ENABLE)|(1<<SPINDLE3_ENABLE))
+#endif
+
+// Driver spindle 0
+
+#if SPINDLE_ENABLE & ((1<<SPINDLE_PWM0)|(1<<SPINDLE_PWM0_NODIR)|(1<<SPINDLE_ONOFF0)|(1<<SPINDLE_ONOFF0_DIR))
+#define DRIVER_SPINDLE_ENABLE       1
+#else
+#define DRIVER_SPINDLE_ENABLE       0
+#endif
+
+#if SPINDLE_ENABLE & ((1<<SPINDLE_PWM0)|(1<<SPINDLE_ONOFF0_DIR))
+#define DRIVER_SPINDLE_DIR_ENABLE   1
+#else
+#define DRIVER_SPINDLE_DIR_ENABLE   0
+#endif
+
+#if SPINDLE_ENABLE & ((1<<SPINDLE_PWM0)|(1<<SPINDLE_PWM0_NODIR))
+#define DRIVER_SPINDLE_PWM_ENABLE  1
+#define DRIVER_SPINDLE_NAME "PWM"
+#else
+#define DRIVER_SPINDLE_PWM_ENABLE  0
+#if DRIVER_SPINDLE_ENABLE
+#define DRIVER_SPINDLE_NAME "Basic"
+#endif
+#endif
+
+// Driver spindle 1
+
+#if SPINDLE_ENABLE & ((1<<SPINDLE_PWM1)|(1<<SPINDLE_PWM1_NODIR)|(1<<SPINDLE_ONOFF1)|(1<<SPINDLE_ONOFF1_DIR))
+#define DRIVER_SPINDLE1_ENABLE       1
+#else
+#define DRIVER_SPINDLE1_ENABLE       0
+#endif
+
+#if SPINDLE_ENABLE & ((1<<SPINDLE_PWM1)|(1<<SPINDLE_ONOFF1_DIR))
+#define DRIVER_SPINDLE1_DIR_ENABLE   1
+#else
+#define DRIVER_SPINDLE1_DIR_ENABLE   0
+#endif
+
+#if SPINDLE_ENABLE & ((1<<SPINDLE_PWM1)|(1<<SPINDLE_PWM1_NODIR))
+#define DRIVER_SPINDLE1_PWM_ENABLE  1
+#define DRIVER_SPINDLE1_NAME "PWM"
+#else
+#define DRIVER_SPINDLE1_PWM_ENABLE  0
+#if DRIVER_SPINDLE1_ENABLE
+#define DRIVER_SPINDLE1_NAME "Basic"
+#endif
+#endif
+
+//
+
+#ifndef VFD_ENABLE
+  #if SPINDLE_ENABLE & ((1<<SPINDLE_HUANYANG1)|(1<<SPINDLE_HUANYANG2)|(1<<SPINDLE_GS20)|(1<<SPINDLE_YL620A)|(1<<SPINDLE_MODVFD)|(1<<SPINDLE_H100)|(1<<SPINDLE_NOWFOREVER))
+    #define VFD_ENABLE 1
+  #else
+    #define VFD_ENABLE 0
+  #endif
 #endif
 
 #define MODBUS_RTU_ENABLED     0b001
@@ -251,10 +343,12 @@
 #endif
 #endif
 
-#if !VFD_SPINDLE || N_SPINDLE > 1
-#define DRIVER_SPINDLE_ENABLE  1
-#else
-#define DRIVER_SPINDLE_ENABLE  0
+#ifndef STEP_INJECT_ENABLE
+  #if SPINDLE_ENABLE & (1<<SPINDLE_STEPPER)
+    #define STEP_INJECT_ENABLE 1
+  #else
+    #define STEP_INJECT_ENABLE 0
+  #endif
 #endif
 
 #ifndef QEI_ENABLE

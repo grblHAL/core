@@ -7,7 +7,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2020-2021 Terje Io
+  Copyright (c) 2020-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -28,7 +28,16 @@
 
 #include <stdbool.h>
 
-#include "settings.h"
+typedef struct {
+    float p_gain;
+    float i_gain;
+    float d_gain;
+    float p_max_error;
+    float i_max_error;
+    float d_max_error;
+    float deadband;
+    float max_error;
+} pid_values_t;
 
 typedef struct {
     pid_values_t cfg;

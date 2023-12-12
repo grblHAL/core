@@ -33,7 +33,7 @@
     plasma_init();
 #endif
 
-#if MODBUS_ENABLE && MODBUS_ENABLE & 0x01
+#if MODBUS_ENABLE && (MODBUS_ENABLE & 0x01)
     extern void modbus_rtu_init (void);
     modbus_rtu_init();
 #endif
@@ -41,6 +41,26 @@
 #if CANBUS_ENABLE
     extern void canbus_init (void);
     canbus_init();
+#endif
+
+#if SPINDLE_ENABLE & (1<<SPINDLE_PWM0_CLONE)
+    extern void cloned_spindle_init (void);
+    cloned_spindle_init();
+#endif
+
+#if SPINDLE_ENABLE & (1<<SPINDLE_STEPPER)
+    extern void stepper_spindle_init (void);
+    stepper_spindle_init();
+#endif
+
+#if SPINDLE_ENABLE & ((1<<SPINDLE_ONOFF1)|(1<<SPINDLE_ONOFF1_DIR))
+    extern void onoff_spindle_init (void);
+    onoff_spindle_init();
+#endif
+
+#if SPINDLE_ENABLE & (1<<SPINDLE_PWM2)
+    extern void pwm_spindle_init (void);
+    pwm_spindle_init();
 #endif
 
 #if VFD_ENABLE

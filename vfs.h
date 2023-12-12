@@ -130,7 +130,6 @@ typedef struct
 {
     const char *fs_name;
     bool removable;
-    vfs_st_mode_t mode;
     vfs_open_ptr fopen;
     vfs_close_ptr fclose;
     vfs_read_ptr fread;
@@ -157,6 +156,7 @@ typedef struct vfs_mount
 {
     char path[64];
     const vfs_t *vfs;
+    vfs_st_mode_t mode;
     struct vfs_mount *next;
 } vfs_mount_t;
 
@@ -188,7 +188,7 @@ extern int vfs_errno;
 
 char *vfs_fixpath (char *path);
 
-bool vfs_mount (const char *path, const vfs_t *fs);
+bool vfs_mount (const char *path, const vfs_t *fs, vfs_st_mode_t mode);
 bool vfs_unmount (const char *path);
 vfs_file_t *vfs_open (const char *filename, const char *mode);
 void vfs_close (vfs_file_t *file);

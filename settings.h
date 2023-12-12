@@ -314,6 +314,9 @@ typedef enum {
     Setting_UnlockAfterEStop = 484,
     Setting_EnableToolPersistence = 485,
     Setting_OffsetLock = 486,
+    Setting_Spindle_OnPort = 487,
+    Setting_Spindle_DirPort = 488,
+    Setting_Spindle_PWMPort = 489,
 
     Setting_Macro0 = 490,
     Setting_Macro1 = 491,
@@ -345,6 +348,7 @@ typedef enum {
     Setting_SpindleEnable5 = 515,
     Setting_SpindleEnable6 = 516,
     Setting_SpindleEnable7 = 517,
+    Setting_EncoderSpindle = 519,
 
     Setting_SpindleToolStart0 = 520,
     Setting_SpindleToolStart1 = 521,
@@ -401,6 +405,23 @@ typedef enum {
     Setting_Kinematics8         = 648,
     Setting_Kinematics9         = 649,
 
+    Setting_FSOptions = 650,
+
+    Setting_RpmMax1 = 730,
+    Setting_RpmMin1 = 731,
+    Setting_Mode1 = 732,
+    Setting_PWMFreq1 = 733,
+    Setting_PWMOffValue1 = 734,
+    Setting_PWMMinValue1 = 735,
+    Setting_PWMMaxValue1 = 736,
+// Optional driver implemented settings for piecewise linear spindle PWM algorithm
+    Setting_LinearSpindle1Piece1 = 737,
+    Setting_LinearSpindle1Piece2 = 738,
+    Setting_LinearSpindle1Piece3 = 739,
+    Setting_LinearSpindle1Piece4 = 740,
+//
+// 900-999 - reserved for automatic tool changers (ATC)
+//
     Setting_SettingsMax,
     Setting_SettingsAll = Setting_SettingsMax,
 
@@ -539,44 +560,6 @@ typedef struct {
 } parking_settings_t;
 
 typedef struct {
-    float p_gain;
-    float i_gain;
-    float d_gain;
-    float p_max_error;
-    float i_max_error;
-    float d_max_error;
-    float deadband;
-    float max_error;
-} pid_values_t;
-
-typedef union {
-    uint8_t value;
-    uint8_t mask;
-    struct {
-        uint8_t enable_rpm_controlled :1, // PWM spindle only
-                unused                :1,
-                type                  :5,
-                pwm_disable           :1; // PWM spindle only
-    };
-} spindle_settings_flags_t;
-
-typedef struct {
-    float rpm_max;
-    float rpm_min;
-    float pwm_freq;
-    float pwm_period;
-    float pwm_off_value;
-    float pwm_min_value;
-    float pwm_max_value;
-    float at_speed_tolerance;
-    pwm_piece_t pwm_piece[SPINDLE_NPWM_PIECES];
-    pid_values_t pid;
-    uint16_t ppr; // Spindle encoder pulses per revolution
-    spindle_state_t invert;
-    spindle_settings_flags_t flags;
-} spindle_settings_t;
-
-typedef struct {
     pid_values_t pid;
 } position_pid_t; // Used for synchronized motion
 
@@ -661,10 +644,20 @@ typedef union {
     uint8_t value;
     uint8_t mask;
     struct {
+        uint8_t sd_mount_on_boot  :1,
+                lfs_hidden        :1,
+                unused            :6;
+    };
+} fs_options_t;
+
+typedef union {
+    uint8_t value;
+    uint8_t mask;
+    struct {
         uint8_t g59_1  :1,
                 g59_2  :1,
                 g59_3  :1,
-                unused :5;
+                encoder_spindle :5; // TODO: move to spindle settings
     };
 } offset_lock_t;
 
@@ -728,13 +721,14 @@ typedef struct {
     reportmask_t status_report; // Mask to indicate desired report data.
     settingflags_t flags;       // Contains default boolean settings
     probeflags_t probe;
+    offset_lock_t offset_lock;
+    fs_options_t fs_options;
     homing_settings_t homing;
     limit_settings_t limits;
     parking_settings_t parking;
     safety_door_settings_t safety_door;
     position_pid_t position;    // Used for synchronized motion
     ioport_signals_t ioport;
- // offset_lock_t offset_lock; // TODO: add in next settings version.
 } settings_t;
 
 typedef enum {
@@ -960,12 +954,6 @@ void settings_write_coord_data(coord_system_id_t id, float (*coord_data)[N_AXIS]
 
 // Reads selected coordinate data from persistent storage
 bool settings_read_coord_data(coord_system_id_t id, float (*coord_data)[N_AXIS]);
-
-// Writes selected tool data to persistent storage
-bool settings_write_tool_data (tool_data_t *tool_data);
-
-// Read selected tool data from persistent storage
-bool settings_read_tool_data (uint32_t tool, tool_data_t *tool_data);
 
 // Temporarily override acceleration, if 0 restore to configured setting value
 bool settings_override_acceleration (uint8_t axis, float acceleration);

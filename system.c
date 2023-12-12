@@ -4,7 +4,7 @@
   Part of grblHAL
 
   Copyright (c) 2017-2023 Terje Io
-  Copyright (c) 2014-2016 Sungeun K. Jeon for Gnea Research LLC
+  Copyright (c) 2014-2016 Sungeun K. Jeon for Gnea mResearch LLC
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -33,74 +33,21 @@
 #include "kinematics.h"
 #endif
 
-static status_code_t jog (sys_state_t state, char *args);
-static status_code_t enumerate_alarms (sys_state_t state, char *args);
-static status_code_t enumerate_alarms_grblformatted (sys_state_t state, char *args);
-static status_code_t enumerate_errors (sys_state_t state, char *args);
-static status_code_t enumerate_errors_grblformatted (sys_state_t state, char *args);
-static status_code_t enumerate_groups (sys_state_t state, char *args);
-static status_code_t enumerate_settings (sys_state_t state, char *args);
-static status_code_t enumerate_all (sys_state_t state, char *args);
-static status_code_t enumerate_settings_grblformatted (sys_state_t state, char *args);
-static status_code_t enumerate_settings_halformatted (sys_state_t state, char *args);
-static status_code_t enumerate_pins (sys_state_t state, char *args);
-static status_code_t output_settings (sys_state_t state, char *args);
-static status_code_t output_all_settings (sys_state_t state, char *args);
-#ifndef NO_SETTINGS_DESCRIPTIONS
-static status_code_t output_setting_description (sys_state_t state, char *args);
-#endif
-static status_code_t output_parser_state (sys_state_t state, char *args);
-static status_code_t toggle_block_delete (sys_state_t state, char *args);
-static status_code_t toggle_single_block (sys_state_t state, char *args);
-static status_code_t toggle_optional_stop (sys_state_t state, char *args);
-static status_code_t check_mode (sys_state_t state, char *args);
-static status_code_t disable_lock (sys_state_t state, char *args);
-static status_code_t output_help (sys_state_t state, char *args);
-static status_code_t output_spindles (sys_state_t state, char *args);
-static status_code_t home (sys_state_t state, char *args);
-static status_code_t home_x (sys_state_t state, char *args);
-static status_code_t home_y (sys_state_t state, char *args);
-static status_code_t home_z (sys_state_t state, char *args);
-#ifdef A_AXIS
-static status_code_t home_a (sys_state_t state, char *args);
-#endif
-#ifdef B_AXIS
-static status_code_t home_b (sys_state_t state, char *args);
-#endif
-#ifdef C_AXIS
-static status_code_t home_c (sys_state_t state, char *args);
-#endif
-#ifdef U_AXIS
-static status_code_t home_u (sys_state_t state, char *args);
-#endif
-#ifdef V_AXIS
-static status_code_t home_v (sys_state_t state, char *args);
-#endif
-static status_code_t enter_sleep (sys_state_t state, char *args);
-static status_code_t set_tool_reference (sys_state_t state, char *args);
-static status_code_t tool_probe_workpiece (sys_state_t state, char *args);
-static status_code_t output_ngc_parameters (sys_state_t state, char *args);
-static status_code_t build_info (sys_state_t state, char *args);
-static status_code_t output_all_build_info (sys_state_t state, char *args);
-static status_code_t settings_reset (sys_state_t state, char *args);
-static status_code_t output_startup_lines (sys_state_t state, char *args);
-static status_code_t set_startup_line0 (sys_state_t state, char *args);
-static status_code_t set_startup_line1 (sys_state_t state, char *args);
-static status_code_t rtc_action (sys_state_t state, char *args);
-#ifdef DEBUGOUT
-static status_code_t output_memmap (sys_state_t state, char *args);
-#endif
-
-// Simple hypotenuse computation function.
+/*! \internal \brief Simple hypotenuse computation function.
+\param x length
+\param y height
+\returns length of hypotenuse
+ */
 inline static float hypot_f (float x, float y)
 {
-    return sqrtf(x*x + y*y);
+    return sqrtf(x * x + y * y);
 }
-
-// Pin change interrupt for pin-out commands, i.e. cycle start, feed hold, and reset. Sets
-// only the realtime command execute variable to have the main program execute these when
-// its ready. This works exactly like the character-based realtime commands when picked off
-// directly from the incoming data stream.
+/*! \brief Pin change interrupt handler for pin-out commands, i.e. cycle start, feed hold, reset etc.
+Mainly sets the realtime command execute variable to have the main program execute these when
+its ready. This works exactly like the character-based realtime commands when picked off
+directly from the incoming data stream.
+\param signals a \a control_signals_t union holding status of the signals.
+*/
 ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
 {
     if(signals.deasserted)
@@ -154,7 +101,8 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
 }
 
 
-// Executes user startup script, if stored.
+/*! \brief Executes user startup scripts, if stored.
+*/
 void system_execute_startup (void)
 {
     if(hal.nvs.type != NVS_None) {
@@ -171,18 +119,7 @@ void system_execute_startup (void)
     }
 }
 
-// Reset spindle encoder data
-status_code_t spindle_reset_data (sys_state_t state, char *args)
-{
-    spindle_ptrs_t *spindle = gc_spindle_get();
-
-    if(spindle->reset_data)
-        spindle->reset_data();
-
-    return spindle->reset_data ? Status_OK : Status_InvalidStatement;
-}
-
-status_code_t read_int (char *s, int32_t *value)
+static status_code_t read_int (char *s, int32_t *value)
 {
     uint_fast8_t counter = 0;
     float parameter;
@@ -197,254 +134,20 @@ status_code_t read_int (char *s, int32_t *value)
     return Status_OK;
 }
 
-PROGMEM static const sys_command_t sys_commands[] = {
-    { "G", output_parser_state, { .noargs = On, .allow_blocking = On } },
-    { "J", jog },
-    { "#", output_ngc_parameters, { .allow_blocking = On } },
-    { "$", output_settings, { .allow_blocking = On } },
-    { "+", output_all_settings, { .allow_blocking = On } },
-#ifndef NO_SETTINGS_DESCRIPTIONS
-    { "SED", output_setting_description, { .allow_blocking = On } },
-#endif
-    { "B", toggle_block_delete, { .noargs = On } },
-    { "S", toggle_single_block, { .noargs = On } },
-    { "O", toggle_optional_stop, { .noargs = On } },
-    { "C", check_mode, { .noargs = On } },
-    { "X", disable_lock },
-    { "H", home },
-    { "HX", home_x },
-    { "HY", home_y },
-    { "HZ", home_z },
-#if AXIS_REMAP_ABC2UVW
-  #ifdef A_AXIS
-    { "HU", home_a },
-  #endif
-  #ifdef B_AXIS
-    { "HV", home_b },
-  #endif
-  #ifdef C_AXIS
-    { "HW", home_c },
-  #endif
-#else
-  #ifdef A_AXIS
-    { "HA", home_a },
-  #endif
-  #ifdef B_AXIS
-    { "HB", home_b },
-  #endif
-  #ifdef C_AXIS
-    { "HC", home_c },
-  #endif
-#endif
-#ifdef U_AXIS
-    { "HU", home_u },
-#endif
-#ifdef V_AXIS
-    { "HV", home_v },
-#endif
-    { "HSS", report_current_home_signal_state, { .noargs = On, .allow_blocking = On } },
-    { "HELP", output_help, { .allow_blocking = On } },
-    { "SPINDLES", output_spindles },
-    { "SLP", enter_sleep, { .noargs = On } },
-    { "TLR", set_tool_reference, { .noargs = On } },
-    { "TPW", tool_probe_workpiece, { .noargs = On } },
-    { "I", build_info, { .allow_blocking = On } },
-    { "I+", output_all_build_info, { .noargs = On, .allow_blocking = On } },
-    { "RST", settings_reset, { .allow_blocking = On } },
-    { "N", output_startup_lines, { .noargs = On, .allow_blocking = On } },
-    { "N0", set_startup_line0 },
-    { "N1", set_startup_line1 },
-    { "EA", enumerate_alarms, { .noargs = On, .allow_blocking = On } },
-    { "EAG", enumerate_alarms_grblformatted, { .noargs = On, .allow_blocking = On } },
-    { "EE", enumerate_errors, { .noargs = On, .allow_blocking = On } },
-    { "EEG", enumerate_errors_grblformatted, { .noargs = On, .allow_blocking = On } },
-    { "EG", enumerate_groups, { .noargs = On, .allow_blocking = On } },
-    { "ES", enumerate_settings, { .noargs = On, .allow_blocking = On } },
-    { "ESG", enumerate_settings_grblformatted, { .noargs = On, .allow_blocking = On } },
-    { "ESH", enumerate_settings_halformatted, { .noargs = On, .allow_blocking = On } },
-    { "E*", enumerate_all, { .noargs = On, .allow_blocking = On } },
-    { "PINS", enumerate_pins, { .noargs = On, .allow_blocking = On } },
-    { "RST", settings_reset, { .allow_blocking = On } },
-    { "LEV", report_last_signals_event, { .noargs = On, .allow_blocking = On } },
-    { "LIM", report_current_limit_state, { .noargs = On, .allow_blocking = On } },
-    { "SD", report_spindle_data },
-    { "SR", spindle_reset_data },
-    { "RTC", rtc_action, { .allow_blocking = On } },
-#ifdef DEBUGOUT
-    { "Q", output_memmap, { .noargs = On } },
-#endif
-};
-
-void system_command_help (void)
-{
-    hal.stream.write("$I - output system information" ASCII_EOL);
-    hal.stream.write("$I+ - output extended system information" ASCII_EOL);
-#if !DISABLE_BUILD_INFO_WRITE_COMMAND
-    hal.stream.write("$I=<string> set build info string" ASCII_EOL);
-#endif
-    hal.stream.write("$<n> - output setting <n> value" ASCII_EOL);
-    hal.stream.write("$<n>=<value> - assign <value> to settings <n>" ASCII_EOL);
-    hal.stream.write("$$ - output all setting values" ASCII_EOL);
-    hal.stream.write("$+ - output all setting values" ASCII_EOL);
-    hal.stream.write("$$=<n> - output setting details for setting <n>" ASCII_EOL);
-    hal.stream.write("$# - output offsets, tool table, probing and home position" ASCII_EOL);
-    hal.stream.write("$#=<n> - output value for parameter <n>" ASCII_EOL);
-    hal.stream.write("$G - output parser state" ASCII_EOL);
-    hal.stream.write("$N - output startup lines" ASCII_EOL);
-    if(settings.homing.flags.enabled)
-        hal.stream.write("$H - home configured axes" ASCII_EOL);
-    if(settings.homing.flags.single_axis_commands)
-        hal.stream.write("$H<axisletter> - home single axis" ASCII_EOL);
-    hal.stream.write("$HSS - report homing switches status" ASCII_EOL);
-    hal.stream.write("$X - unlock machine" ASCII_EOL);
-    hal.stream.write("$SLP - enter sleep mode" ASCII_EOL);
-    hal.stream.write("$HELP - output help topics" ASCII_EOL);
-    hal.stream.write("$HELP <topic> - output help for <topic>" ASCII_EOL);
-    hal.stream.write("$SPINDLES - output spindle list" ASCII_EOL);
-#if ENABLE_RESTORE_NVS_WIPE_ALL
-    hal.stream.write("$RST=* - restore/reset all settings" ASCII_EOL);
-#endif
-#if ENABLE_RESTORE_NVS_DEFAULT_SETTINGS
-    hal.stream.write("$RST=$ - restore default settings" ASCII_EOL);
-#endif
-#if ENABLE_RESTORE_NVS_DRIVER_PARAMETERS
-    if(settings_get_details()->next)
-        hal.stream.write("$RST=& - restore driver and plugin default settings" ASCII_EOL);
-#endif
-#if ENABLE_RESTORE_NVS_CLEAR_PARAMETERS
-  #if N_TOOLS
-    hal.stream.write("$RST=# - reset offsets and tool data" ASCII_EOL);
-  #else
-    hal.stream.write("$RST=# - reset offsets" ASCII_EOL);
-  #endif
-#endif
-    spindle_ptrs_t *spindle = gc_spindle_get();
-    if(spindle->reset_data)
-        hal.stream.write("$SR - reset spindle encoder data" ASCII_EOL);
-    if(spindle->get_data)
-        hal.stream.write("$SD - output spindle encoder data" ASCII_EOL);
-
-    hal.stream.write("$TLR - set tool offset reference" ASCII_EOL);
-    hal.stream.write("$TPW - probe tool plate" ASCII_EOL);
-    hal.stream.write("$EA - enumerate alarms" ASCII_EOL);
-    hal.stream.write("$EAG - enumerate alarms, Grbl formatted" ASCII_EOL);
-    hal.stream.write("$EE - enumerate status codes" ASCII_EOL);
-    hal.stream.write("$EEG - enumerate status codes, Grbl formatted" ASCII_EOL);
-    hal.stream.write("$ES - enumerate settings" ASCII_EOL);
-    hal.stream.write("$ESG - enumerate settings, Grbl formatted" ASCII_EOL);
-    hal.stream.write("$ESH- enumerate settings, grblHAL formatted" ASCII_EOL);
-    hal.stream.write("$E* - enumerate alarms, status codes and settings" ASCII_EOL);
-    if(hal.enumerate_pins)
-        hal.stream.write("$PINS - enumerate pin bindings" ASCII_EOL);
-    hal.stream.write("$LEV - output last control signal events" ASCII_EOL);
-    hal.stream.write("$LIM - output current limit pins state" ASCII_EOL);
-    if(hal.rtc.get_datetime) {
-        hal.stream.write("$RTC - output current time" ASCII_EOL);
-        hal.stream.write("$RTC=<ISO8601 datetime> - set current time" ASCII_EOL);
-    }
-#ifndef NO_SETTINGS_DESCRIPTIONS
-    hal.stream.write("$SED=<n> - output settings description for setting <n>" ASCII_EOL);
-#endif
-}
-
-// Directs and executes one line of formatted input from protocol_process. While mostly
-// incoming streaming g-code blocks, this also executes Grbl internal commands, such as
-// settings, initiating the homing cycle, and toggling switch states. This differs from
-// the realtime command module by being susceptible to when Grbl is ready to execute the
-// next line during a cycle, so for switches like block delete, the switch only effects
-// the lines that are processed afterward, not necessarily real-time during a cycle,
-// since there are motions already stored in the buffer. However, this 'lag' should not
-// be an issue, since these commands are not typically used during a cycle.
-
-// NOTE: Code calling system_execute_line() needs to provide a line buffer of at least LINE_BUFFER_SIZE
-status_code_t system_execute_line (char *line)
-{
-    if(line[1] == '\0') {
-        grbl.report.help_message();
-        return Status_OK;
-    }
-
-    sys_commands_t base = {
-        .n_commands = sizeof(sys_commands) / sizeof(sys_command_t),
-        .commands = sys_commands,
-        .on_get_commands = grbl.on_get_commands
-    };
-
-    status_code_t retval = Status_Unhandled;
-
-    char c, *s1, *s2;
-
-    s1 = s2 = ++line;
-
-    c = *s1;
-    while(c && c != '=') {
-        if(c != ' ')
-            *s2++ = CAPS(c);
-        c = *++s1;
-    }
-
-    while((c = *s1++))
-        *s2++ = c;
-
-    *s2 = '\0';
-
-    if(!strncmp(line, "HELP", 4))
-        return report_help(&line[4]);
-
-    char *args = strchr(line, '=');
-
-    if(args)
-        *args++ = '\0';
-
-    uint_fast8_t idx;
-    sys_commands_t *cmd = &base;
-    do {
-        for(idx = 0; idx < cmd->n_commands; idx++) {
-            if(!strcmp(line, cmd->commands[idx].command)) {
-                if(sys.blocking_event && !cmd->commands[idx].flags.allow_blocking) {
-                    retval = Status_NotAllowedCriticalEvent;
-                    break;
-                } else if(!cmd->commands[idx].flags.noargs || args == NULL) {
-                    if((retval = cmd->commands[idx].execute(state_get(), args)) != Status_Unhandled)
-                        break;
-                }
-            }
-        }
-        cmd = retval == Status_Unhandled && cmd->on_get_commands ? cmd->on_get_commands() : NULL;
-    } while(cmd);
-
-    // Let user code have a peek at system commands before check for global setting
-    if(retval == Status_Unhandled && grbl.on_unknown_sys_command) {
-        if(args)
-            *(--args) = '=';
-
-        retval = grbl.on_unknown_sys_command(state_get(), line);
-
-        if(args)
-            *args++ = '\0';
-    }
-
-    if (retval == Status_Unhandled) {
-        // Check for global setting, store if so
-        if(state_get() == STATE_IDLE || (state_get() & (STATE_ALARM|STATE_ESTOP|STATE_CHECK_MODE))) {
-            uint_fast8_t counter = 0;
-            float parameter;
-            if(!read_float(line, &counter, &parameter))
-                retval = Status_BadNumberFormat;
-            else if(!isintf(parameter))
-                retval = Status_InvalidStatement;
-            else if(args)
-                retval = settings_store_setting((setting_id_t)parameter, args);
-            else
-                retval = report_grbl_setting((setting_id_t)parameter, NULL);
-        } else
-            retval = Status_IdleError;
-    }
-
-    return retval;
-}
-
+//
 // System commands
+//
+
+// Reset spindle encoder data
+static status_code_t spindle_reset_data (sys_state_t state, char *args)
+{
+    spindle_ptrs_t *spindle = gc_spindle_get();
+
+    if(spindle->reset_data)
+        spindle->reset_data();
+
+    return spindle->reset_data ? Status_OK : Status_InvalidStatement;
+}
 
 static status_code_t jog (sys_state_t state, char *args)
 {
@@ -656,9 +359,14 @@ static status_code_t output_help (sys_state_t state, char *args)
     return report_help(args);
 }
 
-static status_code_t output_spindles (sys_state_t state, char *args)
+static status_code_t enumerate_spindles (sys_state_t state, char *args)
 {
-    return report_spindles();
+    return report_spindles(false);
+}
+
+static status_code_t enumerate_spindles_mr (sys_state_t state, char *args)
+{
+    return report_spindles(true);
 }
 
 static status_code_t go_home (sys_state_t state, axes_signals_t axes)
@@ -980,8 +688,273 @@ static status_code_t output_memmap (sys_state_t state, char *args)
 }
 #endif
 
+/*! \brief Command dispatch table
+ */
+PROGMEM static const sys_command_t sys_commands[] = {
+    { "G", output_parser_state, { .noargs = On, .allow_blocking = On } },
+    { "J", jog },
+    { "#", output_ngc_parameters, { .allow_blocking = On } },
+    { "$", output_settings, { .allow_blocking = On } },
+    { "+", output_all_settings, { .allow_blocking = On } },
+#ifndef NO_SETTINGS_DESCRIPTIONS
+    { "SED", output_setting_description, { .allow_blocking = On } },
+#endif
+    { "B", toggle_block_delete, { .noargs = On } },
+    { "S", toggle_single_block, { .noargs = On } },
+    { "O", toggle_optional_stop, { .noargs = On } },
+    { "C", check_mode, { .noargs = On } },
+    { "X", disable_lock },
+    { "H", home },
+    { "HX", home_x },
+    { "HY", home_y },
+    { "HZ", home_z },
+#if AXIS_REMAP_ABC2UVW
+  #ifdef A_AXIS
+    { "HU", home_a },
+  #endif
+  #ifdef B_AXIS
+    { "HV", home_b },
+  #endif
+  #ifdef C_AXIS
+    { "HW", home_c },
+  #endif
+#else
+  #ifdef A_AXIS
+    { "HA", home_a },
+  #endif
+  #ifdef B_AXIS
+    { "HB", home_b },
+  #endif
+  #ifdef C_AXIS
+    { "HC", home_c },
+  #endif
+#endif
+#ifdef U_AXIS
+    { "HU", home_u },
+#endif
+#ifdef V_AXIS
+    { "HV", home_v },
+#endif
+    { "HSS", report_current_home_signal_state, { .noargs = On, .allow_blocking = On } },
+    { "HELP", output_help, { .allow_blocking = On } },
+    { "SPINDLES", enumerate_spindles, { .noargs = On, .allow_blocking = On } },
+    { "SPINDLESH", enumerate_spindles_mr, { .noargs = On, .allow_blocking = On } },
+    { "SLP", enter_sleep, { .noargs = On } },
+    { "TLR", set_tool_reference, { .noargs = On } },
+    { "TPW", tool_probe_workpiece, { .noargs = On } },
+    { "I", build_info, { .allow_blocking = On } },
+    { "I+", output_all_build_info, { .noargs = On, .allow_blocking = On } },
+    { "RST", settings_reset, { .allow_blocking = On } },
+    { "N", output_startup_lines, { .noargs = On, .allow_blocking = On } },
+    { "N0", set_startup_line0 },
+    { "N1", set_startup_line1 },
+    { "EA", enumerate_alarms, { .noargs = On, .allow_blocking = On } },
+    { "EAG", enumerate_alarms_grblformatted, { .noargs = On, .allow_blocking = On } },
+    { "EE", enumerate_errors, { .noargs = On, .allow_blocking = On } },
+    { "EEG", enumerate_errors_grblformatted, { .noargs = On, .allow_blocking = On } },
+    { "EG", enumerate_groups, { .noargs = On, .allow_blocking = On } },
+    { "ES", enumerate_settings, { .noargs = On, .allow_blocking = On } },
+    { "ESG", enumerate_settings_grblformatted, { .noargs = On, .allow_blocking = On } },
+    { "ESH", enumerate_settings_halformatted, { .noargs = On, .allow_blocking = On } },
+    { "E*", enumerate_all, { .noargs = On, .allow_blocking = On } },
+    { "PINS", enumerate_pins, { .noargs = On, .allow_blocking = On } },
+    { "RST", settings_reset, { .allow_blocking = On } },
+    { "LEV", report_last_signals_event, { .noargs = On, .allow_blocking = On } },
+    { "LIM", report_current_limit_state, { .noargs = On, .allow_blocking = On } },
+    { "SD", report_spindle_data },
+    { "SR", spindle_reset_data },
+    { "RTC", rtc_action, { .allow_blocking = On } },
+#ifdef DEBUGOUT
+    { "Q", output_memmap, { .noargs = On } },
+#endif
+};
+
+void system_command_help (void)
+{
+    hal.stream.write("$I - output system information" ASCII_EOL);
+    hal.stream.write("$I+ - output extended system information" ASCII_EOL);
+#if !DISABLE_BUILD_INFO_WRITE_COMMAND
+    hal.stream.write("$I=<string> set build info string" ASCII_EOL);
+#endif
+    hal.stream.write("$<n> - output setting <n> value" ASCII_EOL);
+    hal.stream.write("$<n>=<value> - assign <value> to settings <n>" ASCII_EOL);
+    hal.stream.write("$$ - output all setting values" ASCII_EOL);
+    hal.stream.write("$+ - output all setting values" ASCII_EOL);
+    hal.stream.write("$$=<n> - output setting details for setting <n>" ASCII_EOL);
+    hal.stream.write("$# - output offsets, tool table, probing and home position" ASCII_EOL);
+    hal.stream.write("$#=<n> - output value for parameter <n>" ASCII_EOL);
+    hal.stream.write("$G - output parser state" ASCII_EOL);
+    hal.stream.write("$N - output startup lines" ASCII_EOL);
+    if(settings.homing.flags.enabled)
+        hal.stream.write("$H - home configured axes" ASCII_EOL);
+    if(settings.homing.flags.single_axis_commands)
+        hal.stream.write("$H<axisletter> - home single axis" ASCII_EOL);
+    hal.stream.write("$HSS - report homing switches status" ASCII_EOL);
+    hal.stream.write("$X - unlock machine" ASCII_EOL);
+    hal.stream.write("$SLP - enter sleep mode" ASCII_EOL);
+    hal.stream.write("$HELP - output help topics" ASCII_EOL);
+    hal.stream.write("$HELP <topic> - output help for <topic>" ASCII_EOL);
+    hal.stream.write("$SPINDLES - enumerate spindles, human readable" ASCII_EOL);
+    hal.stream.write("$SPINDLESH - enumerate spindles, machine readable" ASCII_EOL);
+#if ENABLE_RESTORE_NVS_WIPE_ALL
+    hal.stream.write("$RST=* - restore/reset all settings" ASCII_EOL);
+#endif
+#if ENABLE_RESTORE_NVS_DEFAULT_SETTINGS
+    hal.stream.write("$RST=$ - restore default settings" ASCII_EOL);
+#endif
+#if ENABLE_RESTORE_NVS_DRIVER_PARAMETERS
+    if(settings_get_details()->next)
+        hal.stream.write("$RST=& - restore driver and plugin default settings" ASCII_EOL);
+#endif
+#if ENABLE_RESTORE_NVS_CLEAR_PARAMETERS
+    if(grbl.tool_table.n_tools)
+        hal.stream.write("$RST=# - reset offsets and tool data" ASCII_EOL);
+    else
+        hal.stream.write("$RST=# - reset offsets" ASCII_EOL);
+#endif
+    spindle_ptrs_t *spindle = gc_spindle_get();
+    if(spindle->reset_data)
+        hal.stream.write("$SR - reset spindle encoder data" ASCII_EOL);
+    if(spindle->get_data)
+        hal.stream.write("$SD - output spindle encoder data" ASCII_EOL);
+
+    hal.stream.write("$TLR - set tool offset reference" ASCII_EOL);
+    hal.stream.write("$TPW - probe tool plate" ASCII_EOL);
+    hal.stream.write("$EA - enumerate alarms" ASCII_EOL);
+    hal.stream.write("$EAG - enumerate alarms, Grbl formatted" ASCII_EOL);
+    hal.stream.write("$EE - enumerate status codes" ASCII_EOL);
+    hal.stream.write("$EEG - enumerate status codes, Grbl formatted" ASCII_EOL);
+    hal.stream.write("$ES - enumerate settings" ASCII_EOL);
+    hal.stream.write("$ESG - enumerate settings, Grbl formatted" ASCII_EOL);
+    hal.stream.write("$ESH- enumerate settings, grblHAL formatted" ASCII_EOL);
+    hal.stream.write("$E* - enumerate alarms, status codes and settings" ASCII_EOL);
+    if(hal.enumerate_pins)
+        hal.stream.write("$PINS - enumerate pin bindings" ASCII_EOL);
+    hal.stream.write("$LEV - output last control signal events" ASCII_EOL);
+    hal.stream.write("$LIM - output current limit pins state" ASCII_EOL);
+    if(hal.rtc.get_datetime) {
+        hal.stream.write("$RTC - output current time" ASCII_EOL);
+        hal.stream.write("$RTC=<ISO8601 datetime> - set current time" ASCII_EOL);
+    }
+#ifndef NO_SETTINGS_DESCRIPTIONS
+    hal.stream.write("$SED=<n> - output settings description for setting <n>" ASCII_EOL);
+#endif
+}
+
+/*! \brief Directs and executes one line of input from protocol_process.
+
+While mostly incoming streaming g-code blocks, this also executes Grbl internal commands, such as
+settings, initiating the homing cycle, and toggling switch states. This differs from
+the realtime command module by being susceptible to when Grbl is ready to execute the
+next line during a cycle, so for switches like block delete, the switch only effects
+the lines that are processed afterward, not necessarily real-time during a cycle,
+since there are motions already stored in the buffer. However, this 'lag' should not
+be an issue, since these commands are not typically used during a cycle.
+If the command is not known to the core a grbl.on_unknown_sys_command event is raised
+so that plugin code can check if it is a command it supports.
+
+__NOTE:__ Code calling this function needs to provide the command in a writable buffer since
+ the first part of the command (up to the first = character) is changed to uppercase and having
+ spaces removed.
+
+\param line pointer to the command string.
+\returns \a status_code_t enum value; #Status_OK if successfully handled, another relevant status code if not.
+*/
+status_code_t system_execute_line (char *line)
+{
+    if(line[1] == '\0') {
+        grbl.report.help_message();
+        return Status_OK;
+    }
+
+    sys_commands_t base = {
+        .n_commands = sizeof(sys_commands) / sizeof(sys_command_t),
+        .commands = sys_commands,
+        .on_get_commands = grbl.on_get_commands
+    };
+
+    status_code_t retval = Status_Unhandled;
+
+    char c, *s1, *s2;
+
+    s1 = s2 = ++line;
+
+    c = *s1;
+    while(c && c != '=') {
+        if(c != ' ')
+            *s2++ = CAPS(c);
+        c = *++s1;
+    }
+
+    while((c = *s1++))
+        *s2++ = c;
+
+    *s2 = '\0';
+
+    if(!strncmp(line, "HELP", 4))
+        return report_help(&line[4]);
+
+    char *args = strchr(line, '=');
+
+    if(args)
+        *args++ = '\0';
+
+    uint_fast8_t idx;
+    sys_commands_t *cmd = &base;
+    do {
+        for(idx = 0; idx < cmd->n_commands; idx++) {
+            if(!strcmp(line, cmd->commands[idx].command)) {
+                if(sys.blocking_event && !cmd->commands[idx].flags.allow_blocking) {
+                    retval = Status_NotAllowedCriticalEvent;
+                    break;
+                } else if(!cmd->commands[idx].flags.noargs || args == NULL) {
+                    if((retval = cmd->commands[idx].execute(state_get(), args)) != Status_Unhandled)
+                        break;
+                }
+            }
+        }
+        cmd = retval == Status_Unhandled && cmd->on_get_commands ? cmd->on_get_commands() : NULL;
+    } while(cmd);
+
+    // Let user code have a peek at system commands before check for global setting
+    if(retval == Status_Unhandled && grbl.on_unknown_sys_command) {
+        if(args)
+            *(--args) = '=';
+
+        retval = grbl.on_unknown_sys_command(state_get(), line);
+
+        if(args)
+            *args++ = '\0';
+    }
+
+    if (retval == Status_Unhandled) {
+        // Check for global setting, store if so
+        if(state_get() == STATE_IDLE || (state_get() & (STATE_ALARM|STATE_ESTOP|STATE_CHECK_MODE))) {
+            uint_fast8_t counter = 0;
+            float parameter;
+            if(!read_float(line, &counter, &parameter))
+                retval = Status_BadNumberFormat;
+            else if(!isintf(parameter))
+                retval = Status_InvalidStatement;
+            else if(args)
+                retval = settings_store_setting((setting_id_t)parameter, args);
+            else
+                retval = report_grbl_setting((setting_id_t)parameter, NULL);
+        } else
+            retval = Status_IdleError;
+    }
+
+    return retval;
+}
+
 // End system commands
 
+/*! \brief Called on a work coordinate (WCO) changes.
+
+If configured waits for the planner buffer to empty then fires the
+grbl.on_wco_changed event and sets the #Report_WCO flag to add
+the WCO report element to the next status report.
+ */
 void system_flag_wco_change (void)
 {
     if(!settings.status_report.sync_on_wco_change)
@@ -993,9 +966,13 @@ void system_flag_wco_change (void)
     system_add_rt_report(Report_WCO);
 }
 
-// Sets machine position. Must be sent a 'step' array.
-// NOTE: If motor steps and machine position are not in the same coordinate frame, this function
-//       serves as a central place to compute the transformation.
+/*! \brief Sets machine position. Must be sent a 'step' array.
+
+__NOTE:__ If motor steps and machine position are not in the same coordinate frame,
+          this function serves as a central place to compute the transformation.
+\param position pointer to the target float array for the machine position.
+\param steps pointer to the source step count array to transform.
+ */
 void system_convert_array_steps_to_mpos (float *position, int32_t *steps)
 {
 #ifdef KINEMATICS_API
@@ -1009,8 +986,11 @@ void system_convert_array_steps_to_mpos (float *position, int32_t *steps)
 #endif
 }
 
-// Checks if XY position is within coordinate system XY with given tolerance.
-// If tolerance is 0 false is returned.
+/*! \brief Checks if XY position is within coordinate system XY with given tolerance.
+\param id a \a coord_system_id_t, typically #CoordinateSystem_G59_3.
+\param tolerance as the allowed radius the current position has to be within.
+\returns \a false if tolerance is 0 or position is outside the allowed radius, otherwise \a true.
+*/
 bool system_xy_at_fixture (coord_system_id_t id, float tolerance)
 {
     bool ok = false;
@@ -1025,6 +1005,9 @@ bool system_xy_at_fixture (coord_system_id_t id, float tolerance)
     return ok;
 }
 
+/*! \brief Raise and report a system alarm.
+\param a #alarm_code_t enum representing the alarm code.
+ */
 void system_raise_alarm (alarm_code_t alarm)
 {
     if(state_get() == STATE_HOMING && !(sys.rt_exec_state & EXEC_RESET))
@@ -1043,11 +1026,19 @@ void system_raise_alarm (alarm_code_t alarm)
 
 // TODO: encapsulate sys.report
 
+/*! \brief Get the active realtime report addon flags for the next report.
+\return a #report_tracking_flags_t union containing the flags.
+ */
 report_tracking_flags_t system_get_rt_report_flags (void)
 {
     return sys.report;
 }
 
+/*! \brief Set(s) or clear all active realtime report addon flag(s) for the next report.
+
+Fires the \ref grbl.on_rt_reports_added event.
+\param report a #report_tracking_t enum containing the flag(s) to set or clear.
+ */
 void system_add_rt_report (report_tracking_t report)
 {
     if(report == Report_ClearAll)

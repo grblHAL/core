@@ -176,7 +176,7 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
         // if there is a coincident position passed.
         if(!plan_buffer_line(target, pl_data) && pl_data->spindle.hal->cap.laser && pl_data->spindle.state.on && !pl_data->spindle.state.ccw) {
             protocol_buffer_synchronize();
-            pl_data->spindle.hal->set_state(pl_data->spindle.state, pl_data->spindle.rpm);
+            pl_data->spindle.hal->set_state(pl_data->spindle.hal, pl_data->spindle.state, pl_data->spindle.rpm);
         }
 
 #ifdef KINEMATICS_API
@@ -287,9 +287,13 @@ void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *o
     // (2x) settings.arc_tolerance. For 99% of users, this is just fine. If a different arc segment fit
     // is desired, i.e. least-squares, midpoint on arc, just change the mm_per_arc_segment calculation.
     // For the intended uses of Grbl, this value shouldn't exceed 2000 for the strictest of cases.
-    uint_fast16_t segments = (uint_fast16_t)floorf(fabsf(0.5f * angular_travel * radius) / sqrtf(settings.arc_tolerance * (2.0f * radius - settings.arc_tolerance)));
 
-    if (segments) {
+    uint_fast16_t segments = 0;
+
+    if(2.0f * radius > settings.arc_tolerance)
+        segments = (uint_fast16_t)floorf(fabsf(0.5f * angular_travel * radius) / sqrtf(settings.arc_tolerance * (2.0f * radius - settings.arc_tolerance)));
+
+    if(segments) {
 
         // Multiply inverse feed_rate to compensate for the fact that this movement is approximated
         // by a number of discrete segments. The inverse feed_rate should be correct for the sum of
@@ -602,7 +606,7 @@ void mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_
                 mc_dwell(canned->dwell);
 
             if(canned->spindle_off)
-                pl_data->spindle.hal->set_state((spindle_state_t){0}, 0.0f);
+                pl_data->spindle.hal->set_state(pl_data->spindle.hal, (spindle_state_t){0}, 0.0f);
 
             // rapid retract
             switch(motion) {
