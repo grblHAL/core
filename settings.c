@@ -203,7 +203,7 @@ PROGMEM const settings_t defaults = {
     .axis[X_AXIS].max_rate = DEFAULT_X_MAX_RATE,
     .axis[X_AXIS].acceleration = (DEFAULT_X_ACCELERATION * 60.0f * 60.0f),
     .axis[X_AXIS].jerk = (DEFAULT_X_JERK * 60.0f * 60.0f * 60.0f),
-    .axis[X_AXIS].max_travel = (DEFAULT_X_MAX_TRAVEL),
+    .axis[X_AXIS].max_travel = (-DEFAULT_X_MAX_TRAVEL),
     .axis[X_AXIS].dual_axis_offset = 0.0f,
 #if ENABLE_BACKLASH_COMPENSATION
     .axis[X_AXIS].backlash = 0.0f,
