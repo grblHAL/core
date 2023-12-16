@@ -1,5 +1,20 @@
 ## grblHAL changelog
 
+<a name="20231216"/>Build 20231216
+
+Core:
+
+* Refactored canned cycles to better match how LinuxCNC actually implements them. Ref. [ioSender issue 348](https://github.com/terjeio/ioSender/issues/348).  
+__NOTE:__ The implementation may still be incorrect - use with care!
+
+Drivers:
+
+* SAM3X8E: added laser plugins.
+
+* LPC176x: added laser and spindle plugins.
+
+---
+
 <a name="20231210"/>Build 20231210
 
 Core:

@@ -70,6 +70,7 @@ typedef enum {
     Input_RX,
     Input_KeypadStrobe, // To be deprecated? Use Input_I2CStrobe instead.
     Input_I2CStrobe,
+    Input_SdCardDetect,
     Input_QEI_A,
     Input_QEI_B,
     Input_QEI_Select,
@@ -217,6 +218,7 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Input_RX,                  .name = "RX" },
     { .function = Input_KeypadStrobe,        .name = "Keypad strobe" },
     { .function = Input_I2CStrobe,           .name = "I2C strobe" },
+    { .function = Input_SdCardDetect,        .name = "SD card detect" },
     { .function = Input_QEI_A,               .name = "QEI A" },
     { .function = Input_QEI_B,               .name = "QEI B" },
     { .function = Input_QEI_Select,          .name = "QEI select" },

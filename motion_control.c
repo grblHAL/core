@@ -570,35 +570,35 @@ void mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_
             return;
     }
 
+    float position_linear = position[plane.axis_linear],
+          retract_to = canned->retract_mode == CCRetractMode_RPos ? canned->retract_position : position_linear;
+
     // rapid move to X, Y
     memcpy(position, target, sizeof(float) * N_AXIS);
-    position[plane.axis_linear] = canned->prev_position > canned->retract_position ? canned->prev_position : canned->retract_position;
+    position[plane.axis_linear] = position_linear;
     if(!mc_line(position, pl_data))
         return;
 
-    // if current Z > R, rapid move to R
-    if(position[plane.axis_linear] > canned->retract_position) {
-        position[plane.axis_linear] = canned->retract_position;
-        if(!mc_line(position, pl_data))
-            return;
-    }
-
-    if(canned->retract_mode == CCRetractMode_RPos)
-        canned->prev_position = canned->retract_position;
-
     while(repeats--) {
 
-        float current_z = canned->retract_position;
+        // if current Z > R, rapid move to R
+        if(position[plane.axis_linear] > canned->retract_position) {
+            position[plane.axis_linear] = canned->retract_position;
+            if(!mc_line(position, pl_data))
+                return;
+        }
 
-        while(current_z > canned->xyz[plane.axis_linear]) {
+        position_linear = position[plane.axis_linear];
 
-            current_z -= canned->delta;
-            if(current_z < canned->xyz[plane.axis_linear])
-                current_z = canned->xyz[plane.axis_linear];
+        while(position_linear > canned->xyz[plane.axis_linear]) {
+
+            position_linear -= canned->delta;
+            if(position_linear < canned->xyz[plane.axis_linear])
+                position_linear = canned->xyz[plane.axis_linear];
 
             pl_data->condition.rapid_motion = Off;
 
-            position[plane.axis_linear] = current_z;
+            position[plane.axis_linear] = position_linear;
             if(!mc_line(position, pl_data)) // drill
                 return;
 
@@ -613,12 +613,12 @@ void mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_
 
                 case MotionMode_DrillChipBreak:
                     position[plane.axis_linear] = position[plane.axis_linear] == canned->xyz[plane.axis_linear]
-                                                   ? canned->retract_position
+                                                   ? retract_to
                                                    : position[plane.axis_linear] + settings.g73_retract;
                     break;
 
                 default:
-                    position[plane.axis_linear] = canned->retract_position;
+                    position[plane.axis_linear] = retract_to;
                     break;
             }
 
@@ -630,6 +630,8 @@ void mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_
                 spindle_sync(pl_data->spindle.hal, gc_state.modal.spindle.state, pl_data->spindle.rpm);
         }
 
+        pl_data->condition.rapid_motion = On; // Set rapid motion condition flag.
+
        // rapid move to next position if incremental mode
         if(repeats && gc_state.modal.distance_incremental) {
             position[plane.axis_0] += canned->xyz[plane.axis_0];
@@ -640,13 +642,6 @@ void mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_
     }
 
     memcpy(target, position, sizeof(float) * N_AXIS);
-
-    if(canned->retract_mode == CCRetractMode_Previous && motion != MotionMode_DrillChipBreak && target[plane.axis_linear] < canned->prev_position) {
-        pl_data->condition.rapid_motion = On;
-        target[plane.axis_linear] = canned->prev_position;
-        if(!mc_line(target, pl_data))
-            return;
-    }
 }
 
 // Calculates depth-of-cut (DOC) for a given threading pass.

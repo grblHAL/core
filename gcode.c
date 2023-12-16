@@ -2494,7 +2494,6 @@ status_code_t gc_execute_block (char *block)
                     gc_state.canned.xyz[plane.axis_1] = 0.0f;
                     gc_state.canned.rapid_retract = On;
                     gc_state.canned.spindle_off = Off;
-                    gc_state.canned.prev_position = gc_state.position[plane.axis_linear];
                 }
 
                 if(!gc_block.words.l)

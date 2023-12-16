@@ -478,7 +478,6 @@ typedef struct {
     float xyz[3];
     float delta;
     float dwell;
-    float prev_position;
     float retract_position; //!< Canned cycle retract position
     bool rapid_retract;
     bool spindle_off;
