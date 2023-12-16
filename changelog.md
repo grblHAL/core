@@ -4,7 +4,7 @@
 
 Core:
 
-* Refactored canned cycles to better match how LinuxCNC actually implements them. Ref. [ioSender issue 348](https://github.com/terjeio/ioSender/issues/348).  
+* Refactored canned cycles to better match how LinuxCNC actually implements them. Ref. [ioSender issue 347](https://github.com/terjeio/ioSender/issues/347).  
 __NOTE:__ The implementation may still be incorrect - use with care!
 
 Drivers:
