@@ -1,5 +1,18 @@
 ## grblHAL changelog
 
+<a name="20231217"/>20231217
+
+Drivers:
+
+* ESP32: Reverted MKS DLC32 SD card SPI pins assignment, ref. [issue 88](https://github.com/grblHAL/ESP32/issues/88).  
+Fixed I2S stepping issues, added dir > step delay with 4 microseconds minimum delay. Ref. [issue 87](https://github.com/grblHAL/ESP32/issues/87).
+
+Plugins:
+
+* Motors: fixed some typos, ref. core [issue 381](https://github.com/grblHAL/core/issues/381#issuecomment-1859083977).
+
+---
+
 <a name="20231216"/>Build 20231216
 
 Core:
