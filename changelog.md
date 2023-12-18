@@ -1,10 +1,26 @@
 ## grblHAL changelog
 
+<a name="20231218"/>Build 20231218
+
+Core:
+
+* VFS: fix for incorrect handling of mode flags when mounting root filesystem. Added option to list hidden filesystems.
+
+Drivers:
+
+* ESP32: moved mount of littlefs filesystem until after settings are loaded.
+
+Plugins:
+
+* WebUI: improved handling of hidden littlefs filesystem.
+
+---
+
 <a name="20231217"/>20231217
 
 Drivers:
 
-* ESP32: Reverted MKS DLC32 SD card SPI pins assignment, ref. [issue 88](https://github.com/grblHAL/ESP32/issues/88).  
+* ESP32: reverted MKS DLC32 SD card SPI pins assignment, ref. [issue 88](https://github.com/grblHAL/ESP32/issues/88).  
 Fixed I2S stepping issues, added dir > step delay with 4 microseconds minimum delay. Ref. [issue 87](https://github.com/grblHAL/ESP32/issues/87).
 
 Plugins:

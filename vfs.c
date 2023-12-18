@@ -462,10 +462,10 @@ bool vfs_mount (const char *path, const vfs_t *fs, vfs_st_mode_t mode)
 {
     vfs_mount_t *vfs;
 
-    if(!strcmp(path, "/"))
+    if(!strcmp(path, "/")) {
         root.vfs = fs;
-
-    else if((vfs = (vfs_mount_t *)malloc(sizeof(vfs_mount_t)))) {
+        root.mode = mode;
+    } else if((vfs = (vfs_mount_t *)malloc(sizeof(vfs_mount_t)))) {
 
         strcpy(vfs->path, path);
         if(vfs->path[strlen(path) - 1] != '/')
@@ -493,10 +493,10 @@ bool vfs_unmount (const char *path)
 {
     // TODO: close open files?
 
-    if(!strcmp(path, "/"))
+    if(!strcmp(path, "/")) {
         root.vfs = &fs_null;
-
-    else {
+        root.mode = (vfs_st_mode_t){ .directory = true, .read_only = true, .hidden = true };
+    } else {
 
         vfs_mount_t *mount = get_mount(path);
         if(mount) {
@@ -557,7 +557,7 @@ vfs_drives_t *vfs_drives_open (void)
     return handle;
 }
 
-vfs_drive_t *vfs_drives_read (vfs_drives_t *handle)
+vfs_drive_t *vfs_drives_read (vfs_drives_t *handle, bool add_hidden)
 {
     static vfs_drive_t drive;
 
@@ -574,7 +574,7 @@ vfs_drive_t *vfs_drives_read (vfs_drives_t *handle)
         handle->mount = handle->mount->next;
 
         if(handle->mount) do {
-            if(!handle->mount->mode.hidden && handle->mount->vfs->fs_name)
+            if((!handle->mount->mode.hidden || add_hidden) && handle->mount->vfs->fs_name)
                 break;
         } while((handle->mount = handle->mount->next));
     }

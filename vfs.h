@@ -212,7 +212,7 @@ int vfs_utime (const char *filename, struct tm *modified);
 vfs_free_t *vfs_fgetfree (const char *path);
 
 vfs_drives_t *vfs_drives_open (void);
-vfs_drive_t *vfs_drives_read (vfs_drives_t *handle);
+vfs_drive_t *vfs_drives_read (vfs_drives_t *handle, bool add_hidden);
 void vfs_drives_close (vfs_drives_t *handle);
 vfs_free_t *vfs_drive_getfree (vfs_drive_t *drive);
 int vfs_drive_format (vfs_drive_t *drive);
