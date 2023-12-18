@@ -71,7 +71,7 @@ static bool spindle_activate (spindle_id_t spindle_id, spindle_num_t spindle_num
         }
 
         if((pwm_spindle->init_ok = pwm_spindle->hal.config == NULL || pwm_spindle->hal.config(&pwm_spindle->hal)))
-            pwm_spindle->hal.set_state((spindle_state_t){0}, 0.0f);
+            pwm_spindle->hal.set_state(&pwm_spindle->hal, (spindle_state_t){0}, 0.0f);
     }
     pwm_spindle = NULL;
 
@@ -97,10 +97,17 @@ static bool spindle_activate (spindle_id_t spindle_id, spindle_num_t spindle_num
             memcpy(&spindle_hal, &spindle->hal, sizeof(spindle_ptrs_t));
 
             if(spindle->cfg->get_data == NULL) {
-                spindle_hal.get_data = hal.spindle_data.get;
-                spindle_hal.reset_data = hal.spindle_data.reset;
-                if(!spindle->cfg->cap.at_speed)
-                    spindle_hal.cap.at_speed = !!spindle_hal.get_data;
+                if(settings.offset_lock.encoder_spindle == spindle_id) {
+                    spindle_hal.get_data = hal.spindle_data.get;
+                    spindle_hal.reset_data = hal.spindle_data.reset;
+                    if(!spindle->cfg->cap.at_speed)
+                        spindle_hal.cap.at_speed = !!spindle_hal.get_data;
+                } else {
+                    spindle_hal.get_data = NULL;
+                    spindle_hal.reset_data = NULL;
+                    if(!spindle->cfg->cap.at_speed)
+                        spindle_hal.cap.at_speed = Off;
+                }
             }
 
             spindle_hal.cap.laser &= settings.mode == Mode_Laser;
@@ -134,6 +141,9 @@ __NOTE:__ up to \ref N_SPINDLE spindles can be registered at a time.
 */
 spindle_id_t spindle_register (const spindle_ptrs_t *spindle, const char *name)
 {
+    if(n_spindle == 1 && spindles[0].cfg->type == SpindleType_Null)
+        n_spindle = 0;
+
     if(n_spindle < N_SPINDLE && settings_add_spindle_type(name)) {
 
         spindles[n_spindle].cfg = spindle;
@@ -323,9 +333,9 @@ bool spindle_enumerate_spindles (spindle_enumerate_callback_ptr callback, void *
 
         spindle.id = idx;
         spindle.name = spindles[idx].name;
-        spindle.hal = &spindles[idx].hal;
         spindle.num = spindle_get_num(idx);
         spindle.enabled = spindle.num != -1;
+        spindle.hal = spindle.enabled && sys_spindle[spindle.num].hal.id == spindle.id ? &sys_spindle[spindle.num].hal : &spindles[idx].hal;
         spindle.is_current = spindle.enabled && sys_spindle[0].hal.id == idx;
 
         callback(&spindle, data);
@@ -366,32 +376,38 @@ spindle_ptrs_t *spindle_get (spindle_num_t spindle_num)
 // Null (dummy) spindle, automatically installed if no spindles are registered.
 //
 
-static void null_set_state (spindle_state_t state, float rpm)
+static void null_set_state (spindle_ptrs_t *spindle, spindle_state_t state, float rpm)
 {
+    UNUSED(spindle);
     UNUSED(state);
     UNUSED(rpm);
 }
 
-static spindle_state_t null_get_state (void)
+static spindle_state_t null_get_state (spindle_ptrs_t *spindle)
 {
+    UNUSED(spindle);
+
     return (spindle_state_t){0};
 }
 
 // Sets spindle speed
-static void null_update_pwm (uint_fast16_t pwm_value)
+static void null_update_pwm (spindle_ptrs_t *spindle, uint_fast16_t pwm_value)
 {
+    UNUSED(spindle);
     UNUSED(pwm_value);
 }
 
-static uint_fast16_t null_get_pwm (float rpm)
+static uint_fast16_t null_get_pwm (spindle_ptrs_t *spindle, float rpm)
 {
+    UNUSED(spindle);
     UNUSED(rpm);
 
     return 0;
 }
 
-static void null_update_rpm (float rpm)
+static void null_update_rpm (spindle_ptrs_t *spindle, float rpm)
 {
+    UNUSED(spindle);
     UNUSED(rpm);
 }
 
@@ -478,14 +494,14 @@ static bool set_state (spindle_ptrs_t *spindle, spindle_state_t state, float rpm
 
         if (!state.on) { // Halt or set spindle direction and rpm.
             spindle->param->rpm = rpm = 0.0f;
-            spindle->set_state((spindle_state_t){0}, 0.0f);
+            spindle->set_state(spindle, (spindle_state_t){0}, 0.0f);
         } else {
             // NOTE: Assumes all calls to this function is when Grbl is not moving or must remain off.
             // TODO: alarm/interlock if going from CW to CCW directly in non-laser mode?
             if (spindle->cap.laser && state.ccw)
                 rpm = 0.0f; // TODO: May need to be rpm_min*(100/MAX_SPINDLE_RPM_OVERRIDE);
 
-            spindle->set_state(state, spindle_set_rpm(spindle, rpm, spindle->param->override_pct));
+            spindle->set_state(spindle, state, spindle_set_rpm(spindle, rpm, spindle->param->override_pct));
         }
 
         system_add_rt_report(Report_Spindle); // Set to report change immediately
@@ -529,7 +545,7 @@ bool spindle_sync (spindle_ptrs_t *spindle, spindle_state_t state, float rpm)
         // Empty planner buffer to ensure spindle is set when programmed.
         if((ok = protocol_buffer_synchronize()) && set_state(spindle, state, rpm) && !at_speed) {
             float on_delay = 0.0f;
-            while(!(at_speed = spindle->get_state().at_speed)) {
+            while(!(at_speed = spindle->get_state(spindle).at_speed)) {
                 delay_sec(0.2f, DelayMode_Dwell);
                 on_delay += 0.2f;
                 if(ABORTED)
@@ -567,7 +583,7 @@ bool spindle_restore (spindle_ptrs_t *spindle, spindle_state_t state, float rpm)
                 delay_sec(settings.safety_door.spindle_on_delay, DelayMode_SysSuspend);
             else if((ok == (settings.spindle.at_speed_tolerance <= 0.0f))) {
                 float delay = 0.0f;
-                while(!(ok = spindle->get_state().at_speed)) {
+                while(!(ok = spindle->get_state(spindle).at_speed)) {
                     delay_sec(0.1f, DelayMode_SysSuspend);
                     delay += 0.1f;
                     if(ABORTED)
@@ -620,9 +636,9 @@ void spindle_all_off (void)
             spindle->param->rpm = spindle->param->rpm_overridden = 0.0f;
             spindle->param->state.value = 0;
 #ifdef GRBL_ESP32
-            spindle->esp32_off();
+            spindle->esp32_off(spindle);
 #else
-            spindle->set_state((spindle_state_t){0}, 0.0f);
+            spindle->set_state(spindle, (spindle_state_t){0}, 0.0f);
 #endif
         }
     } while(spindle_num);
@@ -639,7 +655,7 @@ bool spindle_is_on (void)
     uint_fast8_t spindle_num = N_SYS_SPINDLE;
     do {
         if((spindle = spindle_get(--spindle_num)))
-            on = spindle->get_state().on;
+            on = spindle->get_state(spindle).on;
     } while(spindle_num && !on);
 
     return on;
@@ -659,43 +675,6 @@ static inline uint_fast16_t invert_pwm (spindle_pwm_t *pwm_data, uint_fast16_t p
     return pwm_data->invert_pwm ? pwm_data->period - pwm_value - 1 : pwm_value;
 }
 
-/*! \brief Precompute PWM values for faster conversion.
-\param spindle pointer to a \ref spindle_ptrs_t structure.
-\param pwm_data pointer to a \a spindle_pwm_t structure, to hold the precomputed values.
-\param clock_hz timer clock frequency used for PWM generation.
-\returns \a true if successful, \a false if no PWM range possible - driver should then revert to simple on/off spindle control.
-*/
-bool spindle_precompute_pwm_values (spindle_ptrs_t *spindle, spindle_pwm_t *pwm_data, uint32_t clock_hz)
-{
-    if(spindle->rpm_max > spindle->rpm_min) {
-        pwm_data->rpm_min = spindle->rpm_min;
-        pwm_data->period = (uint_fast16_t)((float)clock_hz / settings.spindle.pwm_freq);
-        if(settings.spindle.pwm_off_value == 0.0f)
-            pwm_data->off_value = pwm_data->invert_pwm ? pwm_data->period : 0;
-        else
-            pwm_data->off_value = invert_pwm(pwm_data, (uint_fast16_t)(pwm_data->period * settings.spindle.pwm_off_value / 100.0f));
-        pwm_data->min_value = (uint_fast16_t)(pwm_data->period * settings.spindle.pwm_min_value / 100.0f);
-        pwm_data->max_value = (uint_fast16_t)(pwm_data->period * settings.spindle.pwm_max_value / 100.0f) + pwm_data->offset;
-        pwm_data->pwm_gradient = (float)(pwm_data->max_value - pwm_data->min_value) / (spindle->rpm_max - spindle->rpm_min);
-        pwm_data->always_on = settings.spindle.pwm_off_value != 0.0f;
-    }
-
-#if ENABLE_SPINDLE_LINEARIZATION
-    uint_fast8_t idx;
-
-    pwm_data->n_pieces = 0;
-
-    for(idx = 0; idx < SPINDLE_NPWM_PIECES; idx++) {
-        if(!isnan(settings.spindle.pwm_piece[idx].rpm) && settings.spindle.pwm_piece[idx].start != 0.0f)
-            memcpy(&pwm_data->piece[pwm_data->n_pieces++], &settings.spindle.pwm_piece[idx], sizeof(pwm_piece_t));
-    }
-
-    spindle->cap.pwm_linearization = pwm_data->n_pieces > 0;
-#endif
-
-    return spindle->rpm_max > spindle->rpm_min;
-}
-
 /*! \brief Spindle RPM to PWM conversion.
 \param pwm_data pointer t a \a spindle_pwm_t structure.
 \param rpm spindle RPM.
@@ -705,7 +684,7 @@ bool spindle_precompute_pwm_values (spindle_ptrs_t *spindle, spindle_pwm_t *pwm_
 __NOTE:__ \a spindle_precompute_pwm_values() must be called to precompute values before this function is called.
 Typically this is done by the spindle initialization code.
 */
-uint_fast16_t spindle_compute_pwm_value (spindle_pwm_t *pwm_data, float rpm, bool pid_limit)
+static uint_fast16_t spindle_compute_pwm_value (spindle_pwm_t *pwm_data, float rpm, bool pid_limit)
 {
     uint_fast16_t pwm_value;
 
@@ -737,4 +716,64 @@ uint_fast16_t spindle_compute_pwm_value (spindle_pwm_t *pwm_data, float rpm, boo
         pwm_value = rpm == 0.0f ? pwm_data->off_value : invert_pwm(pwm_data, pwm_data->min_value);
 
     return pwm_value;
+}
+
+/*! \internal \brief Dummy spindle RPM to PWM conversion, used if precompute fails.
+\param pwm_data pointer t a \a spindle_pwm_t structure.
+\param rpm spindle RPM.
+\param pid_limit boolean, \a true if PID based spindle sync is used, \a false otherwise.
+\returns the PWM value to use.
+*/
+static uint_fast16_t compute_dummy_pwm_value (spindle_pwm_t *pwm_data, float rpm, bool pid_limit)
+{
+    return pwm_data->off_value;
+}
+
+/*! \brief Precompute PWM values for faster conversion.
+\param spindle pointer to a \ref spindle_ptrs_t structure.
+\param pwm_data pointer to a \a spindle_pwm_t structure, to hold the precomputed values.
+\param clock_hz timer clock frequency used for PWM generation.
+\returns \a true if successful, \a false if no PWM range possible - driver should then revert to simple on/off spindle control.
+*/
+bool spindle_precompute_pwm_values (spindle_ptrs_t *spindle, spindle_pwm_t *pwm_data, spindle_settings_t *settings, uint32_t clock_hz)
+{
+    pwm_data->settings = settings;
+    spindle->rpm_min = pwm_data->rpm_min = settings->rpm_min;
+    spindle->rpm_max = settings->rpm_max;
+    spindle->cap.rpm_range_locked = On;
+
+    if((spindle->cap.variable = !settings->flags.pwm_disable && spindle->rpm_max > spindle->rpm_min)) {
+        pwm_data->f_clock = clock_hz;
+        pwm_data->period = (uint_fast16_t)((float)clock_hz / settings->pwm_freq);
+        if(settings->pwm_off_value == 0.0f)
+            pwm_data->off_value = pwm_data->invert_pwm ? pwm_data->period : 0;
+        else
+            pwm_data->off_value = invert_pwm(pwm_data, (uint_fast16_t)(pwm_data->period * settings->pwm_off_value / 100.0f));
+        pwm_data->min_value = (uint_fast16_t)(pwm_data->period * settings->pwm_min_value / 100.0f);
+        pwm_data->max_value = (uint_fast16_t)(pwm_data->period * settings->pwm_max_value / 100.0f) + pwm_data->offset;
+        pwm_data->pwm_gradient = (float)(pwm_data->max_value - pwm_data->min_value) / (spindle->rpm_max - spindle->rpm_min);
+        pwm_data->always_on = settings->pwm_off_value != 0.0f;
+        pwm_data->compute_value = spindle_compute_pwm_value;
+    } else {
+        pwm_data->off_value = 0;
+        pwm_data->always_on = false;
+        pwm_data->compute_value = compute_dummy_pwm_value;
+    }
+
+    spindle->context = pwm_data;
+
+#if ENABLE_SPINDLE_LINEARIZATION
+    uint_fast8_t idx;
+
+    pwm_data->n_pieces = 0;
+
+    for(idx = 0; idx < SPINDLE_NPWM_PIECES; idx++) {
+        if(!isnan(settings->pwm_piece[idx].rpm) && settings->pwm_piece[idx].start != 0.0f)
+            memcpy(&pwm_data->piece[pwm_data->n_pieces++], &settings->pwm_piece[idx], sizeof(pwm_piece_t));
+    }
+
+    spindle->cap.pwm_linearization = pwm_data->n_pieces > 0;
+#endif
+
+    return spindle->cap.variable;
 }

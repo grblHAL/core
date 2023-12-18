@@ -23,15 +23,15 @@
 #include <stdbool.h>
 
 typedef enum {
-    Stepper2_Steps = 0,
-    Stepper2_InfiniteSteps,
-    Stepper2_mm
+    Stepper2_Steps = 0,     //!< 0
+    Stepper2_InfiniteSteps, //!< 1
+    Stepper2_mm             //!< 2
 } position_t;
 
 struct st2_motor; // members defined in stepper2.c
 typedef struct st2_motor st2_motor_t;
 
-st2_motor_t *st2_motor_init (uint_fast8_t axis_idx);
+st2_motor_t *st2_motor_init (uint_fast8_t axis_idx, bool is_spindle);
 float st2_motor_set_speed (st2_motor_t *motor, float speed);
 bool st2_motor_move (st2_motor_t *motor, const float move, const float speed, position_t type);
 bool st2_motor_run (st2_motor_t *motor);

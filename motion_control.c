@@ -176,7 +176,7 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
         // if there is a coincident position passed.
         if(!plan_buffer_line(target, pl_data) && pl_data->spindle.hal->cap.laser && pl_data->spindle.state.on && !pl_data->spindle.state.ccw) {
             protocol_buffer_synchronize();
-            pl_data->spindle.hal->set_state(pl_data->spindle.state, pl_data->spindle.rpm);
+            pl_data->spindle.hal->set_state(pl_data->spindle.hal, pl_data->spindle.state, pl_data->spindle.rpm);
         }
 
 #ifdef KINEMATICS_API
@@ -287,9 +287,13 @@ void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *o
     // (2x) settings.arc_tolerance. For 99% of users, this is just fine. If a different arc segment fit
     // is desired, i.e. least-squares, midpoint on arc, just change the mm_per_arc_segment calculation.
     // For the intended uses of Grbl, this value shouldn't exceed 2000 for the strictest of cases.
-    uint_fast16_t segments = (uint_fast16_t)floorf(fabsf(0.5f * angular_travel * radius) / sqrtf(settings.arc_tolerance * (2.0f * radius - settings.arc_tolerance)));
 
-    if (segments) {
+    uint_fast16_t segments = 0;
+
+    if(2.0f * radius > settings.arc_tolerance)
+        segments = (uint_fast16_t)floorf(fabsf(0.5f * angular_travel * radius) / sqrtf(settings.arc_tolerance * (2.0f * radius - settings.arc_tolerance)));
+
+    if(segments) {
 
         // Multiply inverse feed_rate to compensate for the fact that this movement is approximated
         // by a number of discrete segments. The inverse feed_rate should be correct for the sum of
@@ -566,35 +570,35 @@ void mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_
             return;
     }
 
+    float position_linear = position[plane.axis_linear],
+          retract_to = canned->retract_mode == CCRetractMode_RPos ? canned->retract_position : position_linear;
+
     // rapid move to X, Y
     memcpy(position, target, sizeof(float) * N_AXIS);
-    position[plane.axis_linear] = canned->prev_position > canned->retract_position ? canned->prev_position : canned->retract_position;
+    position[plane.axis_linear] = position_linear;
     if(!mc_line(position, pl_data))
         return;
 
-    // if current Z > R, rapid move to R
-    if(position[plane.axis_linear] > canned->retract_position) {
-        position[plane.axis_linear] = canned->retract_position;
-        if(!mc_line(position, pl_data))
-            return;
-    }
-
-    if(canned->retract_mode == CCRetractMode_RPos)
-        canned->prev_position = canned->retract_position;
-
     while(repeats--) {
 
-        float current_z = canned->retract_position;
+        // if current Z > R, rapid move to R
+        if(position[plane.axis_linear] > canned->retract_position) {
+            position[plane.axis_linear] = canned->retract_position;
+            if(!mc_line(position, pl_data))
+                return;
+        }
 
-        while(current_z > canned->xyz[plane.axis_linear]) {
+        position_linear = position[plane.axis_linear];
 
-            current_z -= canned->delta;
-            if(current_z < canned->xyz[plane.axis_linear])
-                current_z = canned->xyz[plane.axis_linear];
+        while(position_linear > canned->xyz[plane.axis_linear]) {
+
+            position_linear -= canned->delta;
+            if(position_linear < canned->xyz[plane.axis_linear])
+                position_linear = canned->xyz[plane.axis_linear];
 
             pl_data->condition.rapid_motion = Off;
 
-            position[plane.axis_linear] = current_z;
+            position[plane.axis_linear] = position_linear;
             if(!mc_line(position, pl_data)) // drill
                 return;
 
@@ -602,19 +606,19 @@ void mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_
                 mc_dwell(canned->dwell);
 
             if(canned->spindle_off)
-                pl_data->spindle.hal->set_state((spindle_state_t){0}, 0.0f);
+                pl_data->spindle.hal->set_state(pl_data->spindle.hal, (spindle_state_t){0}, 0.0f);
 
             // rapid retract
             switch(motion) {
 
                 case MotionMode_DrillChipBreak:
                     position[plane.axis_linear] = position[plane.axis_linear] == canned->xyz[plane.axis_linear]
-                                                   ? canned->retract_position
+                                                   ? retract_to
                                                    : position[plane.axis_linear] + settings.g73_retract;
                     break;
 
                 default:
-                    position[plane.axis_linear] = canned->retract_position;
+                    position[plane.axis_linear] = retract_to;
                     break;
             }
 
@@ -626,6 +630,8 @@ void mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_
                 spindle_sync(pl_data->spindle.hal, gc_state.modal.spindle.state, pl_data->spindle.rpm);
         }
 
+        pl_data->condition.rapid_motion = On; // Set rapid motion condition flag.
+
        // rapid move to next position if incremental mode
         if(repeats && gc_state.modal.distance_incremental) {
             position[plane.axis_0] += canned->xyz[plane.axis_0];
@@ -636,13 +642,6 @@ void mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_
     }
 
     memcpy(target, position, sizeof(float) * N_AXIS);
-
-    if(canned->retract_mode == CCRetractMode_Previous && motion != MotionMode_DrillChipBreak && target[plane.axis_linear] < canned->prev_position) {
-        pl_data->condition.rapid_motion = On;
-        target[plane.axis_linear] = canned->prev_position;
-        if(!mc_line(target, pl_data))
-            return;
-    }
 }
 
 // Calculates depth-of-cut (DOC) for a given threading pass.

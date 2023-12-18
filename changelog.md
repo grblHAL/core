@@ -1,5 +1,113 @@
 ## grblHAL changelog
 
+<a name="20231218"/>Build 20231218
+
+Core:
+
+* VFS: fix for incorrect handling of mode flags when mounting root filesystem. Added option to list hidden filesystems.
+
+Drivers:
+
+* ESP32: moved mount of littlefs filesystem until after settings are loaded.
+
+Plugins:
+
+* WebUI: improved handling of hidden littlefs filesystem.
+
+---
+
+<a name="20231217"/>20231217
+
+Drivers:
+
+* ESP32: reverted MKS DLC32 SD card SPI pins assignment, ref. [issue 88](https://github.com/grblHAL/ESP32/issues/88).  
+Fixed I2S stepping issues, added dir > step delay with 4 microseconds minimum delay. Ref. [issue 87](https://github.com/grblHAL/ESP32/issues/87).
+
+Plugins:
+
+* Motors: fixed some typos, ref. core [issue 381](https://github.com/grblHAL/core/issues/381#issuecomment-1859083977).
+
+---
+
+<a name="20231216"/>Build 20231216
+
+Core:
+
+* Refactored canned cycles to better match how LinuxCNC actually implements them. Ref. [ioSender issue 347](https://github.com/terjeio/ioSender/issues/347).  
+__NOTE:__ The implementation may still be incorrect - use with care!
+
+Drivers:
+
+* SAM3X8E: added laser plugins.
+
+* LPC176x: added laser and spindle plugins.
+
+---
+
+<a name="20231210"/>Build 20231210
+
+Core:
+
+* Spindle handling refactoring for improved management and configuration of multiple spindles.  
+__NOTE:__ this is a relatively large change and may have introduced bugs and/or unintended side-effects. Please report any issues!
+
+* Added setting `$519` for binding spindle encoder to given spindle in multi spindle configurations.
+
+* Added machine readable spindle enumeration report, `$SPINDLESH`.
+
+* Increased _default_ value for setting `$398` \(number of planner blocs\) from 35 to 100 for faster laser engraving.
+Ref. [this discussion](https://github.com/grblHAL/core/discussions/402).  
+__NOTE:__ the `$398` setting value will _not_ change on an upgrade!  
+__NOTE:__ STM32F103 builds for the 128K flash variants does not have enough free RAM and will keep 35 as the default value.
+
+* Increased allowed number of decimal places from 3 to 5 for `$10x` stepper step/mm settings.
+Ref. [ioSender issue 346](https://github.com/terjeio/ioSender/issues/346).  
+
+* Added setting `$650` for filing system options. Ref. [issue 397](https://github.com/grblHAL/core/issues/397).   
+Currently the following bits are available \(depending on the configuration\):  
+0 - Auto mount SD card on startup \(1\).  
+1 - Do not add littlefs files when listing the root directory \(2\).
+
+* Added build option for [lathe UVW mode](https://www.cnctrainingcentre.com/haas-turn/u-and-w-on-a-cnc-lathe-incremental-programming/).
+Ref [this discussion](https://github.com/grblHAL/core/discussions/398).  
+When enabled `UVW` words can be used to command relative moves for `XYZ` without switching to relative mode with `G91`. `U` -> `X`, `V` -> `Y`, `W` -> `Z`.  
+__NOTE:__ This permanently sets lathe mode and disables the `$32` mode setting.
+
+For developers: 
+
+* There are signature changes to some spindle, ioports enumeration and VFS filing system mount functions.
+
+* Added events to allow plugin code to handle tool table data, possibly stored on a SD card. Ref. [this discussion](https://github.com/grblHAL/core/discussions/392).
+
+Drivers:
+
+* Most: updated for refactored spindle handling and configuration.
+
+* ESP32: fix for spindle at speed failure. Ref. [ioSender issue 345](https://github.com/terjeio/ioSender/issues/345).
+Initial changes for ESP32-S3 support and some code refactoring.
+
+* STM32F7xx: fix to reduce stepper current surge on startup. Ref. [issue 400](https://github.com/grblHAL/core/issues/400).
+
+* iMRX1062: fix for hardfault when enabling aux input IRQ early in startup sequence.  Ref. [issue 395](https://github.com/grblHAL/core/issues/395).
+
+Plugins:
+
+* Spindle: updated for core changes. Added several spindles:  
+_Nowforever VFD._ \(untested\).  
+_Stepper spindle._ This claims the stepper driver from the last configured axis.  
+_PWM clone._ This clones the default driver implemented PWM spindle and changes it to use the direction signal for on/off control.  
+Settings `$730`, `$731` and `$734` - `$736` will be used to configure the clone. These has the same function as the `$30` - `$36` counterparts.  
+The driver spindle is suitable for controlling a laser when `$32` = `1` and the clone is suitable for controlling a spindle motor.  
+Switching between the spindles is typically done with `M104Q<n>` where `<n>` is the spindle number.  
+_Basic spindle._ Needs and claims 1 or 2 auxillary digital output ports depending on the configuration.  
+_Additional PWM spindle._ Needs and claims 1 or 2 auxillary digital output ports and one analog PWM capable port.  
+
+* Motors: fixed default Trinamic motor current - was incorrectly set to 0, changed to 500 mA RMS. Ref. [issue 400](https://github.com/grblHAL/core/issues/400).
+
+* Various: updated for core call signature changes.
+
+---
+
 <a name="20231005"/>Build 20231005
 
 Core:

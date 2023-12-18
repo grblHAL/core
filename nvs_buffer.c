@@ -92,7 +92,7 @@ static const emap_t target[] = {
     {TOOL_ADDR(6), NVS_GROUP_TOOLS, 6},
     {TOOL_ADDR(7), NVS_GROUP_TOOLS, 7},
 #if N_TOOLS > 8
-    {TOOL_ADDR(8), NVS_GROUP_TOOLS, 8},
+    {TOOL_ADDR(8), NVS_GROUP_TOOLS,  8},
     {TOOL_ADDR(9), NVS_GROUP_TOOLS,  9},
     {TOOL_ADDR(10), NVS_GROUP_TOOLS, 10},
     {TOOL_ADDR(11), NVS_GROUP_TOOLS, 11},
@@ -102,7 +102,22 @@ static const emap_t target[] = {
     {TOOL_ADDR(15), NVS_GROUP_TOOLS, 15},
 #endif
 #if N_TOOLS > 16
-#error Increase number of tool entries!
+    {TOOL_ADDR(16), NVS_GROUP_TOOLS, 16},
+    {TOOL_ADDR(17), NVS_GROUP_TOOLS, 17},
+    {TOOL_ADDR(18), NVS_GROUP_TOOLS, 18},
+    {TOOL_ADDR(19), NVS_GROUP_TOOLS, 19},
+    {TOOL_ADDR(20), NVS_GROUP_TOOLS, 20},
+    {TOOL_ADDR(21), NVS_GROUP_TOOLS, 21},
+    {TOOL_ADDR(22), NVS_GROUP_TOOLS, 22},
+    {TOOL_ADDR(23), NVS_GROUP_TOOLS, 23},
+    {TOOL_ADDR(24), NVS_GROUP_TOOLS, 24},
+    {TOOL_ADDR(25), NVS_GROUP_TOOLS, 25},
+    {TOOL_ADDR(26), NVS_GROUP_TOOLS, 26},
+    {TOOL_ADDR(27), NVS_GROUP_TOOLS, 27},
+    {TOOL_ADDR(28), NVS_GROUP_TOOLS, 28},
+    {TOOL_ADDR(29), NVS_GROUP_TOOLS, 29},
+    {TOOL_ADDR(30), NVS_GROUP_TOOLS, 30},
+    {TOOL_ADDR(31), NVS_GROUP_TOOLS, 31},
 #endif
 #endif
     {0, 0, 0} // list termination - do not remove
@@ -360,8 +375,13 @@ void nvs_buffer_sync_physical (void)
                                        settings_dirty.build_info;
 
     } else if(physical_nvs.memcpy_to_flash) {
-        if(!physical_nvs.memcpy_to_flash(nvsbuffer))
-            report_message("Settings write failed!", Message_Warning);
+        uint_fast8_t retries = 4;
+        do {
+            if(physical_nvs.memcpy_to_flash(nvsbuffer))
+                retries = 0;
+            else if(--retries == 0)
+                report_message("Settings write failed!", Message_Warning);
+        } while(retries);
         memset(&settings_dirty, 0, sizeof(settings_dirty_t));
     }
 }
@@ -421,4 +441,3 @@ void nvs_memmap (void)
 }
 
 #endif
-

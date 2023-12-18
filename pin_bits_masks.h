@@ -226,15 +226,21 @@
 #endif
 
 #if SPINDLE_SYNC_ENABLE
-#ifndef SPINDLE_INDEX_BIT
-#define SPINDLE_INDEX_BIT (1<<SPINDLE_INDEX_PIN)
-#endif
-#ifndef SPINDLE_PULSE_BIT
-#define SPINDLE_PULSE_BIT (1<<SPINDLE_PULSE_PIN)
-#endif
+  #if defined(SPINDLE_INDEX_PIN) && defined(SPINDLE_PULSE_PIN)
+    #ifndef SPINDLE_INDEX_BIT
+      #define SPINDLE_INDEX_BIT (1<<SPINDLE_INDEX_PIN)
+    #endif
+    #ifndef SPINDLE_PULSE_BIT
+      #define SPINDLE_PULSE_BIT (1<<SPINDLE_PULSE_PIN)
+    #endif
+  #else
+    #define SPINDLE_INDEX_BIT 0
+    #define SPINDLE_PULSE_BIT 0
+    #error "Spindle sync requires SPINDLE_PULSE_PIN and SPINDLE_INDEX_PIN defined in the board map!"
+  #endif
 #else
-#define SPINDLE_INDEX_BIT 0
-#define SPINDLE_PULSE_BIT 0
+  #define SPINDLE_INDEX_BIT 0
+  #define SPINDLE_PULSE_BIT 0
 #endif
 
 #if QEI_ENABLE

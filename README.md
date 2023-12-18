@@ -13,11 +13,8 @@ It has been written to complement grblHAL and has features such as proper keyboa
 
 ---
 
-Latest build date is 20231005, see the [changelog](changelog.md) for details.  
+Latest build date is 20231216, see the [changelog](changelog.md) for details.  
 __NOTE:__ A settings reset will be performed on an update of builds earlier than 20230125. Backup and restore of settings is recommended.  
-__IMPORTANT!__  A new setting has been introduced for ganged axes motors in build 20211121.  
-I have only bench tested this for a couple of drivers, correct function should be verified after updating by those who have more than three motors configured.  
-More details in the [changelog](changelog.md).
 
 ---
 
@@ -80,7 +77,7 @@ This is a port/rewrite of [grbl 1.1f](https://github.com/gnea/grbl) and should b
   - Return from macro*****: M99
   - Valid Non-Command Words: A*, B*, C*, D, E*, F, H*, I, J, K, L, N, P, Q*, R, S, T, U*, V*, W*, X, Y, Z
 
-  * driver/configuration dependent. W axis only available when ABC axes are remapped to UVW.
+  * driver/configuration dependent. W axis only available when ABC axes are remapped to UVW or when lathe UVW mode is enabled.
   ** requires compatible GCode sender due to protocol extensions, new state and RT command.
   *** number of inputs and outputs supported dependent on driver implementation.
   **** supports multi turn arcs from build 20220718.
@@ -92,4 +89,4 @@ G/M-codes not supported by [legacy Grbl](https://github.com/gnea/grbl/wiki) are 
 Some [plugins](https://github.com/grblHAL/plugins) implements additional M-codes.
 
 ---
-2023-09-05
+2023-12-10

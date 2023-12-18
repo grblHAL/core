@@ -378,7 +378,7 @@ void state_suspend_manager (void)
                 grbl.on_override_changed(OverrideChanged_SpindleState);
         }
 
-    } else if (sys.step_control.update_spindle_rpm && restore_condition.spindle[0].hal->get_state().on) {
+    } else if (sys.step_control.update_spindle_rpm && restore_condition.spindle[0].hal->get_state(restore_condition.spindle[0].hal).on) {
         // Handles spindle state during hold. NOTE: Spindle speed overrides may be altered during hold state.
         state_spindle_set_state(&restore_condition.spindle[restore_condition.spindle_num]);
         sys.step_control.update_spindle_rpm = Off;
@@ -654,12 +654,12 @@ static void state_await_resume (uint_fast16_t rt_exec)
 
             default:
                 if (!settings.flags.restore_after_feed_hold) {
-                    if (!restore_condition.spindle[restore_condition.spindle_num].hal->get_state().on)
+                    if (!restore_condition.spindle[restore_condition.spindle_num].hal->get_state(restore_condition.spindle[restore_condition.spindle_num].hal).on)
                         gc_spindle_off();
                     sys.override.spindle_stop.value = 0; // Clear spindle stop override states
                 } else {
 
-                    if (restore_condition.spindle[restore_condition.spindle_num].state.on != restore_condition.spindle[restore_condition.spindle_num].hal->get_state().on) {
+                    if (restore_condition.spindle[restore_condition.spindle_num].state.on != restore_condition.spindle[restore_condition.spindle_num].hal->get_state(restore_condition.spindle[restore_condition.spindle_num].hal).on) {
                         grbl.report.feedback_message(Message_SpindleRestore);
                         state_spindle_restore(&restore_condition.spindle[restore_condition.spindle_num]);
                     }
@@ -747,7 +747,7 @@ static void state_await_waypoint_retract (uint_fast16_t rt_exec)
         // NOTE: Clear accessory state after retract and after an aborted restore motion.
         park.plan_data.spindle.state.value = 0;
         park.plan_data.spindle.rpm = 0.0f;
-        park.plan_data.spindle.hal->set_state(park.plan_data.spindle.state, 0.0f); // De-energize
+        park.plan_data.spindle.hal->set_state(park.plan_data.spindle.hal, park.plan_data.spindle.state, 0.0f); // De-energize
 
         if (!settings.safety_door.flags.keep_coolant_on) {
             park.plan_data.condition.coolant.value = 0;

@@ -99,7 +99,7 @@ status_code_t report_spindle_data (sys_state_t state, char *args);
 status_code_t report_pins (sys_state_t state, char *args);
 
 // Prints registered spindles.
-status_code_t report_spindles (void);
+status_code_t report_spindles (bool machine_readable);
 
 // Prints current RTC datetime in ISO8601 format (when available)
 status_code_t report_time (void);

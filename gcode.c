@@ -40,11 +40,7 @@
 // arbitrary value, and some GUIs may require more. So we increased it based on a max safe
 // value when converting a float (7.2 digit precision)s to an integer.
 #define MAX_LINE_NUMBER 10000000
-#if N_TOOLS
-#define MAX_TOOL_NUMBER N_TOOLS // Limited by max unsigned 8-bit value
-#else
 #define MAX_TOOL_NUMBER 4294967294 // Limited by max unsigned 32-bit value - 1
-#endif
 
 #define MACH3_SCALING
 
@@ -110,11 +106,6 @@ typedef union {
 
 // Declare gc extern struct
 parser_state_t gc_state, *saved_state = NULL;
-#if N_TOOLS
-tool_data_t tool_table[N_TOOLS + 1];
-#else
-tool_data_t tool_table;
-#endif
 
 #define FAIL(status) return(status);
 
@@ -217,9 +208,8 @@ void gc_set_tool_offset (tool_offset_mode_t mode, uint_fast8_t idx, int32_t offs
                 idx--;
                 tlo_changed |= gc_state.tool_length_offset[idx] != 0.0f;
                 gc_state.tool_length_offset[idx] = 0.0f;
-#ifndef N_TOOLS
-                gc_state.tool->offset[idx] = 0.0f;
-#endif
+                if(grbl.tool_table.n_tools == 0)
+                    gc_state.tool->offset[idx] = 0.0f;
             } while(idx);
             break;
 
@@ -228,9 +218,8 @@ void gc_set_tool_offset (tool_offset_mode_t mode, uint_fast8_t idx, int32_t offs
                 float new_offset = offset / settings.axis[idx].steps_per_mm;
                 tlo_changed |= gc_state.tool_length_offset[idx] != new_offset;
                 gc_state.tool_length_offset[idx] = new_offset;
-#ifndef N_TOOLS
-                gc_state.tool->offset[idx] = new_offset;
-#endif
+                if(grbl.tool_table.n_tools == 0)
+                    gc_state.tool->offset[idx] = new_offset;
             }
             break;
 
@@ -275,21 +264,15 @@ void gc_init (void)
 {
 #if COMPATIBILITY_LEVEL > 1
     memset(&gc_state, 0, sizeof(parser_state_t));
-  #if N_TOOLS
-    gc_state.tool = &tool_table[0];
-  #else
-    memset(&tool_table, 0, sizeof(tool_table));
-    gc_state.tool = &tool_table;
-  #endif
+    gc_state.tool = &grbl.tool_table.tool[0];
+    if(grbl.tool_table.n_tools == 0)
+        memset(grbl.tool_table.tool, 0, sizeof(tool_data_t));
 #else
     if(sys.cold_start) {
         memset(&gc_state, 0, sizeof(parser_state_t));
-      #if N_TOOLS
-        gc_state.tool = &tool_table[0];
-      #else
-        memset(&tool_table, 0, sizeof(tool_table));
-        gc_state.tool = &tool_table;
-      #endif
+        gc_state.tool = &grbl.tool_table.tool[0];
+        if(grbl.tool_table.n_tools == 0)
+            memset(grbl.tool_table.tool, 0, sizeof(tool_data_t));
     } else {
         memset(&gc_state, 0, offsetof(parser_state_t, g92_coord_offset));
         gc_state.tool_pending = gc_state.tool->tool_id;
@@ -335,7 +318,6 @@ void gc_init (void)
         grbl.on_parser_init(&gc_state);
 }
 
-
 // Set dynamic laser power mode to PPI (Pulses Per Inch)
 // Returns true if driver uses hardware implementation.
 // Driver support for pulsing the laser on signal is required for this to work.
@@ -369,25 +351,23 @@ spindle_ptrs_t *gc_spindle_get (void)
 
 static tool_data_t *tool_get_pending (tool_id_t tool_id)
 {
-#if N_TOOLS
-    return &tool_table[tool_id];
-#else
     static tool_data_t tool_data = {0};
+
+    if(grbl.tool_table.n_tools)
+        return &grbl.tool_table.tool[tool_id];
 
     memcpy(&tool_data, gc_state.tool, sizeof(tool_data_t));
     tool_data.tool_id = tool_id;
 
     return &tool_data;
-#endif
 }
 
 static inline void tool_set (tool_data_t *tool)
 {
-#if N_TOOLS
-    gc_state.tool = tool;
-#else
-    gc_state.tool->tool_id = tool->tool_id;
-#endif
+    if(grbl.tool_table.n_tools)
+        gc_state.tool = tool;
+    else
+        gc_state.tool->tool_id = tool->tool_id;
 }
 
 // Add output command to linked list
@@ -414,6 +394,9 @@ static bool add_output_command (output_command_t *command)
 
 static status_code_t init_sync_motion (plan_line_data_t *pl_data, float pitch)
 {
+    if(pl_data->spindle.hal->get_data == NULL)
+        FAIL(Status_GcodeUnsupportedCommand); // [Spindle not sync capable]
+
     pl_data->condition.inverse_time = Off;
     pl_data->feed_rate = gc_state.distance_per_rev = pitch;
     pl_data->spindle.css = NULL;                    // Switch off CSS.
@@ -655,11 +638,17 @@ status_code_t gc_execute_block (char *block)
 #ifdef C_AXIS
       , .c = On
 #endif
+#if LATHE_UVW_OPTION
+      , .u = On
+      , .v = On
+      , .w = On
+#else
 #ifdef U_AXIS
       , .u = On
 #endif
 #ifdef V_AXIS
       , .v = On
+#endif
 #endif
     };
 
@@ -1067,16 +1056,14 @@ status_code_t gc_execute_block (char *block)
                         // there cannot be any axis motion or coordinate offsets updated. Meaning G43, G43.1, and G49
                         // all are explicit axis commands, regardless if they require axis words or not.
                         // NOTE: cannot find the NIST statement referenced above, changed to match LinuxCNC behaviour in build 20210513.
-                        if (int_value == 49) // G49
+                        if(int_value == 49) // G49
                             gc_block.modal.tool_offset_mode = ToolLengthOffset_Cancel;
-#if N_TOOLS
-                        else if (mantissa == 0) // G43
+                        else if(mantissa == 0 && grbl.tool_table.n_tools) // G43
                             gc_block.modal.tool_offset_mode = ToolLengthOffset_Enable;
-                        else if (mantissa == 20) // G43.2
+                        else if(mantissa == 20 && grbl.tool_table.n_tools) // G43.2
                             gc_block.modal.tool_offset_mode = ToolLengthOffset_ApplyAdditional;
-#endif
-                        else if (mantissa == 10) { // G43.1
-                            if (axis_command)
+                        else if(mantissa == 10) { // G43.1
+                            if(axis_command)
                                 FAIL(Status_GcodeAxisCommandConflict); // [Axis word/command conflict] }
                             axis_command = AxisCommand_ToolLengthOffset;
                             gc_block.modal.tool_offset_mode = ToolLengthOffset_EnableDynamic;
@@ -1446,13 +1433,33 @@ status_code_t gc_execute_block (char *block)
                         break;
 
                     case 'T':
-                        if (mantissa > 0)
+                        if(mantissa > 0)
                             FAIL(Status_GcodeCommandValueNotInteger);
-                        if (int_value > MAX_TOOL_NUMBER)
+                        if(int_value > (grbl.tool_table.n_tools ? grbl.tool_table.n_tools : MAX_TOOL_NUMBER))
                             FAIL(Status_GcodeIllegalToolTableEntry);
                         word_bit.parameter.t = On;
                         gc_block.values.t = isnan(value) ? 0xFFFFFFFF : int_value;
                         break;
+#if LATHE_UVW_OPTION
+                    case 'U':
+                        axis_words.x = On;
+                        word_bit.parameter.x = word_bit.parameter.u = On;
+                        gc_block.values.uvw[X_AXIS] = value / 2.0f; // U is always a diameter
+                        break;
+
+                    case 'V':
+                        axis_words.y = On;
+                        word_bit.parameter.y = word_bit.parameter.v = On;
+                        gc_block.values.uvw[Y_AXIS] = value;
+                        break;
+
+                    case 'W':
+                        axis_words.z = On;
+                        word_bit.parameter.z = word_bit.parameter.w = On;
+                        gc_block.values.uvw[Z_AXIS] = value;
+                        break;
+
+#else
 
 #ifdef U_AXIS
                   case 'U':
@@ -1469,7 +1476,7 @@ status_code_t gc_execute_block (char *block)
                       gc_block.values.xyz[V_AXIS] = value;
                       break;
 #endif
-
+#endif
                   case 'X':
                         axis_words.x = On;
                         word_bit.parameter.x = On;
@@ -1712,7 +1719,7 @@ status_code_t gc_execute_block (char *block)
             FAIL(Status_GcodeValueWordMissing);
         if (floorf(gc_block.values.q) - gc_block.values.q != 0.0f)
             FAIL(Status_GcodeCommandValueNotInteger);
-        if ((uint32_t)gc_block.values.q > MAX_TOOL_NUMBER)
+        if ((uint32_t)gc_block.values.q > (grbl.tool_table.n_tools ? grbl.tool_table.n_tools : MAX_TOOL_NUMBER))
             FAIL(Status_GcodeIllegalToolTableEntry);
 
         gc_block.values.t = (uint32_t)gc_block.values.q;
@@ -1720,13 +1727,13 @@ status_code_t gc_execute_block (char *block)
 #if NGC_EXPRESSIONS_ENABLE
         if(hal.stream.file) {
             gc_state.tool_pending = 0; // force set tool
-  #if N_TOOLS
-            if(gc_state.g43_pending) {
-                gc_block.values.h = gc_state.g43_pending;
-                command_words.G8 = On;
+            if(grbl.tool_table.n_tools) {
+                if(gc_state.g43_pending) {
+                    gc_block.values.h = gc_state.g43_pending;
+                    command_words.G8 = On;
+                }
+                gc_state.g43_pending = 0;
             }
-            gc_state.g43_pending = 0;
-  #endif
         }
 #endif
     } else if (!gc_block.words.t)
@@ -1893,11 +1900,18 @@ status_code_t gc_execute_block (char *block)
     if (gc_block.modal.units_imperial) do { // Axes indices are consistent, so loop may be used.
         idx--;
 #if N_AXIS > 3
-        if (bit_istrue(axis_words.mask, bit(idx)) && bit_isfalse(settings.steppers.is_rotational.mask, bit(idx)))
+        if (bit_istrue(axis_words.mask, bit(idx)) && bit_isfalse(settings.steppers.is_rotational.mask, bit(idx))) {
 #else
-        if (bit_istrue(axis_words.mask, bit(idx)))
+        if (bit_istrue(axis_words.mask, bit(idx))) {
 #endif
             gc_block.values.xyz[idx] *= MM_PER_INCH;
+#if LATHE_UVW_OPTION
+  #if N_AXIS > 3
+            if(idx <= Z_AXIS)
+  #endif
+            gc_block.values.uvw[idx] *= MM_PER_INCH;
+#endif
+        }
     } while(idx);
 
     if (command_words.G15 && gc_state.modal.diameter_mode != gc_block.modal.diameter_mode) {
@@ -1987,6 +2001,12 @@ status_code_t gc_execute_block (char *block)
                      gc_block.values.xyz[idx] *= scale_factor.ijk[idx];
                 else
                      gc_block.values.xyz[idx] = (gc_block.values.xyz[idx] - scale_factor.xyz[idx]) * scale_factor.ijk[idx] + scale_factor.xyz[idx];
+#if LATHE_UVW_OPTION
+  #if N_AXIS > 3
+                if(idx <= Z_AXIS)
+  #endif
+                gc_block.values.uvw[idx] *= scale_factor.ijk[idx];
+#endif
             }
         } while(idx);
     }
@@ -1996,7 +2016,7 @@ status_code_t gc_execute_block (char *block)
     //   NOTE: Since cutter radius compensation is never enabled, these G40 errors don't apply. Grbl supports G40
     //   only for the purpose to not error when G40 is sent with a g-code program header to setup the default modes.
 
-    // [14. Tool length compensation ]: G43.1 and G49 are always supported, G43 and G43.2 if N_TOOLS defined.
+    // [14. Tool length compensation ]: G43.1 and G49 are always supported, G43 and G43.2 if grbl.tool_table.n_tools > 0
     // [G43.1 Errors]: Motion command in same line.
     // [G43.2 Errors]: Tool number not in the tool table,
     if (command_words.G8) { // Indicates called in block.
@@ -2014,30 +2034,36 @@ status_code_t gc_execute_block (char *block)
         switch(gc_block.modal.tool_offset_mode) {
 
             case ToolLengthOffset_EnableDynamic:
-                if (!axis_words.mask)
+                if(!axis_words.mask)
                     FAIL(Status_GcodeG43DynamicAxisError);
                 break;
-#if N_TOOLS
+
             case ToolLengthOffset_Enable:
-                if (gc_block.words.h) {
-                    if(gc_block.values.h > MAX_TOOL_NUMBER)
-                        FAIL(Status_GcodeIllegalToolTableEntry);
-                    gc_block.words.h = Off;
-                    if(gc_block.values.h == 0)
+                if(grbl.tool_table.n_tools) {
+                    if(gc_block.words.h) {
+                        if(gc_block.values.h > grbl.tool_table.n_tools)
+                            FAIL(Status_GcodeIllegalToolTableEntry);
+                        gc_block.words.h = Off;
+                        if(gc_block.values.h == 0)
+                            gc_block.values.h = gc_block.values.t;
+                    } else
                         gc_block.values.h = gc_block.values.t;
                 } else
-                    gc_block.values.h = gc_block.values.t;
+                    FAIL(Status_GcodeUnsupportedCommand);
                 break;
 
             case ToolLengthOffset_ApplyAdditional:
-                if (gc_block.words.h) {
-                    if(gc_block.values.h == 0 || gc_block.values.h > MAX_TOOL_NUMBER)
-                        FAIL(Status_GcodeIllegalToolTableEntry);
-                    gc_block.words.h = Off;
+                if(grbl.tool_table.n_tools) {
+                    if(gc_block.words.h) {
+                        if(gc_block.values.h == 0 || gc_block.values.h > grbl.tool_table.n_tools)
+                            FAIL(Status_GcodeIllegalToolTableEntry);
+                        gc_block.words.h = Off;
+                    } else
+                        FAIL(Status_GcodeValueWordMissing);
                 } else
-                    FAIL(Status_GcodeValueWordMissing);
+                    FAIL(Status_GcodeUnsupportedCommand);
                 break;
-#endif
+
             default:
                 break;
         }
@@ -2078,7 +2104,7 @@ status_code_t gc_execute_block (char *block)
             // [G10 Errors]: L missing and is not 2 or 20. P word missing. (Negative P value done.)
             // [G10 L2 Errors]: R word NOT SUPPORTED. P value not 0 to N_WorkCoordinateSystems (max 9). Axis words missing.
             // [G10 L20 Errors]: P must be 0 to N_WorkCoordinateSystems (max 9). Axis words missing.
-            // [G10 L1, L10, L11 Errors]: P must be 0 to MAX_TOOL_NUMBER (max 9). Axis words or R word missing.
+            // [G10 L1, L10, L11 Errors]: P must be 0 to grbl.tool_table.n_tools. Axis words or R word missing.
 
             if (!(axis_words.mask || (gc_block.values.l != 20 && gc_block.words.r)))
                 FAIL(Status_GcodeNoAxisWords); // [No axis words (or R word for tool offsets)]
@@ -2112,8 +2138,8 @@ status_code_t gc_execute_block (char *block)
                         FAIL(Status_SettingReadFail); // [non-volatile storage read fail]
 
 #if COMPATIBILITY_LEVEL <= 1
-                    if(settings.parking.flags.offset_lock && gc_block.values.coord_data.id >= CoordinateSystem_G59_1 && gc_block.values.coord_data.id <= CoordinateSystem_G59_3) {
-                        if(bit_istrue(settings.parking.flags.offset_lock, bit(gc_block.values.coord_data.id - CoordinateSystem_G59_1)))
+                    if(settings.offset_lock.mask && gc_block.values.coord_data.id >= CoordinateSystem_G59_1 && gc_block.values.coord_data.id <= CoordinateSystem_G59_3) {
+                        if(bit_istrue(settings.offset_lock.mask, bit(gc_block.values.coord_data.id - CoordinateSystem_G59_1)))
                             FAIL(Status_GCodeCoordSystemLocked);
                     }
 #endif
@@ -2133,47 +2159,48 @@ status_code_t gc_execute_block (char *block)
                     } while(idx);
                     break;
 
-#if N_TOOLS
-                case 1: case 10: case 11:;
-                    if(p_value == 0 || p_value > MAX_TOOL_NUMBER)
-                       FAIL(Status_GcodeIllegalToolTableEntry); // [Greater than MAX_TOOL_NUMBER]
+                case 1: case 10: case 11:
+                    if(grbl.tool_table.n_tools) {
+                        if(p_value == 0 || p_value > grbl.tool_table.n_tools)
+                           FAIL(Status_GcodeIllegalToolTableEntry); // [Greater than max allowed tool number]
 
-                    tool_table[p_value].tool_id = (tool_id_t)p_value;
+                        grbl.tool_table.tool[p_value].tool_id = (tool_id_t)p_value;
 
-                    if(gc_block.words.r) {
-                        tool_table[p_value].radius = gc_block.values.r;
-                        gc_block.words.r = Off;
-                    }
+                        if(gc_block.words.r) {
+                            grbl.tool_table.tool[p_value].radius = gc_block.values.r;
+                            gc_block.words.r = Off;
+                        }
 
-                    float g59_3_offset[N_AXIS];
-                    if(gc_block.values.l == 11 && !settings_read_coord_data(CoordinateSystem_G59_3, &g59_3_offset))
-                        FAIL(Status_SettingReadFail);
+                        float g59_3_offset[N_AXIS];
+                        if(gc_block.values.l == 11 && !settings_read_coord_data(CoordinateSystem_G59_3, &g59_3_offset))
+                            FAIL(Status_SettingReadFail);
 
-                    if(gc_block.values.l == 1)
-                        settings_read_tool_data(p_value, &tool_table[p_value]);
+                        if(gc_block.values.l == 1)
+                            grbl.tool_table.read(p_value, &grbl.tool_table.tool[p_value]);
 
-                    idx = N_AXIS;
-                    do {
-                        if(bit_istrue(axis_words.mask, bit(--idx))) {
-                            if(gc_block.values.l == 1)
-                                tool_table[p_value].offset[idx] = gc_block.values.xyz[idx];
-                            else if(gc_block.values.l == 10)
-                                tool_table[p_value].offset[idx] = gc_state.position[idx] - gc_state.modal.coord_system.xyz[idx] - gc_state.g92_coord_offset[idx] - gc_block.values.xyz[idx];
-                            else if(gc_block.values.l == 11)
-                                tool_table[p_value].offset[idx] = g59_3_offset[idx] - gc_block.values.xyz[idx];
-//                            if(gc_block.values.l != 1)
-//                                tool_table[p_value].offset[idx] -= gc_state.tool_length_offset[idx];
-                        } else if(gc_block.values.l == 10 || gc_block.values.l == 11)
-                            tool_table[p_value].offset[idx] = gc_state.tool_length_offset[idx];
+                        idx = N_AXIS;
+                        do {
+                            if(bit_istrue(axis_words.mask, bit(--idx))) {
+                                if(gc_block.values.l == 1)
+                                    grbl.tool_table.tool[p_value].offset[idx] = gc_block.values.xyz[idx];
+                                else if(gc_block.values.l == 10)
+                                    grbl.tool_table.tool[p_value].offset[idx] = gc_state.position[idx] - gc_state.modal.coord_system.xyz[idx] - gc_state.g92_coord_offset[idx] - gc_block.values.xyz[idx];
+                                else if(gc_block.values.l == 11)
+                                    grbl.tool_table.tool[p_value].offset[idx] = g59_3_offset[idx] - gc_block.values.xyz[idx];
+    //                            if(gc_block.values.l != 1)
+    //                                tool_table[p_value].offset[idx] -= gc_state.tool_length_offset[idx];
+                            } else if(gc_block.values.l == 10 || gc_block.values.l == 11)
+                                grbl.tool_table.tool[p_value].offset[idx] = gc_state.tool_length_offset[idx];
 
-                        // else, keep current stored value.
-                    } while(idx);
+                            // else, keep current stored value.
+                        } while(idx);
 
-                    if(gc_block.values.l == 1)
-                        settings_write_tool_data(&tool_table[p_value]);
-
+                        if(gc_block.values.l == 1)
+                            grbl.tool_table.write(&grbl.tool_table.tool[p_value]);
+                    } else
+                        FAIL(Status_GcodeUnsupportedCommand);
                     break;
-#endif
+
                 default:
                     FAIL(Status_GcodeUnsupportedCommand); // [Unsupported L]
             }
@@ -2207,13 +2234,22 @@ status_code_t gc_execute_block (char *block)
             if (axis_words.mask && axis_command != AxisCommand_ToolLengthOffset) { // TLO block any axis command.
                 idx = N_AXIS;
                 do { // Axes indices are consistent, so loop may be used to save flash space.
-                    if (bit_isfalse(axis_words.mask, bit(--idx)))
+                    if(bit_isfalse(axis_words.mask, bit(--idx)))
                         gc_block.values.xyz[idx] = gc_state.position[idx]; // No axis word in block. Keep same axis position.
-                    else if (gc_block.non_modal_command != NonModal_AbsoluteOverride) {
+                    else if(gc_block.non_modal_command != NonModal_AbsoluteOverride) {
                         // Update specified value according to distance mode or ignore if absolute override is active.
                         // NOTE: G53 is never active with G28/30 since they are in the same modal group.
                         // Apply coordinate offsets based on distance mode.
-                        if (gc_block.modal.distance_incremental)
+#if LATHE_UVW_OPTION
+  #if N_AXIS > 3
+                        if(idx <= Z_AXIS && bit_istrue(axis_words.mask, bit(idx)) && gc_block.values.uvw[idx] != 0.0f)
+  #else
+                        if(bit_istrue(axis_words.mask, bit(idx)) && gc_block.values.uvw[idx] != 0.0f)
+  #endif
+                            gc_block.values.xyz[idx] = gc_state.position[idx] + gc_block.values.uvw[idx];
+                        else
+#endif
+                        if(gc_block.modal.distance_incremental)
                             gc_block.values.xyz[idx] += gc_state.position[idx];
                         else  // Absolute mode
                             gc_block.values.xyz[idx] += gc_get_block_offset(&gc_block, idx);
@@ -2458,7 +2494,6 @@ status_code_t gc_execute_block (char *block)
                     gc_state.canned.xyz[plane.axis_1] = 0.0f;
                     gc_state.canned.rapid_retract = On;
                     gc_state.canned.spindle_off = Off;
-                    gc_state.canned.prev_position = gc_state.position[plane.axis_linear];
                 }
 
                 if(!gc_block.words.l)
@@ -3066,12 +3101,10 @@ status_code_t gc_execute_block (char *block)
 #if NGC_EXPRESSIONS_ENABLE
             if((status_code_t)int_value != Status_Unhandled)
                 tool_set(pending_tool);
-  #if N_TOOLS
-            else if(command_words.G8 && gc_block.modal.tool_offset_mode && ToolLengthOffset_Enable) {
+            else if(grbl.tool_table.n_tools && command_words.G8 && gc_block.modal.tool_offset_mode && ToolLengthOffset_Enable) {
                 gc_state.g43_pending = gc_block.values.h;
                 command_words.G8 = Off;
             }
-  #endif
 #else
             tool_set(pending_tool);
 #endif
@@ -3164,7 +3197,7 @@ status_code_t gc_execute_block (char *block)
     // [13. Cutter radius compensation ]: G41/42 NOT SUPPORTED
     // gc_state.modal.cutter_comp = gc_block.modal.cutter_comp; // NOTE: Not needed since always disabled.
 
-    // [14. Tool length compensation ]: G43, G43.1 and G49 supported. G43 supported when N_TOOLS defined.
+    // [14. Tool length compensation ]: G43, G43.1 and G49 supported. G43 supported when grbl.tool_table.n_tools > 0.
     // NOTE: If G43 were supported, its operation wouldn't be any different from G43.1 in terms
     // of execution. The error-checking step would simply load the offset value into the correct
     // axis of the block XYZ value array.
@@ -3185,19 +3218,19 @@ status_code_t gc_execute_block (char *block)
                     tlo_changed |= gc_state.tool_length_offset[idx] != 0.0f;
                     gc_state.tool_length_offset[idx] = 0.0f;
                     break;
-#if N_TOOLS
+
                 case ToolLengthOffset_Enable: // G43
-                    if (gc_state.tool_length_offset[idx] != tool_table[gc_block.values.h].offset[idx]) {
+                    if (gc_state.tool_length_offset[idx] != grbl.tool_table.tool[gc_block.values.h].offset[idx]) {
                         tlo_changed = true;
-                        gc_state.tool_length_offset[idx] = tool_table[gc_block.values.h].offset[idx];
+                        gc_state.tool_length_offset[idx] = grbl.tool_table.tool[gc_block.values.h].offset[idx];
                     }
                     break;
 
                 case ToolLengthOffset_ApplyAdditional: // G43.2
-                    tlo_changed |= tool_table[gc_block.values.h].offset[idx] != 0.0f;
-                    gc_state.tool_length_offset[idx] += tool_table[gc_block.values.h].offset[idx];
+                    tlo_changed |= grbl.tool_table.tool[gc_block.values.h].offset[idx] != 0.0f;
+                    gc_state.tool_length_offset[idx] += grbl.tool_table.tool[gc_block.values.h].offset[idx];
                     break;
-#endif
+
                 case ToolLengthOffset_EnableDynamic: // G43.1
                     if (bit_istrue(axis_words.mask, bit(idx)) && gc_state.tool_length_offset[idx] != gc_block.values.xyz[idx]) {
                         tlo_changed = true;
@@ -3236,18 +3269,14 @@ status_code_t gc_execute_block (char *block)
     switch(gc_block.non_modal_command) {
 
         case NonModal_SetCoordinateData:
-#if N_TOOLS
             if(gc_block.values.l == 2 || gc_block.values.l == 20) {
-#endif
                 settings_write_coord_data(gc_block.values.coord_data.id, &gc_block.values.coord_data.xyz);
                 // Update system coordinate system if currently active.
                 if (gc_state.modal.coord_system.id == gc_block.values.coord_data.id) {
                     memcpy(gc_state.modal.coord_system.xyz, gc_block.values.coord_data.xyz, sizeof(gc_state.modal.coord_system.xyz));
                     system_flag_wco_change();
                 }
-#if N_TOOLS
             }
-#endif
             break;
 
         case NonModal_GoHome_0:

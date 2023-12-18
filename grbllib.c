@@ -292,6 +292,13 @@ int grbl_enter (void)
         grbl.on_execute_realtime = auto_realtime_report;
     }
 
+    if(hal.driver_cap.sd_card || hal.driver_cap.littlefs) {
+        fs_options_t fs_options = {0};
+        fs_options.lfs_hidden = hal.driver_cap.littlefs;
+        fs_options.sd_mount_on_boot = hal.driver_cap.sd_card;
+        setting_remove_elements(Setting_FSOptions, fs_options.mask);
+    }
+
     // Grbl initialization loop upon power-up or a system abort. For the latter, all processes
     // will return to this loop to be cleanly re-initialized.
     while(looping) {

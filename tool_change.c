@@ -92,17 +92,13 @@ static void reset (void)
 {
     if(next_tool) { //TODO: move to gc_xxx() function?
         // Restore previous tool if reset is during change
-#if N_TOOLS
         if(current_tool.tool_id != next_tool->tool_id) {
-            memcpy(gc_state.tool, &current_tool, sizeof(tool_data_t));
+            if(grbl.tool_table.n_tools)
+                memcpy(gc_state.tool, &current_tool, sizeof(tool_data_t));
+            else
+                memcpy(next_tool, &current_tool, sizeof(tool_data_t));
             system_add_rt_report(Report_Tool);
         }
-#else
-        if(current_tool.tool_id != next_tool->tool_id) {
-            memcpy(next_tool, &current_tool, sizeof(tool_data_t));
-            system_add_rt_report(Report_Tool);
-        }
-#endif
         gc_state.tool_pending = gc_state.tool->tool_id;
         next_tool = NULL;
     }

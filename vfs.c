@@ -101,9 +101,6 @@ static char *fs_getcwd (char *buf, size_t size)
 }
 
 static const vfs_t fs_null = {
-    .mode.directory = true,
-    .mode.hidden = true,
-    .mode.read_only = true,
     .fopen = fs_open,
     .fclose = fs_close,
     .fread = fs_read,
@@ -126,6 +123,7 @@ static const vfs_t fs_null = {
 static vfs_mount_t root = {
     .path = "/",
     .vfs = &fs_null,
+    .mode = { .directory = true, .read_only = true, .hidden = true },
     .next = NULL
 };
 static vfs_mount_t *cwdmount = &root;
@@ -342,7 +340,7 @@ vfs_dir_t *vfs_opendir (const char *path)
 
         if((add_mount = root.next)) do {
             if(add_mount != mount && !strncmp(add_mount->path, path, strlen(path))) {
-                if(!add_mount->vfs->mode.hidden && (mln = malloc(sizeof(vfs_mount_ll_entry_t)))) {
+                if(!add_mount->mode.hidden && (mln = malloc(sizeof(vfs_mount_ll_entry_t)))) {
                     mln->mount = add_mount;
                     mln->next = NULL;
                     if(dir->mounts == NULL)
@@ -376,7 +374,7 @@ vfs_dirent_t *vfs_readdir (vfs_dir_t *dir)
         if((s = strrchr(dirent.name, '/')))
             *s = '\0';
 
-        dirent.st_mode = ml->mount->vfs->mode;
+        dirent.st_mode = ml->mount->mode;
         dirent.st_mode.directory = true;
         dir->mounts = dir->mounts->next;
         free(ml);
@@ -460,20 +458,21 @@ vfs_free_t *vfs_fgetfree (const char *path)
     return NULL;
 }
 
-bool vfs_mount (const char *path, const vfs_t *fs)
+bool vfs_mount (const char *path, const vfs_t *fs, vfs_st_mode_t mode)
 {
     vfs_mount_t *vfs;
 
-    if(!strcmp(path, "/"))
+    if(!strcmp(path, "/")) {
         root.vfs = fs;
-
-    else if((vfs = (vfs_mount_t *)malloc(sizeof(vfs_mount_t)))) {
+        root.mode = mode;
+    } else if((vfs = (vfs_mount_t *)malloc(sizeof(vfs_mount_t)))) {
 
         strcpy(vfs->path, path);
         if(vfs->path[strlen(path) - 1] != '/')
             strcat(vfs->path, "/");
 
         vfs->vfs = fs;
+        vfs->mode = mode;
         vfs->next = NULL;
 
         vfs_mount_t *mount = &root;
@@ -494,10 +493,10 @@ bool vfs_unmount (const char *path)
 {
     // TODO: close open files?
 
-    if(!strcmp(path, "/"))
+    if(!strcmp(path, "/")) {
         root.vfs = &fs_null;
-
-    else {
+        root.mode = (vfs_st_mode_t){ .directory = true, .read_only = true, .hidden = true };
+    } else {
 
         vfs_mount_t *mount = get_mount(path);
         if(mount) {
@@ -527,7 +526,7 @@ vfs_drive_t *vfs_get_drive (const char *path)
     vfs_mount_t *mount = get_mount(path);
     drive.name = mount->vfs->fs_name;
     drive.path = (const char *)mount->path;
-    drive.mode = mount->vfs->mode;
+    drive.mode = mount->mode;
     drive.removable = mount->vfs->removable;
     drive.fs = mount->vfs;
 
@@ -543,7 +542,7 @@ vfs_drives_t *vfs_drives_open (void)
 
         handle->mount = NULL;
         do {
-            if(mount->vfs->mode.hidden)
+            if(mount->mode.hidden)
                 mount = mount->next;
             else
                 handle->mount = mount;
@@ -558,7 +557,7 @@ vfs_drives_t *vfs_drives_open (void)
     return handle;
 }
 
-vfs_drive_t *vfs_drives_read (vfs_drives_t *handle)
+vfs_drive_t *vfs_drives_read (vfs_drives_t *handle, bool add_hidden)
 {
     static vfs_drive_t drive;
 
@@ -568,14 +567,14 @@ vfs_drive_t *vfs_drives_read (vfs_drives_t *handle)
 
         drive.name = handle->mount->vfs->fs_name;
         drive.path = (const char *)handle->mount->path;
-        drive.mode = handle->mount->vfs->mode;
+        drive.mode = handle->mount->mode;
         drive.removable = handle->mount->vfs->removable;
         drive.fs = handle->mount->vfs;
 
         handle->mount = handle->mount->next;
 
         if(handle->mount) do {
-            if(!handle->mount->vfs->mode.hidden && handle->mount->vfs->fs_name)
+            if((!handle->mount->mode.hidden || add_hidden) && handle->mount->vfs->fs_name)
                 break;
         } while((handle->mount = handle->mount->next));
     }
