@@ -1347,6 +1347,10 @@ static const char *set_axis_setting_unit (setting_id_t setting_id, uint_fast8_t 
             unit = is_rotary ? "deg/sec^2" : "mm/sec^2";
             break;
 
+        case Setting_AxisJerk:
+            unit = is_rotary ? "deg/sec^3" : "mm/sec^3";
+            break;
+
         case Setting_AxisMaxTravel:
         case Setting_AxisBacklash:
             unit = is_rotary ? "deg" : "mm";
@@ -1454,6 +1458,10 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
         case Setting_AxisAcceleration:
             settings.axis[idx].acceleration = override_backup.acceleration[idx] = value * 60.0f * 60.0f; // Convert to mm/min^2 for grbl internal use.
             break;
+      
+        case Setting_AxisJerk:
+            settings.axis[idx].jerk = value * 60.0f * 60.0f *60.0f; // Convert to mm/min^3 for grbl internal use.
+            break;
 
         case Setting_AxisMaxTravel:
             if(settings.axis[idx].max_travel != -value) {
@@ -1516,6 +1524,10 @@ static float get_float (setting_id_t setting)
 
             case Setting_AxisAcceleration:
                 value = settings.axis[idx].acceleration / (60.0f * 60.0f); // Convert from mm/min^2 to mm/sec^2.
+                break;
+          
+            case Setting_AxisJerk:
+                value = settings.axis[idx].acceleration / (60.0f * 60.0f * 60.0f); // Convert from mm/min^3 to mm/sec^3.
                 break;
 
             case Setting_AxisMaxTravel:
