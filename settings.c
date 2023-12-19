@@ -1508,7 +1508,7 @@ static float get_float (setting_id_t setting)
 {
     float value = 0.0f;
 
-    if (setting >= Setting_AxisSettingsBase && setting <= Setting_AxisSettingsMax) {
+    if (setting >= Setting_AxisSettingsBase && setting <= Setting_AxisSettingsMax2) {
 
         uint_fast8_t idx;
 
