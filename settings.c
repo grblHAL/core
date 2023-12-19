@@ -1460,7 +1460,7 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
             break;
       
         case Setting_AxisJerk:
-            settings.axis[idx].jerk = value * 60.0f * 60.0f *60.0f; // Convert to mm/min^3 for grbl internal use.
+            settings.axis[idx].jerk = value * 60.0f * 60.0f * 60.0f; // Convert to mm/min^3 for grbl internal use.
             break;
 
         case Setting_AxisMaxTravel:
@@ -1527,7 +1527,7 @@ static float get_float (setting_id_t setting)
                 break;
           
             case Setting_AxisJerk:
-                value = settings.axis[idx].acceleration / (60.0f * 60.0f * 60.0f); // Convert from mm/min^3 to mm/sec^3.
+                value = settings.axis[idx].jerk / (60.0f * 60.0f * 60.0f); // Convert from mm/min^3 to mm/sec^3.
                 break;
 
             case Setting_AxisMaxTravel:
