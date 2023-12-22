@@ -631,6 +631,7 @@ void spindle_all_off (void)
 {
     spindle_ptrs_t *spindle;
     uint_fast8_t spindle_num = N_SYS_SPINDLE;
+
     do {
         if((spindle = spindle_get(--spindle_num))) {
             spindle->param->rpm = spindle->param->rpm_overridden = 0.0f;
@@ -642,6 +643,8 @@ void spindle_all_off (void)
 #endif
         }
     } while(spindle_num);
+
+    system_add_rt_report(Report_Spindle);
 }
 
 /*! \brief Check if any of the enabled spindles is running.
