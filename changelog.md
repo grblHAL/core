@@ -1,5 +1,25 @@
 ## grblHAL changelog
 
+<a name="20231222"/>Build 20231222
+
+Core:
+
+* Some minor fixes and changes.
+
+Drivers:
+
+* STM32F1xx: made timer assignments more flexible. Added support for PWM out on PB9. Ref. [core discussion 62](https://github.com/grblHAL/core/discussions/62).
+
+* STM32F4xx: fixed typos in SPI interface code for SPI3.
+
+Plugins:
+
+* Spindle: updated and verified code for second PWM spindle on top of aux outputs. Requires one PWM capable analog output and at least one digital.
+
+* Embroidery: no longer starts spindle if sync mode is disabled.
+
+---
+
 <a name="20231218"/>Build 20231218
 
 Core:

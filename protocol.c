@@ -35,7 +35,7 @@
 #include "machine_limits.h"
 
 #ifndef RT_QUEUE_SIZE
-#define RT_QUEUE_SIZE 8 // must be a power of 2
+#define RT_QUEUE_SIZE 16 // must be a power of 2
 #endif
 
 // Define line flags. Includes comment type tracking and line overflow detection.

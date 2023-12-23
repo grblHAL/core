@@ -1464,94 +1464,101 @@ static void report_settings_detail (settings_format_t format, const setting_deta
     switch(format)
     {
         case SettingsFormat_HumanReadable:
-            hal.stream.write(ASCII_EOL "$");
-            hal.stream.write(uitoa(setting->id + offset));
-            hal.stream.write(": ");
-            if(setting->group == Group_Axis0)
-                hal.stream.write(axis_letter[offset]);
-            write_name(setting->name, suboffset);
+            {
+                bool reboot_newline = false;
 
-            switch(setting_datatype_to_external(setting->datatype)) {
+                hal.stream.write(ASCII_EOL "$");
+                hal.stream.write(uitoa(setting->id + offset));
+                hal.stream.write(": ");
+                if(setting->group == Group_Axis0)
+                    hal.stream.write(axis_letter[offset]);
+                write_name(setting->name, suboffset);
 
-                case Format_AxisMask:
-                    hal.stream.write(" as axismask");
-                    break;
+                switch(setting_datatype_to_external(setting->datatype)) {
 
-                case Format_Bool:
-                    hal.stream.write(" as boolean");
-                    break;
+                    case Format_AxisMask:
+                        hal.stream.write(" as axismask");
+                        break;
 
-                case Format_Bitfield:
-                    hal.stream.write(" as bitfield:");
-                    report_bitfield(setting->format, true);
-                    break;
+                    case Format_Bool:
+                        hal.stream.write(" as boolean");
+                        break;
 
-                case Format_XBitfield:
-                    hal.stream.write(" as bitfield where setting bit 0 enables the rest:");
-                    report_bitfield(setting->format, true);
-                    break;
+                    case Format_Bitfield:
+                        hal.stream.write(" as bitfield:");
+                        report_bitfield(setting->format, true);
+                        reboot_newline = true;
+                        break;
 
-                case Format_RadioButtons:
-                    hal.stream.write(":");
-                    report_bitfield(setting->format, false);
-                    break;
+                    case Format_XBitfield:
+                        hal.stream.write(" as bitfield where setting bit 0 enables the rest:");
+                        report_bitfield(setting->format, true);
+                        reboot_newline = true;
+                        break;
 
-                case Format_IPv4:
-                    hal.stream.write(" as IP address");
-                    break;
+                    case Format_RadioButtons:
+                        hal.stream.write(":");
+                        report_bitfield(setting->format, false);
+                        reboot_newline = true;
+                        break;
 
-                default:
-                    if(setting->unit) {
-                        hal.stream.write(" in ");
-                        hal.stream.write(setting->unit);
-                    }
-                    break;
-            }
+                    case Format_IPv4:
+                        hal.stream.write(" as IP address");
+                        break;
 
-            if(setting->min_value && setting->max_value) {
-                hal.stream.write(", range: ");
-                hal.stream.write(setting->min_value);
-                hal.stream.write(" - ");
-                hal.stream.write(setting->max_value);
-            } else if(!setting_is_list(setting)) {
-                if(setting->min_value) {
-                    hal.stream.write(", min: ");
+                    default:
+                        if(setting->unit) {
+                            hal.stream.write(" in ");
+                            hal.stream.write(setting->unit);
+                        }
+                        break;
+                }
+
+                if(setting->min_value && setting->max_value) {
+                    hal.stream.write(", range: ");
                     hal.stream.write(setting->min_value);
-                }
-                if(setting->max_value) {
-                    hal.stream.write(", max: ");
+                    hal.stream.write(" - ");
                     hal.stream.write(setting->max_value);
+                } else if(!setting_is_list(setting)) {
+                    if(setting->min_value) {
+                        hal.stream.write(", min: ");
+                        hal.stream.write(setting->min_value);
+                    }
+                    if(setting->max_value) {
+                        hal.stream.write(", max: ");
+                        hal.stream.write(setting->max_value);
+                    }
                 }
-            }
 
-            if(setting->flags.reboot_required)
-                hal.stream.write(", reboot required");
+                if(setting->flags.reboot_required)
+                    hal.stream.write(reboot_newline ? ASCII_EOL ASCII_EOL "Reboot required." : ", reboot required");
 
 #ifndef NO_SETTINGS_DESCRIPTIONS
-            // Add description if driver is capable of outputting it...
-            if(hal.stream.write_n) {
-                const char *description = setting_get_description((setting_id_t)(setting->id + offset));
-                if(description && *description != '\0') {
-                    char *lf;
-                    hal.stream.write(ASCII_EOL);
-                    if((lf = strstr(description, "\\n"))) while(lf) {
+                // Add description if driver is capable of outputting it...
+                if(hal.stream.write_n) {
+                    const char *description = setting_get_description((setting_id_t)(setting->id + offset));
+                    if(description && *description != '\0') {
+                        char *lf;
                         hal.stream.write(ASCII_EOL);
-                        hal.stream.write_n(description, lf - description);
-                        description = lf + 2;
-                        lf = strstr(description, "\\n");
+                        if((lf = strstr(description, "\\n"))) while(lf) {
+                            hal.stream.write(ASCII_EOL);
+                            hal.stream.write_n(description, lf - description);
+                            description = lf + 2;
+                            lf = strstr(description, "\\n");
+                        }
+                        if(*description != '\0') {
+                            hal.stream.write(ASCII_EOL);
+                            hal.stream.write(description);
+                        }
                     }
-                    if(*description != '\0') {
-                        hal.stream.write(ASCII_EOL);
-                        hal.stream.write(description);
+                    if(setting->flags.reboot_required) {
+                        if(description && *description != '\0')
+                            hal.stream.write(ASCII_EOL ASCII_EOL);
+                        hal.stream.write(SETTINGS_HARD_RESET_REQUIRED + 4);
                     }
                 }
-                if(setting->flags.reboot_required) {
-                    if(description && *description != '\0')
-                        hal.stream.write(ASCII_EOL ASCII_EOL);
-                    hal.stream.write(SETTINGS_HARD_RESET_REQUIRED + 4);
-                }
-            }
 #endif
+            }
             break;
 
         case SettingsFormat_MachineReadable:
