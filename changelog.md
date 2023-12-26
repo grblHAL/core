@@ -1,5 +1,31 @@
 ## grblHAL changelog
 
+<a name="20231226"/>20231226
+
+Core:
+
+* Added setting and data field for network interface MAC address \(for WizNet interfaces, not used by the core\).
+
+Drivers:
+
+* ESP32: refactored UART driver code to use framework provided low-level calls instead of direct MCU register access.
+
+* RP2040: placed some WizNet interface code in RAM to improve performance.
+
+* STM32F4xx: removed stray debug code.  
+Changed pin allocation for WizNet ethernet over SPI for BTT SKR 2.0 board.
+Ref. core [discussion #415](https://github.com/grblHAL/core/discussions/415#).
+
+Plugins:
+
+* Networking: improved WizNet interrupt handling.   
+Added new optional setting, `$535`, for configuring WizNet interface MAC address.
+This _must_ be set to all but one when more than one WizNet controller is added to the network.  
+Tip: grab a MAC address from an unused device such as a router.  
+__NOTE:__ Network settings for controllers having a WizNet interface will be reset to default on upgrade.
+
+---
+
 <a name="20231222"/>Build 20231222
 
 Core:
@@ -282,7 +308,7 @@ Plugins:
 
 * Laser: LaserBurn clusters plugin updated for [new format variation encountered](https://github.com/grblHAL/ESP32/issues/77#issuecomment-1707125447).
 
---
+---
 
 <a name="20230905"/>Build 20230905
 

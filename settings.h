@@ -365,6 +365,7 @@ typedef enum {
     Setting_MQTTBrokerPassword  = 533,
 
     Setting_NGCDebugOut = 534,
+    Setting_NetworkMAC  = 535,
 
     Setting_Panel_SpindleSpeed       = 540,  // NOTE: Reserving settings values 540 to 579 for panel settings.
     Setting_Panel_ModbusAddress      = 541,
