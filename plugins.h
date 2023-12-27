@@ -92,6 +92,9 @@ typedef struct {
 #if MQTT_ENABLE
     mqtt_settings_t mqtt;
 #endif
+#ifdef _WIZCHIP_
+    uint8_t mac[6];
+#endif
 } network_settings_t;
 
 typedef enum {
