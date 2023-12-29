@@ -380,8 +380,8 @@ typedef struct {
     float ijk[3];              //!< I,J,K Axis arc offsets
     float k;                   //!< G33 distance per revolution
     float m;                   //!< G65 argument.
-    float p;                   //!< G10 or dwell parameters
-    float q;                   //!< User defined M-code parameter, M67 output value, G83 delta increment
+    float p;                   //!< G10, 664 or dwell parameters
+    float q;                   //!< User defined M-code parameter, M67 output value, G64 naive CAM tolerance, G83 delta increment
     float r;                   //!< Arc radius or retract position
     float s;                   //!< Spindle speed - single-meaning word
     float xyz[N_AXIS];         //!< X,Y,Z (and A,B,C,U,V when enabled) translational axes
@@ -462,7 +462,9 @@ typedef struct {
     //< uint8_t cutter_comp;             //!< {G40} NOTE: Don't track. Only default supported.
     tool_offset_mode_t tool_offset_mode; //!< {G43,G43.1,G49}
     coord_system_t coord_system;         //!< {G54,G55,G56,G57,G58,G59,G59.1,G59.2,G59.3}
-    // control_mode_t control;           //!< {G61} NOTE: Don't track. Only default supported.
+#if ENABLE_PATH_BLENDING
+    control_mode_t control;              //!< {G61} NOTE: Don't track. Only default supported.
+#endif
     program_flow_t program_flow;         //!< {M0,M1,M2,M30,M60}
     coolant_state_t coolant;             //!< {M7,M8,M9}
     spindle_mode_t spindle;              //!< {M3,M4,M5 and G96,G97}
@@ -532,7 +534,10 @@ typedef struct {
     float feed_rate;                    //!< Millimeters/min
     float distance_per_rev;             //!< Millimeters/rev
     float position[N_AXIS];             //!< Where the interpreter considers the tool to be at this point in the code
-    //  float blending_tolerance;       //!< Motion blending tolerance
+#if ENABLE_PATH_BLENDING
+    float path_tolerance;               //!< Path blending tolerance
+    float cam_tolerance;                //!< Naive CAM tolerance
+#endif
     int32_t line_number;                //!< Last line number sent
     tool_id_t tool_pending;             //!< Tool to be selected on next M6
 #if NGC_EXPRESSIONS_ENABLE

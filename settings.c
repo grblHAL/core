@@ -42,6 +42,8 @@
 
 settings_t settings;
 
+static const control_signals_t limits_override = { .limits_override = On };
+
 const settings_restore_t settings_all = {
     .defaults          = SETTINGS_RESTORE_DEFAULTS,
     .parameters        = SETTINGS_RESTORE_PARAMETERS,
@@ -968,7 +970,7 @@ static status_code_t set_ngc_debug_out (setting_id_t id, uint_fast16_t int_value
 
 static status_code_t set_control_invert (setting_id_t id, uint_fast16_t int_value)
 {
-    settings.control_invert.mask = int_value & hal.signals_cap.mask;
+    settings.control_invert.mask = (int_value & hal.signals_cap.mask) | limits_override.mask;
 
     return Status_OK;
 }
@@ -1584,7 +1586,7 @@ static uint32_t get_int (setting_id_t id)
             break;
 
         case Setting_ControlInvertMask:
-            value = settings.control_invert.mask & hal.signals_cap.mask;
+            value = (settings.control_invert.mask & hal.signals_cap.mask) & ~limits_override.mask;
             break;
 
         case Setting_SpindleInvertMask:
@@ -2140,6 +2142,8 @@ bool read_global_settings ()
         settings.steppers.enable_invert.mask = AXES_BITMASK;
 #endif
 
+    settings.control_invert.mask |= limits_override.mask;
+
     return ok && settings.version == SETTINGS_VERSION;
 }
 
@@ -2172,7 +2176,7 @@ void settings_restore (settings_restore_t restore)
 
         memcpy(&settings, &defaults, sizeof(settings_t));
 
-        settings.control_invert.mask &= hal.signals_cap.mask;
+        settings.control_invert.mask = (settings.control_invert.mask & hal.signals_cap.mask) | limits_override.mask;
         settings.spindle.invert.ccw &= spindle_get_caps(false).direction;
         settings.spindle.invert.pwm &= spindle_get_caps(false).pwm_invert;
 #if ENABLE_BACKLASH_COMPENSATION

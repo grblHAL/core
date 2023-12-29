@@ -175,7 +175,7 @@ inline static char *axis_signals_tostring (char *buf, axes_signals_t signals)
 
 // Convert control signals bits to string representation.
 // NOTE: returns pointer to null terminator!
-inline static char *control_signals_tostring (char *buf, control_signals_t signals)
+inline static char *control_signals_tostring (char *buf, control_signals_t signals, bool all)
 {
     static const char signals_map[] = "RHSDLTE FM    P ";
 
@@ -200,7 +200,7 @@ inline static char *control_signals_tostring (char *buf, control_signals_t signa
                     break;
 
                 case 'L':
-                    if(sys.flags.block_delete_enabled)
+                    if(all || sys.flags.block_delete_enabled)
                         *buf++ = *map;
                     break;
 
@@ -976,6 +976,11 @@ void report_build_info (char *line, bool extended)
         grbl.on_report_options(true);
         hal.stream.write("]" ASCII_EOL);
 
+        hal.stream.write("[SIGNALS:");
+        control_signals_tostring(buf, hal.signals_cap, true);
+        hal.stream.write(buf);
+        hal.stream.write("]" ASCII_EOL);
+
         hal.stream.write("[FIRMWARE:grblHAL]" ASCII_EOL);
 
         if(!(nvs->type == NVS_None || nvs->type == NVS_Emulated)) {
@@ -1232,7 +1237,7 @@ void report_realtime_status (void)
                 append = axis_signals_tostring(append, lim_pin_state);
 
             if(ctrl_pin_state.value)
-                append = control_signals_tostring(append, ctrl_pin_state);
+                append = control_signals_tostring(append, ctrl_pin_state, false);
 
             *append = '\0';
             hal.stream.write_all(buf);
@@ -2074,7 +2079,7 @@ status_code_t report_last_signals_event (sys_state_t state, char *args)
 
     strcpy(buf, "[LASTEVENTS:");
 
-    append = control_signals_tostring(append, sys.last_event.control);
+    append = control_signals_tostring(append, sys.last_event.control, false);
     *append++ = ',';
     append = add_limits(append, sys.last_event.limits);
 
@@ -2141,19 +2146,6 @@ status_code_t report_spindle_data (sys_state_t state, char *args)
     return spindle->get_data ? Status_OK : Status_InvalidStatement;
 }
 
-static const char *get_pinname (pin_function_t function)
-{
-    const char *name = NULL;
-    uint_fast8_t idx = sizeof(pin_names) / sizeof(pin_name_t);
-
-    do {
-        if(pin_names[--idx].function == function)
-            name = pin_names[idx].name;
-    } while(idx && !name);
-
-    return name ? name : "N/A";
-}
-
 static void report_pin (xbar_t *pin, void *data)
 {
     hal.stream.write("[PIN:");
@@ -2161,7 +2153,7 @@ static void report_pin (xbar_t *pin, void *data)
         hal.stream.write((char *)pin->port);
     hal.stream.write(uitoa(pin->pin));
     hal.stream.write(",");
-    hal.stream.write(get_pinname(pin->function));
+    hal.stream.write(xbar_fn_to_pinname(pin->function));
     if(pin->description) {
         hal.stream.write(",");
         hal.stream.write(pin->description);
