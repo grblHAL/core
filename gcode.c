@@ -1084,12 +1084,7 @@ status_code_t gc_execute_block (char *block)
                         }
                         break;
 
-                    case 61:
-                        word_bit.modal_group.G13 = On;
-                        if (mantissa != 0) // [G61.1 not supported]
-                            FAIL(Status_GcodeUnsupportedCommand);
-                        break;
-/*
+#if ENABLE_PATH_BLENDING
                     case 61:
                         word_bit.modal_group.G13 = On;
                         if (mantissa != 0 || mantissa != 10)
@@ -1101,7 +1096,13 @@ status_code_t gc_execute_block (char *block)
                         word_bit.modal_group.G13 = On;
                         gc_block.modal.control = ControlMode_PathBlending; // G64
                         break;
-*/
+#else
+                    case 61:
+                        word_bit.modal_group.G13 = On;
+                        if (mantissa != 0) // [G61.1 not supported]
+                            FAIL(Status_GcodeUnsupportedCommand);
+                        break;
+#endif
 
                     case 65: // NOTE: Mach 3/4 GCode
                         word_bit.modal_group.G0 = On;
@@ -2081,14 +2082,17 @@ status_code_t gc_execute_block (char *block)
     }
 
     // [16. Set path control mode ]: N/A. Only G61. G61.1 and G64 NOT SUPPORTED.
-/*
-    if (command_words.G13) { // Check if called in block
+#if ENABLE_PATH_BLENDING
+    if(command_words.G13) { // Check if called in block
         if(gc_block.modal.control == ControlMode_PathBlending) {
-            gc_state.blending_tolerance = gc_block.words.p ? gc_block.values.p : 0.0f;
-            gc_block.words.p = Off;
-        }
+            gc_state.path_tolerance = gc_block.words.p ? gc_block.values.p : 0.0f;
+            gc_state.cam_tolerance = gc_block.words.q ? gc_block.values.q : 0.0f;
+            gc_block.words.p = gc_block.words.q = Off;
+        } else
+            gc_state.path_tolerance = gc_state.cam_tolerance = 0.0f;
     }
-*/
+#endif
+
     // [17. Set distance mode ]: N/A. Only G91.1. G90.1 NOT SUPPORTED.
     // [18. Set retract mode ]: N/A.
 
@@ -2159,7 +2163,10 @@ status_code_t gc_execute_block (char *block)
                     } while(idx);
                     break;
 
-                case 1: case 10: case 11:
+                case 1: case 10:
+#if COMPATIBILITY_LEVEL <= 1
+                case 11:
+#endif
                     if(grbl.tool_table.n_tools) {
                         if(p_value == 0 || p_value > grbl.tool_table.n_tools)
                            FAIL(Status_GcodeIllegalToolTableEntry); // [Greater than max allowed tool number]
@@ -2172,8 +2179,10 @@ status_code_t gc_execute_block (char *block)
                         }
 
                         float g59_3_offset[N_AXIS];
+#if COMPATIBILITY_LEVEL <= 1
                         if(gc_block.values.l == 11 && !settings_read_coord_data(CoordinateSystem_G59_3, &g59_3_offset))
                             FAIL(Status_SettingReadFail);
+#endif
 
                         if(gc_block.values.l == 1)
                             grbl.tool_table.read(p_value, &grbl.tool_table.tool[p_value]);
@@ -3258,6 +3267,9 @@ status_code_t gc_execute_block (char *block)
 
     // [16. Set path control mode ]: G61.1/G64 NOT SUPPORTED
     // gc_state.modal.control = gc_block.modal.control; // NOTE: Always default.
+#if ENABLE_PATH_BLENDING
+    gc_state.modal.control = gc_block.modal.control;
+#endif
 
     // [17. Set distance mode ]:
     gc_state.modal.distance_incremental = gc_block.modal.distance_incremental;
@@ -3349,9 +3361,13 @@ status_code_t gc_execute_block (char *block)
     gc_state.modal.motion = gc_block.modal.motion;
     gc_state.modal.canned_cycle_active = gc_block.modal.canned_cycle_active;
 
-    if (gc_state.modal.motion != MotionMode_None && axis_command == AxisCommand_MotionMode) {
+    if(gc_state.modal.motion != MotionMode_None && axis_command == AxisCommand_MotionMode) {
 
         plan_data.output_commands = output_commands;
+#if ENABLE_PATH_BLENDING
+        plan_data.cam_tolerance = gc_state.cam_tolerance;
+        plan_data.path_tolerance = gc_state.path_tolerance;
+#endif
         output_commands = NULL;
 
         pos_update_t gc_update_pos = GCUpdatePos_Target;

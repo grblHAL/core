@@ -379,8 +379,31 @@
 #endif
 #endif
 
+// Optional control signals
+
 #ifndef SAFETY_DOOR_ENABLE
 #define SAFETY_DOOR_ENABLE  0
+#endif
+#ifndef PROBE_DISCONNECT_ENABLE
+#define PROBE_DISCONNECT_ENABLE 0
+#endif
+#ifndef STOP_DISABLE_ENABLE
+#define STOP_DISABLE_ENABLE 0
+#endif
+#ifndef BLOCK_DELETE_ENABLE
+#define BLOCK_DELETE_ENABLE 0
+#endif
+#ifndef SINGLE_BLOCK_ENABLE
+#define SINGLE_BLOCK_ENABLE 0
+#endif
+#ifndef MOTOR_FAULT_ENABLE
+#define MOTOR_FAULT_ENABLE 0
+#endif
+#ifndef MOTOR_WARNING_ENABLE
+#define MOTOR_WARNING_ENABLE 0
+#endif
+#ifndef LIMITS_OVERRIDE_ENABLE
+#define LIMITS_OVERRIDE_ENABLE 0
 #endif
 
 #if SAFETY_DOOR_ENABLE && defined(NO_SAFETY_DOOR_SUPPORT)
@@ -396,6 +419,8 @@
 #elif ESTOP_ENABLE && COMPATIBILITY_LEVEL > 1
   #warning "Enabling ESTOP may not work with all senders!"
 #endif
+
+//
 
 #ifndef WIFI_ENABLE
 #define WIFI_ENABLE         0

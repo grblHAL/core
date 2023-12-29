@@ -127,3 +127,16 @@ limit_signals_t xbar_get_homing_source_from_cycle (axes_signals_t homing_cycle)
 
     return source;
 }
+
+const char *xbar_fn_to_pinname (pin_function_t fn)
+{
+    const char *name = NULL;
+    uint_fast8_t idx = sizeof(pin_names) / sizeof(pin_name_t);
+
+    do {
+        if(pin_names[--idx].function == fn)
+            name = pin_names[idx].name;
+    } while(idx && !name);
+
+    return name ? name : "N/A";
+}

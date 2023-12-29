@@ -177,8 +177,19 @@ the speed is not limited to 115200 baud. An example is native USB streaming.
 #define CHECK_MODE_DELAY 0 // ms
 #endif
 
+/*! \def DEBOUNCE_DELAY
+\brief
+When > 0 adds a short delay when an input changes state to avoid switch bounce
+or EMI triggering the related interrupt falsely or too many times.
+*/
+#if !defined DEBOUNCE_DELAY || defined __DOXYGEN__
+#define DEBOUNCE_DELAY 40 // ms
+#endif
+
 // ---------------------------------------------------------------------------------------
 // ADVANCED CONFIGURATION OPTIONS:
+
+#define ENABLE_PATH_BLENDING Off // Do NOT enable unless working on adding this feature!
 
 // Enables code for debugging purposes. Not for general use and always in constant flux.
 //#define DEBUG // Uncomment to enable. Default disabled.

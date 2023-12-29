@@ -1,5 +1,34 @@
 ## grblHAL changelog
 
+<a name="20231229"/>Build 20231229
+
+Core:
+
+* Fixed regression that prevented builds with compatibiliy level set > 1.
+
+* Added `[SIGNALS:xxx]` element to the `$I` output, `xxx` uses the same letters as the `Pn:`
+element in the [real time report](https://github.com/grblHAL/core/wiki/Report-extensions#realtime-report) and list all available from the controller except limits inputs.
+
+Drivers:
+
+* Most: added new configuration options in _my_machine.h_ for assigning optional signals to aux input ports. These are:
+1. `SAFETY_DOOR_ENABLE` - bound to aux port in the map file for backwards comaptibility.
+2. `MOTOR_FAULT_ENABLE` - bound to aux port in the map file since a single MCU input might be routed to several external inputs.
+3. `MOTOR_WARNING_ENABLE` - bound to aux port in the map file since a single MCU input might be routed to several external inputs.
+4. `PROBE_DISCONNECT_ENABLE` - assigned from unused ports.
+5. `STOP_DISABLE_ENABLE` - assigned from unused ports.
+6. `BLOCK_DELETE_ENABLE` - assigned from unused ports.
+7. `SINGLE_BLOCK_ENABLE` - assigned from unused ports.
+8. `LIMITS_OVERRIDE_ENABLE` - assigned from unused ports. Always active low.
+
+If too many inputs are enabled assignment will fail silently for those who cannot be bound.  
+__NOTE:__ core functionality for some of these inputs might change after user input!  
+Tip: use the `$pins` command to output the mapping.
+
+* ESP32: moved board maps and board specific code to separate folder.
+
+---
+
 <a name="20231226"/>20231226
 
 Core:
