@@ -759,7 +759,11 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { (setting_id_t)(Setting_AxisStepsPerMM + 1), "Travel resolution in steps per degree." }, // "Hack" to get correct description for rotary axes
     { Setting_AxisMaxRate, "Maximum rate. Used as G0 rapid rate." },
     { Setting_AxisAcceleration, "Acceleration. Used for motion planning to not exceed motor torque and lose steps." },
-    { Setting_AxisJerk, "Maximum rate of acceleration change - smoothes out acceleration profile up to max axis acceleration."},
+    { Setting_AxisJerk, "Maximum rate of acceleration change - smoothes out acceleration profile up to max axis acceleration.\\n\\n"
+                        "Minimum value of x10 Acceleration setting to ensure decent acceleration times.\\n"
+                        "Maximum is calcualted by current acceleration and stepper segment time.\\n"
+                        "At Maximum value motion is effectively trapezoidal instead of constant jerk.\\n\\n"
+                        "Can be increased by adjusting ACCELERATION_TICKS_PER_SECOND to a larger value before compiling."},
     { Setting_AxisMaxTravel, "Maximum axis travel distance from homing switch. Determines valid machine space for soft-limits and homing search distances." },
 #if ENABLE_BACKLASH_COMPENSATION
     { Setting_AxisBacklash, "Backlash distance to compensate for." },
@@ -1459,10 +1463,16 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
 
         case Setting_AxisAcceleration:
             settings.axis[idx].acceleration = override_backup.acceleration[idx] = value * 60.0f * 60.0f; // Convert to mm/min^2 for grbl internal use.
+            settings.axis[idx].jerk = (settings.axis[idx].acceleration * 10.0f * 60.0f);  //reset jerk to axis minimum.
             break;
       
         case Setting_AxisJerk:
-            settings.axis[idx].jerk = value * 60.0f * 60.0f * 60.0f; // Convert to mm/min^3 for grbl internal use.
+            if ((value * 60.0f * 60.0f) < (settings.axis[idx].acceleration * 10.0f)) //ensuring that the acceleration time is limited to at maximum 100ms (or 10 stepper segments).
+                settings.axis[idx].jerk = settings.axis[idx].acceleration * 10.0f * 60.0f; // mm/min^2 -> mm/min^3
+            else if ((settings.axis[idx].acceleration / (value * 60.0f * 60.0f * 60.0f)) < (1.0f / ACCELERATION_TICKS_PER_SECOND)) // Limit Jerk if Value is so large that it reverts back to trapezoidal.
+                settings.axis[idx].jerk = settings.axis[idx].acceleration * ACCELERATION_TICKS_PER_SECOND * 60.0f; // mm/min^2 -> mm/min^3
+            else
+                settings.axis[idx].jerk = value * 60.0f * 60.0f * 60.0f; // Convert to mm/min^3 for grbl internal use.
             break;
 
         case Setting_AxisMaxTravel:
