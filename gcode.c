@@ -2242,12 +2242,12 @@ status_code_t gc_execute_block (char *block)
             break;
 
         case NonModal_SetAccelerationProfile:
-            if (!gc_block.values.p)
-                gc_block.values.p = 1.0f;
-            else if (gc_block.values.p < 1.0f)
-                FAIL(Status_NegativeValue);
-            else if (gc_block.values.p > 5.0f)
-                FAIL(Status_GcodeValueOutOfRange);
+            if (!gc_block.values.p){
+                gc_block.values.p = 1.0f;}
+            else if (gc_block.values.p < 1.0f){
+                FAIL(Status_NegativeValue);}
+            else if (gc_block.values.p > 5.0f){
+                FAIL(Status_GcodeValueOutOfRange);}
             uint8_t idx = N_AXIS;
             do {
                 idx--;

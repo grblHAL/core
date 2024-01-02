@@ -871,7 +871,7 @@ bool settings_override_acceleration (uint8_t axis, float acceleration, float jer
     } else {
         if(!override_backup.valid)
             save_override_backup();
-        settings.axis[axis].acceleration = (override_backup.acceleration[axis] >= (acceleration * 60.0f * 60.0f)) ? (acceleration * 60.0f * 60.0f) : override_backup.aceceleration[axis]; // Limited to max setting value
+        settings.axis[axis].acceleration = (override_backup.acceleration[axis] >= (acceleration * 60.0f * 60.0f)) ? (acceleration * 60.0f * 60.0f) : override_backup.acceleration[axis]; // Limited to max setting value
     }
     if(jerk <= 0.0f) {
         if(override_backup.valid)
