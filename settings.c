@@ -829,6 +829,7 @@ static setting_details_t setting_details = {
 static struct {
     bool valid;
     float acceleration[N_AXIS];
+    float jerk[N_AXIS];
 } override_backup = { .valid = false };
 
 static void save_override_backup (void)
@@ -838,6 +839,7 @@ static void save_override_backup (void)
     do {
         idx--;
         override_backup.acceleration[idx] = settings.axis[idx].acceleration;
+        override_backup.jerk[idx] = settings.axis[idx].jerk;
     } while(idx);
 
     override_backup.valid = true;
@@ -850,12 +852,13 @@ static void restore_override_backup (void)
     if(override_backup.valid) do {
         idx--;
         settings.axis[idx].acceleration = override_backup.acceleration[idx];
+        settings.axis[idx].jerk = override_backup.jerk[idx];
     } while(idx);
 }
 
 // Temporarily override acceleration, if 0 restore to setting value.
 // Note: only allowed when current state is idle.
-bool settings_override_acceleration (uint8_t axis, float acceleration)
+bool settings_override_acceleration (uint8_t axis, float acceleration, float jerk)
 {
     sys_state_t state = state_get();
 
@@ -868,10 +871,30 @@ bool settings_override_acceleration (uint8_t axis, float acceleration)
     } else {
         if(!override_backup.valid)
             save_override_backup();
-        settings.axis[axis].acceleration = acceleration * 60.0f * 60.0f; // Limit max to setting value?
+        settings.axis[axis].acceleration = (override_backup.acceleration[axis] >= (acceleration * 60.0f * 60.0f)) ? (acceleration * 60.0f * 60.0f) : override_backup.aceceleration[axis]; // Limited to max setting value
     }
-
+    if(jerk <= 0.0f) {
+        if(override_backup.valid)
+            settings.axis[axis].jerk = override_backup.jerk[axis];
+    } else {
+        if(!override_backup.valid)
+            save_override_backup();
+        settings.axis[axis].jerk = (override_backup.jerk[axis] >= (jerk * 60.0f * 60.0f * 60.0f)) ? (jerk * 60.0f * 60.0f * 60.0f) : override_backup.jerk[axis]; // Limited to max setting value
+    }
     return true;
+}
+
+//Acceleration Profiles for G187 P[x] in percent of maximum machine acceleration.
+float AccelerationProfile(uint8_t Profile) {
+    static const float lookup[5] = { 
+        1.0f,   // 100% - Roughing - Max Acceleration Default
+        0.8f,   // 80% - Semi Roughing
+        0.6f,   // 60% - Semi Finish
+        0.4f,   // 40% - Finish
+        0.2f,   // 20% - Slow AF Mode
+    };
+    Profile = lookup[Profile];
+    return Profile;
 }
 
 // ---

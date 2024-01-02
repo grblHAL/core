@@ -56,7 +56,8 @@ typedef enum {
     NonModal_SetCoordinateOffset = 92,      //!< 92 - G92
     NonModal_ResetCoordinateOffset = 102,   //!< 102 - G92.1
     NonModal_ClearCoordinateOffset = 112,   //!< 112 - G92.2
-    NonModal_RestoreCoordinateOffset = 122  //!< 122 - G92.3
+    NonModal_RestoreCoordinateOffset = 122, //!< 122 - G92.3
+    NonModal_SetAccelerationProfile = 187   //!< 187 - G187 
 } non_modal_t;
 
 /*! Modal Group G1: Motion modes
