@@ -2242,16 +2242,19 @@ status_code_t gc_execute_block (char *block)
             break;
 
         case NonModal_SetAccelerationProfile:
-            uint_fast8_t idx = N_AXIS;
             if (!gc_block.values.p)
                 gc_block.values.p = 1.0f;
             else if (gc_block.values.p < 1.0f)
                 FAIL(Status_NegativeValue);
+            else if (gc_block.values.p > 5.0f)
+                FAIL(Status_GcodeValueOutOfRange);
+            uint8_t idx = N_AXIS;
             do {
                 idx--;
-                settings_override_acceleration(idx, (settings.axis[idx].acceleration * AccelerationProfile[gc_block.values.p]), (settings.axis[idx].jerk * AccelerationProfile[gc_block.values.p]));
+                settings_override_acceleration(idx, (settings.axis[idx].acceleration * AccelerationProfile(gc_block.values.p)), (settings.axis[idx].jerk * AccelerationProfile(gc_block.values.p)));
             } while(idx);
             break;
+            
         default:
 
             // At this point, the rest of the explicit axis commands treat the axis values as the traditional
