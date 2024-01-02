@@ -2251,10 +2251,10 @@ status_code_t gc_execute_block (char *block)
             uint8_t idx = N_AXIS;
             do {
                 idx--;
-                settings_override_acceleration(idx, (settings.axis[idx].acceleration * AccelerationProfile(gc_block.values.p)), (settings.axis[idx].jerk * AccelerationProfile(gc_block.values.p)));
+                settings_override_acceleration(idx, ((settings.axis[idx].acceleration / (60.0f * 60.0f)) * AccelerationProfile(gc_block.values.p)), ((settings.axis[idx].jerk / (60.0f * 60.0f * 60.0f)) * AccelerationProfile(gc_block.values.p)));
             } while(idx);
             break;
-            
+
         default:
 
             // At this point, the rest of the explicit axis commands treat the axis values as the traditional
