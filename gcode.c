@@ -2242,7 +2242,8 @@ status_code_t gc_execute_block (char *block)
                     gc_block.values.xyz[idx] = gc_state.g92_coord_offset[idx];
             } while(idx);
             break;
-
+            
+#if ENABLE_ACCELERATION_PROFILES
         case NonModal_SetAccelerationProfile:
             if (!gc_block.values.p){
                 gc_block.values.p = 1.0f;}
@@ -2256,7 +2257,7 @@ status_code_t gc_execute_block (char *block)
                 settings_override_acceleration(idx, ((settings.axis[idx].acceleration / (60.0f * 60.0f)) * AccelerationProfile(gc_block.values.p)), ((settings.axis[idx].jerk / (60.0f * 60.0f * 60.0f)) * AccelerationProfile(gc_block.values.p)));
             } while(idx);
             break;
-
+#endif
         default:
 
             // At this point, the rest of the explicit axis commands treat the axis values as the traditional
