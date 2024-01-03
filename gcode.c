@@ -1130,12 +1130,14 @@ status_code_t gc_execute_block (char *block)
                         gc_block.modal.scaling_active = int_value == 51;
                         break;
 
+#if ENABLE_ACCELERATION_PROFILES
                     case 187:
                         word_bit.modal_group.G0 = On;
                         gc_block.non_modal_command = (non_modal_t)int_value;
                         if(mantissa != 0)
                             FAIL(Status_GcodeUnsupportedCommand);
                         break;
+#endif
 
                     default: FAIL(Status_GcodeUnsupportedCommand); // [Unsupported G command]
                 } // end G-value switch

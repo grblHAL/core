@@ -884,6 +884,7 @@ bool settings_override_acceleration (uint8_t axis, float acceleration, float jer
     return true;
 }
 
+#if ENABLE_ACCELERATION_PROFILES
 //Acceleration Profiles for G187 P[x] in percent of maximum machine acceleration.
 float AccelerationProfile(uint8_t Profile) {
     static const float lookup[5] = { 
@@ -896,6 +897,7 @@ float AccelerationProfile(uint8_t Profile) {
     Profile = lookup[Profile];
     return Profile;
 }
+#endif
 
 // ---
 

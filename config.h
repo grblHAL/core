@@ -190,6 +190,7 @@ or EMI triggering the related interrupt falsely or too many times.
 // ADVANCED CONFIGURATION OPTIONS:
 
 #define ENABLE_PATH_BLENDING Off // Do NOT enable unless working on adding this feature!
+#define ENABLE_ACCELERATION_PROFILES Off // Enable to allow G-Code changeable acceleration profiles.
 
 // Enables code for debugging purposes. Not for general use and always in constant flux.
 //#define DEBUG // Uncomment to enable. Default disabled.
