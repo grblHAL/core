@@ -886,7 +886,11 @@ static void restore_override_backup (void)
 
 // Temporarily override acceleration, if 0 restore to setting value.
 // Note: only allowed when current state is idle.
+#if ENABLE_JERK_ACCELERATION   
 bool settings_override_acceleration (uint8_t axis, float acceleration, float jerk)
+#else
+bool settings_override_acceleration (uint8_t axis, float acceleration)
+#endif
 {
     sys_state_t state = state_get();
 
