@@ -1848,6 +1848,7 @@ Timezone offset from UTC in hours, allowed range is -12.0 - 12.0.
 /*! @name 22x - Setting_AxisJerk
 */
 ///@{
+#if ENABLE_JERK_ACCELERATION
 #if !defined DEFAULT_X_JERK|| defined __DOXYGEN__
 #define DEFAULT_X_JERK 100.0f // mm/sec^3
 #endif
@@ -1871,6 +1872,7 @@ Timezone offset from UTC in hours, allowed range is -12.0 - 12.0.
 #endif
 #if (defined V_AXIS && !defined DEFAULT_V_JERK) || defined __DOXYGEN__
 #define DEFAULT_V_JERK 100.0f // mm/sec^3
+#endif
 #endif
 ///@}
 
