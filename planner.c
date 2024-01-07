@@ -354,7 +354,7 @@ static inline float limit_acceleration_by_axis_maximum (float *unit_vec)
 
     return limit_value;
 }
-
+#if ENABLE_JERK_ACCELERATION
 static inline float limit_jerk_by_axis_maximum (float *unit_vec)
 {
     uint_fast8_t idx = N_AXIS;
@@ -367,7 +367,7 @@ static inline float limit_jerk_by_axis_maximum (float *unit_vec)
 
     return limit_value;
 }
-
+#endif
 static inline float limit_max_rate_by_axis_maximum (float *unit_vec)
 {
     uint_fast8_t idx = N_AXIS;
@@ -516,8 +516,12 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
 #endif
 
     block->millimeters = convert_delta_vector_to_unit_vector(unit_vec);
+#if ENABLE_ACCELERATION_PROFILES
     block->max_acceleration = limit_acceleration_by_axis_maximum(unit_vec);
     block->jerk = limit_jerk_by_axis_maximum(unit_vec);
+#else
+    block->acceleration = limit_acceleration_by_axis_maximum(unit_vec);
+#endif
     block->rapid_rate = limit_max_rate_by_axis_maximum(unit_vec);
 
     // Store programmed rate.
@@ -531,11 +535,13 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
         if (block->condition.inverse_time)
             block->programmed_rate *= block->millimeters;
     }
+#if ENABLE_ACCELERATION_PROFILES    
     // Calculate effective acceleration over block. Since jerk acceleration takes longer to execute due to ramp up and 
     // ramp down of the acceleration at the start and end of a ramp we need to adjust the acceleration value the planner 
     // uses so it still calculates reasonable entry and exit speeds. We do this by adding 2x the time it takes to reach 
     // full acceleration to the trapezoidal acceleration time and dividing the programmed rate by the value obtained.
     block->acceleration = block->programmed_rate / ((block->programmed_rate / block->max_acceleration) + 2.0f * (block->max_acceleration / block->jerk));
+#endif
 
     // TODO: Need to check this method handling zero junction speeds when starting from rest.
     if ((block_buffer_head == block_buffer_tail) || (block->condition.system_motion)) {

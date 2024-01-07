@@ -189,8 +189,10 @@ or EMI triggering the related interrupt falsely or too many times.
 // ---------------------------------------------------------------------------------------
 // ADVANCED CONFIGURATION OPTIONS:
 
+// EXPERIMENTAL OPTIONS
 #define ENABLE_PATH_BLENDING Off // Do NOT enable unless working on adding this feature!
 #define ENABLE_ACCELERATION_PROFILES Off // Enable to allow G-Code changeable acceleration profiles.
+#define ENABLE_JERK_ACCELERATION Off // Enable to use 3rd order Acceleration calculations. May need more processing power, tiny chips beware. 
 
 // Enables code for debugging purposes. Not for general use and always in constant flux.
 //#define DEBUG // Uncomment to enable. Default disabled.

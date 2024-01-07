@@ -204,7 +204,9 @@ PROGMEM const settings_t defaults = {
     .axis[X_AXIS].steps_per_mm = DEFAULT_X_STEPS_PER_MM,
     .axis[X_AXIS].max_rate = DEFAULT_X_MAX_RATE,
     .axis[X_AXIS].acceleration = (DEFAULT_X_ACCELERATION * 60.0f * 60.0f),
+#if ENABLE_JERK_ACCELERATION    
     .axis[X_AXIS].jerk = (DEFAULT_X_JERK * 60.0f * 60.0f * 60.0f),
+#endif
     .axis[X_AXIS].max_travel = (-DEFAULT_X_MAX_TRAVEL),
     .axis[X_AXIS].dual_axis_offset = 0.0f,
 #if ENABLE_BACKLASH_COMPENSATION
@@ -215,7 +217,9 @@ PROGMEM const settings_t defaults = {
     .axis[Y_AXIS].max_rate = DEFAULT_Y_MAX_RATE,
     .axis[Y_AXIS].max_travel = (-DEFAULT_Y_MAX_TRAVEL),
     .axis[Y_AXIS].acceleration = (DEFAULT_Y_ACCELERATION * 60.0f * 60.0f),
+#if ENABLE_JERK_ACCELERATION   
     .axis[Y_AXIS].jerk = (DEFAULT_Y_JERK * 60.0f * 60.0f * 60.0f),
+#endif
     .axis[Y_AXIS].dual_axis_offset = 0.0f,
 #if ENABLE_BACKLASH_COMPENSATION
     .axis[Y_AXIS].backlash = 0.0f,
@@ -224,7 +228,9 @@ PROGMEM const settings_t defaults = {
     .axis[Z_AXIS].steps_per_mm = DEFAULT_Z_STEPS_PER_MM,
     .axis[Z_AXIS].max_rate = DEFAULT_Z_MAX_RATE,
     .axis[Z_AXIS].acceleration = (DEFAULT_Z_ACCELERATION * 60.0f * 60.0f),
+#if ENABLE_JERK_ACCELERATION   
     .axis[Z_AXIS].jerk = (DEFAULT_Z_JERK * 60.0f * 60.0f * 60.0f),
+#endif
     .axis[Z_AXIS].max_travel = (-DEFAULT_Z_MAX_TRAVEL),
     .axis[Z_AXIS].dual_axis_offset = 0.0f,
 #if ENABLE_BACKLASH_COMPENSATION
@@ -235,7 +241,9 @@ PROGMEM const settings_t defaults = {
     .axis[A_AXIS].steps_per_mm = DEFAULT_A_STEPS_PER_MM,
     .axis[A_AXIS].max_rate = DEFAULT_A_MAX_RATE,
     .axis[A_AXIS].acceleration =(DEFAULT_A_ACCELERATION * 60.0f * 60.0f),
+#if ENABLE_JERK_ACCELERATION   
     .axis[A_AXIS].jerk = (DEFAULT_A_JERK * 60.0f * 60.0f * 60.0f),
+#endif
     .axis[A_AXIS].max_travel = (-DEFAULT_A_MAX_TRAVEL),
     .axis[A_AXIS].dual_axis_offset = 0.0f,
 #if ENABLE_BACKLASH_COMPENSATION
@@ -248,7 +256,9 @@ PROGMEM const settings_t defaults = {
     .axis[B_AXIS].steps_per_mm = DEFAULT_B_STEPS_PER_MM,
     .axis[B_AXIS].max_rate = DEFAULT_B_MAX_RATE,
     .axis[B_AXIS].acceleration = (DEFAULT_B_ACCELERATION * 60.0f * 60.0f),
+#if ENABLE_JERK_ACCELERATION   
     .axis[B_AXIS].jerk = (DEFAULT_B_JERK * 60.0f * 60.0f * 60.0f),
+#endif
     .axis[B_AXIS].max_travel = (-DEFAULT_B_MAX_TRAVEL),
     .axis[B_AXIS].dual_axis_offset = 0.0f,
 #if ENABLE_BACKLASH_COMPENSATION
@@ -260,7 +270,9 @@ PROGMEM const settings_t defaults = {
 #ifdef C_AXIS
     .axis[C_AXIS].steps_per_mm = DEFAULT_C_STEPS_PER_MM,
     .axis[C_AXIS].acceleration = (DEFAULT_C_ACCELERATION * 60.0f * 60.0f),
+#if ENABLE_JERK_ACCELERATION   
     .axis[C_AXIS].jerk = (DEFAULT_C_JERK * 60.0f * 60.0f * 60.0f),
+#endif
     .axis[C_AXIS].max_rate = DEFAULT_C_MAX_RATE,
     .axis[C_AXIS].max_travel = (-DEFAULT_C_MAX_TRAVEL),
     .axis[C_AXIS].dual_axis_offset = 0.0f,
@@ -273,7 +285,9 @@ PROGMEM const settings_t defaults = {
 #ifdef U_AXIS
     .axis[U_AXIS].steps_per_mm = DEFAULT_U_STEPS_PER_MM,
     .axis[U_AXIS].acceleration = (DEFAULT_U_ACCELERATION * 60.0f * 60.0f),
+#if ENABLE_JERK_ACCELERATION   
     .axis[U_AXIS].jerk = (DEFAULT_U_JERK * 60.0f * 60.0f * 60.0f),
+#endif
     .axis[U_AXIS].max_rate = DEFAULT_U_MAX_RATE,
     .axis[U_AXIS].max_travel = (-DEFAULT_U_MAX_TRAVEL),
     .axis[U_AXIS].dual_axis_offset = 0.0f,
@@ -285,7 +299,9 @@ PROGMEM const settings_t defaults = {
 #ifdef V_AXIS
     .axis[V_AXIS].steps_per_mm = DEFAULT_V_STEPS_PER_MM,
     .axis[V_AXIS].acceleration = (DEFAULT_V_ACCELERATION * 60.0f * 60.0f),
+#if ENABLE_JERK_ACCELERATION   
     .axis[V_AXIS].jerk = (DEFAULT_V_JERK * 60.0f * 60.0f * 60.0f),
+#endif
     .axis[V_AXIS].max_rate = DEFAULT_V_MAX_RATE,
     .axis[V_AXIS].max_travel = (-DEFAULT_V_MAX_TRAVEL),
     .axis[V_AXIS].dual_axis_offset = 0.0f,
@@ -440,7 +456,9 @@ static char spindle_types[100] = "";
 static char axis_dist[4] = "mm";
 static char axis_rate[8] = "mm/min";
 static char axis_accel[10] = "mm/sec^2";
+#if ENABLE_JERK_ACCELERATION   
 static char axis_jerk[15] = "mm/sec^3";
+#endif
 #if DELTA_ROBOT
 static char axis_steps[9] = "step/rev";
 #else
@@ -569,7 +587,9 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_AxisStepsPerMM, Group_Axis0, "-axis travel resolution", axis_steps, Format_Decimal, "#####0.000##", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL, AXIS_OPTS },
      { Setting_AxisMaxRate, Group_Axis0, "-axis maximum rate", axis_rate, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL, AXIS_OPTS },
      { Setting_AxisAcceleration, Group_Axis0, "-axis acceleration", axis_accel, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL, AXIS_OPTS },
+#if ENABLE_JERK_ACCELERATION   
      { Setting_AxisJerk, Group_Axis0, "-axis jerk", axis_jerk, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsExtendedFn, set_axis_setting, get_float, NULL, AXIS_OPTS },
+#endif
      { Setting_AxisMaxTravel, Group_Axis0, "-axis maximum travel", axis_dist, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL, AXIS_OPTS },
 #if ENABLE_BACKLASH_COMPENSATION
      { Setting_AxisBacklash, Group_Axis0, "-axis backlash compensation", axis_dist, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsExtendedFn, set_axis_setting, get_float, NULL, AXIS_OPTS },
@@ -759,11 +779,13 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { (setting_id_t)(Setting_AxisStepsPerMM + 1), "Travel resolution in steps per degree." }, // "Hack" to get correct description for rotary axes
     { Setting_AxisMaxRate, "Maximum rate. Used as G0 rapid rate." },
     { Setting_AxisAcceleration, "Acceleration. Used for motion planning to not exceed motor torque and lose steps." },
+#if ENABLE_JERK_ACCELERATION   
     { Setting_AxisJerk, "Maximum rate of acceleration change - smoothes out acceleration profile up to max axis acceleration.\\n\\n"
                         "Minimum value of x10 Acceleration setting to ensure decent acceleration times.\\n"
                         "Maximum is calcualted by current acceleration and stepper segment time.\\n"
                         "At Maximum value motion is effectively trapezoidal instead of constant jerk.\\n\\n"
                         "Can be increased by adjusting ACCELERATION_TICKS_PER_SECOND to a larger value before compiling."},
+#endif
     { Setting_AxisMaxTravel, "Maximum axis travel distance from homing switch. Determines valid machine space for soft-limits and homing search distances." },
 #if ENABLE_BACKLASH_COMPENSATION
     { Setting_AxisBacklash, "Backlash distance to compensate for." },
@@ -829,7 +851,9 @@ static setting_details_t setting_details = {
 static struct {
     bool valid;
     float acceleration[N_AXIS];
+#if ENABLE_JERK_ACCELERATION   
     float jerk[N_AXIS];
+#endif
 } override_backup = { .valid = false };
 
 static void save_override_backup (void)
@@ -839,7 +863,9 @@ static void save_override_backup (void)
     do {
         idx--;
         override_backup.acceleration[idx] = settings.axis[idx].acceleration;
+#if ENABLE_JERK_ACCELERATION   
         override_backup.jerk[idx] = settings.axis[idx].jerk;
+#endif
     } while(idx);
 
     override_backup.valid = true;
@@ -852,7 +878,9 @@ static void restore_override_backup (void)
     if(override_backup.valid) do {
         idx--;
         settings.axis[idx].acceleration = override_backup.acceleration[idx];
+#if ENABLE_JERK_ACCELERATION   
         settings.axis[idx].jerk = override_backup.jerk[idx];
+#endif
     } while(idx);
 }
 
@@ -873,6 +901,7 @@ bool settings_override_acceleration (uint8_t axis, float acceleration, float jer
             save_override_backup();
         settings.axis[axis].acceleration = (override_backup.acceleration[axis] >= (acceleration * 60.0f * 60.0f)) ? (acceleration * 60.0f * 60.0f) : override_backup.acceleration[axis]; // Limited to max setting value
     }
+#if ENABLE_JERK_ACCELERATION   
     if(jerk <= 0.0f) {
         if(override_backup.valid)
             settings.axis[axis].jerk = override_backup.jerk[axis];
@@ -881,6 +910,7 @@ bool settings_override_acceleration (uint8_t axis, float acceleration, float jer
             save_override_backup();
         settings.axis[axis].jerk = (override_backup.jerk[axis] >= (jerk * 60.0f * 60.0f * 60.0f)) ? (jerk * 60.0f * 60.0f * 60.0f) : override_backup.jerk[axis]; // Limited to max setting value
     }
+#endif
     return true;
 }
 
@@ -1377,11 +1407,11 @@ static const char *set_axis_setting_unit (setting_id_t setting_id, uint_fast8_t 
         case Setting_AxisAcceleration:
             unit = is_rotary ? "deg/sec^2" : "mm/sec^2";
             break;
-
+#if ENABLE_JERK_ACCELERATION   
         case Setting_AxisJerk:
             unit = is_rotary ? "deg/sec^3" : "mm/sec^3";
             break;
-
+#endif
         case Setting_AxisMaxTravel:
         case Setting_AxisBacklash:
             unit = is_rotary ? "deg" : "mm";
@@ -1488,9 +1518,11 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
 
         case Setting_AxisAcceleration:
             settings.axis[idx].acceleration = override_backup.acceleration[idx] = value * 60.0f * 60.0f; // Convert to mm/min^2 for grbl internal use.
+#if ENABLE_JERK_ACCELERATION   
             settings.axis[idx].jerk = (settings.axis[idx].acceleration * 10.0f * 60.0f);  //reset jerk to axis minimum.
+#endif
             break;
-      
+#if ENABLE_JERK_ACCELERATION      
         case Setting_AxisJerk:
             if ((value * 60.0f * 60.0f) < (settings.axis[idx].acceleration * 10.0f)) //ensuring that the acceleration time is limited to at maximum 100ms (or 10 stepper segments).
                 settings.axis[idx].jerk = settings.axis[idx].acceleration * 10.0f * 60.0f; // mm/min^2 -> mm/min^3
@@ -1499,7 +1531,7 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
             else
                 settings.axis[idx].jerk = value * 60.0f * 60.0f * 60.0f; // Convert to mm/min^3 for grbl internal use.
             break;
-
+#endif            
         case Setting_AxisMaxTravel:
             if(settings.axis[idx].max_travel != -value) {
                 bit_false(sys.homed.mask, bit(idx));
@@ -1562,11 +1594,11 @@ static float get_float (setting_id_t setting)
             case Setting_AxisAcceleration:
                 value = settings.axis[idx].acceleration / (60.0f * 60.0f); // Convert from mm/min^2 to mm/sec^2.
                 break;
-          
+#if ENABLE_JERK_ACCELERATION          
             case Setting_AxisJerk:
                 value = settings.axis[idx].jerk / (60.0f * 60.0f * 60.0f); // Convert from mm/min^3 to mm/sec^3.
                 break;
-
+#endif
             case Setting_AxisMaxTravel:
                 value = -settings.axis[idx].max_travel; // Store as negative for grbl internal use.
                 break;
