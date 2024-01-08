@@ -970,6 +970,10 @@ bool settings_override_acceleration (uint8_t axis, float acceleration, float jer
 bool settings_override_acceleration (uint8_t axis, float acceleration);
 #endif
 
+#if ENABLE_ACCELERATION_PROFILES
+float AccelerationProfile(uint8_t Profile);
+#endif
+
 void settings_register (setting_details_t *details);
 setting_details_t *settings_get_details (void);
 bool settings_is_group_available (setting_group_t group);
