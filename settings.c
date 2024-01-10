@@ -886,11 +886,7 @@ static void restore_override_backup (void)
 
 // Temporarily override acceleration, if 0 restore to setting value.
 // Note: only allowed when current state is idle.
-#if ENABLE_JERK_ACCELERATION   
-bool settings_override_acceleration (uint8_t axis, float acceleration, float jerk)
-#else
 bool settings_override_acceleration (uint8_t axis, float acceleration)
-#endif
 {
     sys_state_t state = state_get();
 
@@ -905,22 +901,12 @@ bool settings_override_acceleration (uint8_t axis, float acceleration)
             save_override_backup();
         settings.axis[axis].acceleration = (override_backup.acceleration[axis] >= (acceleration * 60.0f * 60.0f)) ? (acceleration * 60.0f * 60.0f) : override_backup.acceleration[axis]; // Limited to max setting value
     }
-#if ENABLE_JERK_ACCELERATION   
-    if(jerk <= 0.0f) {
-        if(override_backup.valid)
-            settings.axis[axis].jerk = override_backup.jerk[axis];
-    } else {
-        if(!override_backup.valid)
-            save_override_backup();
-        settings.axis[axis].jerk = (override_backup.jerk[axis] >= (jerk * 60.0f * 60.0f * 60.0f)) ? (jerk * 60.0f * 60.0f * 60.0f) : override_backup.jerk[axis]; // Limited to max setting value
-    }
-#endif
     return true;
 }
 
 #if ENABLE_ACCELERATION_PROFILES
 //Acceleration Profiles for G187 P[x] in percent of maximum machine acceleration.
-float AccelerationProfile(uint8_t Profile) {
+float LookupProfile(uint8_t Profile) {
     static const float lookup[5] = { 
         1.0f,   // 100% - Roughing - Max Acceleration Default
         0.8f,   // 80% - Semi Roughing

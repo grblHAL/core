@@ -2251,11 +2251,7 @@ status_code_t gc_execute_block (char *block)
                 FAIL(Status_NegativeValue);}
             else if (gc_block.values.p > 5.0f){
                 FAIL(Status_GcodeValueOutOfRange);}
-            uint8_t idx = N_AXIS;
-            do {
-                idx--;
-                settings_override_acceleration(idx, ((settings.axis[idx].acceleration / (60.0f * 60.0f)) * AccelerationProfile(gc_block.values.p)), ((settings.axis[idx].jerk / (60.0f * 60.0f * 60.0f)) * AccelerationProfile(gc_block.values.p)));
-            } while(idx);
+            ActiveAccelProfile = gc_block.values.p;
             break;
 #endif
         default:

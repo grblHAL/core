@@ -964,14 +964,11 @@ void settings_write_coord_data(coord_system_id_t id, float (*coord_data)[N_AXIS]
 bool settings_read_coord_data(coord_system_id_t id, float (*coord_data)[N_AXIS]);
 
 // Temporarily override acceleration, if 0 restore to configured setting value
-#if ENABLE_JERK_ACCELERATION   
-bool settings_override_acceleration (uint8_t axis, float acceleration, float jerk);
-#else
 bool settings_override_acceleration (uint8_t axis, float acceleration);
-#endif
 
 #if ENABLE_ACCELERATION_PROFILES
-float AccelerationProfile(uint8_t Profile);
+extern uint8_t ActiveAccelProfile = 1;
+float AccelerationProfile (uint8_t Profile);
 #endif
 
 void settings_register (setting_details_t *details);

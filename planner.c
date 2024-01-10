@@ -351,9 +351,12 @@ static inline float limit_acceleration_by_axis_maximum (float *unit_vec)
         if (unit_vec[--idx] != 0.0f)  // Avoid divide by zero.
             limit_value = min(limit_value, fabsf(settings.axis[idx].acceleration / unit_vec[idx]));
     } while(idx);
-
+#if ENABLE_ACCELERATION_PROFILES
+    limit_value *= AccelerationProfile(ActiveAccelProfile);
+#endif
     return limit_value;
 }
+
 #if ENABLE_JERK_ACCELERATION
 static inline float limit_jerk_by_axis_maximum (float *unit_vec)
 {
@@ -364,10 +367,13 @@ static inline float limit_jerk_by_axis_maximum (float *unit_vec)
         if (unit_vec[--idx] != 0.0f)  // Avoid divide by zero.
             limit_value = min(limit_value, fabsf(settings.axis[idx].jerk / unit_vec[idx]));
     } while(idx);
-
+#if ENABLE_ACCELERATION_PROFILES
+    limit_value *= AccelerationProfile(ActiveAccelProfile);
+#endif
     return limit_value;
 }
 #endif
+
 static inline float limit_max_rate_by_axis_maximum (float *unit_vec)
 {
     uint_fast8_t idx = N_AXIS;
@@ -516,7 +522,7 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
 #endif
 
     block->millimeters = convert_delta_vector_to_unit_vector(unit_vec);
-#if ENABLE_ACCELERATION_PROFILES
+#if ENABLE_JERK_ACCELERATION
     block->max_acceleration = limit_acceleration_by_axis_maximum(unit_vec);
     block->jerk = limit_jerk_by_axis_maximum(unit_vec);
 #else
@@ -535,7 +541,7 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
         if (block->condition.inverse_time)
             block->programmed_rate *= block->millimeters;
     }
-#if ENABLE_ACCELERATION_PROFILES    
+#if ENABLE_JERK_ACCELERATION
     // Calculate effective acceleration over block. Since jerk acceleration takes longer to execute due to ramp up and 
     // ramp down of the acceleration at the start and end of a ramp we need to adjust the acceleration value the planner 
     // uses so it still calculates reasonable entry and exit speeds. We do this by adding 2x the time it takes to reach 
