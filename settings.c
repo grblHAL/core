@@ -851,9 +851,6 @@ static setting_details_t setting_details = {
 static struct {
     bool valid;
     float acceleration[N_AXIS];
-#if ENABLE_JERK_ACCELERATION   
-    float jerk[N_AXIS];
-#endif
 } override_backup = { .valid = false };
 
 static void save_override_backup (void)
@@ -863,9 +860,6 @@ static void save_override_backup (void)
     do {
         idx--;
         override_backup.acceleration[idx] = settings.axis[idx].acceleration;
-#if ENABLE_JERK_ACCELERATION   
-        override_backup.jerk[idx] = settings.axis[idx].jerk;
-#endif
     } while(idx);
 
     override_backup.valid = true;
@@ -878,9 +872,6 @@ static void restore_override_backup (void)
     if(override_backup.valid) do {
         idx--;
         settings.axis[idx].acceleration = override_backup.acceleration[idx];
-#if ENABLE_JERK_ACCELERATION   
-        settings.axis[idx].jerk = override_backup.jerk[idx];
-#endif
     } while(idx);
 }
 
