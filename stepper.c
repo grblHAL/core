@@ -944,6 +944,9 @@ void st_prep_buffer (void)
                         time_var = 2.0f * (pl_block->millimeters - mm_remaining) / (prep.current_speed + prep.maximum_speed);
                         prep.ramp_type = mm_remaining == prep.decelerate_after ? Ramp_Decel : Ramp_Cruise;
                         prep.current_speed = prep.maximum_speed;
+#if ENABLE_JERK_ACCELERATION
+                        last_segment_accel = 0.0f;  // reset acceleration variable to 0 for next accel ramp
+#endif
                     } else // Acceleration only.
                         prep.current_speed += speed_var;
                     break;
@@ -991,6 +994,9 @@ void st_prep_buffer (void)
                     time_var = 2.0f * (mm_remaining - prep.mm_complete) / (prep.current_speed + prep.exit_speed);
                     mm_remaining = prep.mm_complete;
                     prep.current_speed = prep.exit_speed;
+#if ENABLE_JERK_ACCELERATION
+                    last_segment_accel = 0.0f;  // reset acceleration variable to 0 for next accel ramp
+#endif
             }
 
             dt += time_var; // Add computed ramp time to total segment time.
