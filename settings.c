@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2023 Terje Io
+  Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2011-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -447,7 +447,7 @@ static status_code_t set_ngc_debug_out (setting_id_t id, uint_fast16_t int_value
 #endif
 
 static bool machine_mode_changed = false;
-static char control_signals[] = "Reset,Feed hold,Cycle start,Safety door,Block delete,Optional stop,EStop,Probe connected,Motor fault";
+static char control_signals[] = "Reset,Feed hold,Cycle start,Safety door,Block delete,Optional stop,EStop,Probe connected,Motor fault,Motor warning,Limits override,Single step blocks";
 static char spindle_signals[] = "Spindle enable,Spindle direction,PWM";
 static char coolant_signals[] = "Flood,Mist";
 static char ganged_axes[] = "X-Axis,Y-Axis,Z-Axis";
@@ -1022,6 +1022,9 @@ static status_code_t set_ngc_debug_out (setting_id_t id, uint_fast16_t int_value
 static status_code_t set_control_invert (setting_id_t id, uint_fast16_t int_value)
 {
     settings.control_invert.mask = (int_value & hal.signals_cap.mask) | limits_override.mask;
+
+    ioport_setting_changed(id);
+    system_init_switches();
 
     return Status_OK;
 }

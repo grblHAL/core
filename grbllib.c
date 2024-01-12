@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2023 Terje Io
+  Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2011-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -334,6 +334,7 @@ int grbl_enter (void)
         plan_reset();                   // Clear block buffer and planner variables
         st_reset();                     // Clear stepper subsystem variables.
         limits_set_homing_axes();       // Set axes to be homed from settings.
+        system_init_switches();         // Set switches from inputs.
 
         // Sync cleared gcode and planner positions to current system position.
         sync_position();

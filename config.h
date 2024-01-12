@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2020-2023 Terje Io
+  Copyright (c) 2020-2024 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -1661,7 +1661,7 @@ since the spindle may pull down the Z due to its weight.
 
 /*! @name $2 - Setting_StepInvertMask
 \brief \ref axismask controlling the polarity of the step signals. The default is positive pulses.
-Set this value to -1 to invert for all steppers or specify which by mask.
+Set this value to -1 or AXES_BITMASK to invert for all steppers or specify which by mask.
 */
 ///@{
 #if !defined DEFAULT_STEP_SIGNALS_INVERT_MASK || defined __DOXYGEN__
@@ -1672,7 +1672,7 @@ Set this value to -1 to invert for all steppers or specify which by mask.
 /*! @name $3 - Setting_DirInvertMask
 \brief \ref axismask controling the polarity of the stepper direction signals. The default
 is positive voltage for motions in negative direction.
-Set this value to -1 to invert for all steppers or specify which by mask.*/
+Set this value to -1 or AXES_BITMASK to invert for all steppers or specify which by mask.*/
 ///@{
 #if !defined DEFAULT_DIR_SIGNALS_INVERT_MASK || defined __DOXYGEN__
 #define DEFAULT_DIR_SIGNALS_INVERT_MASK 0
@@ -1681,6 +1681,8 @@ Set this value to -1 to invert for all steppers or specify which by mask.*/
 
 /*! @name $4 - Setting_InvertStepperEnable
 \brief \ref axismask for inverting the polarity of the stepper enable signal(s).
+
+Set this value to -1 or AXES_BITMASK to invert for all steppers or specify which by mask.
 <br>__NOTE:__ If \ref COMPATIBILITY_LEVEL > 2 this setting reverts to the legacy
               Grbl behaviour where 0 inverts the enable signals for all drivers
               and 1 does not.
@@ -1690,9 +1692,7 @@ Set this value to -1 to invert for all steppers or specify which by mask.*/
 */
 ///@{
 #if !defined DEFAULT_ENABLE_SIGNALS_INVERT_MASK || defined __DOXYGEN__
-#define DEFAULT_ENABLE_SIGNALS_INVERT_MASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT) // Default disabled. Uncomment to enable.
-#else
-//#define DEFAULT_ENABLE_SIGNALS_INVERT_MASK 1
+#define DEFAULT_ENABLE_SIGNALS_INVERT_MASK AXES_BITMASK
 #endif
 ///@}
 

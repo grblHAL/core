@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2023 Terje Io
+  Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2014-2016 Sungeun K. Jeon for Gnea Research LLC
 
   Grbl is free software: you can redistribute it and/or modify
@@ -119,7 +119,7 @@ typedef union {
     };
 } step_control_t;
 
-
+// NOTE: the pin_function_t enum must be kept in sync with any changes!
 typedef union {
     uint16_t value;
     uint16_t mask;
@@ -139,10 +139,9 @@ typedef union {
                  unassigned         :1,
                  probe_overtravel   :1, //! used for probe protection
                  probe_triggered    :1, //! used for probe protection
-                 deasserted         :1; //! this flag is set if signals are deasserted. Note: do NOT pass on to the control_interrupt_handler if set.
+                 deasserted         :1; //! this flag is set if signals are deasserted.
     };
 } control_signals_t;
-
 
 // Define spindle stop override control states.
 typedef union {
@@ -313,13 +312,15 @@ typedef struct system {
 } system_t;
 
 typedef status_code_t (*sys_command_ptr)(sys_state_t state, char *args);
+typedef const char *(*sys_help_ptr)(const char *command);
 
 typedef union {
     uint8_t flags;
     struct {
         uint8_t noargs         :1, //!< System command does not handle arguments.
                 allow_blocking :1, //!< System command can be used when blocking event is active.
-                unused         :6;
+                help_fn        :1,
+                unused         :5;
     };
 } sys_command_flags_t;
 
@@ -328,6 +329,10 @@ typedef struct
     const char *command;
     sys_command_ptr execute;
     sys_command_flags_t flags;
+    union {
+        const char *str;
+        sys_help_ptr fn;
+    } help;
 } sys_command_t;
 
 typedef struct sys_commands_str {
@@ -344,7 +349,9 @@ void system_flag_wco_change (void);
 void system_convert_array_steps_to_mpos (float *position, int32_t *steps);
 bool system_xy_at_fixture (coord_system_id_t id, float tolerance);
 void system_raise_alarm (alarm_code_t alarm);
+void system_init_switches (void);
 void system_command_help (void);
+void system_output_help (const sys_command_t *commands, uint32_t num_commands);
 
 void system_add_rt_report (report_tracking_t report);
 report_tracking_flags_t system_get_rt_report_flags (void);
