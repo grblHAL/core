@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2023 Terje Io
+  Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
 
   Grbl is free software: you can redistribute it and/or modify
@@ -175,14 +175,11 @@ inline static char *axis_signals_tostring (char *buf, axes_signals_t signals)
 
 // Convert control signals bits to string representation.
 // NOTE: returns pointer to null terminator!
-inline static char *control_signals_tostring (char *buf, control_signals_t signals, bool all)
+inline static char *control_signals_tostring (char *buf, control_signals_t signals)
 {
-    static const char signals_map[] = "RHSDLTE FM    P ";
+    static const char signals_map[] = "RHSDLTEOFM Q  P ";
 
     char *map = (char *)signals_map;
-
-    if(!hal.signals_cap.stop_disable)
-        signals.stop_disable = sys.flags.optional_stop_disable;
 
     if(!signals.deasserted)
       while(signals.mask) {
@@ -196,11 +193,6 @@ inline static char *control_signals_tostring (char *buf, control_signals_t signa
 
                 case 'D':
                     if(hal.signals_cap.safety_door_ajar)
-                        *buf++ = *map;
-                    break;
-
-                case 'L':
-                    if(all || sys.flags.block_delete_enabled)
                         *buf++ = *map;
                     break;
 
@@ -976,12 +968,12 @@ void report_build_info (char *line, bool extended)
         grbl.on_report_options(true);
         hal.stream.write("]" ASCII_EOL);
 
+        hal.stream.write("[FIRMWARE:grblHAL]" ASCII_EOL);
+
         hal.stream.write("[SIGNALS:");
-        control_signals_tostring(buf, hal.signals_cap, true);
+        control_signals_tostring(buf, hal.signals_cap);
         hal.stream.write(buf);
         hal.stream.write("]" ASCII_EOL);
-
-        hal.stream.write("[FIRMWARE:grblHAL]" ASCII_EOL);
 
         if(!(nvs->type == NVS_None || nvs->type == NVS_Emulated)) {
             hal.stream.write("[NVS STORAGE:");
@@ -1216,28 +1208,38 @@ void report_realtime_status (void)
 
     if(settings.status_report.pin_state) {
 
+        static const system_flags_t sys_switches = {
+            .block_delete_enabled = On,
+            .optional_stop_disable = On,
+            .single_block = On
+        };
+
         axes_signals_t lim_pin_state = limit_signals_merge(hal.limits.get_state());
         control_signals_t ctrl_pin_state = hal.control.get_state();
 
+        ctrl_pin_state.probe_triggered = probe_state.triggered;
+        ctrl_pin_state.probe_disconnected = !probe_state.connected;
         ctrl_pin_state.cycle_start |= sys.report.cycle_start;
+        if(sys.flags.value & sys_switches.value) {
+            if(!hal.signals_cap.stop_disable)
+                ctrl_pin_state.stop_disable = sys.flags.optional_stop_disable;
+            if(!hal.signals_cap.block_delete)
+                ctrl_pin_state.block_delete = sys.flags.block_delete_enabled;
+            if(!hal.signals_cap.single_block)
+                ctrl_pin_state.single_block = sys.flags.single_block;
+        }
 
-        if (lim_pin_state.value | ctrl_pin_state.value | probe_state.triggered | !probe_state.connected | sys.flags.block_delete_enabled) {
+        if(lim_pin_state.value | ctrl_pin_state.value) {
 
             char *append = &buf[4];
 
             strcpy(buf, "|Pn:");
 
-            if(probe_state.triggered)
-                *append++ = 'P';
-
-            if(!probe_state.connected)
-                *append++ = 'O';
-
             if(lim_pin_state.value && !ctrl_pin_state.limits_override)
                 append = axis_signals_tostring(append, lim_pin_state);
 
             if(ctrl_pin_state.value)
-                append = control_signals_tostring(append, ctrl_pin_state, false);
+                append = control_signals_tostring(append, ctrl_pin_state);
 
             *append = '\0';
             hal.stream.write_all(buf);
@@ -2079,7 +2081,7 @@ status_code_t report_last_signals_event (sys_state_t state, char *args)
 
     strcpy(buf, "[LASTEVENTS:");
 
-    append = control_signals_tostring(append, sys.last_event.control, false);
+    append = control_signals_tostring(append, sys.last_event.control);
     *append++ = ',';
     append = add_limits(append, sys.last_event.limits);
 

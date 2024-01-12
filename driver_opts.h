@@ -438,7 +438,7 @@
 #define WEBUI_INFLASH       0
 #endif
 
-#if WEBUI_ENABLE && !defined(ESP_PLATFORM) 
+#if WEBUI_ENABLE
 
 #if !WIFI_ENABLE
 #ifdef ETHERNET_ENABLE

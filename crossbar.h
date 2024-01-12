@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2023 Terje Io
+  Copyright (c) 2021-2024 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -25,17 +25,23 @@
 #include "nuts_bolts.h"
 
 typedef enum {
-    Input_Probe = 0,
-    Input_Reset,
+// NOTE: the sequence of the following enums MUST match the control_signals_t layout
+    Input_Reset = 0,
     Input_FeedHold,
     Input_CycleStart,
     Input_SafetyDoor,
-    Input_LimitsOverride,
-    Input_EStop,
     Input_BlockDelete,
-    Input_SingleBlock,
     Input_StopDisable,
+    Input_EStop,
     Input_ProbeDisconnect,
+    Input_MotorFault,
+    Input_MotorWarning,
+    Input_LimitsOverride,
+    Input_SingleBlock,
+    Input_Unassigned,
+    Input_ProbeOvertravel,
+    Input_Probe,
+// end control_signals_t sequence
     Input_MPGSelect,
     Input_ModeSelect = Input_MPGSelect, // Deprecated
     Input_LimitX,
@@ -93,8 +99,6 @@ typedef enum {
     Input_Analog_Aux5,
     Input_Analog_Aux6,
     Input_Analog_Aux7,
-    Input_MotorWarning,
-    Input_MotorFault,
     Outputs,
     Output_StepX = Outputs,
     Output_StepX_2,
@@ -189,17 +193,20 @@ typedef struct {
 } pin_name_t;
 
 PROGMEM static const pin_name_t pin_names[] = {
-    { .function = Input_Probe,               .name = "Probe" },
     { .function = Input_Reset,               .name = "Reset" },
     { .function = Input_FeedHold,            .name = "Feed hold" },
     { .function = Input_CycleStart,          .name = "Cycle start" },
     { .function = Input_SafetyDoor,          .name = "Safety door" },
-    { .function = Input_LimitsOverride,      .name = "Limits override" },
-    { .function = Input_EStop,               .name = "Emergency stop" },
     { .function = Input_BlockDelete,         .name = "Block delete" },
-    { .function = Input_SingleBlock,         .name = "Single block" },
     { .function = Input_StopDisable,         .name = "Stop disable" },
+    { .function = Input_EStop,               .name = "Emergency stop" },
     { .function = Input_ProbeDisconnect,     .name = "Probe disconnect" },
+    { .function = Input_MotorFault,          .name = "Motor fault" },
+    { .function = Input_MotorWarning,        .name = "Motor warning" },
+    { .function = Input_LimitsOverride,      .name = "Limits override" },
+    { .function = Input_SingleBlock,         .name = "Single block" },
+    { .function = Input_ProbeOvertravel,     .name = "Probe overtravel" },
+    { .function = Input_Probe,               .name = "Probe" },
     { .function = Input_MPGSelect,           .name = "MPG mode select" },
     { .function = Input_LimitX,              .name = "X limit min" },
     { .function = Input_LimitX_2,            .name = "X limit min 2" },
@@ -225,8 +232,6 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Input_QEI_Index,           .name = "QEI index" },
     { .function = Input_SpindleIndex,        .name = "Spindle index" },
     { .function = Input_SpindlePulse,        .name = "Spindle pulse" },
-    { .function = Input_MotorWarning,        .name = "Motor warning" },
-    { .function = Input_MotorFault,          .name = "Motor fault" },
     { .function = Input_Aux0,                .name = "Aux input 0" },
     { .function = Input_Aux1,                .name = "Aux input 1" },
     { .function = Input_Aux2,                .name = "Aux input 2" },
@@ -470,6 +475,27 @@ typedef void (*xbar_set_value_ptr)(struct xbar *pin, float value);
 typedef void (*xbar_event_ptr)(bool on);
 typedef bool (*xbar_config_ptr)(struct xbar *pin, void *cfg_data);
 
+typedef enum {
+    AuxCtrl_SafetyDoor = 0,
+    AuxCtrl_MotorFault,
+    AuxCtrl_MotorWarning,
+    AuxCtrl_ProbeDisconnect,
+    AuxCtrl_StopDisable,
+    AuxCtrl_BlockDelete,
+    AuxCtrl_SingleBlock,
+    AuxCtrl_LimitsOverride,
+    AuxCtrl_NumEntries,
+} aux_ctrl_signals_t;
+
+typedef struct {
+    bool enabled;
+    bool debouncing;
+    uint8_t port;
+    pin_irq_mode_t irq_mode;
+    control_signals_t cap;
+    pin_function_t function;
+} aux_ctrl_t;
+
 typedef struct xbar {
     pin_function_t function;
     pin_group_t group;
@@ -504,5 +530,6 @@ limit_signals_t xbar_get_homing_source (void);
 limit_signals_t xbar_get_homing_source_from_cycle (axes_signals_t homing_cycle);
 axes_signals_t xbar_fn_to_axismask (pin_function_t id);
 const char *xbar_fn_to_pinname (pin_function_t id);
+control_signals_t xbar_fn_to_signals_mask (pin_function_t id);
 
 #endif

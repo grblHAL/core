@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2023 Terje Io
+  Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -1139,9 +1139,11 @@ ISR_CODE void ISR_FUNC(mc_reset)(void)
             st_go_idle(); // Force kill steppers. Position has likely been lost.
         }
 
-        if(hal.control.get_state().e_stop)
+        control_signals_t signals = hal.control.get_state();
+
+        if(signals.e_stop)
             system_set_exec_alarm(Alarm_EStop);
-        else if(hal.control.get_state().motor_fault)
+        else if(signals.motor_fault)
             system_set_exec_alarm(Alarm_MotorFault);
 
         if(grbl.on_reset)

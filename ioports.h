@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2023 Terje Io
+  Copyright (c) 2021-2024 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -159,6 +159,7 @@ typedef struct {
 
 bool ioports_add (io_ports_data_t *ports, io_port_type_t type, uint8_t n_in, uint8_t n_out);
 void ioports_add_settings (driver_settings_load_ptr settings_loaded, setting_changed_ptr setting_changed);
+void ioport_setting_changed (setting_id_t id);
 #define iports_get_pnum(type, port) type.get_pnum(&type, port)
 #define ioports_map(type, port) ( type.map ? type.map[port] : port )
 uint8_t ioports_map_reverse (io_ports_detail_t *type, uint8_t port);

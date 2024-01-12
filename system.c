@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2023 Terje Io
+  Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2014-2016 Sungeun K. Jeon for Gnea mResearch LLC
 
   Grbl is free software: you can redistribute it and/or modify
@@ -42,6 +42,16 @@ inline static float hypot_f (float x, float y)
 {
     return sqrtf(x * x + y * y);
 }
+
+void system_init_switches (void)
+{
+    control_signals_t signals = hal.control.get_state();
+
+    sys.flags.block_delete_enabled = signals.block_delete;
+    sys.flags.single_block = signals.single_block;
+    sys.flags.optional_stop_disable = signals.stop_disable;
+}
+
 /*! \brief Pin change interrupt handler for pin-out commands, i.e. cycle start, feed hold, reset etc.
 Mainly sets the realtime command execute variable to have the main program execute these when
 its ready. This works exactly like the character-based realtime commands when picked off
@@ -50,10 +60,17 @@ directly from the incoming data stream.
 */
 ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
 {
-    if(signals.deasserted)
-        return; // for now...
+    static control_signals_t onoff_signals = {
+       .block_delete = On,
+       .single_block = On,
+       .stop_disable = On,
+       .deasserted = On
+    };
 
-    if (signals.value) {
+    if(signals.deasserted)
+        signals.value &= onoff_signals.mask;
+
+    if(signals.value) {
 
         sys.last_event.control.value = signals.value;
 
@@ -96,6 +113,15 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
                 system_set_exec_state_flag(EXEC_CYCLE_START);
                 sys.report.cycle_start = settings.status_report.pin_state;
             }
+
+            if(signals.block_delete)
+                sys.flags.block_delete_enabled = !signals.deasserted;
+
+            if(signals.single_block)
+                sys.flags.single_block = !signals.deasserted;
+
+            if(signals.stop_disable)
+                sys.flags.optional_stop_disable = !signals.deasserted;
         }
     }
 }
@@ -281,26 +307,32 @@ static status_code_t output_parser_state (sys_state_t state, char *args)
 
 static status_code_t toggle_single_block (sys_state_t state, char *args)
 {
-    sys.flags.single_block = !sys.flags.single_block;
-    grbl.report.feedback_message(sys.flags.single_block ? Message_Enabled : Message_Disabled);
+    if(!hal.signals_cap.single_block) {
+        sys.flags.single_block = !sys.flags.single_block;
+        grbl.report.feedback_message(sys.flags.single_block ? Message_Enabled : Message_Disabled);
+    }
 
-    return Status_OK;
+    return hal.signals_cap.single_block ? Status_InvalidStatement : Status_OK;
 }
 
 static status_code_t toggle_block_delete (sys_state_t state, char *args)
 {
-    sys.flags.block_delete_enabled = !sys.flags.block_delete_enabled;
-    grbl.report.feedback_message(sys.flags.block_delete_enabled ? Message_Enabled : Message_Disabled);
+    if(!hal.signals_cap.block_delete) {
+        sys.flags.block_delete_enabled = !sys.flags.block_delete_enabled;
+        grbl.report.feedback_message(sys.flags.block_delete_enabled ? Message_Enabled : Message_Disabled);
+    }
 
-    return Status_OK;
+    return hal.signals_cap.block_delete ? Status_InvalidStatement : Status_OK;
 }
 
 static status_code_t toggle_optional_stop (sys_state_t state, char *args)
 {
-    sys.flags.optional_stop_disable = !sys.flags.optional_stop_disable;
-    grbl.report.feedback_message(sys.flags.block_delete_enabled ? Message_Enabled : Message_Disabled);
+    if(!hal.signals_cap.stop_disable) {
+        sys.flags.optional_stop_disable = !sys.flags.optional_stop_disable;
+        grbl.report.feedback_message(sys.flags.block_delete_enabled ? Message_Enabled : Message_Disabled);
+    }
 
-    return Status_OK;
+    return hal.signals_cap.stop_disable ? Status_InvalidStatement : Status_OK;
 }
 
 static status_code_t check_mode (sys_state_t state, char *args)
@@ -688,23 +720,117 @@ static status_code_t output_memmap (sys_state_t state, char *args)
 }
 #endif
 
+const char *help_rst (const char *cmd)
+{
+#if ENABLE_RESTORE_NVS_WIPE_ALL
+    hal.stream.write("$RST=* - restore/reset all settings." ASCII_EOL);
+#endif
+#if ENABLE_RESTORE_NVS_DEFAULT_SETTINGS
+    hal.stream.write("$RST=$ - restore default settings." ASCII_EOL);
+#endif
+#if ENABLE_RESTORE_NVS_DRIVER_PARAMETERS
+    if(settings_get_details()->next)
+        hal.stream.write("$RST=& - restore driver and plugin default settings." ASCII_EOL);
+#endif
+#if ENABLE_RESTORE_NVS_CLEAR_PARAMETERS
+    if(grbl.tool_table.n_tools)
+        hal.stream.write("$RST=# - reset offsets and tool data." ASCII_EOL);
+    else
+        hal.stream.write("$RST=# - reset offsets." ASCII_EOL);
+#endif
+
+    return NULL;
+}
+
+const char *help_rtc (const char *cmd)
+{
+    if(hal.rtc.get_datetime) {
+        hal.stream.write("$RTC - output current time." ASCII_EOL);
+        hal.stream.write("$RTC=<ISO8601 datetime> - set current time." ASCII_EOL);
+    }
+
+    return NULL;
+}
+
+const char *help_spindle (const char *cmd)
+{
+    spindle_ptrs_t *spindle = gc_spindle_get();
+
+    if(cmd[1] == 'R' && spindle->reset_data)
+        hal.stream.write("$SR - reset spindle encoder data." ASCII_EOL);
+
+    if(cmd[1] == 'D' && spindle->get_data)
+        hal.stream.write("$SD - output spindle encoder data." ASCII_EOL);
+
+    return NULL;
+}
+
+const char *help_pins (const char *cmd)
+{
+    return hal.enumerate_pins ? "enumerate pin bindings" : NULL;
+}
+
+const char *help_switches (const char *cmd)
+{
+    const char *help = NULL;
+
+    switch(*cmd) {
+
+        case 'B':
+            if(!hal.signals_cap.block_delete)
+                help = "toggle block delete switch";
+            break;
+
+        case 'O':
+            if(!hal.signals_cap.stop_disable)
+                help = "toggle optional stop switch (M1)";
+            break;
+
+        case 'S':
+            if(!hal.signals_cap.single_block)
+                help = "toggle single stepping switch";
+            break;
+    }
+
+    return help;
+}
+
+const char *help_homing (const char *cmd)
+{
+    if(settings.homing.flags.enabled)
+        hal.stream.write("$H - home configured axes." ASCII_EOL);
+
+    if(settings.homing.flags.single_axis_commands)
+        hal.stream.write("$H<axisletter> - home single axis." ASCII_EOL);
+
+    return NULL;
+}
+
 /*! \brief Command dispatch table
  */
 PROGMEM static const sys_command_t sys_commands[] = {
-    { "G", output_parser_state, { .noargs = On, .allow_blocking = On } },
-    { "J", jog },
-    { "#", output_ngc_parameters, { .allow_blocking = On } },
-    { "$", output_settings, { .allow_blocking = On } },
-    { "+", output_all_settings, { .allow_blocking = On } },
+    { "G", output_parser_state, { .noargs = On, .allow_blocking = On }, { .str = "output parser state" } },
+    { "J", jog, {}, { .str = "$J=<gcode> - jog machine" } },
+    { "#", output_ngc_parameters, { .allow_blocking = On }, {
+        .str = "output offsets, tool table, probing and home position"
+     ASCII_EOL "$#=<n> - output value for parameter <n>"
+    } },
+    { "$", output_settings, { .allow_blocking = On }, {
+        .str = "$<n> - output setting <n> value"
+     ASCII_EOL "$<n>=<value> - assign <value> to settings <n>"
+     ASCII_EOL "$$ - output all setting values"
+     ASCII_EOL "$$=<n> - output setting details for setting <n>"
+    } },
+    { "+", output_all_settings, { .allow_blocking = On }, { .str = "output all setting values" } },
 #ifndef NO_SETTINGS_DESCRIPTIONS
-    { "SED", output_setting_description, { .allow_blocking = On } },
+    { "SED", output_setting_description, { .allow_blocking = On }, { .str = "$SED=<n> - output settings description for setting <n>" } },
 #endif
-    { "B", toggle_block_delete, { .noargs = On } },
-    { "S", toggle_single_block, { .noargs = On } },
-    { "O", toggle_optional_stop, { .noargs = On } },
-    { "C", check_mode, { .noargs = On } },
-    { "X", disable_lock },
-    { "H", home },
+    { "B", toggle_block_delete, { .noargs = On, .help_fn = On }, { .fn = help_switches } },
+    { "S", toggle_single_block, { .noargs = On, .help_fn = On }, { .fn = help_switches } },
+    { "O", toggle_optional_stop, { .noargs = On, .help_fn = On }, { .fn = help_switches } },
+    { "C", check_mode, { .noargs = On }, { .str = "enable check mode, <Reset> to exit" } },
+    { "X", disable_lock, {}, { .str = "unlock machine" } },
+    { "H", home, { .help_fn = On }, { .fn = help_homing } },
     { "HX", home_x },
     { "HY", home_y },
     { "HZ", home_z },
@@ -735,110 +861,77 @@ PROGMEM static const sys_command_t sys_commands[] = {
 #ifdef V_AXIS
     { "HV", home_v },
 #endif
-    { "HSS", report_current_home_signal_state, { .noargs = On, .allow_blocking = On } },
-    { "HELP", output_help, { .allow_blocking = On } },
-    { "SPINDLES", enumerate_spindles, { .noargs = On, .allow_blocking = On } },
-    { "SPINDLESH", enumerate_spindles_mr, { .noargs = On, .allow_blocking = On } },
-    { "SLP", enter_sleep, { .noargs = On } },
-    { "TLR", set_tool_reference, { .noargs = On } },
-    { "TPW", tool_probe_workpiece, { .noargs = On } },
-    { "I", build_info, { .allow_blocking = On } },
-    { "I+", output_all_build_info, { .noargs = On, .allow_blocking = On } },
-    { "RST", settings_reset, { .allow_blocking = On } },
-    { "N", output_startup_lines, { .noargs = On, .allow_blocking = On } },
-    { "N0", set_startup_line0 },
-    { "N1", set_startup_line1 },
-    { "EA", enumerate_alarms, { .noargs = On, .allow_blocking = On } },
-    { "EAG", enumerate_alarms_grblformatted, { .noargs = On, .allow_blocking = On } },
-    { "EE", enumerate_errors, { .noargs = On, .allow_blocking = On } },
-    { "EEG", enumerate_errors_grblformatted, { .noargs = On, .allow_blocking = On } },
-    { "EG", enumerate_groups, { .noargs = On, .allow_blocking = On } },
-    { "ES", enumerate_settings, { .noargs = On, .allow_blocking = On } },
-    { "ESG", enumerate_settings_grblformatted, { .noargs = On, .allow_blocking = On } },
-    { "ESH", enumerate_settings_halformatted, { .noargs = On, .allow_blocking = On } },
-    { "E*", enumerate_all, { .noargs = On, .allow_blocking = On } },
-    { "PINS", enumerate_pins, { .noargs = On, .allow_blocking = On } },
-    { "RST", settings_reset, { .allow_blocking = On } },
-    { "LEV", report_last_signals_event, { .noargs = On, .allow_blocking = On } },
-    { "LIM", report_current_limit_state, { .noargs = On, .allow_blocking = On } },
-    { "SD", report_spindle_data },
-    { "SR", spindle_reset_data },
-    { "RTC", rtc_action, { .allow_blocking = On } },
+    { "HSS", report_current_home_signal_state, { .noargs = On, .allow_blocking = On }, { .str = "report homing switches status" } },
+    { "HELP", output_help, { .allow_blocking = On }, {
+        .str = "$HELP - output help topics"
+     ASCII_EOL "$HELP <topic> - output help for <topic>"
+    } },
+    { "SPINDLES", enumerate_spindles, { .noargs = On, .allow_blocking = On }, { .str = "enumerate spindles, human readable" } },
+    { "SPINDLESH", enumerate_spindles_mr, { .noargs = On, .allow_blocking = On }, { .str = "enumerate spindles, machine readable" } },
+    { "SLP", enter_sleep, { .noargs = On }, { .str = "enter sleep mode" } },
+    { "TLR", set_tool_reference, { .noargs = On }, { .str = "set tool offset reference" } },
+    { "TPW", tool_probe_workpiece, { .noargs = On }, { .str = "probe tool plate" } },
+    { "I", build_info, { .allow_blocking = On }, {
+        .str = "output system information"
+#if !DISABLE_BUILD_INFO_WRITE_COMMAND
+     ASCII_EOL "$I=<string> - set build info string"
+#endif
+    } },
+    { "I+", output_all_build_info, { .noargs = On, .allow_blocking = On }, { .str = "output extended system information" } },
+    { "RST", settings_reset, { .allow_blocking = On, .help_fn = On }, { .fn = help_rst } },
+    { "N", output_startup_lines, { .noargs = On, .allow_blocking = On }, { .str = "output startup lines" } },
+    { "N0", set_startup_line0, {}, { .str = "N0=<gcode> - set startup line 0" } },
+    { "N1", set_startup_line1, {}, { .str = "N1=<gcode> - set startup line 1" } },
+    { "EA", enumerate_alarms, { .noargs = On, .allow_blocking = On }, { .str = "enumerate alarms" } },
+    { "EAG", enumerate_alarms_grblformatted, { .noargs = On, .allow_blocking = On }, { .str = "enumerate alarms, Grbl formatted" } },
+    { "EE", enumerate_errors, { .noargs = On, .allow_blocking = On }, { .str = "enumerate status codes" } },
+    { "EEG", enumerate_errors_grblformatted, { .noargs = On, .allow_blocking = On }, { .str = "enumerate status codes, Grbl formatted" } },
+    { "EG", enumerate_groups, { .noargs = On, .allow_blocking = On }, { .str = "enumerate setting groups" } },
+    { "ES", enumerate_settings, { .noargs = On, .allow_blocking = On }, { .str = "enumerate settings" } },
+    { "ESG", enumerate_settings_grblformatted, { .noargs = On, .allow_blocking = On }, { .str = "enumerate settings, Grbl formatted" } },
+    { "ESH", enumerate_settings_halformatted, { .noargs = On, .allow_blocking = On }, { .str = "enumerate settings, grblHAL formatted" } },
+    { "E*", enumerate_all, { .noargs = On, .allow_blocking = On }, { .str = "enumerate alarms, status codes and settings" } },
+    { "PINS", enumerate_pins, { .noargs = On, .allow_blocking = On, .help_fn = On }, { .fn = help_pins } },
+    { "LEV", report_last_signals_event, { .noargs = On, .allow_blocking = On }, { .str = "output last control signal events" } },
+    { "LIM", report_current_limit_state, { .noargs = On, .allow_blocking = On }, { .str = "output current limit pins" } },
+    { "SD", report_spindle_data, { .help_fn = On }, { .fn = help_spindle } },
+    { "SR", spindle_reset_data, { .help_fn = On }, { .fn = help_spindle } },
+    { "RTC", rtc_action, { .allow_blocking = On, .help_fn = On }, { .fn = help_rtc } },
 #ifdef DEBUGOUT
-    { "Q", output_memmap, { .noargs = On } },
+    { "Q", output_memmap, { .noargs = On }, { .str = "output NVS memory allocation" } },
 #endif
 };
 
+void system_output_help (const sys_command_t *commands, uint32_t num_commands)
+{
+    const char *help;
+    uint_fast8_t idx;
+
+    for(idx = 0; idx < num_commands; idx++) {
+
+        if(commands[idx].help.str) {
+
+            if(commands[idx].flags.help_fn)
+                help = commands[idx].help.fn(commands[idx].command);
+            else
+                help = commands[idx].help.str;
+
+            if(help) {
+                if(*help != '$') {
+                    hal.stream.write_char('$');
+                    hal.stream.write(commands[idx].command);
+                    hal.stream.write(" - ");
+                }
+                hal.stream.write(help);
+                hal.stream.write("." ASCII_EOL);
+            }
+        }
+    }
+}
+
 void system_command_help (void)
 {
-    hal.stream.write("$I - output system information" ASCII_EOL);
-    hal.stream.write("$I+ - output extended system information" ASCII_EOL);
-#if !DISABLE_BUILD_INFO_WRITE_COMMAND
-    hal.stream.write("$I=<string> set build info string" ASCII_EOL);
-#endif
-    hal.stream.write("$<n> - output setting <n> value" ASCII_EOL);
-    hal.stream.write("$<n>=<value> - assign <value> to settings <n>" ASCII_EOL);
-    hal.stream.write("$$ - output all setting values" ASCII_EOL);
-    hal.stream.write("$+ - output all setting values" ASCII_EOL);
-    hal.stream.write("$$=<n> - output setting details for setting <n>" ASCII_EOL);
-    hal.stream.write("$# - output offsets, tool table, probing and home position" ASCII_EOL);
-    hal.stream.write("$#=<n> - output value for parameter <n>" ASCII_EOL);
-    hal.stream.write("$G - output parser state" ASCII_EOL);
-    hal.stream.write("$N - output startup lines" ASCII_EOL);
-    if(settings.homing.flags.enabled)
-        hal.stream.write("$H - home configured axes" ASCII_EOL);
-    if(settings.homing.flags.single_axis_commands)
-        hal.stream.write("$H<axisletter> - home single axis" ASCII_EOL);
-    hal.stream.write("$HSS - report homing switches status" ASCII_EOL);
-    hal.stream.write("$X - unlock machine" ASCII_EOL);
-    hal.stream.write("$SLP - enter sleep mode" ASCII_EOL);
-    hal.stream.write("$HELP - output help topics" ASCII_EOL);
-    hal.stream.write("$HELP <topic> - output help for <topic>" ASCII_EOL);
-    hal.stream.write("$SPINDLES - enumerate spindles, human readable" ASCII_EOL);
-    hal.stream.write("$SPINDLESH - enumerate spindles, machine readable" ASCII_EOL);
-#if ENABLE_RESTORE_NVS_WIPE_ALL
-    hal.stream.write("$RST=* - restore/reset all settings" ASCII_EOL);
-#endif
-#if ENABLE_RESTORE_NVS_DEFAULT_SETTINGS
-    hal.stream.write("$RST=$ - restore default settings" ASCII_EOL);
-#endif
-#if ENABLE_RESTORE_NVS_DRIVER_PARAMETERS
-    if(settings_get_details()->next)
-        hal.stream.write("$RST=& - restore driver and plugin default settings" ASCII_EOL);
-#endif
-#if ENABLE_RESTORE_NVS_CLEAR_PARAMETERS
-    if(grbl.tool_table.n_tools)
-        hal.stream.write("$RST=# - reset offsets and tool data" ASCII_EOL);
-    else
-        hal.stream.write("$RST=# - reset offsets" ASCII_EOL);
-#endif
-    spindle_ptrs_t *spindle = gc_spindle_get();
-    if(spindle->reset_data)
-        hal.stream.write("$SR - reset spindle encoder data" ASCII_EOL);
-    if(spindle->get_data)
-        hal.stream.write("$SD - output spindle encoder data" ASCII_EOL);
-
-    hal.stream.write("$TLR - set tool offset reference" ASCII_EOL);
-    hal.stream.write("$TPW - probe tool plate" ASCII_EOL);
-    hal.stream.write("$EA - enumerate alarms" ASCII_EOL);
-    hal.stream.write("$EAG - enumerate alarms, Grbl formatted" ASCII_EOL);
-    hal.stream.write("$EE - enumerate status codes" ASCII_EOL);
-    hal.stream.write("$EEG - enumerate status codes, Grbl formatted" ASCII_EOL);
-    hal.stream.write("$ES - enumerate settings" ASCII_EOL);
-    hal.stream.write("$ESG - enumerate settings, Grbl formatted" ASCII_EOL);
-    hal.stream.write("$ESH- enumerate settings, grblHAL formatted" ASCII_EOL);
-    hal.stream.write("$E* - enumerate alarms, status codes and settings" ASCII_EOL);
-    if(hal.enumerate_pins)
-        hal.stream.write("$PINS - enumerate pin bindings" ASCII_EOL);
-    hal.stream.write("$LEV - output last control signal events" ASCII_EOL);
-    hal.stream.write("$LIM - output current limit pins state" ASCII_EOL);
-    if(hal.rtc.get_datetime) {
-        hal.stream.write("$RTC - output current time" ASCII_EOL);
-        hal.stream.write("$RTC=<ISO8601 datetime> - set current time" ASCII_EOL);
-    }
-#ifndef NO_SETTINGS_DESCRIPTIONS
-    hal.stream.write("$SED=<n> - output settings description for setting <n>" ASCII_EOL);
-#endif
+    system_output_help(sys_commands, sizeof(sys_commands) / sizeof(sys_command_t));
 }
 
 /*! \brief Directs and executes one line of input from protocol_process.

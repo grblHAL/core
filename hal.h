@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2016-2023 Terje Io
+  Copyright (c) 2016-2024 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -506,6 +506,32 @@ typedef struct {
     rtc_set_datetime_ptr set_datetime;  //!< Optional handler setting the current datetime.
 } rtc_ptrs_t;
 
+/*******************
+ *  RGB (LED) API  *
+ *******************/
+
+typedef union {
+    uint32_t value;
+    struct {
+        uint8_t B; //!< Blue
+        uint8_t G; //!< Green
+        uint8_t R; //!< Red
+        uint8_t W; //!< White
+    };
+} rgb_color_t;
+
+/*! \brief Pointer to function for setting RGB (LED) output.
+\param color a \a rgb_color_t union.
+*/
+typedef void (*rgb_set_color)(uint8_t device, rgb_color_t color);
+
+typedef struct {
+    rgb_set_color out;      //!< Optional handler for setting device (LED) color.
+    uint8_t num_devices;    //!< Number of devices (LEDS) available.
+} rgb_ptr_t;
+
+/**/
+
 /*! \brief Pointer to function for performing a pallet shuttle.
 */
 typedef void (*pallet_shuttle_ptr)(void);
@@ -595,6 +621,7 @@ typedef struct {
     tool_ptrs_t tool;                       //!< Optional handlers for tool changes.
     rtc_ptrs_t rtc;                         //!< Optional handlers for real time clock (RTC).
     io_port_t port;                         //!< Optional handlers for axuillary I/O (adds support for M62-M66).
+    rgb_ptr_t rgb;                          //!< Optional handler for RGB output to LEDs (neopixels) or lamps.
     periph_port_t periph_port;              //!< Optional handlers for peripheral pin registration.
     driver_reset_ptr driver_reset;          //!< Optional handler, called on soft resets. Set to a dummy handler by the core at startup.
     nvs_io_t nvs;                           //!< Optional handlers for storing/retrieving settings and data to/from non-volatile storage (NVS).

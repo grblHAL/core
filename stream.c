@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2023 Terje Io
+  Copyright (c) 2021-2024 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -432,6 +432,9 @@ bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stream_write_
 
         mpg.stream = stream;
         mpg.is_up = is_connected;
+
+        if(hal.periph_port.set_pin_description)
+            hal.periph_port.set_pin_description(Input_RX, (pin_group_t)(PinGroup_UART + stream->instance), "MPG");
 
         return true;
     }

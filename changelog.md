@@ -1,5 +1,41 @@
 ## grblHAL changelog
 
+<a name="20240111"/>Build 20240111
+
+Core:
+
+* Fix for issue #426, decreasing the `$30` setting value \(max spindle RPM\) causes incorrect PWM output.
+
+* Implemented handling of _single block_, _block delete_ and _optional stop disable_ control signal events.  
+Added help for `$S` \(single block\), `$B` \(block delete\) and `$O` \(optional stop disable\) commands that can be used
+to toggle the functionality when the corresponding switch inputs are not available.
+
+* Added [optional HAL entry point](http://svn.io-engineering.com/grblHAL/html/structrgb__ptr__t.html) for outputting WRGB values to lights such as neopixels. The WRGB API may be extended later.
+
+* Improved $-commands registration to make it easier to add help text and keep it in sync. Added missing help text for some core commands.  
+Tip: send `$help commands` to output command help.
+
+Drivers:
+
+* ESP32: moved build configuration from [CMakeLists.txt](https://github.com/grblHAL/ESP32/blob/master/main/CMakeLists.txt) to
+[my_machine.h](https://github.com/grblHAL/ESP32/blob/master/main/my_machine.h), mainly for reducing build time in the Web Builder.  
+More changes for ESP32-S3 compatibility, still work in progress but getting closer.  
+Added support for third UART \(serial port\).
+
+* SAM3X8E \(Due\): fix for incorrect pin map, [issue #20](https://github.com/grblHAL/SAM3X8E/issues/20).
+
+* STM32F1xx: fix for [issue #47](https://github.com/grblHAL/STM32F1xx/issues/47) - bad linker file.  
+__NOTE:__ this moves settings storage to the end of available flash, if updating backup and restore your settings!
+
+* Most: further updates for assigning optional signals to aux input ports - should be working now.  
+__NOTE:__ some signals requires aux pins that support pin change interrupt.
+
+Plugins:
+
+* SD card: updated for new $-commands registration \(help text\).
+
+---
+
 <a name="20231229"/>Build 20231229
 
 Core:

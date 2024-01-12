@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2023 Terje Io
+  Copyright (c) 2021-2024 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -173,45 +173,30 @@
 #endif
 
 #if SAFETY_DOOR_ENABLE || MOTOR_FAULT_ENABLE || MOTOR_WARNING_ENABLE || PROBE_DISCONNECT_ENABLE || \
-    STOP_DISABLE_ENABLE || BLOCK_DELETE_ENABLE || SINGLE_BLOCK_PIN || LIMITS_OVERRIDE_ENABLE || defined __DOXYGEN__
+    STOP_DISABLE_ENABLE || BLOCK_DELETE_ENABLE || SINGLE_BLOCK_ENABLE || LIMITS_OVERRIDE_ENABLE || defined __DOXYGEN__
 
 #define AUX_CONTROLS_ENABLED 1
 
-#if PROBE_DISCONNECT_ENABLE || STOP_DISABLE_ENABLE || BLOCK_DELETE_ENABLE || SINGLE_BLOCK_PIN || LIMITS_OVERRIDE_ENABLE
+#if PROBE_DISCONNECT_ENABLE || STOP_DISABLE_ENABLE || BLOCK_DELETE_ENABLE || SINGLE_BLOCK_ENABLE || LIMITS_OVERRIDE_ENABLE
 #define AUX_CONTROLS_SCAN    3 // start index for scanned inputs
 #else
 #define AUX_CONTROLS_SCAN    0
 #endif
 
-typedef enum {
-    AuxCtrl_SafetyDoor = 0,
-    AuxCtrl_MotorFault,
-    AuxCtrl_MotorWarning,
-    AuxCtrl_ProbeDisconnect,
-    AuxCtrl_StopDisable,
-    AuxCtrl_BlockDelete,
-    AuxCtrl_SingleBlock,
-    AuxCtrl_LimitsOverride,
-    AuxCtrl_NumEntries,
-} aux_ctrl_signals_t;
-
-typedef struct {
-    bool enabled;
-    bool debouncing;
-    uint8_t port;
-    pin_irq_mode_t irq_mode;
-    control_signals_t cap;
-    pin_function_t function;
-} aux_ctrl_t;
+#if SAFETY_DOOR_ENABLE || MOTOR_FAULT_ENABLE || MOTOR_WARNING_ENABLE
+#define AUX_CONTROLS_XMAP    1
+#else
+#define AUX_CONTROLS_XMAP    0
+#endif
 
 static aux_ctrl_t aux_ctrl[] = {
     { .enabled = SAFETY_DOOR_ENABLE, .port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .safety_door_ajar = On }, .function = Input_SafetyDoor },
     { .enabled = MOTOR_FAULT_ENABLE, .port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .motor_fault = On }, .function = Input_MotorFault },
     { .enabled = MOTOR_WARNING_ENABLE, .port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .motor_warning = On }, .function = Input_MotorWarning },
     { .enabled = PROBE_DISCONNECT_ENABLE, .port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .motor_fault = On }, .function = Input_ProbeDisconnect },
-    { .enabled = STOP_DISABLE_ENABLE, .port = 0xFF, .irq_mode = IRQ_Mode_None, .cap = { .stop_disable = On }, .function = Input_StopDisable },
-    { .enabled = BLOCK_DELETE_ENABLE, .port = 0xFF, .irq_mode = IRQ_Mode_None, .cap = { .block_delete = On }, .function = Input_BlockDelete },
-    { .enabled = SINGLE_BLOCK_ENABLE, .port = 0xFF, .irq_mode = IRQ_Mode_None, .cap = { .single_block = On }, .function = Input_SingleBlock },
+    { .enabled = STOP_DISABLE_ENABLE, .port = 0xFF, .irq_mode = IRQ_Mode_Change, .cap = { .stop_disable = On }, .function = Input_StopDisable },
+    { .enabled = BLOCK_DELETE_ENABLE, .port = 0xFF, .irq_mode = IRQ_Mode_Change, .cap = { .block_delete = On }, .function = Input_BlockDelete },
+    { .enabled = SINGLE_BLOCK_ENABLE, .port = 0xFF, .irq_mode = IRQ_Mode_Change, .cap = { .single_block = On }, .function = Input_SingleBlock },
     { .enabled = LIMITS_OVERRIDE_ENABLE, .port = 0xFF, .irq_mode = IRQ_Mode_None, .cap = { .limits_override = On }, .function = Input_LimitsOverride }
 };
 

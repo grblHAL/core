@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2023 Terje Io
+  Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2012-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -281,6 +281,8 @@ void spindle_update_caps (spindle_ptrs_t *spindle, spindle_pwm_t *pwm_caps)
         if(sys_spindle[idx].enabled && spindle->id == sys_spindle[idx].hal.id) {
             sys_spindle[idx].hal.type = spindle->type;
             sys_spindle[idx].hal.cap.laser = spindle->cap.laser;
+            sys_spindle[idx].hal.rpm_min =  spindle->rpm_min;
+            sys_spindle[idx].hal.rpm_max =  spindle->rpm_max;
             sys_spindle[idx].hal.pwm_off_value =  spindle->pwm_off_value;
             break;
         }
