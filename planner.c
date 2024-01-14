@@ -352,7 +352,7 @@ static inline float limit_acceleration_by_axis_maximum (float *unit_vec)
             limit_value = min(limit_value, fabsf(settings.axis[idx].acceleration / unit_vec[idx]));
     } while(idx);
 #if ENABLE_ACCELERATION_PROFILES
-    limit_value *= AccelerationProfile(ActiveAccelProfile);
+    limit_value *= LookupProfile(ActiveAccelProfile);
 #endif
     return limit_value;
 }
@@ -368,7 +368,7 @@ static inline float limit_jerk_by_axis_maximum (float *unit_vec)
             limit_value = min(limit_value, fabsf(settings.axis[idx].jerk / unit_vec[idx]));
     } while(idx);
 #if ENABLE_ACCELERATION_PROFILES
-    limit_value *= AccelerationProfile(ActiveAccelProfile);
+    limit_value *= LookupProfileProfile(ActiveAccelProfile);
 #endif
     return limit_value;
 }

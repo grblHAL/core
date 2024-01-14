@@ -967,7 +967,7 @@ bool settings_read_coord_data(coord_system_id_t id, float (*coord_data)[N_AXIS])
 bool settings_override_acceleration (uint8_t axis, float acceleration);
 
 #if ENABLE_ACCELERATION_PROFILES
-extern uint8_t ActiveAccelProfile = 1;
+extern uint8_t ActiveAccelProfile;
 float AccelerationProfile (uint8_t Profile);
 #endif
 

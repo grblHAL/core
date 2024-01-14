@@ -896,6 +896,8 @@ bool settings_override_acceleration (uint8_t axis, float acceleration)
 }
 
 #if ENABLE_ACCELERATION_PROFILES
+ActiveAccelProfile = 1; // Initialize machine with 100% Profile
+
 //Acceleration Profiles for G187 P[x] in percent of maximum machine acceleration.
 float LookupProfile(uint8_t Profile) {
     static const float lookup[5] = { 
