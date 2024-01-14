@@ -968,7 +968,7 @@ bool settings_override_acceleration (uint8_t axis, float acceleration);
 
 #if ENABLE_ACCELERATION_PROFILES
 extern uint8_t ActiveAccelProfile;
-float AccelerationProfile (uint8_t Profile);
+float LookupProfile (uint8_t Profile);
 #endif
 
 void settings_register (setting_details_t *details);

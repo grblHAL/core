@@ -1393,11 +1393,13 @@ static const char *set_axis_setting_unit (setting_id_t setting_id, uint_fast8_t 
         case Setting_AxisAcceleration:
             unit = is_rotary ? "deg/sec^2" : "mm/sec^2";
             break;
+
 #if ENABLE_JERK_ACCELERATION   
         case Setting_AxisJerk:
             unit = is_rotary ? "deg/sec^3" : "mm/sec^3";
             break;
 #endif
+
         case Setting_AxisMaxTravel:
         case Setting_AxisBacklash:
             unit = is_rotary ? "deg" : "mm";
@@ -1504,20 +1506,21 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
 
         case Setting_AxisAcceleration:
             settings.axis[idx].acceleration = override_backup.acceleration[idx] = value * 60.0f * 60.0f; // Convert to mm/min^2 for grbl internal use.
-#if ENABLE_JERK_ACCELERATION   
-            settings.axis[idx].jerk = (settings.axis[idx].acceleration * 10.0f * 60.0f);  //reset jerk to axis minimum.
-#endif
             break;
+
 #if ENABLE_JERK_ACCELERATION      
         case Setting_AxisJerk:
-            if ((value * 60.0f * 60.0f) < (settings.axis[idx].acceleration * 10.0f)) //ensuring that the acceleration time is limited to at maximum 100ms (or 10 stepper segments).
+            if ((value * 60.0f * 60.0f) < (settings.axis[idx].acceleration * 10.0f)) { //ensuring that the acceleration ramp time is limited to at maximum 100ms (or 10 stepper segments).
                 settings.axis[idx].jerk = settings.axis[idx].acceleration * 10.0f * 60.0f; // mm/min^2 -> mm/min^3
-            else if ((settings.axis[idx].acceleration / (value * 60.0f * 60.0f * 60.0f)) < (1.0f / ACCELERATION_TICKS_PER_SECOND)) // Limit Jerk if Value is so large that it reverts back to trapezoidal.
+            }
+            else if ((settings.axis[idx].acceleration / (value * 60.0f * 60.0f * 60.0f)) < (1.0f / ACCELERATION_TICKS_PER_SECOND)) { // Limit Jerk if value is so large that it reverts back to trapezoidal.
                 settings.axis[idx].jerk = settings.axis[idx].acceleration * ACCELERATION_TICKS_PER_SECOND * 60.0f; // mm/min^2 -> mm/min^3
+            }
             else
                 settings.axis[idx].jerk = value * 60.0f * 60.0f * 60.0f; // Convert to mm/min^3 for grbl internal use.
             break;
 #endif            
+
         case Setting_AxisMaxTravel:
             if(settings.axis[idx].max_travel != -value) {
                 bit_false(sys.homed.mask, bit(idx));
@@ -1580,11 +1583,13 @@ static float get_float (setting_id_t setting)
             case Setting_AxisAcceleration:
                 value = settings.axis[idx].acceleration / (60.0f * 60.0f); // Convert from mm/min^2 to mm/sec^2.
                 break;
+
 #if ENABLE_JERK_ACCELERATION          
             case Setting_AxisJerk:
                 value = settings.axis[idx].jerk / (60.0f * 60.0f * 60.0f); // Convert from mm/min^3 to mm/sec^3.
                 break;
 #endif
+
             case Setting_AxisMaxTravel:
                 value = -settings.axis[idx].max_travel; // Store as negative for grbl internal use.
                 break;
