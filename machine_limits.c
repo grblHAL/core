@@ -144,7 +144,7 @@ void limits_set_work_envelope (void)
 void limits_set_machine_positions (axes_signals_t cycle, bool add_pulloff)
 {
     uint_fast8_t idx = N_AXIS;
-    float pulloff = add_pulloff ? settings.homing.pulloff : 0.0f;
+    float pulloff = add_pulloff ? settings.homing.pulloff : -0.0f;
 
     if(settings.homing.flags.force_set_origin) {
         do {

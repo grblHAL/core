@@ -1,6 +1,20 @@
 ## grblHAL changelog
 
-<a name="20240111"/>Build 20240111
+<a name="20240115"/>Build 20240115
+
+Core:
+
+* Updated build date and a minor insignificant fix.
+
+Drivers:
+
+* ESP32: switched to low-level I/O register access for speed, added WS2812 RGB HAL, completed 32 \(or 31?\) bit I2S shift register output for ESP32-S3, 16 bit not yet ready.
+
+* STM32F7xx: added missing code for ganged axis support \(auto squaring was not affected\).
+
+---
+
+<a name="20240109"/>Build 20240109
 
 Core:
 
