@@ -131,6 +131,16 @@
 // Note: Third party plugins may have more than one implementation, there is no "owner" of plugins listed here.
 //       It is also guaranteed that there will be no implementation in the grblHAL repository of these.
 
+#if PWM_SERVO_ENABLE
+    extern void pwm_servo_init (void);
+    pwm_servo_init();
+#endif
+
+#if BLTOUCH_ENABLE
+    extern void bltouch_init (void);
+    bltouch_init();
+#endif
+
 #if ATC_ENABLE
     extern void atc_init (void);
     atc_init();

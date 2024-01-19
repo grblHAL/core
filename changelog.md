@@ -1,5 +1,32 @@
 ## grblHAL changelog
 
+<a name="20240118"/>Build 20240118
+
+Core:
+
+* Added RGB API to the HAL, with crossbar definitions for number of devices \(LEDs, NeoPixels\).
+
+* Refactored some inconsistent parts of the ioports/crossbar interfaces.  
+For developers: the signature of the [ioports_enumerate()](http://svn.io-engineering.com/grblHAL/html/ioports_8c.html#ae46c4f9a7ebeac80607a3015da5ab412) call has been changed.
+Added PWM servo capability.
+
+Drivers:
+
+* Most: updated for the changed ioports/crossbar interfaces.
+
+* ESP32: added NeoPixel driver for the new RGB API. _Experimental, no board support yet._  
+Added auxillary analog PWM out option for up to two channels. Can be configured for PWM servos.
+
+* RP2040: added NeoPixel driver for the new RGB API. _Experimental and untested, no board support yet._
+
+Plugins:
+
+* Spindle: fix for [issue #24](https://github.com/grblHAL/Plugins_spindle/issues/24) Typo, regression causing compilation failure for the MODVFD driver.
+
+* Keypad: I2C display interface, [issue #9](https://github.com/grblHAL/Plugin_keypad/issues/9) - missing update to match core changes caused compilation failure.
+
+---
+
 <a name="20240115"/>Build 20240115
 
 Core:

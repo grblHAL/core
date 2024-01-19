@@ -143,7 +143,7 @@ bool ioport_can_claim_explicit (void)
     return !(hal.port.claim == NULL || hal.port.get_pin_info == NULL);
 }
 
-bool ioports_enumerate (io_port_type_t type, io_port_direction_t dir, pin_mode_t filter, bool claimable, ioports_enumerate_callback_ptr callback, void *data)
+bool ioports_enumerate (io_port_type_t type, io_port_direction_t dir, pin_cap_t filter, ioports_enumerate_callback_ptr callback, void *data)
 {
     bool ok = false;
     uint8_t n_ports = ioports_available(type, dir);
@@ -151,8 +151,6 @@ bool ioports_enumerate (io_port_type_t type, io_port_direction_t dir, pin_mode_t
 
     if(n_ports && ioport_can_claim_explicit()) do {
         portinfo = hal.port.get_pin_info(type, dir, --n_ports);
-        if(claimable && portinfo->mode.claimed)
-            continue;
         if((portinfo->cap.mask & filter.mask) == filter.mask && (ok = callback(portinfo, n_ports, data)))
             break;
     } while(n_ports);
@@ -295,14 +293,15 @@ bool ioports_precompute_pwm_values (pwm_config_t *config, ioports_pwm_t *pwm_dat
     if(config->max > config->min) {
         pwm_data->min = config->min;
         pwm_data->period = (uint_fast16_t)((float)clock_hz / config->freq_hz);
-        if(config->off_value == 0.0f)
-            pwm_data->off_value = pwm_data->invert_pwm ? pwm_data->period : 0;
-        else
-            pwm_data->off_value = invert_pwm(pwm_data, (uint_fast16_t)(pwm_data->period * config->off_value / 100.0f));
         pwm_data->min_value = (uint_fast16_t)(pwm_data->period * config->min_value / 100.0f);
         pwm_data->max_value = (uint_fast16_t)(pwm_data->period * config->max_value / 100.0f); // + pwm_data->offset;
         pwm_data->pwm_gradient = (float)(pwm_data->max_value - pwm_data->min_value) / (config->max - config->min);
-        pwm_data->always_on = config->off_value != 0.0f;
+        if(!(pwm_data->always_on = config->off_value != 0.0f))
+            pwm_data->off_value = pwm_data->invert_pwm ? pwm_data->period : 0;
+        else if(!config->servo_mode && config->off_value > 0.0f)
+            pwm_data->off_value = invert_pwm(pwm_data, (uint_fast16_t)(pwm_data->period * config->off_value / 100.0f));
+        else
+            pwm_data->off_value = pwm_data->min_value;
     }
 
     return config->max > config->min;

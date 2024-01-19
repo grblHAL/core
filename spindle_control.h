@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2022 Terje Io
+  Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2012-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -137,6 +137,10 @@ typedef bool (*spindle_config_ptr)(struct spindle_ptrs *spindle);
 */
 typedef void (*spindle_set_state_ptr)(struct spindle_ptrs *spindle, spindle_state_t state, float rpm);
 
+#ifdef GRBL_ESP32
+typedef void (*esp32_spindle_off_ptr)(struct spindle_ptrs *spindle);
+#endif
+
 /*! \brief Pointer to function for getting the spindle state.
 \returns state in a \a spindle_state_t union variable.
 */
@@ -199,7 +203,7 @@ struct spindle_ptrs {
     spindle_update_pwm_ptr update_pwm;  //!< Handler for updating spindle PWM output.
     spindle_update_rpm_ptr update_rpm;  //!< Handler for updating spindle RPM.
 #ifdef GRBL_ESP32
-    void (*esp32_off)(struct spindle_ptrs *spindle);   //!< Workaround handler for snowflake ESP32 Guru awaken by floating point data in ISR context.
+    esp32_spindle_off_ptr esp32_off;    //!< Workaround handler for snowflake ESP32 Guru awaken by floating point data in ISR context.
 #endif
     // Optional entry points.
     spindle_pulse_on_ptr pulse_on;      //!< Optional handler for Pulses Per Inch (PPI) mode. Required for the laser PPI plugin.

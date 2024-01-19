@@ -523,11 +523,12 @@ typedef union {
 /*! \brief Pointer to function for setting RGB (LED) output.
 \param color a \a rgb_color_t union.
 */
-typedef void (*rgb_set_color)(uint8_t device, rgb_color_t color);
+typedef void (*rgb_set_color_ptr)(uint8_t device, rgb_color_t color);
 
 typedef struct {
-    rgb_set_color out;      //!< Optional handler for setting device (LED) color.
-    uint8_t num_devices;    //!< Number of devices (LEDS) available.
+    rgb_set_color_ptr out;  //!< Optional handler for setting device (LED) color.
+    rgb_color_t cap;        //!< Driver capability, color value: 0 - not available, 1 - on off, > 1 - intensity range 0 - n.
+    uint8_t num_devices;    //!< Number of devices (LEDs) available.
 } rgb_ptr_t;
 
 /**/

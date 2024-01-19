@@ -171,6 +171,12 @@ typedef enum {
     Output_Analog_Aux5,
     Output_Analog_Aux6,
     Output_Analog_Aux7,
+    Output_LED,
+    Output_LED_R,
+    Output_LED_G,
+    Output_LED_B,
+    Output_LED_W,
+    Output_LED_Adressable,
     Bidirectional,
     Bidirectional_SDA = Bidirectional,
     Bidirectional_MotorUARTX,
@@ -344,6 +350,12 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Output_Analog_Aux5,        .name = "Aux analog out 5" },
     { .function = Output_Analog_Aux6,        .name = "Aux analog out 6" },
     { .function = Output_Analog_Aux7,        .name = "Aux analog out 7" },
+    { .function = Output_LED,                .name = "LED" },
+    { .function = Output_LED_R,              .name = "LED R" },
+    { .function = Output_LED_G,              .name = "LED G" },
+    { .function = Output_LED_B,              .name = "LED B" },
+    { .function = Output_LED_W,              .name = "LED W" },
+    { .function = Output_LED_Adressable,     .name = "LED adressable" },
     { .function = Bidirectional_SDA,         .name = "SDA" },
     { .function = Bidirectional_MotorUARTX,  .name = "UART X" },
     { .function = Bidirectional_MotorUARTY,  .name = "UART Y" },
@@ -380,6 +392,7 @@ typedef enum {
     PinGroup_UART4,
     PinGroup_USB,
     PinGroup_CAN,
+    PinGroup_LED,
     PinGroup_Home,
 // Interrupt capable pins that may have debounce processing enabled
     PinGroup_Control       = (1<<8),
@@ -429,16 +442,16 @@ typedef enum {
     PullMode_UpDown  = 0b11  //!< 0b11 (0x03) - only used to report port capability.
 } pull_mode_t;
 
-#define PINMODE_NONE     (0)
-#define PINMODE_OUTPUT   (1U<<1)
+#define PINMODE_NONE        (0)
+#define PINMODE_OUTPUT      (1U<<1)
 #ifndef __LPC17XX__
-#define PINMODE_OD       (1U<<2)
+#define PINMODE_OD          (1U<<2)
 #endif
-#define PINMODE_PULLUP   (PullMode_Up<<3)
-#define PINMODE_PULLDOWN (PullMode_Down<<3)
-#define PINMODE_PWM      (1U<<10)
-#define PINMODE_ANALOG   (1U<<11)
-#define PINMODE_REMAP    (1U<<14)
+#define PINMODE_PULLUP      (PullMode_Up<<3)
+#define PINMODE_PULLDOWN    (PullMode_Down<<3)
+#define PINMODE_ANALOG      (1U<<10)
+#define PINMODE_PWM         (1U<<11)
+#define PINMODE_PWM_SERVO   (1U<<12)
 
 typedef union {
     uint16_t mask;
@@ -448,14 +461,31 @@ typedef union {
                  open_drain :1,
                  pull_mode  :2,
                  irq_mode   :5,
-                 pwm        :1,
                  analog     :1,
-                 peripheral :1,
+                 pwm        :1,
+                 servo_pwm  :1,
+                 claimable  :1,
+                 reserved   :2;
+    };
+} pin_cap_t;
+
+typedef union {
+    uint16_t mask;
+    struct {
+        uint16_t input      :1,
+                 output     :1,
+                 open_drain :1,
+                 pull_mode  :2,
+                 irq_mode   :5,
+                 analog     :1,
+                 pwm        :1,
+                 servo_pwm  :1,
                  claimed    :1,
-                 remapped   :1,
-                 can_remap  :1;
+                 reserved   :2;
     };
 } pin_mode_t;
+
+#define XBAR_SET_CAP(cap, mode) { cap.mask = mode.mask; cap.claimable = !mode.claimed; }
 
 //! /a cfg_data argument to /a xbar_config_ptr for PWM pins
 typedef struct {
@@ -466,6 +496,7 @@ typedef struct {
     float min_value; // percent of period
     float max_value; // percent of period
     bool invert;
+    bool servo_mode;
 } pwm_config_t;
 
 struct xbar;
@@ -489,7 +520,7 @@ typedef enum {
 
 typedef struct {
     bool enabled;
-    bool debouncing;
+    volatile bool debouncing;
     uint8_t port;
     pin_irq_mode_t irq_mode;
     control_signals_t cap;
@@ -503,8 +534,8 @@ typedef struct xbar {
     const char *description;
     uint_fast8_t pin;
     uint32_t bit;
-    pin_mode_t mode;
-    pin_mode_t cap;
+    pin_cap_t cap;              //!< Pin capabilities
+    pin_mode_t mode;            //!< Current pin configuration
     xbar_config_ptr config;
     xbar_get_value_ptr get_value;
     xbar_set_value_ptr set_value;
