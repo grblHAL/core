@@ -349,6 +349,8 @@ const io_stream_t *stream_null_init (uint32_t baud_rate);
 
 io_stream_t const *stream_open_instance (uint8_t instance, uint32_t baud_rate, stream_write_char_ptr rx_handler);
 
+bool stream_set_description (const io_stream_t *stream, const char *description);
+
 #ifdef DEBUGOUT
 void debug_write (const char *s);
 void debug_writeln (const char *s);

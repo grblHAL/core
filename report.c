@@ -2171,6 +2171,131 @@ status_code_t report_pins (sys_state_t state, char *args)
     return Status_OK;
 }
 
+#ifndef NO_SETTINGS_DESCRIPTIONS
+
+static char *irq_mode (pin_irq_mode_t mode)
+{
+    switch(mode) {
+        case IRQ_Mode_Rising:
+            return "R";
+        case IRQ_Mode_Falling:
+            return "F";
+        case IRQ_Mode_Change:
+            return "C";
+        case IRQ_Mode_Edges:
+            return "E";
+        case IRQ_Mode_High:
+            return "H";
+        case IRQ_Mode_Low:
+            return "L";
+        case IRQ_Mode_All:
+            return "A";
+        default:
+            break;
+    }
+
+    return "-";
+}
+
+static char *pull_mode (pull_mode_t mode)
+{
+    switch(mode) {
+        case PullMode_Up:
+            return "U";
+        case PullMode_Down:
+            return "D";
+        case PullMode_UpDown:
+            return "B";
+        default:
+            break;
+    }
+
+    return "-";
+}
+
+
+status_code_t report_pin_states (sys_state_t state, char *args)
+{
+    xbar_t *port;
+    uint8_t idx, ports;
+
+    if((ports = ioports_available(Port_Digital, Port_Input))) {
+        for(idx = 0; idx < ports; idx++) {
+            if((port = hal.port.get_pin_info(Port_Digital, Port_Input, idx))) {
+                hal.stream.write("[PINSTATE:DIN|");
+                hal.stream.write(port->description);
+                hal.stream.write("|");
+                hal.stream.write(uitoa(idx));
+                hal.stream.write("|");
+                hal.stream.write(port->mode.inverted ? "I" : "N");
+                hal.stream.write(pull_mode(port->mode.pull_mode));
+                hal.stream.write(irq_mode(port->mode.irq_mode));
+                hal.stream.write("|");
+                hal.stream.write(port->cap.invert ? "I" : "-");
+                hal.stream.write(pull_mode(port->cap.pull_mode));
+                hal.stream.write(irq_mode(port->cap.irq_mode));
+                hal.stream.write("|");
+                hal.stream.write(port->get_value ? uitoa((uint32_t)port->get_value(port)) : "?");
+                hal.stream.write("]" ASCII_EOL);
+            }
+        }
+    }
+
+    if((ports = ioports_available(Port_Digital, Port_Output))) {
+        for(idx = 0; idx < ports; idx++) {
+            if((port = hal.port.get_pin_info(Port_Digital, Port_Output, idx))) {
+                hal.stream.write("[PINSTATE:DOUT|");
+                hal.stream.write(port->description);
+                hal.stream.write("|");
+                hal.stream.write(uitoa(idx));
+                hal.stream.write("|");
+                hal.stream.write(port->mode.inverted ? "I" : "N");
+                hal.stream.write("|");
+                hal.stream.write(port->cap.invert ? "I" : "-");
+                hal.stream.write("|");
+                hal.stream.write(port->get_value ? uitoa((uint32_t)port->get_value(port)) : "?");
+                hal.stream.write("]" ASCII_EOL);
+            }
+        }
+    }
+
+    if((ports = ioports_available(Port_Analog, Port_Input))) {
+        for(idx = 0; idx < ports; idx++) {
+            if((port = hal.port.get_pin_info(Port_Analog, Port_Input, idx))) {
+                hal.stream.write("[PINSTATE:AIN|");
+                hal.stream.write(port->description);
+                hal.stream.write("|");
+                hal.stream.write(uitoa(idx));
+                hal.stream.write("|||");
+                hal.stream.write(port->get_value ? ftoa((uint32_t)port->get_value(port), 2) : "?");
+                hal.stream.write("]" ASCII_EOL);
+            }
+        }
+    }
+
+    if((ports = ioports_available(Port_Analog, Port_Output))) {
+        for(idx = 0; idx < ports; idx++) {
+            if((port = hal.port.get_pin_info(Port_Analog, Port_Output, idx))) {
+                hal.stream.write("[PINSTATE:AOUT|");
+                hal.stream.write(port->description);
+                hal.stream.write("|");
+                hal.stream.write(uitoa(idx));
+                hal.stream.write("|");
+                hal.stream.write(port->mode.pwm ? "P" : (port->mode.servo_pwm ? "S" : "N"));
+                hal.stream.write("|");
+                hal.stream.write(port->cap.pwm ? "P" : (port->cap.servo_pwm ? "S" : "N"));
+                hal.stream.write("|");
+                hal.stream.write(port->get_value ? ftoa((uint32_t)port->get_value(port), 2) : "?");
+                hal.stream.write("]" ASCII_EOL);
+            }
+        }
+    }
+
+    return Status_OK;
+}
+
+#endif
+
 static void print_uito2a (char *prefix, uint32_t v)
 {
     hal.stream.write(prefix);

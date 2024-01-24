@@ -1,5 +1,46 @@
-## grblHAL changelog
+<a name="20240123"/>Build 20240123
 
+Core:
+
+* Enhanced RGB and ioports APIs.
+
+* Allowed use of unused \(by the core\) axis words \(ABCUVW\) in M-code commands implemented by plugin code.
+
+* Added `$PINSTATE` command, for outputting auxillary pin states, modes and capabilities. Machine readable formatting.
+
+Drivers:
+
+* RP2040: refactored allocation/initialization of PIO state machines to allow a neopixel driver, and possibly user drivers, to be installed.
+
+* ESP32, RP2040, STM32F4xx: added Neopixel driver code exposed via the core RGB API.  
+__NOTE:__ there is no official board support for this just yet.
+
+* Some: added full or partial support for new features in the ioports API.  
+__NOTE:__ This work is not yet complete, final tuning and update of remaining drivers will be done later.
+
+Plugins:
+
+* Motors: added overridable symbol for specifying R sense for Trinamic drivers.
+
+Templates:
+
+* Added plugin for RGB LED control via [M150](https://marlinfw.org/docs/gcode/M150.html), sits on top of the new RGB API.
+
+Web Builder:
+
+* Added new tab for assigning optional and dedicated inputs to auxillary inputs.  
+Some internal changes to simplify board specifications. Currently the ESP32 and STM32F1xx divers has been updated for this, more to follow later.  
+__NOTE:__ Please report any unwanted/unexpected change in behaviour of the generated firmware.
+
+For info:
+
+I have plugings in the pipeline for PWM servo control via [M280](https://marlinfw.org/docs/gcode/M280.html) plus automatic BLTouch probe deployment.  
+These are based on original work by @wakass and might be published by him if a PR I plan to submit is accepted.
+
+---
+
+## grblHAL changelog
+ 
 <a name="20240118"/>Build 20240118
 
 Core:
@@ -21,7 +62,7 @@ Added auxillary analog PWM out option for up to two channels. Can be configured 
 
 Plugins:
 
-* Spindle: fix for [issue #24](https://github.com/grblHAL/Plugins_spindle/issues/24) Typo, regression causing compilation failure for the MODVFD driver.
+* Spindle: fix for [issue #24](https://github.com/grblHAL/Plugins_spindle/issues/24) - typo, regression causing compilation failure for the MODVFD driver.
 
 * Keypad: I2C display interface, [issue #9](https://github.com/grblHAL/Plugin_keypad/issues/9) - missing update to match core changes caused compilation failure.
 

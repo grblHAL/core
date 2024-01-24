@@ -65,6 +65,7 @@ typedef int32_t (*wait_on_input_ptr)(io_port_type_t type, uint8_t port, wait_mod
 typedef void (*set_pin_description_ptr)(io_port_type_t type, io_port_direction_t dir, uint8_t port, const char *s);
 
 /*! \brief Pointer to function for getting information about a digital or analog port.
+<br>__NOTE:__ The port information pointed to will be overwritten by the next call to this function.
 \param type as an \a #io_port_type_t enum value.
 \param dir as an \a #io_port_direction_t enum value.
 \param port port number.

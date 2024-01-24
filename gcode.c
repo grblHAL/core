@@ -1328,6 +1328,11 @@ status_code_t gc_execute_block (char *block)
                         word_bit.parameter.a = On;
                         gc_block.values.xyz[A_AXIS] = value;
                         break;
+#else
+                    case 'A':
+                        word_bit.parameter.a = On;
+                        gc_block.values.a = value;
+                        break;
 #endif
 
 #ifdef B_AXIS
@@ -1340,6 +1345,11 @@ status_code_t gc_execute_block (char *block)
                         word_bit.parameter.b = On;
                         gc_block.values.xyz[B_AXIS] = value;
                         break;
+#else
+                    case 'B':
+                        word_bit.parameter.b = On;
+                        gc_block.values.b = value;
+                        break;
 #endif
 
 #ifdef C_AXIS
@@ -1351,6 +1361,11 @@ status_code_t gc_execute_block (char *block)
                         axis_words.c = On;
                         word_bit.parameter.c = On;
                         gc_block.values.xyz[C_AXIS] = value;
+                        break;
+#else
+                    case 'C':
+                        word_bit.parameter.c = On;
+                        gc_block.values.c = value;
                         break;
 #endif
 
@@ -1463,22 +1478,39 @@ status_code_t gc_execute_block (char *block)
 #else
 
 #ifdef U_AXIS
-                  case 'U':
-                      axis_words.u = On;
-                      word_bit.parameter.u = On;
-                      gc_block.values.xyz[U_AXIS] = value;
-                      break;
+                    case 'U':
+                        axis_words.u = On;
+                        word_bit.parameter.u = On;
+                        gc_block.values.xyz[U_AXIS] = value;
+                        break;
+#elif !AXIS_REMAP_ABC2UVW
+                    case 'U':
+                        word_bit.parameter.u = On;
+                        gc_block.values.u = value;
+                        break;
 #endif
 
 #ifdef V_AXIS
-                  case 'V':
-                      axis_words.v = On;
-                      word_bit.parameter.v = On;
-                      gc_block.values.xyz[V_AXIS] = value;
-                      break;
+                    case 'V':
+                        axis_words.v = On;
+                        word_bit.parameter.v = On;
+                        gc_block.values.xyz[V_AXIS] = value;
+                        break;
+#elif !AXIS_REMAP_ABC2UVW
+                    case 'V':
+                        word_bit.parameter.v = On;
+                        gc_block.values.v = value;
+                        break;
 #endif
+#endif // LATHE_UVW_OPTION
+
+#if !AXIS_REMAP_ABC2UVW
+                    case 'W':
+                        word_bit.parameter.w = On;
+                        gc_block.values.w = value;
+                        break;
 #endif
-                  case 'X':
+                    case 'X':
                         axis_words.x = On;
                         word_bit.parameter.x = On;
                         gc_block.values.xyz[X_AXIS] = value;

@@ -364,14 +364,24 @@ io_stream_flags_t stream_get_flags (io_stream_t stream)
     return flags;
 }
 
+bool stream_set_description (const io_stream_t *stream, const char *description)
+{
+    bool ok;
+
+    if((ok = stream->type == StreamType_Serial && !stream->state.is_usb && hal.periph_port.set_pin_description)) {
+        hal.periph_port.set_pin_description(Output_TX, (pin_group_t)(PinGroup_UART + stream->instance), description);
+        hal.periph_port.set_pin_description(Input_RX, (pin_group_t)(PinGroup_UART + stream->instance), description);
+    }
+
+    return ok;
+}
+
 bool stream_connect (const io_stream_t *stream)
 {
     bool ok;
 
-    if((ok = stream_select(stream, true)) && stream->type == StreamType_Serial && !stream->state.is_usb && hal.periph_port.set_pin_description) {
-        hal.periph_port.set_pin_description(Input_RX, (pin_group_t)(PinGroup_UART + stream->instance), "Primary UART");
-        hal.periph_port.set_pin_description(Output_TX, (pin_group_t)(PinGroup_UART + stream->instance), "Primary UART");
-    }
+    if((ok = stream_select(stream, true)))
+        stream_set_description(stream, "Primary UART");
 
     return ok;
 }
@@ -454,10 +464,7 @@ bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stream_write_
 
         hal.stream.write_all = stream_write_all;
 
-        if(hal.periph_port.set_pin_description) {
-            hal.periph_port.set_pin_description(Output_TX, (pin_group_t)(PinGroup_UART + stream->instance), "MPG");
-            hal.periph_port.set_pin_description(Input_RX, (pin_group_t)(PinGroup_UART + stream->instance), "MPG");
-        }
+        stream_set_description(stream, "MPG");
     }
 
     return connection != NULL;

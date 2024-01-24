@@ -13,7 +13,7 @@ It has been written to complement grblHAL and has features such as proper keyboa
 
 ---
 
-Latest build date is 20240115, see the [changelog](changelog.md) for details.  
+Latest build date is 20240123, see the [changelog](changelog.md) for details.  
 __NOTE:__ A settings reset will be performed on an update of builds earlier than 20230125. Backup and restore of settings is recommended.  
 
 ---
@@ -89,4 +89,4 @@ G/M-codes not supported by [legacy Grbl](https://github.com/gnea/grbl/wiki) are 
 Some [plugins](https://github.com/grblHAL/plugins) implements additional M-codes.
 
 ---
-20240115
+20240124

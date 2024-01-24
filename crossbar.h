@@ -449,9 +449,9 @@ typedef enum {
 #endif
 #define PINMODE_PULLUP      (PullMode_Up<<3)
 #define PINMODE_PULLDOWN    (PullMode_Down<<3)
-#define PINMODE_ANALOG      (1U<<10)
-#define PINMODE_PWM         (1U<<11)
-#define PINMODE_PWM_SERVO   (1U<<12)
+#define PINMODE_ANALOG      (1U<<11)
+#define PINMODE_PWM         (1U<<12)
+#define PINMODE_PWM_SERVO   (1U<<13)
 
 typedef union {
     uint16_t mask;
@@ -461,11 +461,12 @@ typedef union {
                  open_drain :1,
                  pull_mode  :2,
                  irq_mode   :5,
+                 invert     :1,
                  analog     :1,
                  pwm        :1,
                  servo_pwm  :1,
                  claimable  :1,
-                 reserved   :2;
+                 reserved   :1;
     };
 } pin_cap_t;
 
@@ -477,11 +478,12 @@ typedef union {
                  open_drain :1,
                  pull_mode  :2,
                  irq_mode   :5,
+                 inverted   :1,
                  analog     :1,
                  pwm        :1,
                  servo_pwm  :1,
                  claimed    :1,
-                 reserved   :2;
+                 reserved   :1;
     };
 } pin_mode_t;
 
@@ -528,18 +530,18 @@ typedef struct {
 } aux_ctrl_t;
 
 typedef struct xbar {
-    pin_function_t function;
-    pin_group_t group;
-    void *port;
-    const char *description;
-    uint_fast8_t pin;
-    uint32_t bit;
-    pin_cap_t cap;              //!< Pin capabilities
-    pin_mode_t mode;            //!< Current pin configuration
-    xbar_config_ptr config;
-    xbar_get_value_ptr get_value;
-    xbar_set_value_ptr set_value;
-    xbar_event_ptr on_event; // ?? - remove?
+    pin_function_t function;        //!< Pin function.
+    pin_group_t group;              //!< Pin group.
+    void *port;                     //!< Optional pointer to the underlying peripheral or pin specific data.
+    const char *description;        //!< Optional pointer to description string.
+    uint_fast8_t pin;               //!< Pin number.
+    uint32_t bit;                   //!< Pin bit, 1 << pin.
+    pin_cap_t cap;                  //!< Pin capabilities.
+    pin_mode_t mode;                //!< Current pin configuration.
+    xbar_config_ptr config;         //!< Optional pointer to function for configuring the port.
+    xbar_get_value_ptr get_value;   //!< Optional pointer to function to get current port value.
+    xbar_set_value_ptr set_value;   //!< Optional pointer to function to set port value.
+    xbar_event_ptr on_event;        //!< Not used - might be removed.
 } xbar_t;
 
 typedef struct {

@@ -241,6 +241,15 @@ static status_code_t enumerate_pins (sys_state_t state, char *args)
     return report_pins(state, args);
 }
 
+#ifndef NO_SETTINGS_DESCRIPTIONS
+
+static status_code_t pin_state (sys_state_t state, char *args)
+{
+    return report_pin_states(state, args);
+}
+
+#endif
+
 static status_code_t output_settings (sys_state_t state, char *args)
 {
     status_code_t retval = Status_OK;
@@ -770,6 +779,15 @@ const char *help_pins (const char *cmd)
     return hal.enumerate_pins ? "enumerate pin bindings" : NULL;
 }
 
+#ifndef NO_SETTINGS_DESCRIPTIONS
+
+const char *help_pin_state (const char *cmd)
+{
+    return hal.port.get_pin_info ? "output auxillary pin states" : NULL;
+}
+
+#endif
+
 const char *help_switches (const char *cmd)
 {
     const char *help = NULL;
@@ -892,6 +910,9 @@ PROGMEM static const sys_command_t sys_commands[] = {
     { "ESH", enumerate_settings_halformatted, { .noargs = On, .allow_blocking = On }, { .str = "enumerate settings, grblHAL formatted" } },
     { "E*", enumerate_all, { .noargs = On, .allow_blocking = On }, { .str = "enumerate alarms, status codes and settings" } },
     { "PINS", enumerate_pins, { .noargs = On, .allow_blocking = On, .help_fn = On }, { .fn = help_pins } },
+#ifndef NO_SETTINGS_DESCRIPTIONS
+    { "PINSTATE", pin_state, { .noargs = On, .allow_blocking = On, .help_fn = On }, { .fn = help_pin_state } },
+#endif
     { "LEV", report_last_signals_event, { .noargs = On, .allow_blocking = On }, { .str = "output last control signal events" } },
     { "LIM", report_current_limit_state, { .noargs = On, .allow_blocking = On }, { .str = "output current limit pins" } },
     { "SD", report_spindle_data, { .help_fn = On }, { .fn = help_spindle } },
