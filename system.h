@@ -338,7 +338,8 @@ typedef struct
 typedef struct sys_commands_str {
     const uint8_t n_commands;
     const sys_command_t *commands;
-    struct sys_commands_str *(*on_get_commands)(void);
+    struct sys_commands_str *next;
+    struct sys_commands_str *(*on_get_commands)(void); //!< deprecated, to be removed
 } sys_commands_t;
 
 extern system_t sys;
@@ -352,6 +353,7 @@ void system_raise_alarm (alarm_code_t alarm);
 void system_init_switches (void);
 void system_command_help (void);
 void system_output_help (const sys_command_t *commands, uint32_t num_commands);
+void system_register_commands (sys_commands_t *commands);
 
 void system_add_rt_report (report_tracking_t report);
 report_tracking_flags_t system_get_rt_report_flags (void);

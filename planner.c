@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2023 Terje Io
+  Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
   Copyright (c) 2011 Jens Geisler
@@ -217,11 +217,6 @@ inline static void plan_reset_buffer (void)
     block_buffer_planned = block_buffer_tail;               // = block_buffer_tail
 }
 
-static void planner_warning (sys_state_t state)
-{
-    report_message("Planner buffer size was reduced!", Message_Plain);
-}
-
 uint_fast16_t plan_get_buffer_size (void)
 {
     return block_buffer_size;
@@ -242,7 +237,7 @@ bool plan_reset (void)
     }
 
     if(block_buffer_size != settings.planner_buffer_blocks)
-        protocol_enqueue_rt_command(planner_warning);
+        protocol_enqueue_foreground_task(report_plain, "Planner buffer size was reduced!");
 
     if(block_buffer == NULL)
         return false;
@@ -402,7 +397,6 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
     block->line_number = pl_data->line_number;
     block->output_commands = pl_data->output_commands;
     block->message = pl_data->message;
-    pl_data->message = NULL;
 
     // Copy position data based on type of motion being planned.
     memcpy(position_steps, block->condition.system_motion ? sys.position : pl.position, sizeof(position_steps));
@@ -455,12 +449,14 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
         block->spindle.css->delta_rpm = block->spindle.css->target_rpm - block->spindle.rpm;
     }
 
-    // Bail if this is a zero-length block. Highly unlikely to occur.
-    if (block->step_event_count == 0)
-        return false;
-
     pl_data->message = NULL;         // Indicate message is already queued for display on execution
     pl_data->output_commands = NULL; // Indicate commands are already queued for execution
+
+    // Bail if this is a zero-length block. Highly unlikely to occur.
+    if(block->step_event_count == 0) {
+        plan_cleanup(block); // TODO: output message and execute output_commands?
+        return false;
+    }
 
 #if N_AXIS > 3  && ROTARY_FIX
 

@@ -33,6 +33,8 @@
   #define LINE_BUFFER_SIZE 257 // 256 characters plus terminator
 #endif
 
+typedef void (*foreground_task_ptr)(void *data);
+
 // Starts Grbl main loop. It handles all incoming characters from the input stream and executes
 // them as they complete. It is also responsible for finishing the initialization procedures.
 bool protocol_main_loop (void);
@@ -42,6 +44,7 @@ bool protocol_execute_realtime (void);
 bool protocol_exec_rt_system (void);
 void protocol_execute_noop (uint_fast16_t state);
 bool protocol_enqueue_rt_command (on_execute_realtime_ptr fn);
+bool protocol_enqueue_foreground_task (foreground_task_ptr fn, void *data);
 
 // Executes the auto cycle feature, if enabled.
 void protocol_auto_cycle_start (void);

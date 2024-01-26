@@ -605,11 +605,6 @@ const io_stream_t *stream_null_init (uint32_t baud_rate)
 
 static stream_write_ptr dbg_write = NULL;
 
-static void debug_stream_warning (uint_fast16_t state)
-{
-    report_message("Failed to initialize debug stream!", Message_Warning);
-}
-
 void debug_write (const char *s)
 {
     if(dbg_write) {
@@ -654,7 +649,7 @@ bool debug_stream_init (void)
     if(stream_enumerate_streams(debug_claim_stream))
         hal.debug.write(ASCII_EOL "UART debug active:" ASCII_EOL);
     else
-        protocol_enqueue_rt_command(debug_stream_warning);
+        protocol_enqueue_foreground_task(report_warning, "Failed to initialize debug stream!");
 
     return hal.debug.write == debug_write;
 }

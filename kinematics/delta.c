@@ -514,7 +514,7 @@ static void delta_limits_set_machine_positions (axes_signals_t cycle)
     */
 }
 
-static void delta_go_home (sys_state_t state)
+static void delta_go_home (void *data)
 {
     plan_line_data_t plan_data;
 
@@ -542,7 +542,7 @@ static void delta_homing_complete (bool success)
                                 : machine.home_z - settings.homing.pulloff;
 
         if(machine.cfg.flags.home_to_cuboid_top)
-            protocol_enqueue_rt_command(delta_go_home);
+            protocol_enqueue_foreground_task(delta_go_home);
     }
 
     if(on_homing_completed)

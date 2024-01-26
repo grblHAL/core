@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2016-2023 Terje Io
+  Copyright (c) 2016-2024 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -84,9 +84,6 @@ typedef struct {
 static amass_t amass;
 #endif
 
-// Message to be output by foreground process
-static char *message = NULL; // TODO: do we need a queue for this?
-
 // Used for blocking new segments being added to the seqment buffer until deceleration starts
 // after probe signal has been asserted.
 static volatile bool probe_asserted = false;
@@ -140,6 +137,7 @@ typedef struct {
 
 static st_prep_t prep;
 
+extern void gc_output_message (char *message);
 
 /*    BLOCK VELOCITY PROFILE DEFINITION
           __________________________
@@ -180,22 +178,6 @@ static st_prep_t prep;
 */
 
 //
-
-// Output message in sync with motion, called by foreground process.
-static void output_message (sys_state_t state)
-{
-    if(message) {
-
-        if(grbl.on_gcode_message)
-            grbl.on_gcode_message(message);
-
-        if(*message)
-            report_message(message, Message_Plain);
-
-        free(message);
-        message = NULL;
-    }
-}
 
 // Callback from delay to deenergize steppers after movement, might been cancelled
 void st_deenergize (void)
@@ -351,11 +333,8 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
 
                 // Enqueue any message to be printed (by foreground process)
                 if(st.exec_block->message) {
-                    if(message == NULL) {
-                        message = st.exec_block->message;
-                        protocol_enqueue_rt_command(output_message);
-                    } else
-                        free(st.exec_block->message); //
+                    if(!protocol_enqueue_foreground_task((foreground_task_ptr)gc_output_message, st.exec_block->message))
+                        free(st.exec_block->message);
                     st.exec_block->message = NULL;
                 }
 
@@ -558,11 +537,6 @@ void st_reset (void)
 {
     if(hal.probe.configure)
         hal.probe.configure(false, false);
-
-    if(message) {
-        free(message);
-        message = NULL;
-    }
 
     // Initialize stepper driver idle state, clear step and direction port pins.
     st_go_idle();

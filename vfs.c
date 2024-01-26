@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2022-2023 Terje Io
+  Copyright (c) 2022-2024 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -130,6 +130,7 @@ static vfs_mount_t *cwdmount = &root;
 static char cwd[100] = "/";
 
 int vfs_errno = 0;
+vfs_events_t vfs = {0};
 
 // Strip trailing directory separator, FatFS dont't like it (WinSCP adds it)
 char *vfs_fixpath (char *path)
@@ -210,6 +211,8 @@ void vfs_close (vfs_file_t *file)
     vfs_errno = 0;
 
     ((vfs_t *)(file->fs))->fclose(file);
+
+// TODO: somehow raise vfs.on_fs_changed event when a file openened for writing is closed
 }
 
 size_t vfs_read (void *buffer, size_t size, size_t count, vfs_file_t *file)
@@ -261,30 +264,54 @@ bool vfs_eof (vfs_file_t *file)
 
 int vfs_rename (const char *from, const char *to)
 {
+    int ret;
+
     vfs_mount_t *mount_from = get_mount(from), *mount_to = get_mount(to);
 
-    return mount_from == mount_to ? mount_from->vfs->frename(get_filename(mount_from, from), get_filename(mount_to, to)) : -1;
+    if((ret = mount_from == mount_to ? mount_from->vfs->frename(get_filename(mount_from, from), get_filename(mount_to, to)) : -1) != -1 &&
+               vfs.on_fs_changed && !mount_from->mode.hidden) {
+        vfs.on_fs_changed(mount_from->vfs);
+        if(mount_from != mount_to && !mount_to->mode.hidden)
+            vfs.on_fs_changed(mount_to->vfs);
+    }
+
+    return ret;
 }
 
 int vfs_unlink (const char *filename)
 {
+    int ret;
+
     vfs_mount_t *mount = get_mount(filename); // TODO: test for dir?
 
-    return mount ? mount->vfs->funlink(get_filename(mount, filename)) : -1;
+    if((ret = mount ? mount->vfs->funlink(get_filename(mount, filename)) : -1) != -1 && vfs.on_fs_changed && !mount->mode.hidden)
+        vfs.on_fs_changed(mount->vfs);
+
+    return ret;
 }
 
 int vfs_mkdir (const char *path)
 {
+    int ret;
+
     vfs_mount_t *mount = get_mount(path);
 
-    return mount ? mount->vfs->fmkdir(get_filename(mount, path)) : -1;
+    if((ret = mount ? mount->vfs->fmkdir(get_filename(mount, path)) : -1) != -1 && vfs.on_fs_changed && !mount->mode.hidden)
+        vfs.on_fs_changed(mount->vfs);
+
+    return ret;
 }
 
 int vfs_rmdir (const char *path)
 {
+    int ret;
+
     vfs_mount_t *mount = get_mount(path);
 
-    return mount ? mount->vfs->frmdir(get_filename(mount, path)) : -1;
+    if((ret = mount ? mount->vfs->frmdir(get_filename(mount, path)) : -1) != -1 && vfs.on_fs_changed && !mount->mode.hidden)
+        vfs.on_fs_changed(mount->vfs);
+
+    return ret;
 }
 
 int vfs_chdir (const char *path)
@@ -460,31 +487,31 @@ vfs_free_t *vfs_fgetfree (const char *path)
 
 bool vfs_mount (const char *path, const vfs_t *fs, vfs_st_mode_t mode)
 {
-    vfs_mount_t *vfs;
+    vfs_mount_t *mount;
 
     if(!strcmp(path, "/")) {
         root.vfs = fs;
         root.mode = mode;
-    } else if((vfs = (vfs_mount_t *)malloc(sizeof(vfs_mount_t)))) {
+    } else if((mount = (vfs_mount_t *)malloc(sizeof(vfs_mount_t)))) {
 
-        strcpy(vfs->path, path);
-        if(vfs->path[strlen(path) - 1] != '/')
-            strcat(vfs->path, "/");
+        strcpy(mount->path, path);
+        if(mount->path[strlen(path) - 1] != '/')
+            strcat(mount->path, "/");
 
-        vfs->vfs = fs;
-        vfs->mode = mode;
-        vfs->next = NULL;
+        mount->vfs = fs;
+        mount->mode = mode;
+        mount->next = NULL;
 
         vfs_mount_t *mount = &root;
 
         while(mount->next)
             mount = mount->next;
 
-        mount->next = vfs;
+        mount->next = mount;
     }
 
-    if(fs && grbl.on_vfs_mount)
-        grbl.on_vfs_mount(path, fs);
+    if(fs && vfs.on_mount)
+        vfs.on_mount(path, fs);
 
     return fs != NULL;
 }
@@ -513,8 +540,8 @@ bool vfs_unmount (const char *path)
         }
     }
 
-    if(grbl.on_vfs_unmount)
-        grbl.on_vfs_unmount(path);
+    if(vfs.on_unmount)
+        vfs.on_unmount(path);
 
     return true;
 }

@@ -1,3 +1,25 @@
+## grblHAL changelog
+
+ <a name="20240125"/>Build 20240125
+
+Core, for developers:
+
+* Simplified [regstration](http://svn.io-engineering.com/grblHAL/html/system_8c.html#a480cedc4c3840cfebb4d5fdce898dd3b) of additional system commands, deprecated original method.
+* Added [improved call](http://svn.io-engineering.com/grblHAL/html/protocol_8c.html#a869dff1f8d0b3965578eb3e6a94729c1) for registering single run tasks to be executed in the foreground, deprecated [original call](http://svn.io-engineering.com/grblHAL/html/protocol_8c.html#a78fa9a198df36192acec52d28d760a6c).
+* Moved VFS events from `grbl.*` to [vfs.*](http://svn.io-engineering.com/grblHAL/html/vfs_8h.html#ab87cc94daec156bea722f9f05d7eeb0c).
+
+Drivers:
+
+* Most: updated to use new method for registering single run tasks. Updated ioports code for improved core compliance.
+
+* LPC176x: fix for [issue #44](https://github.com/grblHAL/LPC176x/issues/44), non-existing probe pin.
+
+Plugins:
+
+* Many: updated to use new method for registering single run tasks. Some bug fixes.
+
+---
+
 <a name="20240123"/>Build 20240123
 
 Core:
@@ -39,8 +61,6 @@ These are based on original work by @wakass and might be published by him if a P
 
 ---
 
-## grblHAL changelog
- 
 <a name="20240118"/>Build 20240118
 
 Core:

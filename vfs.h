@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2022-2023 Terje Io
+  Copyright (c) 2022-2024 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -152,6 +152,16 @@ typedef struct
     vfs_format_ptr format;
 } vfs_t;
 
+typedef void (*on_vfs_changed_ptr)(const vfs_t *fs);
+typedef void (*on_vfs_mount_ptr)(const char *path, const vfs_t *fs);
+typedef void (*on_vfs_unmount_ptr)(const char *path);
+
+typedef struct {
+    on_vfs_mount_ptr on_mount;          //!< Called when a file system is mounted.
+    on_vfs_unmount_ptr on_unmount;      //!< Called when a file system is unmounted.
+    on_vfs_changed_ptr on_fs_changed;   //!< Called when file system content is changed.
+} vfs_events_t;
+
 typedef struct vfs_mount
 {
     char path[64];
@@ -185,6 +195,7 @@ struct vfs_dir {
 };
 
 extern int vfs_errno;
+extern vfs_events_t vfs;
 
 char *vfs_fixpath (char *path);
 

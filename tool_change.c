@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2020-2023 Terje Io
+  Copyright (c) 2020-2024 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -147,14 +147,14 @@ static bool restore (void)
 
 // Issue warning on cycle start event if touch off by $TPW is pending.
 // Used in Manual and Manual_G59_3 modes ($341=1 or $341=2). Called from the foreground process.
-static void execute_warning (sys_state_t state)
+static void execute_warning (void *data)
 {
     grbl.report.feedback_message(Message_ExecuteTPW);
 }
 
 // Execute restore position after touch off (on cycle start event).
 // Used in Manual and Manual_G59_3 modes ($341=1 or $341=2). Called from the foreground process.
-static void execute_restore (sys_state_t state)
+static void execute_restore (void *data)
 {
     // Get current position.
     system_convert_array_steps_to_mpos(target.values, sys.position);
@@ -171,7 +171,7 @@ static void execute_restore (sys_state_t state)
 
 // Execute touch off on cycle start event from @ G59.3 position.
 // Used in SemiAutomatic mode ($341=3) only. Called from the foreground process.
-static void execute_probe (sys_state_t state)
+static void execute_probe (void *data)
 {
 #if COMPATIBILITY_LEVEL <= 1
     bool ok;
@@ -245,9 +245,9 @@ ISR_CODE static void ISR_FUNC(trap_control_cycle_start)(control_signals_t signal
     if(signals.cycle_start) {
         if(!execute_posted) {
             if(!block_cycle_start)
-                execute_posted = protocol_enqueue_rt_command(settings.tool_change.mode == ToolChange_SemiAutomatic ? execute_probe : execute_restore);
+                execute_posted = protocol_enqueue_foreground_task(settings.tool_change.mode == ToolChange_SemiAutomatic ? execute_probe : execute_restore, NULL);
             else
-                protocol_enqueue_rt_command(execute_warning);
+                protocol_enqueue_foreground_task(execute_warning, NULL);
         }
         signals.cycle_start = Off;
     } else
@@ -265,9 +265,9 @@ ISR_CODE static bool ISR_FUNC(trap_stream_cycle_start)(char c)
     if((drop = (c == CMD_CYCLE_START || c == CMD_CYCLE_START_LEGACY))) {
         if(!execute_posted) {
             if(!block_cycle_start)
-                execute_posted = protocol_enqueue_rt_command(settings.tool_change.mode == ToolChange_SemiAutomatic ? execute_probe : execute_restore);
+                execute_posted = protocol_enqueue_foreground_task(settings.tool_change.mode == ToolChange_SemiAutomatic ? execute_probe : execute_restore, NULL);
             else
-                protocol_enqueue_rt_command(execute_warning);
+                protocol_enqueue_foreground_task(execute_warning, NULL);
         }
     } else
         drop = enqueue_realtime_command(c);

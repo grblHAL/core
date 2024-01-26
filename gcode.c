@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2023 Terje Io
+  Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -420,15 +420,18 @@ static status_code_t init_sync_motion (plan_line_data_t *pl_data, float pitch)
 }
 
 // Output and free previously allocated message
-static void output_message (char *message)
+void gc_output_message (char *message)
 {
-    if(grbl.on_gcode_message)
-        grbl.on_gcode_message(message);
+    if(message) {
 
-    if(*message)
-        report_message(message, Message_Plain);
+        if(grbl.on_gcode_message)
+            grbl.on_gcode_message(message);
 
-    free(message);
+        if(*message)
+            report_message(message, Message_Plain);
+
+        free(message);
+    }
 }
 
 #if NGC_EXPRESSIONS_ENABLE
@@ -747,7 +750,7 @@ status_code_t gc_execute_block (char *block)
 
     if(block[0] == '\0') {
         if(message)
-            output_message(message);
+            gc_output_message(message);
         return Status_OK;
     }
 
@@ -760,7 +763,7 @@ status_code_t gc_execute_block (char *block)
     if (block[0] == CMD_PROGRAM_DEMARCATION && block[1] == '\0') {
         gc_state.file_run = !gc_state.file_run;
         if(message)
-            output_message(message);
+            gc_output_message(message);
         return Status_OK;
     }
 
@@ -3109,7 +3112,7 @@ status_code_t gc_execute_block (char *block)
         protocol_buffer_synchronize();
 
         if(plan_data.message) {
-            output_message(plan_data.message);
+            gc_output_message(plan_data.message);
             plan_data.message = NULL;
         }
 
@@ -3535,7 +3538,7 @@ status_code_t gc_execute_block (char *block)
     }
 
     if(plan_data.message)
-        output_message(plan_data.message);
+        gc_output_message(plan_data.message);
 
     // [21. Program flow ]:
     // M0,M1,M2,M30,M60: Perform non-running program flow actions. During a program pause, the buffer may

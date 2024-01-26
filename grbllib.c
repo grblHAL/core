@@ -97,7 +97,7 @@ static bool dummy_irq_claim (irq_type_t irq, uint_fast8_t id, irq_callback_ptr c
     return false;
 }
 
-static void report_driver_error (sys_state_t state)
+static void report_driver_error (void *data)
 {
     char msg[40];
 
@@ -266,7 +266,7 @@ int grbl_enter (void)
 
     if(driver.ok != 0xFF) {
         sys.alarm = Alarm_SelftestFailed;
-        protocol_enqueue_rt_command(report_driver_error);
+        protocol_enqueue_foreground_task(report_driver_error, NULL);
     }
 
     hal.stepper.enable(settings.steppers.deenergize);

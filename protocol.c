@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2023 Terje Io
+  Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -50,9 +50,17 @@ typedef union {
 } line_flags_t;
 
 typedef struct {
+    void *data;
+    union {
+        foreground_task_ptr fn;
+        on_execute_realtime_ptr fn_deprecated;
+    };
+} delayed_task_t;
+
+typedef struct {
     volatile uint_fast8_t head;
     volatile uint_fast8_t tail;
-    on_execute_realtime_ptr fn[RT_QUEUE_SIZE];
+    delayed_task_t task[RT_QUEUE_SIZE];
 } realtime_queue_t;
 
 static uint_fast16_t char_counter = 0;
@@ -190,7 +198,7 @@ bool protocol_main_loop (void)
         if(realtime_queue.head != realtime_queue.tail)
             system_set_exec_state_flag(EXEC_RT_COMMAND);  // execute any boot up commands
         sys.cold_start = false;
-    } else
+    } else // TODO: if flushing entries from the queue that has allocated data associated then these will be orphaned/leaked.
         memset(&realtime_queue, 0, sizeof(realtime_queue_t));
 
     // ---------------------------------------------------------------------------------
@@ -1010,20 +1018,37 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(char c)
     return drop;
 }
 
-// Enqueue a function to be called once by the
-// foreground process, typically enqueued from an interrupt handler.
-ISR_CODE bool ISR_FUNC(protocol_enqueue_rt_command)(on_execute_realtime_ptr fn)
+static const uint32_t dummy_data = 0;
+
+
+/*! \brief Enqueue a function to be called once by the foreground process.
+\param fn pointer to a \a foreground_task_ptr type of function.
+\param data pointer to data to be passed to the callee.
+\returns true if successful, false otherwise.
+*/
+bool protocol_enqueue_foreground_task (foreground_task_ptr fn, void *data)
 {
     bool ok;
     uint_fast8_t bptr = (realtime_queue.head + 1) & (RT_QUEUE_SIZE - 1);    // Get next head pointer
 
-    if((ok = bptr != realtime_queue.tail)) {          // If not buffer full
-        realtime_queue.fn[realtime_queue.head] = fn;  // add function pointer to buffer,
-        realtime_queue.head = bptr;                   // update pointer and
-        system_set_exec_state_flag(EXEC_RT_COMMAND);  // flag it for execute
+    if((ok = bptr != realtime_queue.tail)) {                    // If not buffer full
+        realtime_queue.task[realtime_queue.head].data = data;
+        realtime_queue.task[realtime_queue.head].fn = fn;       // add function pointer to buffer,
+        realtime_queue.head = bptr;                             // update pointer and
+        system_set_exec_state_flag(EXEC_RT_COMMAND);            // flag it for execute
     }
 
     return ok;
+}
+
+/*! \brief Enqueue a function to be called once by the foreground process.
+\param fn pointer to a \a on_execute_realtime_ptr type of function.
+\returns true if successful, false otherwise.
+__NOTE:__ Deprecated, use protocol_enqueue_foreground_task instead.
+*/
+ISR_CODE bool ISR_FUNC(protocol_enqueue_rt_command)(on_execute_realtime_ptr fn)
+{
+    return protocol_enqueue_foreground_task((foreground_task_ptr)fn, (void *)&dummy_data);
 }
 
 // Execute enqueued functions.
@@ -1031,10 +1056,16 @@ static void protocol_execute_rt_commands (void)
 {
     while(realtime_queue.tail != realtime_queue.head) {
         uint_fast8_t bptr = realtime_queue.tail;
-        on_execute_realtime_ptr call;
-        if((call = realtime_queue.fn[bptr])) {
-            realtime_queue.fn[bptr] = NULL;
-            call(state_get());
+        if(realtime_queue.task[bptr].fn) {
+            if(realtime_queue.task[bptr].data == (void *)&dummy_data) {
+                on_execute_realtime_ptr call = realtime_queue.task[bptr].fn_deprecated;
+                realtime_queue.task[bptr].fn = NULL;
+                call(state_get());
+            } else {
+                foreground_task_ptr call = realtime_queue.task[bptr].fn;
+                realtime_queue.task[bptr].fn = NULL;
+                call(realtime_queue.task[bptr].data);
+            }
         }
         realtime_queue.tail = (bptr + 1) & (RT_QUEUE_SIZE - 1);
     }

@@ -272,6 +272,24 @@ void report_message (const char *msg, message_type_t type)
     hal.stream.write("]" ASCII_EOL);
 }
 
+// Message helper to be run as foreground task
+void report_plain (void *message)
+{
+    report_message((char *)message, Message_Plain);
+}
+
+// Message helper to be run as foreground task
+void report_info (void *message)
+{
+    report_message((char *)message, Message_Info);
+}
+
+// Message helper to be run as foreground task
+void report_warning (void *message)
+{
+    report_message((char *)message, Message_Warning);
+}
+
 // Prints feedback messages. This serves as a centralized method to provide additional
 // user feedback for things that are not of the status/alarm message protocol. These are
 // messages such as setup warnings, switch toggling, and how to exit alarms.
