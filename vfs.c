@@ -200,8 +200,10 @@ vfs_file_t *vfs_open (const char *filename, const char *mode)
     vfs_file_t *file = NULL;
     vfs_mount_t *mount = get_mount(filename);
 
-    if(mount && (file = mount->vfs->fopen(get_filename(mount, filename), mode)))
+    if(mount && (file = mount->vfs->fopen(get_filename(mount, filename), mode))) {
         file->fs = mount->vfs;
+        file->update = !mount->mode.hidden && !!strchr(mode, 'w');
+    }
 
     return file;
 }
@@ -212,7 +214,8 @@ void vfs_close (vfs_file_t *file)
 
     ((vfs_t *)(file->fs))->fclose(file);
 
-// TODO: somehow raise vfs.on_fs_changed event when a file openened for writing is closed
+    if(file->update && vfs.on_fs_changed)
+        vfs.on_fs_changed((vfs_t *)file->fs);
 }
 
 size_t vfs_read (void *buffer, size_t size, size_t count, vfs_file_t *file)
@@ -502,12 +505,12 @@ bool vfs_mount (const char *path, const vfs_t *fs, vfs_st_mode_t mode)
         mount->mode = mode;
         mount->next = NULL;
 
-        vfs_mount_t *mount = &root;
+        vfs_mount_t *lmount = &root;
 
-        while(mount->next)
-            mount = mount->next;
+        while(lmount->next)
+            lmount = lmount->next;
 
-        mount->next = mount;
+        lmount->next = mount;
     }
 
     if(fs && vfs.on_mount)

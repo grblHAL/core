@@ -79,6 +79,10 @@
 #define PROBE_ENABLE        1
 #endif
 
+#ifndef NEOPIXELS_ENABLE
+#define NEOPIXELS_ENABLE    0
+#endif
+
 #ifndef USB_SERIAL_CDC
 #define USB_SERIAL_CDC      0 // for UART comms
 #endif

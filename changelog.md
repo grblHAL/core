@@ -1,6 +1,22 @@
 ## grblHAL changelog
 
- <a name="20240125"/>Build 20240125
+<a name="20240127"/>Build 20240127
+
+Core:
+
+* Fixed regression mainly affecting WebUI enabled builds. Some internal changes.
+
+Drivers:
+
+* ESP32: reorganized main driver code for readability, minor fixes.
+
+Plugins:
+
+* SD card: commented out unused code to avoid compiler warning.
+
+---
+
+<a name="20240125"/>Build 20240125
 
 Core, for developers:
 

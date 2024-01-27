@@ -501,12 +501,18 @@ typedef struct {
     bool servo_mode;
 } pwm_config_t;
 
+typedef union
+  {
+//    pin_mode_t *pin_mode;
+    pwm_config_t *pwm_config;
+  } xbar_cfg_ptr_t __attribute__ ((__transparent_union__));
+
 struct xbar;
 
 typedef float (*xbar_get_value_ptr)(struct xbar *pin);
 typedef void (*xbar_set_value_ptr)(struct xbar *pin, float value);
 typedef void (*xbar_event_ptr)(bool on);
-typedef bool (*xbar_config_ptr)(struct xbar *pin, void *cfg_data);
+typedef bool (*xbar_config_ptr)(struct xbar *pin, xbar_cfg_ptr_t cfg_data);
 
 typedef enum {
     AuxCtrl_SafetyDoor = 0,

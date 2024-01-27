@@ -80,7 +80,8 @@ typedef struct {
 typedef struct {
     const void *fs;
     size_t size;
-    uint8_t handle; // first byte of file handle structure
+    bool update;
+    uint8_t handle __attribute__ ((aligned (4))); // first byte of file handle structure
 } vfs_file_t;
 
 struct vfs_dir;
@@ -191,7 +192,7 @@ typedef struct {
 struct vfs_dir {
     const void *fs;
     vfs_mount_ll_entry_t *mounts;
-    uint8_t handle; // must be last!
+    uint8_t handle __attribute__ ((aligned (4))); // must be last!
 };
 
 extern int vfs_errno;
