@@ -1,5 +1,15 @@
 ## grblHAL changelog
 
+<a name="20240129"/>20240129
+
+Drivers:
+
+* ESP32: made usage of second UART/serial port more flexible for those boards that has support for it.
+
+* iMXRT1062: fixed regression blocking builds with the Bluetooth plugin enabled. Ref. Bluetooth plugin [issue #4](https://github.com/grblHAL/Plugins_Bluetooth/issues/4).
+
+---
+
 <a name="20240127"/>Build 20240127
 
 Core:
