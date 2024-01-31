@@ -1,5 +1,16 @@
 ## grblHAL changelog
 
+<a name="20240131"/>20240131
+
+Drivers:
+
+* iMXRT1062: fixed regression causing spindle sync builds to fail.
+
+* STM32F4xx: moved board maps and code to separate directory. Fixed minor bug.
+
+* Web Builder supported boards: updated board definition files for Web Builder internal changes.
+
+---
 <a name="20240129"/>20240129
 
 Drivers:

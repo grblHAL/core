@@ -392,7 +392,9 @@ static status_code_t set_ganged_dir_invert (setting_id_t id, uint_fast16_t int_v
 static status_code_t set_stepper_deenergize_mask (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_report_interval (setting_id_t setting, uint_fast16_t int_value);
 static status_code_t set_estop_unlock (setting_id_t id, uint_fast16_t int_value);
+#if COMPATIBILITY_LEVEL <= 1
 static status_code_t set_offset_lock (setting_id_t id, uint_fast16_t int_value);
+#endif
 #ifndef NO_SAFETY_DOOR_SUPPORT
 static status_code_t set_parking_enable (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_restore_overrides (setting_id_t id, uint_fast16_t int_value);
@@ -1089,6 +1091,8 @@ static status_code_t set_estop_unlock (setting_id_t id, uint_fast16_t int_value)
     return Status_OK;
 }
 
+#if COMPATIBILITY_LEVEL <= 1
+
 static status_code_t set_offset_lock (setting_id_t id, uint_fast16_t int_value)
 {
     settings.parking.flags.offset_lock = int_value & 0b111; // TODO: remove
@@ -1097,6 +1101,8 @@ static status_code_t set_offset_lock (setting_id_t id, uint_fast16_t int_value)
 
     return Status_OK;
 }
+
+#endif
 
 static inline void tmp_set_hard_limits (void)
 {
