@@ -309,7 +309,7 @@ void delay_sec (float seconds, delaymode_t mode)
           if (state_door_reopened()) // Bail, if safety door reopens.
               return;
         }
-        hal.delay_ms(DWELL_TIME_STEP, 0); // Delay DWELL_TIME_STEP increment
+        hal.delay_ms(DWELL_TIME_STEP, NULL); // Delay DWELL_TIME_STEP increment
     }
 }
 

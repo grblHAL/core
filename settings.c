@@ -71,7 +71,7 @@ PROGMEM const settings_t defaults = {
     .planner_buffer_blocks = DEFAULT_PLANNER_BUFFER_BLOCKS,
     .flags.legacy_rt_commands = DEFAULT_LEGACY_RTCOMMANDS,
     .flags.report_inches = DEFAULT_REPORT_INCHES,
-    .flags.sleep_enable = DEFAULT_SLEEP_ENABLE,
+    .flags.sleep_enable = DEFAULT_SLEEP_ENABLE && SLEEP_DURATION > 0.0f,
     .flags.compatibility_level = COMPATIBILITY_LEVEL,
 #if DEFAULT_DISABLE_G92_PERSISTENCE
     .flags.g92_is_volatile = 1,
@@ -534,7 +534,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_RestoreOverrides, Group_General, "Restore overrides", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_restore_overrides, get_int, is_setting_available },
      { Setting_DoorOptions, Group_SafetyDoor, "Safety door options", NULL, Format_Bitfield, "Ignore when idle,Keep coolant state on open", NULL, NULL, Setting_IsExtended, &settings.safety_door.flags.value, NULL, is_setting_available },
 #endif
-     { Setting_SleepEnable, Group_General, "Sleep enable", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_sleep_enable, get_int, NULL },
+     { Setting_SleepEnable, Group_General, "Sleep enable", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_sleep_enable, get_int, is_setting_available },
      { Setting_HoldActions, Group_General, "Feed hold actions", NULL, Format_Bitfield, "Disable laser during hold,Restore spindle and coolant state on resume", NULL, NULL, Setting_IsExtendedFn, set_hold_actions, get_int, NULL },
      { Setting_ForceInitAlarm, Group_General, "Force init alarm", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_force_initialization_alarm, get_int, NULL },
      { Setting_ProbingFeedOverride, Group_Probing, "Probing feed override", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_probe_allow_feed_override, get_int, is_setting_available },
@@ -1947,6 +1947,10 @@ static bool is_setting_available (const setting_detail_t *setting)
             available = spindle_get_caps(false).variable;
             break;
 
+        case Setting_SleepEnable:
+            available = SLEEP_DURATION > 0.0f;
+            break;
+
         case Setting_DualAxisLengthFailPercent:
         case Setting_DualAxisLengthFailMin:
         case Setting_DualAxisLengthFailMax:
@@ -2141,6 +2145,9 @@ bool read_global_settings ()
 
     if(!hal.driver_cap.spindle_encoder)
         settings.spindle.ppr = 0;
+
+    if(SLEEP_DURATION <= 0.0f)
+        settings.flags.sleep_enable = Off;
 
 #if COMPATIBILITY_LEVEL > 1 && DEFAULT_DISABLE_G92_PERSISTENCE
     settings.flags.g92_is_volatile = On;

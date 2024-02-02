@@ -2213,8 +2213,8 @@ status_code_t gc_execute_block (char *block)
                             gc_block.words.r = Off;
                         }
 
-                        float g59_3_offset[N_AXIS];
 #if COMPATIBILITY_LEVEL <= 1
+                        float g59_3_offset[N_AXIS];
                         if(gc_block.values.l == 11 && !settings_read_coord_data(CoordinateSystem_G59_3, &g59_3_offset))
                             FAIL(Status_SettingReadFail);
 #endif
@@ -2229,8 +2229,10 @@ status_code_t gc_execute_block (char *block)
                                     grbl.tool_table.tool[p_value].offset[idx] = gc_block.values.xyz[idx];
                                 else if(gc_block.values.l == 10)
                                     grbl.tool_table.tool[p_value].offset[idx] = gc_state.position[idx] - gc_state.modal.coord_system.xyz[idx] - gc_state.g92_coord_offset[idx] - gc_block.values.xyz[idx];
+#if COMPATIBILITY_LEVEL <= 1
                                 else if(gc_block.values.l == 11)
                                     grbl.tool_table.tool[p_value].offset[idx] = g59_3_offset[idx] - gc_block.values.xyz[idx];
+#endif
     //                            if(gc_block.values.l != 1)
     //                                tool_table[p_value].offset[idx] -= gc_state.tool_length_offset[idx];
                             } else if(gc_block.values.l == 10 || gc_block.values.l == 11)

@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+<a name="20240202"/>20240202
+
+Core:
+
+* Fixed compiler warning for compatibility level > 1, added some "just in case" assertions.
+
+Drivers:
+
+* Most: "hardened" ioports code to avoid hardfault in some configurations.
+
+---
+
 <a name="20240131"/>20240131
 
 Drivers:
@@ -11,6 +23,7 @@ Drivers:
 * Web Builder supported boards: updated board definition files for Web Builder internal changes.
 
 ---
+
 <a name="20240129"/>20240129
 
 Drivers:

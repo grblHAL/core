@@ -214,8 +214,8 @@ ISR_CODE void ISR_FUNC(st_go_idle)(void)
     hal.stepper.go_idle(false);
 
     // Set stepper driver idle state, disabled or enabled, depending on settings and circumstances.
-    if (((settings.steppers.idle_lock_time != 255) || sys.rt_exec_alarm || state == STATE_SLEEP) && state != STATE_HOMING) {
-        if(state == STATE_SLEEP)
+    if(((settings.steppers.idle_lock_time != 255) || sys.rt_exec_alarm || state == STATE_SLEEP) && state != STATE_HOMING) {
+        if(settings.steppers.idle_lock_time == 0 || state == STATE_SLEEP)
             hal.stepper.enable((axes_signals_t){0});
         else {
             // Force stepper dwell to lock axes for a defined amount of time to ensure the axes come to a complete
