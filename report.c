@@ -2060,7 +2060,9 @@ status_code_t report_setting_group_details (bool by_id, char *prefix)
 
         do {
             for(idx = 0; idx < details->n_groups; idx++) {
-                if(!group_is_dup(all_groups, details->groups[idx].id))
+                if(group_is_dup(all_groups, details->groups[idx].id))
+                    n_groups--;
+                else
                     *group++ = (setting_group_detail_t *)&details->groups[idx];
             }
         } while((details = details->next));

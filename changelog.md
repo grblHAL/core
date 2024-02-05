@@ -1,5 +1,29 @@
 ## grblHAL changelog
 
+<a name="20240205"/>20240205
+
+Core:
+
+* Added core support for new MPG mode that claims one serial stream and uses the `0x8B` real-time command character for switching mode. Does not require the keypad plugin.
+
+* Moved RGB API definitions to separate file and added some utilities for drivers and plugins. Fixed minor bug.
+
+* For developers: `stream_open_instance()`, signature change - added optional description string.
+
+Drivers:
+
+* Many: Updated to support new MPG mode. Updated for core signature change.
+
+* ESP32, RP2040, STM32F4xx: enhanced Neopixel support. __Note:__ Not yet used by any boards.
+
+* STM32F7xx: Added missing MPG mode handlers.
+
+Plugins:
+
+* Bluetooth: updated for core signature change.
+
+---
+
 <a name="20240202"/>20240202
 
 Core:

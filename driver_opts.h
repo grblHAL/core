@@ -108,6 +108,8 @@
 
 #if MPG_ENABLE == 1 && KEYPAD_ENABLE == 2
 #define MPG_MODE            2
+#elif MPG_ENABLE == 2
+#define MPG_MODE            3
 #elif MPG_ENABLE
 #define MPG_MODE            1
 #else

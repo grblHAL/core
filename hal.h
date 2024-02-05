@@ -38,6 +38,7 @@
 #include "nvs.h"
 #include "probe.h"
 #include "ioports.h"
+#include "rgb.h"
 #include "plugins.h"
 
 #define HAL_VERSION 10
@@ -505,55 +506,6 @@ typedef struct {
     rtc_get_datetime_ptr get_datetime;  //!< Optional handler getting the current datetime.
     rtc_set_datetime_ptr set_datetime;  //!< Optional handler setting the current datetime.
 } rtc_ptrs_t;
-
-/*******************
- *  RGB (LED) API  *
- *******************/
-
-typedef union {
-    uint8_t value;
-    uint8_t mask;
-    struct {
-        uint8_t B      :1,
-                G      :1,
-                R      :1,
-                W      :1,
-                unused :4;
-    };
-} rgb_color_mask_t;
-
-typedef union {
-    uint32_t value;
-    struct {
-        uint8_t B; //!< Blue
-        uint8_t G; //!< Green
-        uint8_t R; //!< Red
-        uint8_t W; //!< White
-    };
-} rgb_color_t;
-
-/*! \brief Pointer to function for setting RGB (LED) output.
-\param color a \a rgb_color_t union.
-*/
-typedef void (*rgb_set_color_ptr)(uint16_t device, rgb_color_t color);
-
-/*! \brief Pointer to function for setting RGB (LED) output, with mask for which LEDs to change.
-\param color a \a rgb_color_t union.
-\param mask a \a rgb_color_mask_t union.
-*/
-typedef void (*rgb_set_color_masked_ptr)(uint16_t device, rgb_color_t color, rgb_color_mask_t mask);
-
-/*! \brief Pointer to function for outputting RGB (LED) data to Neopixel strip.
-*/
-typedef void (*rgb_write_ptr)(void);
-
-typedef struct {
-    rgb_set_color_ptr out;                  //!< Optional handler for setting device (LED) color.
-    rgb_set_color_masked_ptr out_masked;    //!< Optional handler for setting device (LED) color, with mask for which LEDs to change.
-    rgb_write_ptr write;                    //!< Optional handler for outputting data to Neopixel strip.
-    rgb_color_t cap;                        //!< Driver capability, color value: 0 - not available, 1 - on off, > 1 - intensity range 0 - n.
-    uint8_t num_devices;                    //!< Number of devices (LEDs) available.
-} rgb_ptr_t;
 
 /**/
 

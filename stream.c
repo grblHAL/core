@@ -415,19 +415,37 @@ void stream_disconnect (const io_stream_t *stream)
         stream_select(stream, false);
 }
 
-io_stream_t const *stream_open_instance (uint8_t instance, uint32_t baud_rate, stream_write_char_ptr rx_handler)
+io_stream_t const *stream_open_instance (uint8_t instance, uint32_t baud_rate, stream_write_char_ptr rx_handler, const char *description)
 {
     connection.instance = instance;
     connection.baud_rate = baud_rate;
     connection.stream = NULL;
 
-    if(stream_enumerate_streams(_open_instance))
+    if(stream_enumerate_streams(_open_instance)) {
         connection.stream->set_enqueue_rt_handler(rx_handler);
+        if(description)
+            stream_set_description(connection.stream, description);
+    }
 
     return connection.stream;
 }
 
 // MPG stream
+
+void stream_mpg_set_mode (void *data)
+{
+    stream_mpg_enable(data != NULL);
+}
+
+ISR_CODE bool ISR_FUNC(stream_mpg_check_enable)(char c)
+{
+    if(c == CMD_MPG_MODE_TOGGLE)
+        protocol_enqueue_foreground_task(stream_mpg_set_mode, (void *)1);
+    else
+        protocol_enqueue_realtime_command(c);
+
+    return true;
+}
 
 bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stream_write_char_ptr write_char)
 {

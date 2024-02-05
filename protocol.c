@@ -931,7 +931,7 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(char c)
 
         case CMD_MPG_MODE_TOGGLE:           // Switch off MPG mode
             if(hal.stream.type == StreamType_MPG)
-                stream_mpg_enable(false);
+                protocol_enqueue_foreground_task(stream_mpg_set_mode, NULL);
             break;
 
         case CMD_AUTO_REPORTING_TOGGLE:

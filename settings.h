@@ -365,7 +365,9 @@ typedef enum {
     Setting_MQTTBrokerPassword  = 533,
 
     Setting_NGCDebugOut = 534,
-    Setting_NetworkMAC  = 535,
+    Setting_NetworkMAC = 535,
+    Setting_RGB_StripLengt0 = 536,
+    Setting_RGB_StripLengt1 = 537,
 
     Setting_Panel_SpindleSpeed       = 540,  // NOTE: Reserving settings values 540 to 579 for panel settings.
     Setting_Panel_ModbusAddress      = 541,
@@ -717,15 +719,19 @@ typedef struct {
     control_signals_t control_invert;
     control_signals_t control_disable_pullup;
     coolant_state_t coolant_invert;
+    uint8_t hole_0;
+    uint16_t hole_1;
     spindle_settings_t spindle;
     stepper_settings_t steppers;
     reportmask_t status_report; // Mask to indicate desired report data.
     settingflags_t flags;       // Contains default boolean settings
     probeflags_t probe;
+    uint8_t rgb_strip0_length;
     offset_lock_t offset_lock;
     fs_options_t fs_options;
     homing_settings_t homing;
     limit_settings_t limits;
+    uint8_t rgb_strip1_length;
     parking_settings_t parking;
     safety_door_settings_t safety_door;
     position_pid_t position;    // Used for synchronized motion
