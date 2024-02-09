@@ -623,7 +623,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_LimitPinsInvertMask, "Inverts the axis limit input signals." },
     { Setting_InvertProbePin, "Inverts the probe input pin signal." },
     { Setting_SpindlePWMOptions, "Enable controls PWM output availability.\\n"
-                                 "When `RPM controls spindle enable signal` is checked and M3 or M4 is active S0 switches it off and S > 0 switches it on."
+                                 "When `RPM controls spindle enable signal` is checked and M3 or M4 is active S='minimum spindle speed' switches it off and S > 'minimum spindle speed' switches it on."
     },
     { Setting_GangedDirInvertMask, "Inverts the direction signals for the second motor used for ganged axes.\\n\\n"
                                    "NOTE: This inversion will be applied in addition to the inversion from setting $3."
