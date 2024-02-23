@@ -185,15 +185,71 @@ Used for Pulses Per Inch (PPI) laser mode.
 */
 typedef void (*spindle_pulse_on_ptr)(uint_fast16_t pulse_length);
 
+typedef struct {
+    float rpm;
+    float start;
+    float end;
+} pwm_piece_t;
+
+typedef union {
+    uint8_t value;
+    uint8_t mask;
+    struct {
+        uint8_t enable_rpm_controlled :1, // PWM spindle only
+                unused                :1,
+                type                  :5,
+                pwm_disable           :1; // PWM spindle only
+    };
+} spindle_settings_flags_t;
+
+typedef struct {
+    float rpm_max;
+    float rpm_min;
+    float pwm_freq;
+    float pwm_period; // currently unused
+    float pwm_off_value;
+    float pwm_min_value;
+    float pwm_max_value;
+    float at_speed_tolerance;
+    pwm_piece_t pwm_piece[SPINDLE_NPWM_PIECES];
+    pid_values_t pid;
+    uint16_t ppr; // Spindle encoder pulses per revolution
+    spindle_state_t invert;
+    spindle_settings_flags_t flags;
+} spindle_settings_t;
+
+//!* \brief Precalculated values that may be set/used by HAL driver to speed up RPM to PWM conversions if variable spindle is supported. */
+typedef struct spindle_pwm {
+    uint32_t f_clock;
+    spindle_settings_t *settings;
+    uint_fast16_t period;
+    uint_fast16_t off_value;    //!< NOTE: this value holds the inverted version if software PWM inversion is enabled by the driver.
+    uint_fast16_t min_value;
+    uint_fast16_t max_value;
+    float rpm_min;              //!< Minimum spindle RPM.
+    float pwm_gradient;
+    bool invert_pwm;            //!< NOTE: set (by driver) when inversion is done in code
+    bool always_on;
+    bool cloned;
+    int_fast16_t offset;
+    uint_fast16_t n_pieces;
+    pwm_piece_t piece[SPINDLE_NPWM_PIECES];
+    uint_fast16_t (*compute_value)(struct spindle_pwm *pwm_data, float rpm, bool pid_limit);
+} spindle_pwm_t;
+
+typedef union
+{
+    spindle_pwm_t *pwm;
+} spindle_context_ptr_t __attribute__ ((__transparent_union__));
+
 /*! \brief Handlers and data for spindle support. */
 struct spindle_ptrs {
     spindle_id_t id;                    //!< Spindle id, assingned on spindle registration.
     struct spindle_param *param;        //!< Pointer to current spindle parameters, assigned when spindle is enabled.
     spindle_type_t type;                //!< Spindle type.
     spindle_cap_t cap;                  //!< Spindle capabilities.
-    void *context;                      //!< Optional pointer to spindle specific context data.
+    spindle_context_ptr_t context;      //!< Optional pointer to spindle specific context.
     uint_fast16_t pwm_off_value;        //!< Value for switching PWM signal off.
-//    struct spindle_pwm *pwm_data;       //!< Optional pointer to PWM configuration.
     float rpm_min;                      //!< Minimum spindle RPM.
     float rpm_max;                      //!< Maximum spindle RPM.
     spindle_config_ptr config;          //!< Optional handler for configuring the spindle.
@@ -247,58 +303,6 @@ typedef struct  {
     bool is_current;
     const spindle_ptrs_t *hal;
 } spindle_info_t;
-
-typedef struct {
-    float rpm;
-    float start;
-    float end;
-} pwm_piece_t;
-
-typedef union {
-    uint8_t value;
-    uint8_t mask;
-    struct {
-        uint8_t enable_rpm_controlled :1, // PWM spindle only
-                unused                :1,
-                type                  :5,
-                pwm_disable           :1; // PWM spindle only
-    };
-} spindle_settings_flags_t;
-
-typedef struct {
-    float rpm_max;
-    float rpm_min;
-    float pwm_freq;
-    float pwm_period; // currently unused
-    float pwm_off_value;
-    float pwm_min_value;
-    float pwm_max_value;
-    float at_speed_tolerance;
-    pwm_piece_t pwm_piece[SPINDLE_NPWM_PIECES];
-    pid_values_t pid;
-    uint16_t ppr; // Spindle encoder pulses per revolution
-    spindle_state_t invert;
-    spindle_settings_flags_t flags;
-} spindle_settings_t;
-
-//!* \brief Precalculated values that may be set/used by HAL driver to speed up RPM to PWM conversions if variable spindle is supported. */
-typedef struct spindle_pwm {
-    uint32_t f_clock;
-    spindle_settings_t *settings;
-    uint_fast16_t period;
-    uint_fast16_t off_value;    //!< NOTE: this value holds the inverted version if software PWM inversion is enabled by the driver.
-    uint_fast16_t min_value;
-    uint_fast16_t max_value;
-    float rpm_min;              //!< Minimum spindle RPM.
-    float pwm_gradient;
-    bool invert_pwm;            //!< NOTE: set (by driver) when inversion is done in code
-    bool always_on;
-    bool cloned;
-    int_fast16_t offset;
-    uint_fast16_t n_pieces;
-    pwm_piece_t piece[SPINDLE_NPWM_PIECES];
-    uint_fast16_t (*compute_value)(struct spindle_pwm *pwm_data, float rpm, bool pid_limit);
-} spindle_pwm_t;
 
 /*! \brief Pointer to callback function called by spindle_enumerate_spindles().
 \param spindle prointer to a \a spindle_info_t struct.

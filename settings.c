@@ -7,18 +7,18 @@
   Copyright (c) 2011-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <math.h>
@@ -679,7 +679,8 @@ PROGMEM static const setting_descr_t setting_descr[] = {
                                       "Normally leave this at 0 as there is an implicit delay on direction changes when AMASS is active."
     },
     { Setting_RpmMax, "Maximum spindle speed, can be overridden by spindle plugins." },
-    { Setting_RpmMin, "Minimum spindle speed, can be overridden by spindle plugins." },
+    { Setting_RpmMin, "Minimum spindle speed, can be overridden by spindle plugins.\\n\\n"
+                      "When set > 0 $35 (PWM min value) may have to be set to get the configured RPM."},
 #if !LATHE_UVW_OPTION
     { Setting_Mode, "Laser mode: consecutive G1/2/3 commands will not halt when spindle speed is changed.\\n"
                     "Lathe mode: allows use of G7, G8, G96 and G97."
@@ -904,6 +905,9 @@ static status_code_t set_probe_invert (setting_id_t id, uint_fast16_t int_value)
         return Status_SettingDisabled;
 
     settings.probe.invert_probe_pin = int_value != 0;
+
+    ioport_setting_changed(id);
+
     hal.probe.configure(false, false);
 
     return Status_OK;
@@ -1043,6 +1047,8 @@ static status_code_t set_control_disable_pullup (setting_id_t id, uint_fast16_t 
 {
     settings.control_disable_pullup.mask = int_value & hal.signals_cap.mask;
 
+    ioport_setting_changed(id);
+
     return Status_OK;
 }
 
@@ -1052,6 +1058,8 @@ static status_code_t set_probe_disable_pullup (setting_id_t id, uint_fast16_t in
         return Status_SettingDisabled;
 
     settings.probe.disable_probe_pullup = int_value != 0;
+
+    ioport_setting_changed(id);
 
     return Status_OK;
 }
@@ -2319,8 +2327,8 @@ bool settings_iterator (const setting_detail_t *setting, setting_output_ptr call
             if(grbl.on_set_axis_setting_unit)
                 set_axis_unit(setting, grbl.on_set_axis_setting_unit(setting->id, axis_idx));
 
-            if(callback(setting, axis_idx, data))
-                ok = true;
+            if(!(ok = callback(setting, axis_idx, data)))
+                break;
         }
     } else if(setting->flags.increment) {
         setting_details_t *set;

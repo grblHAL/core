@@ -71,7 +71,7 @@ typedef struct {
     uint16_t num_devices;                   //!< Number of devices (LEDs) available.
 } rgb_ptr_t;
 
-// helper functions
+// helper structure and functions, not used by the core
 
 typedef struct {
     uint16_t num_leds;
@@ -80,7 +80,7 @@ typedef struct {
     uint8_t intensity;
 } neopixel_cfg_t;
 
-// RGB to/from 3 bytes per pixel packed format
+// Intensity conversions
 
 static inline rgb_color_t rgb_set_intensity (rgb_color_t color, uint8_t intensity)
 {
@@ -90,6 +90,17 @@ static inline rgb_color_t rgb_set_intensity (rgb_color_t color, uint8_t intensit
 
     return color;
 }
+
+static inline rgb_color_t rgb_reset_intensity (rgb_color_t color, uint8_t intensity)
+{
+    color.R = (uint8_t)((color.R << 8) / (intensity + 1));
+    color.G = (uint8_t)((color.G << 8) / (intensity + 1));
+    color.B = (uint8_t)((color.B << 8) / (intensity + 1));
+
+    return color;
+}
+
+// RGB to/from 3 bytes per pixel packed format
 
 static inline void  rgb_3bpp_pack (uint8_t *led, rgb_color_t color, rgb_color_mask_t mask, uint8_t intensity)
 {
@@ -128,15 +139,6 @@ static inline void  rgb_3bpp_pack (uint8_t *led, rgb_color_t color, rgb_color_ma
     }
 }
 
-static inline rgb_color_t rgb_reset_intensity (rgb_color_t color, uint8_t intensity)
-{
-    color.R = (uint8_t)((color.R << 8) / (intensity + 1));
-    color.G = (uint8_t)((color.G << 8) / (intensity + 1));
-    color.B = (uint8_t)((color.B << 8) / (intensity + 1));
-
-    return color;
-}
-
 static inline rgb_color_t rgb_3bpp_unpack (uint8_t *led, uint8_t intensity)
 {
     rgb_color_t color = {0};
@@ -173,6 +175,8 @@ static inline rgb_color_t rgb_3bpp_unpack (uint8_t *led, uint8_t intensity)
 
     return color;
 }
+
+// RGB to/from 1 byte per pixel packed format
 
 static inline void rgb_1bpp_assign (uint8_t *led, rgb_color_t color, rgb_color_mask_t mask)
 {

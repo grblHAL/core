@@ -180,7 +180,7 @@ extern void gc_output_message (char *message);
 //
 
 // Callback from delay to deenergize steppers after movement, might been cancelled
-void st_deenergize (void)
+void st_deenergize (void *data)
 {
     if(sys.steppers_deenergize) {
         hal.stepper.enable(settings.steppers.deenergize);
@@ -192,15 +192,10 @@ void st_deenergize (void)
 // enabled. Startup init and limits call this function but shouldn't start the cycle.
 void st_wake_up (void)
 {
-    if(sys.steppers_deenergize) {
-        sys.steppers_deenergize = false;
-//        hal.delay_ms(0, st_deenergize); // Cancel any pending steppers deenergize
-    }
-
     // Initialize stepper data to ensure first ISR call does not step and
     // cancel any pending steppers deenergize
     //st.exec_block = NULL;
-
+    sys.steppers_deenergize = false;
     hal.stepper.wake_up();
 }
 
@@ -220,8 +215,8 @@ ISR_CODE void ISR_FUNC(st_go_idle)(void)
         else {
             // Force stepper dwell to lock axes for a defined amount of time to ensure the axes come to a complete
             // stop and not drift from residual inertial forces at the end of the last movement.
-            sys.steppers_deenergize = true;
-            hal.delay_ms(settings.steppers.idle_lock_time, st_deenergize);
+            task_delete(st_deenergize, NULL); // Cancel any pending steppers deenergize task
+            sys.steppers_deenergize = task_add_delayed(st_deenergize, NULL, settings.steppers.idle_lock_time);
         }
     } else
         hal.stepper.enable(settings.steppers.idle_lock_time == 255 ? (axes_signals_t){AXES_BITMASK} : settings.steppers.deenergize);

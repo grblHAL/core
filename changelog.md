@@ -1,6 +1,42 @@
 ## grblHAL changelog
 
-<a name="20240205"/>20240205
+<a name="20240222"/>Build 20240222
+
+__NOTE:__ This build has moved the probe input to the ioPorts pool of inputs and will be allocated from it when configured.  
+The change is major and _potentially dangerous_, it may damage your probe, so please _verify correct operation_ after installing this build.  
+There were basically two reasons for doing this, one is to free the input for general use if not needed and another is to be able to add advanced
+probe protection support, via plugin code, for probe inputs that has interrupt capability.
+
+Core:
+
+* Fix for STM32F4xx [issue #161](https://github.com/grblHAL/STM32F4xx/issues/161), Ethernet connection unresponsive if USB port not powered.
+
+* Enhanced ioPorts interface: New debounce option for input pins that are interrupt capable, currently only possible to enable via plugin code - later to be made available via a $-setting.  
+Added some wrapper functions for simpler plugin code++
+
+
+* Added simple task scheduler to the core, allows interrupt routines to dispatch jobs to the foreground process, delayed tasks and repeating tasks attached to the 1 ms system timer.  
+Some drivers and plugins now uses the scheduler for input pin debouncing, regular polling etc. The core uses it for stepper disabling and sleep monitoring.
+
+Drivers:
+
+* Most: updated to support the enhanced ioPorts interface and using the new task scheduler for debouncing etc.
+  Moved probe and safety door inputs to ioPorts pin pool, if not assigned at compile time they will be free to use by M66 or plugin code.   
+  Many board maps has been updated to take advantage of the new ioPorts capabilities. PLease report anny irregularities as I do not have access to all the boards for testing.
+
+* ESP32: MKS Tinybee v1.0 map changed to use MT_DET \(pin 35\) for motor 3 limit input \(e.g. auto squared Y\) if probe input is not enabled. Ref. [issue #93}(https://github.com/grblHAL/ESP32/issues/93#issuecomment-1917467402).
+
+Plugins:
+
+* Some: updated to use the new task scheduler for polling etc.
+
+* Networking: WizNet driver code updated to use the new task scheduler for interrupt handling, resulting in faster/smoother operation.
+
+* WebUI: a bit of code "hardening", reduced memory requirement for some of the larger generated messages.
+
+---
+
+<a name="20240205"/>Build 20240205
 
 Core:
 
@@ -12,11 +48,11 @@ Core:
 
 Drivers:
 
-* Many: Updated to support new MPG mode. Updated for core signature change.
+* Many: updated to support new MPG mode. Updated for core signature change.
 
 * ESP32, RP2040, STM32F4xx: enhanced Neopixel support. __Note:__ Not yet used by any boards.
 
-* STM32F7xx: Added missing MPG mode handlers.
+* STM32F7xx: added missing MPG mode handlers.
 
 Plugins:
 

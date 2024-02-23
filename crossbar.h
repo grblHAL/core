@@ -5,18 +5,18 @@
 
   Copyright (c) 2021-2024 Terje Io
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef _CROSSBAR_H_
@@ -71,16 +71,6 @@ typedef enum {
     Input_LimitV,
     Input_LimitV_Max,
     Input_HomeV,
-    Input_MISO,
-    Input_SPIIRQ,
-    Input_RX,
-    Input_KeypadStrobe, // To be deprecated? Use Input_I2CStrobe instead.
-    Input_I2CStrobe,
-    Input_SdCardDetect,
-    Input_QEI_A,
-    Input_QEI_B,
-    Input_QEI_Select,
-    Input_QEI_Index,
     Input_SpindleIndex,
     Input_SpindlePulse,
     Input_Aux0,
@@ -99,8 +89,9 @@ typedef enum {
     Input_Analog_Aux5,
     Input_Analog_Aux6,
     Input_Analog_Aux7,
-    Outputs,
-    Output_StepX = Outputs,
+// Output pins
+    Output_StepX,
+    Outputs = Output_StepX,
     Output_StepX_2,
     Output_StepY,
     Output_StepY_2,
@@ -148,13 +139,6 @@ typedef enum {
     Output_SpindlePWM,
     Output_CoolantMist,
     Output_CoolantFlood,
-    Output_TX,
-    Output_RTS,
-    Output_SCK,
-    Output_MOSI,
-    Output_SPIRST,
-    Output_SPICS,
-    Output_SdCardCS,
     Output_Aux0,
     Output_Aux1,
     Output_Aux2,
@@ -177,9 +161,32 @@ typedef enum {
     Output_LED_B,
     Output_LED_W,
     Output_LED_Adressable,
-    Bidirectional,
-    Bidirectional_SDA = Bidirectional,
+// Multipin peripherals
+    Input_MISO,
+    Multipin = Input_MISO,
+    Output_MOSI,
+    Output_SPICLK,
+    Output_SPICS,
+    Output_SdCardCS,
+    Input_SdCardDetect,
+    Output_SPIRST,
+    Input_SPIIRQ,
+    Output_SCK,
+    Output_I2CSCK = Output_SCK,
+    Bidirectional_SDA,
+    Bidirectional_I2CSDA = Bidirectional_SDA,
+    Input_KeypadStrobe, // To be deprecated? Use Input_I2CStrobe instead.
+    Input_I2CStrobe,
+    Input_RX,
+    Output_TX,
+    Output_RTS,
+    Input_QEI_A,
+    Input_QEI_B,
+    Input_QEI_Select,
+    Input_QEI_Index,
+// Single pin bidirectional peripherals
     Bidirectional_MotorUARTX,
+    Bidirectional = Bidirectional_MotorUARTX,
     Bidirectional_MotorUARTY,
     Bidirectional_MotorUARTZ,
     Bidirectional_MotorUARTM3,
@@ -226,16 +233,6 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Input_LimitZ_2,            .name = "Z limit min 2" },
     { .function = Input_LimitZ_Max,          .name = "Z limit max" },
     { .function = Input_HomeZ,               .name = "Z home" },
-    { .function = Input_MISO,                .name = "MISO" },
-    { .function = Input_SPIIRQ,              .name = "SPI IRQ" },
-    { .function = Input_RX,                  .name = "RX" },
-    { .function = Input_KeypadStrobe,        .name = "Keypad strobe" },
-    { .function = Input_I2CStrobe,           .name = "I2C strobe" },
-    { .function = Input_SdCardDetect,        .name = "SD card detect" },
-    { .function = Input_QEI_A,               .name = "QEI A" },
-    { .function = Input_QEI_B,               .name = "QEI B" },
-    { .function = Input_QEI_Select,          .name = "QEI select" },
-    { .function = Input_QEI_Index,           .name = "QEI index" },
     { .function = Input_SpindleIndex,        .name = "Spindle index" },
     { .function = Input_SpindlePulse,        .name = "Spindle pulse" },
     { .function = Input_Aux0,                .name = "Aux input 0" },
@@ -327,13 +324,6 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Output_SpindlePWM,         .name = "Spindle PWM" },
     { .function = Output_CoolantMist,        .name = "Mist" },
     { .function = Output_CoolantFlood,       .name = "Flood" },
-    { .function = Output_TX,                 .name = "TX" },
-    { .function = Output_RTS,                .name = "RTS" },
-    { .function = Output_SCK,                .name = "SCK" },
-    { .function = Output_MOSI,               .name = "MOSI" },
-    { .function = Output_SPIRST,             .name = "SPI reset" },
-    { .function = Output_SPICS,              .name = "SPI CS" },
-    { .function = Output_SdCardCS,           .name = "SD card CS" },
     { .function = Output_Aux0,               .name = "Aux out 0" },
     { .function = Output_Aux1,               .name = "Aux out 1" },
     { .function = Output_Aux2,               .name = "Aux out 2" },
@@ -356,7 +346,25 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Output_LED_B,              .name = "LED B" },
     { .function = Output_LED_W,              .name = "LED W" },
     { .function = Output_LED_Adressable,     .name = "LED adressable" },
-    { .function = Bidirectional_SDA,         .name = "SDA" },
+    { .function = Input_MISO,                .name = "MISO" },
+    { .function = Output_MOSI,               .name = "MOSI" },
+    { .function = Output_SPICLK,             .name = "SPI CLK" },
+    { .function = Output_SPICS,              .name = "SPI CS" },
+    { .function = Output_SdCardCS,           .name = "SD card CS" },
+    { .function = Input_SdCardDetect,        .name = "SD card detect" },
+    { .function = Output_SPIRST,             .name = "SPI reset" },
+    { .function = Input_SPIIRQ,              .name = "SPI IRQ" },
+    { .function = Output_I2CSCK,             .name = "I2C SCK" },
+    { .function = Bidirectional_SDA,         .name = "I2C SDA" },
+    { .function = Input_KeypadStrobe,        .name = "Keypad strobe" },
+    { .function = Input_I2CStrobe,           .name = "I2C strobe" },
+    { .function = Input_RX,                  .name = "RX" },
+    { .function = Output_TX,                 .name = "TX" },
+    { .function = Output_RTS,                .name = "RTS" },
+    { .function = Input_QEI_A,               .name = "QEI A" },
+    { .function = Input_QEI_B,               .name = "QEI B" },
+    { .function = Input_QEI_Select,          .name = "QEI select" },
+    { .function = Input_QEI_Index,           .name = "QEI index" },
     { .function = Bidirectional_MotorUARTX,  .name = "UART X" },
     { .function = Bidirectional_MotorUARTY,  .name = "UART Y" },
     { .function = Bidirectional_MotorUARTZ,  .name = "UART Z" },
@@ -385,8 +393,8 @@ typedef enum {
     PinGroup_MotorUART,
     PinGroup_I2C,
     PinGroup_SPI,
-    PinGroup_UART,
-    PinGroup_UART1 = PinGroup_UART,
+    PinGroup_UART1,
+    PinGroup_UART = PinGroup_UART1,
     PinGroup_UART2,
     PinGroup_UART3,
     PinGroup_UART4,
@@ -411,14 +419,15 @@ typedef enum {
 
 //! Pin interrupt modes, may be or'ed when reporting pin capability.
 typedef enum {
-    IRQ_Mode_None    = 0b00000, //!< 0b00000 (0x00)
-    IRQ_Mode_Rising  = 0b00001, //!< 0b00001 (0x01)
-    IRQ_Mode_Falling = 0b00010, //!< 0b00010 (0x02)
-    IRQ_Mode_Change  = 0b00100, //!< 0b00100 (0x04)
-    IRQ_Mode_Edges   = 0b00111, //!< 0b00111 (0x07) - only used to report port capability.
-    IRQ_Mode_High    = 0b01000, //!< 0b01000 (0x08)
-    IRQ_Mode_Low     = 0b10000, //!< 0b10000 (0x10)
-    IRQ_Mode_All     = 0b11111  //!< 0b11111 (0x1F) - only used to report port capability.
+    IRQ_Mode_None          = 0b00000, //!< 0b00000 (0x00)
+    IRQ_Mode_Rising        = 0b00001, //!< 0b00001 (0x01)
+    IRQ_Mode_Falling       = 0b00010, //!< 0b00010 (0x02)
+    IRQ_Mode_RisingFalling = 0b00011, //!< 0b00011 (0x03) - only used to report port capability.
+    IRQ_Mode_Change        = 0b00100, //!< 0b00100 (0x04)
+    IRQ_Mode_Edges         = 0b00111, //!< 0b00111 (0x07) - only used to report port capability.
+    IRQ_Mode_High          = 0b01000, //!< 0b01000 (0x08)
+    IRQ_Mode_Low           = 0b10000, //!< 0b10000 (0x10)
+    IRQ_Mode_All           = 0b11111  //!< 0b11111 (0x1F) - only used to report port capability.
 } pin_irq_mode_t;
 
 typedef enum {
@@ -466,7 +475,7 @@ typedef union {
                  pwm        :1,
                  servo_pwm  :1,
                  claimable  :1,
-                 reserved   :1;
+                 debounce   :1;
     };
 } pin_cap_t;
 
@@ -483,11 +492,52 @@ typedef union {
                  pwm        :1,
                  servo_pwm  :1,
                  claimed    :1,
-                 reserved   :1;
+                 debounce   :1;
     };
 } pin_mode_t;
 
 #define XBAR_SET_CAP(cap, mode) { cap.mask = mode.mask; cap.claimable = !mode.claimed; }
+#define XBAR_SET_DIN_INFO(pin, pin_id, src, cfg_fn, get_val_fn) { \
+  pin.id = pin_id; \
+  pin.mode = src.mode; \
+  pin.cap = src.cap; \
+  pin.cap.invert = On; \
+  pin.cap.claimable = !src.mode.claimed; \
+  pin.function = src.id; \
+  pin.group = src.group; \
+  pin.pin = src.pin; \
+  pin.port = (void *)src.port; \
+  pin.description = src.description; \
+  pin.config = cfg_fn; \
+  pin.get_value = get_val_fn; \
+}
+#define XBAR_SET_DOUT_INFO(pin, pin_id, src, cfg_fn, get_val_fn) { \
+  pin.id = pin_id; \
+  pin.mode = src.mode; \
+  pin.cap.mask = src.mode.mask; \
+  pin.cap.invert = On; \
+  pin.cap.claimable = !src.mode.claimed; \
+  pin.function = src.id; \
+  pin.group = src.group; \
+  pin.pin = src.pin; \
+  pin.port = (void *)src.port; \
+  pin.description = src.description; \
+  pin.config = cfg_fn; \
+  pin.get_value = get_val_fn; \
+}
+
+//! /a cfg_data argument to /a xbar_config_ptr for gpio input pins
+typedef struct {
+    bool inverted;
+    bool debounce;
+    pull_mode_t pull_mode;
+} gpio_in_config_t;
+
+//! /a cfg_data argument to /a xbar_config_ptr for gpio output pins
+typedef struct {
+    bool inverted;
+    bool open_drain;
+} gpio_out_config_t;
 
 //! /a cfg_data argument to /a xbar_config_ptr for PWM pins
 typedef struct {
@@ -502,46 +552,36 @@ typedef struct {
 } pwm_config_t;
 
 typedef union
-  {
-//    pin_mode_t *pin_mode;
+{
     pwm_config_t *pwm_config;
-  } xbar_cfg_ptr_t __attribute__ ((__transparent_union__));
+    gpio_in_config_t *gpio_in_config;
+    gpio_out_config_t *gpio_out_config;
+} xbar_cfg_ptr_t __attribute__ ((__transparent_union__));
 
 struct xbar;
 
 typedef float (*xbar_get_value_ptr)(struct xbar *pin);
 typedef void (*xbar_set_value_ptr)(struct xbar *pin, float value);
 typedef void (*xbar_event_ptr)(bool on);
-typedef bool (*xbar_config_ptr)(struct xbar *pin, xbar_cfg_ptr_t cfg_data);
-
-typedef enum {
-    AuxCtrl_SafetyDoor = 0,
-    AuxCtrl_MotorFault,
-    AuxCtrl_MotorWarning,
-    AuxCtrl_ProbeDisconnect,
-    AuxCtrl_StopDisable,
-    AuxCtrl_BlockDelete,
-    AuxCtrl_SingleBlock,
-    AuxCtrl_LimitsOverride,
-    AuxCtrl_NumEntries,
-} aux_ctrl_signals_t;
+typedef bool (*xbar_config_ptr)(struct xbar *pin, xbar_cfg_ptr_t cfg_data, bool persistent);
 
 typedef struct {
-    bool enabled;
-    volatile bool debouncing;
-    uint8_t port;
+    pin_function_t function;
+    uint8_t aux_port;
     pin_irq_mode_t irq_mode;
     control_signals_t cap;
-    pin_function_t function;
+    uint8_t pin;
+    void *port;
+    void *input;
 } aux_ctrl_t;
 
 typedef struct xbar {
+    uint8_t id;                     //!< Pin id.
     pin_function_t function;        //!< Pin function.
     pin_group_t group;              //!< Pin group.
     void *port;                     //!< Optional pointer to the underlying peripheral or pin specific data.
     const char *description;        //!< Optional pointer to description string.
     uint_fast8_t pin;               //!< Pin number.
-    uint32_t bit;                   //!< Pin bit, 1 << pin.
     pin_cap_t cap;                  //!< Pin capabilities.
     pin_mode_t mode;                //!< Current pin configuration.
     xbar_config_ptr config;         //!< Optional pointer to function for configuring the port.
@@ -563,6 +603,17 @@ typedef struct periph_signal {
     periph_pin_t pin;
     struct periph_signal *next;
 } periph_signal_t;
+
+typedef union {
+    uint8_t mask;
+    struct {
+        uint8_t limits      :1,
+                aux_inputs  :1,
+                safety_door :1,
+                qei_select  :1,
+                unassigned  :4;
+    };
+} pin_debounce_t;
 
 void xbar_set_homing_source (void);
 limit_signals_t xbar_get_homing_source (void);

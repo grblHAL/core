@@ -3,21 +3,21 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2023 Terje Io
+  Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2014-2016 Sungeun K. Jeon for Gnea Research LLC
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "grbl.h"
@@ -45,7 +45,8 @@ PROGMEM static const message_t messages[] = {
     { .id = Message_TPCycleStart2Continue, .text = "Remove any touch plate and press cycle start to continue." },
     { .id = Message_ProbeFailedRetry, .text = "Probe failed, try again." },
     { .id = Message_ExecuteTPW, .text = "Perform a probe with $TPW first!", .type = Message_Warning},
-    { .id = Message_ProbeProtected, .text = "Probe protection activated."}
+    { .id = Message_ProbeProtected, .text = "Probe protection activated."},
+    { .id = Message_Stop, .text = "Stop"}
 };
 
 const message_t *message_get (message_code_t id)

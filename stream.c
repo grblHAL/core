@@ -5,18 +5,18 @@
 
   Copyright (c) 2021-2024 Terje Io
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <stdlib.h>
@@ -244,6 +244,8 @@ static bool stream_select (const io_stream_t *stream, bool add)
 {
     static const io_stream_t *active_stream = NULL;
 
+    bool send_init_message = false;
+
     if(stream == base.stream) {
         base.is_up = add ? (stream->is_connected ? stream->is_connected : is_connected) : is_not_connected;
         return true;
@@ -288,28 +290,22 @@ static bool stream_select (const io_stream_t *stream, bool add)
         case StreamType_Telnet:
             if(connection_is_up(&hal.stream))
                 report_message("TELNET STREAM ACTIVE", Message_Plain);
-            if(add && sys.driver_started) {
+            if((send_init_message = add && sys.driver_started))
                 hal.stream.write_all = stream->write;
-                grbl.report.init_message();
-            }
             break;
 
         case StreamType_WebSocket:
             if(connection_is_up(&hal.stream))
                 report_message("WEBSOCKET STREAM ACTIVE", Message_Plain);
-            if(add && sys.driver_started && !hal.stream.state.webui_connected) {
+            if((send_init_message = add && sys.driver_started && !hal.stream.state.webui_connected))
                 hal.stream.write_all = stream->write;
-                grbl.report.init_message();
-            }
             break;
 
         case StreamType_Bluetooth:
             if(connection_is_up(&hal.stream))
                 report_message("BLUETOOTH STREAM ACTIVE", Message_Plain);
-            if(add && sys.driver_started) {
+            if((send_init_message = add && sys.driver_started))
                 hal.stream.write_all = stream->write;
-                grbl.report.init_message();
-            }
             break;
 
         default:
@@ -317,12 +313,13 @@ static bool stream_select (const io_stream_t *stream, bool add)
     }
 
     memcpy(&hal.stream, stream, sizeof(io_stream_t));
-
-    if(!hal.stream.write_all)
-        hal.stream.write_all = base.next != NULL ? stream_write_all : hal.stream.write;
+    hal.stream.write_all = stream_write_all;
 
     if(stream == base.stream && base.is_up == is_not_connected)
         base.is_up = is_connected;
+
+    if(hal.stream.is_connected == NULL)
+        hal.stream.is_connected = stream == base.stream ? base.is_up : is_connected;
 
     if(stream->type == StreamType_WebSocket && !stream->state.webui_connected)
         hal.stream.state.webui_connected = webui_connected;
@@ -331,6 +328,9 @@ static bool stream_select (const io_stream_t *stream, bool add)
 
     if(hal.stream.disable_rx)
         hal.stream.disable_rx(false);
+
+    if(send_init_message)
+        grbl.report.init_message();
 
     if(grbl.on_stream_changed)
         grbl.on_stream_changed(hal.stream.type);
@@ -441,8 +441,11 @@ ISR_CODE bool ISR_FUNC(stream_mpg_check_enable)(char c)
 {
     if(c == CMD_MPG_MODE_TOGGLE)
         protocol_enqueue_foreground_task(stream_mpg_set_mode, (void *)1);
-    else
+    else {
         protocol_enqueue_realtime_command(c);
+        if((c == CMD_CYCLE_START || c == CMD_CYCLE_START_LEGACY) && settings.status_report.pin_state)
+            sys.report.cycle_start |= state_get() == STATE_IDLE;
+    }
 
     return true;
 }

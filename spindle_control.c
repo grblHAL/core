@@ -754,8 +754,10 @@ bool spindle_precompute_pwm_values (spindle_ptrs_t *spindle, spindle_pwm_t *pwm_
             pwm_data->off_value = pwm_data->invert_pwm ? pwm_data->period : 0;
         else
             pwm_data->off_value = invert_pwm(pwm_data, (uint_fast16_t)(pwm_data->period * settings->pwm_off_value / 100.0f));
-        pwm_data->min_value = (uint_fast16_t)(pwm_data->period * settings->pwm_min_value / 100.0f);
         pwm_data->max_value = (uint_fast16_t)(pwm_data->period * settings->pwm_max_value / 100.0f) + pwm_data->offset;
+        if((pwm_data->min_value = (uint_fast16_t)(pwm_data->period * settings->pwm_min_value / 100.0f)) == 0 && spindle->rpm_min > 0.0f)
+            pwm_data->min_value = (uint_fast16_t)((float)pwm_data->max_value * 0.004f);
+
         pwm_data->pwm_gradient = (float)(pwm_data->max_value - pwm_data->min_value) / (spindle->rpm_max - spindle->rpm_min);
         pwm_data->always_on = settings->pwm_off_value != 0.0f;
         pwm_data->compute_value = spindle_compute_pwm_value;
@@ -765,7 +767,7 @@ bool spindle_precompute_pwm_values (spindle_ptrs_t *spindle, spindle_pwm_t *pwm_
         pwm_data->compute_value = compute_dummy_pwm_value;
     }
 
-    spindle->context = pwm_data;
+    spindle->context.pwm = pwm_data;
 
 #if ENABLE_SPINDLE_LINEARIZATION
     uint_fast8_t idx;

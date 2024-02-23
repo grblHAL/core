@@ -7,18 +7,18 @@
   Copyright (c) 2011-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <string.h>
@@ -58,6 +58,8 @@
 #include "kinematics/polar.h"
 #endif
 
+static void task_execute (sys_state_t state);
+
 typedef union {
     uint8_t ok;
     struct {
@@ -70,11 +72,23 @@ typedef union {
     };
 } driver_startup_t;
 
+#ifndef CORE_TASK_POOL_SIZE
+#define CORE_TASK_POOL_SIZE 30
+#endif
+
+typedef struct core_task {
+    uint32_t time;
+    foreground_task_ptr fn;
+    void *data;
+    struct core_task *next;
+} core_task_t;
+
 struct system sys = {0}; //!< System global variable structure.
 grbl_t grbl;
 grbl_hal_t hal;
 static driver_startup_t driver = { .ok = 0xFF };
-static on_execute_realtime_ptr on_execute_realtime;
+static core_task_t task_pool[CORE_TASK_POOL_SIZE] = {0};
+static core_task_t *next_task = NULL, *immediate_task = NULL, *systick_task = NULL, *last_freed = NULL;
 
 #ifdef KINEMATICS_API
 kinematics_t kinematics;
@@ -109,21 +123,20 @@ static void report_driver_error (void *data)
     report_message(msg, Message_Plain);
 }
 
-static void auto_realtime_report (sys_state_t state)
+static void auto_realtime_report (void *data);
+
+static void realtime_report_check (void *data)
 {
-    static uint32_t ms = 0;
+    task_add_delayed(sys.flags.auto_reporting ? auto_realtime_report : realtime_report_check, NULL, settings.report_interval);
+}
 
+static void auto_realtime_report (void *data)
+{
     if(sys.flags.auto_reporting) {
-
-        uint32_t t = hal.get_elapsed_ticks();
-
-        if(t - ms >= settings.report_interval) {
-            ms = t;
-            system_set_exec_state_flag(EXEC_STATUS_REPORT);
-        }
-    }
-
-    on_execute_realtime(state);
+        system_set_exec_state_flag(EXEC_STATUS_REPORT);
+        task_add_delayed(auto_realtime_report, NULL, settings.report_interval);
+    } else if(settings.report_interval)
+        task_add_delayed(realtime_report_check, NULL, settings.report_interval);
 }
 
 // "Wire" homing signals to limit signals, used when max limit inputs not available.
@@ -161,7 +174,7 @@ int grbl_enter (void)
 
     // Clear all and set some core function pointers
     memset(&grbl, 0, sizeof(grbl_t));
-    grbl.on_execute_realtime = grbl.on_execute_delay = protocol_execute_noop;
+    grbl.on_execute_realtime = grbl.on_execute_delay = task_execute;
     grbl.enqueue_gcode = protocol_enqueue_gcode;
     grbl.enqueue_realtime_command = stream_enqueue_realtime_command;
     grbl.on_report_options = dummy_bool_handler;
@@ -287,10 +300,8 @@ int grbl_enter (void)
     if(hal.homing.get_state == NULL)
         hal.homing.get_state = hal.limits_cap.max.mask ? get_homing_status2 : get_homing_status;
 
-    if(settings.report_interval) {
-        on_execute_realtime = grbl.on_execute_realtime;
-        grbl.on_execute_realtime = auto_realtime_report;
-    }
+    if(settings.report_interval)
+        task_add_delayed(auto_realtime_report, NULL, settings.report_interval);
 
     if(hal.driver_cap.sd_card || hal.driver_cap.littlefs) {
         fs_options_t fs_options = {0};
@@ -364,4 +375,198 @@ int grbl_enter (void)
     nvs_buffer_free();
 
     return 0;
+}
+
+static inline core_task_t *task_alloc (void)
+{
+    core_task_t *task = NULL;
+    uint_fast8_t idx = CORE_TASK_POOL_SIZE;
+
+    if(last_freed) {
+        task = last_freed;
+        last_freed = NULL;
+    } else do {
+        if(task_pool[--idx].fn == NULL)
+            task = &task_pool[idx];
+    } while(task == NULL && idx);
+
+    return task;
+}
+
+static inline void task_free (core_task_t *task)
+{
+    task->fn = NULL;
+    if(last_freed == NULL)
+        last_freed = task;
+}
+
+static void task_execute (sys_state_t state)
+{
+    static uint32_t last_ms = 0;
+
+    core_task_t *task;
+
+    if(immediate_task && sys.driver_started) {
+
+        hal.irq_disable();
+        task = immediate_task;
+        immediate_task = NULL;
+        hal.irq_enable();
+
+        do {
+            void *data = task->data;
+            foreground_task_ptr fn = task->fn;
+            task_free(task);
+            fn(data);
+        } while((task = task->next));
+    }
+
+    uint32_t now = hal.get_elapsed_ticks();
+    if(now == last_ms || next_task == systick_task)
+        return;
+
+    last_ms = now;
+
+    if((task = systick_task)) do {
+        task->fn(task->data);
+    } while((task = task->next));
+
+    while(next_task && (int32_t)(next_task->time - now) <= 0) {
+
+        void *data = next_task->data;
+        foreground_task_ptr fn = next_task->fn;
+        task_free(next_task);
+        next_task = next_task->next;
+
+        fn(data);
+    }
+}
+
+ISR_CODE bool ISR_FUNC(task_add_delayed)(foreground_task_ptr fn, void *data, uint32_t delay_ms)
+{
+    core_task_t *task = NULL;
+
+    hal.irq_disable();
+
+    if(fn && (task = task_alloc())) {
+
+        task->time = hal.get_elapsed_ticks() + delay_ms;
+        task->fn = fn;
+        task->data = data;
+        task->next = NULL;
+
+        if(next_task == NULL)
+            next_task = task;
+        else if((int32_t)(task->time - next_task->time) < 0) {
+            task->next = next_task;
+            next_task = task;
+        } else {
+            core_task_t *t = next_task;
+            while(t) {
+                if(t->next == NULL || (int32_t)(task->time - t->next->time) < 0) {
+                    task->next = t->next;
+                    t->next = task;
+                    break;
+                }
+                t = t->next;
+            }
+        }
+    }
+
+    hal.irq_enable();
+
+    return task != NULL;
+}
+
+void task_delete (foreground_task_ptr fn, void *data)
+{
+    core_task_t *task, *prev = NULL;
+
+    if((task = next_task)) do {
+        if(fn == task->fn && data == task->data) {
+            if(prev)
+                prev->next = task->next;
+            else
+                next_task = task->next;
+            task_free(task);
+            break;
+        }
+        prev = task;
+    } while((task = task->next));
+}
+
+ISR_CODE bool ISR_FUNC(task_add_systick)(foreground_task_ptr fn, void *data)
+{
+    core_task_t *task = NULL;
+
+    hal.irq_disable();
+
+    if(fn && (task = task_alloc())) {
+
+        task->fn = fn;
+        task->data = data;
+        task->next = NULL;
+
+        if(systick_task == NULL)
+            systick_task = task;
+        else {
+            core_task_t *t = systick_task;
+            while(t->next)
+                t = t->next;
+            t->next = task;
+        }
+    }
+
+    hal.irq_enable();
+
+    return task != NULL;
+}
+
+void task_delete_systick (foreground_task_ptr fn, void *data)
+{
+    core_task_t *task, *prev = NULL;
+
+    if((task = systick_task)) do {
+        if(fn == task->fn && data == task->data) {
+            if(prev)
+                prev->next = task->next;
+            else
+                systick_task = task->next;
+            task_free(task);
+            break;
+        }
+        prev = task;
+    } while((task = task->next));
+}
+
+/*! \brief Enqueue a function to be called once by the foreground process.
+\param fn pointer to a \a foreground_task_ptr type of function.
+\param data pointer to data to be passed to the callee.
+\returns true if successful, false otherwise.
+*/
+ISR_CODE bool ISR_FUNC(task_add_immediate)(foreground_task_ptr fn, void *data)
+{
+    core_task_t *task = NULL;
+
+    hal.irq_disable();
+
+    if(fn && (task = task_alloc())) {
+
+        task->fn = fn;
+        task->data = data;
+        task->next = NULL;
+
+        if(immediate_task == NULL)
+            immediate_task = task;
+        else {
+            core_task_t *t = immediate_task;
+            while(t->next)
+                t = t->next;
+            t->next = task;
+        }
+    }
+
+    hal.irq_enable();
+
+    return task != NULL;
 }
