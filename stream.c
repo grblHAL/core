@@ -5,18 +5,18 @@
 
   Copyright (c) 2021-2024 Terje Io
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <stdlib.h>
@@ -244,6 +244,8 @@ static bool stream_select (const io_stream_t *stream, bool add)
 {
     static const io_stream_t *active_stream = NULL;
 
+    bool send_init_message = false;
+
     if(stream == base.stream) {
         base.is_up = add ? (stream->is_connected ? stream->is_connected : is_connected) : is_not_connected;
         return true;
@@ -288,28 +290,22 @@ static bool stream_select (const io_stream_t *stream, bool add)
         case StreamType_Telnet:
             if(connection_is_up(&hal.stream))
                 report_message("TELNET STREAM ACTIVE", Message_Plain);
-            if(add && sys.driver_started) {
+            if((send_init_message = add && sys.driver_started))
                 hal.stream.write_all = stream->write;
-                grbl.report.init_message();
-            }
             break;
 
         case StreamType_WebSocket:
             if(connection_is_up(&hal.stream))
                 report_message("WEBSOCKET STREAM ACTIVE", Message_Plain);
-            if(add && sys.driver_started && !hal.stream.state.webui_connected) {
+            if((send_init_message = add && sys.driver_started && !hal.stream.state.webui_connected))
                 hal.stream.write_all = stream->write;
-                grbl.report.init_message();
-            }
             break;
 
         case StreamType_Bluetooth:
             if(connection_is_up(&hal.stream))
                 report_message("BLUETOOTH STREAM ACTIVE", Message_Plain);
-            if(add && sys.driver_started) {
+            if((send_init_message = add && sys.driver_started))
                 hal.stream.write_all = stream->write;
-                grbl.report.init_message();
-            }
             break;
 
         default:
@@ -317,12 +313,13 @@ static bool stream_select (const io_stream_t *stream, bool add)
     }
 
     memcpy(&hal.stream, stream, sizeof(io_stream_t));
-
-    if(!hal.stream.write_all)
-        hal.stream.write_all = base.next != NULL ? stream_write_all : hal.stream.write;
+    hal.stream.write_all = stream_write_all;
 
     if(stream == base.stream && base.is_up == is_not_connected)
         base.is_up = is_connected;
+
+    if(hal.stream.is_connected == NULL)
+        hal.stream.is_connected = stream == base.stream ? base.is_up : is_connected;
 
     if(stream->type == StreamType_WebSocket && !stream->state.webui_connected)
         hal.stream.state.webui_connected = webui_connected;
@@ -331,6 +328,9 @@ static bool stream_select (const io_stream_t *stream, bool add)
 
     if(hal.stream.disable_rx)
         hal.stream.disable_rx(false);
+
+    if(send_init_message)
+        grbl.report.init_message();
 
     if(grbl.on_stream_changed)
         grbl.on_stream_changed(hal.stream.type);
@@ -364,14 +364,24 @@ io_stream_flags_t stream_get_flags (io_stream_t stream)
     return flags;
 }
 
+bool stream_set_description (const io_stream_t *stream, const char *description)
+{
+    bool ok;
+
+    if((ok = stream->type == StreamType_Serial && !stream->state.is_usb && hal.periph_port.set_pin_description)) {
+        hal.periph_port.set_pin_description(Output_TX, (pin_group_t)(PinGroup_UART + stream->instance), description);
+        hal.periph_port.set_pin_description(Input_RX, (pin_group_t)(PinGroup_UART + stream->instance), description);
+    }
+
+    return ok;
+}
+
 bool stream_connect (const io_stream_t *stream)
 {
     bool ok;
 
-    if((ok = stream_select(stream, true)) && stream->type == StreamType_Serial && !stream->state.is_usb && hal.periph_port.set_pin_description) {
-        hal.periph_port.set_pin_description(Input_RX, (pin_group_t)(PinGroup_UART + stream->instance), "Primary UART");
-        hal.periph_port.set_pin_description(Output_TX, (pin_group_t)(PinGroup_UART + stream->instance), "Primary UART");
-    }
+    if((ok = stream_select(stream, true)))
+        stream_set_description(stream, "Primary UART");
 
     return ok;
 }
@@ -405,19 +415,40 @@ void stream_disconnect (const io_stream_t *stream)
         stream_select(stream, false);
 }
 
-io_stream_t const *stream_open_instance (uint8_t instance, uint32_t baud_rate, stream_write_char_ptr rx_handler)
+io_stream_t const *stream_open_instance (uint8_t instance, uint32_t baud_rate, stream_write_char_ptr rx_handler, const char *description)
 {
     connection.instance = instance;
     connection.baud_rate = baud_rate;
     connection.stream = NULL;
 
-    if(stream_enumerate_streams(_open_instance))
+    if(stream_enumerate_streams(_open_instance)) {
         connection.stream->set_enqueue_rt_handler(rx_handler);
+        if(description)
+            stream_set_description(connection.stream, description);
+    }
 
     return connection.stream;
 }
 
 // MPG stream
+
+void stream_mpg_set_mode (void *data)
+{
+    stream_mpg_enable(data != NULL);
+}
+
+ISR_CODE bool ISR_FUNC(stream_mpg_check_enable)(char c)
+{
+    if(c == CMD_MPG_MODE_TOGGLE)
+        protocol_enqueue_foreground_task(stream_mpg_set_mode, (void *)1);
+    else {
+        protocol_enqueue_realtime_command(c);
+        if((c == CMD_CYCLE_START || c == CMD_CYCLE_START_LEGACY) && settings.status_report.pin_state)
+            sys.report.cycle_start |= state_get() == STATE_IDLE;
+    }
+
+    return true;
+}
 
 bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stream_write_char_ptr write_char)
 {
@@ -454,10 +485,7 @@ bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stream_write_
 
         hal.stream.write_all = stream_write_all;
 
-        if(hal.periph_port.set_pin_description) {
-            hal.periph_port.set_pin_description(Output_TX, (pin_group_t)(PinGroup_UART + stream->instance), "MPG");
-            hal.periph_port.set_pin_description(Input_RX, (pin_group_t)(PinGroup_UART + stream->instance), "MPG");
-        }
+        stream_set_description(stream, "MPG");
     }
 
     return connection != NULL;
@@ -598,11 +626,6 @@ const io_stream_t *stream_null_init (uint32_t baud_rate)
 
 static stream_write_ptr dbg_write = NULL;
 
-static void debug_stream_warning (uint_fast16_t state)
-{
-    report_message("Failed to initialize debug stream!", Message_Warning);
-}
-
 void debug_write (const char *s)
 {
     if(dbg_write) {
@@ -647,7 +670,7 @@ bool debug_stream_init (void)
     if(stream_enumerate_streams(debug_claim_stream))
         hal.debug.write(ASCII_EOL "UART debug active:" ASCII_EOL);
     else
-        protocol_enqueue_rt_command(debug_stream_warning);
+        protocol_enqueue_foreground_task(report_warning, "Failed to initialize debug stream!");
 
     return hal.debug.write == debug_write;
 }

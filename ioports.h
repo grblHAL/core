@@ -5,18 +5,18 @@
 
   Copyright (c) 2021-2024 Terje Io
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #pragma once
@@ -65,6 +65,7 @@ typedef int32_t (*wait_on_input_ptr)(io_port_type_t type, uint8_t port, wait_mod
 typedef void (*set_pin_description_ptr)(io_port_type_t type, io_port_direction_t dir, uint8_t port, const char *s);
 
 /*! \brief Pointer to function for getting information about a digital or analog port.
+<br>__NOTE:__ The port information pointed to will be overwritten by the next call to this function.
 \param type as an \a #io_port_type_t enum value.
 \param dir as an \a #io_port_direction_t enum value.
 \param port port number.
@@ -125,7 +126,12 @@ typedef struct {
 uint8_t ioports_available (io_port_type_t type, io_port_direction_t dir);
 bool ioport_claim (io_port_type_t type, io_port_direction_t dir, uint8_t *port, const char *description);
 bool ioport_can_claim_explicit (void);
-bool ioports_enumerate (io_port_type_t type, io_port_direction_t dir, pin_mode_t filter, bool claimable, ioports_enumerate_callback_ptr callback, void *data);
+bool ioports_enumerate (io_port_type_t type, io_port_direction_t dir, pin_cap_t filter, ioports_enumerate_callback_ptr callback, void *data);
+void ioport_assign_function (aux_ctrl_t *aux_ctrl, pin_function_t *function);
+bool ioport_analog_out_config (uint8_t port, pwm_config_t *config);
+bool ioport_digital_in_config (uint8_t port, gpio_in_config_t *config);
+bool ioport_enable_irq (uint8_t port, pin_irq_mode_t irq_mode, ioport_interrupt_callback_ptr handler);
+bool ioport_digital_out_config (uint8_t port, gpio_out_config_t *config);
 
 //
 
@@ -159,6 +165,8 @@ typedef struct {
 
 bool ioports_add (io_ports_data_t *ports, io_port_type_t type, uint8_t n_in, uint8_t n_out);
 void ioports_add_settings (driver_settings_load_ptr settings_loaded, setting_changed_ptr setting_changed);
+void ioport_save_input_settings (xbar_t *xbar, gpio_in_config_t *config);
+void ioport_save_output_settings (xbar_t *xbar, gpio_out_config_t *config);
 void ioport_setting_changed (setting_id_t id);
 #define iports_get_pnum(type, port) type.get_pnum(&type, port)
 #define ioports_map(type, port) ( type.map ? type.map[port] : port )

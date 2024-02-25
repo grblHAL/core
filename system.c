@@ -241,6 +241,15 @@ static status_code_t enumerate_pins (sys_state_t state, char *args)
     return report_pins(state, args);
 }
 
+#ifndef NO_SETTINGS_DESCRIPTIONS
+
+static status_code_t pin_state (sys_state_t state, char *args)
+{
+    return report_pin_states(state, args);
+}
+
+#endif
+
 static status_code_t output_settings (sys_state_t state, char *args)
 {
     status_code_t retval = Status_OK;
@@ -770,6 +779,15 @@ const char *help_pins (const char *cmd)
     return hal.enumerate_pins ? "enumerate pin bindings" : NULL;
 }
 
+#ifndef NO_SETTINGS_DESCRIPTIONS
+
+const char *help_pin_state (const char *cmd)
+{
+    return hal.port.get_pin_info ? "output auxillary pin states" : NULL;
+}
+
+#endif
+
 const char *help_switches (const char *cmd)
 {
     const char *help = NULL;
@@ -892,6 +910,9 @@ PROGMEM static const sys_command_t sys_commands[] = {
     { "ESH", enumerate_settings_halformatted, { .noargs = On, .allow_blocking = On }, { .str = "enumerate settings, grblHAL formatted" } },
     { "E*", enumerate_all, { .noargs = On, .allow_blocking = On }, { .str = "enumerate alarms, status codes and settings" } },
     { "PINS", enumerate_pins, { .noargs = On, .allow_blocking = On, .help_fn = On }, { .fn = help_pins } },
+#ifndef NO_SETTINGS_DESCRIPTIONS
+    { "PINSTATE", pin_state, { .noargs = On, .allow_blocking = On, .help_fn = On }, { .fn = help_pin_state } },
+#endif
     { "LEV", report_last_signals_event, { .noargs = On, .allow_blocking = On }, { .str = "output last control signal events" } },
     { "LIM", report_current_limit_state, { .noargs = On, .allow_blocking = On }, { .str = "output current limit pins" } },
     { "SD", report_spindle_data, { .help_fn = On }, { .fn = help_spindle } },
@@ -902,36 +923,65 @@ PROGMEM static const sys_command_t sys_commands[] = {
 #endif
 };
 
-void system_output_help (const sys_command_t *commands, uint32_t num_commands)
+static sys_commands_t core_commands = {
+    .n_commands = sizeof(sys_commands) / sizeof(sys_command_t),
+    .commands = sys_commands,
+};
+
+static sys_commands_t *commands_root = &core_commands;
+
+void system_register_commands (sys_commands_t *commands)
+{
+    commands->next = commands_root;
+    commands_root = commands;
+}
+
+void _system_output_help (sys_commands_t *commands, bool traverse)
 {
     const char *help;
     uint_fast8_t idx;
 
-    for(idx = 0; idx < num_commands; idx++) {
+    while(commands) {
+        for(idx = 0; idx < commands->n_commands; idx++) {
 
-        if(commands[idx].help.str) {
+            if(commands->commands[idx].help.str) {
 
-            if(commands[idx].flags.help_fn)
-                help = commands[idx].help.fn(commands[idx].command);
-            else
-                help = commands[idx].help.str;
+                if(commands->commands[idx].flags.help_fn)
+                    help = commands->commands[idx].help.fn(commands->commands[idx].command);
+                else
+                    help = commands->commands[idx].help.str;
 
-            if(help) {
-                if(*help != '$') {
-                    hal.stream.write_char('$');
-                    hal.stream.write(commands[idx].command);
-                    hal.stream.write(" - ");
+                if(help) {
+                    if(*help != '$') {
+                        hal.stream.write_char('$');
+                        hal.stream.write(commands->commands[idx].command);
+                        hal.stream.write(" - ");
+                    }
+                    hal.stream.write(help);
+                    hal.stream.write("." ASCII_EOL);
                 }
-                hal.stream.write(help);
-                hal.stream.write("." ASCII_EOL);
             }
         }
+        commands = traverse && commands->next != &core_commands ? commands->next : NULL;
     }
+}
+
+// Deprecated, to be removed.
+void system_output_help (const sys_command_t *commands, uint32_t num_commands)
+{
+    sys_commands_t cmd = {
+         .commands = commands,
+         .n_commands = num_commands
+    };
+
+    _system_output_help(&cmd, false);
 }
 
 void system_command_help (void)
 {
-    system_output_help(sys_commands, sizeof(sys_commands) / sizeof(sys_command_t));
+    _system_output_help(&core_commands, false);
+    if(commands_root != &core_commands)
+        _system_output_help(commands_root, true);
 }
 
 /*! \brief Directs and executes one line of input from protocol_process.
@@ -960,12 +1010,6 @@ status_code_t system_execute_line (char *line)
         return Status_OK;
     }
 
-    sys_commands_t base = {
-        .n_commands = sizeof(sys_commands) / sizeof(sys_command_t),
-        .commands = sys_commands,
-        .on_get_commands = grbl.on_get_commands
-    };
-
     status_code_t retval = Status_Unhandled;
 
     char c, *s1, *s2;
@@ -993,7 +1037,7 @@ status_code_t system_execute_line (char *line)
         *args++ = '\0';
 
     uint_fast8_t idx;
-    sys_commands_t *cmd = &base;
+    sys_commands_t *cmd = commands_root;
     do {
         for(idx = 0; idx < cmd->n_commands; idx++) {
             if(!strcmp(line, cmd->commands[idx].command)) {
@@ -1006,8 +1050,28 @@ status_code_t system_execute_line (char *line)
                 }
             }
         }
-        cmd = retval == Status_Unhandled && cmd->on_get_commands ? cmd->on_get_commands() : NULL;
+        cmd = retval == Status_Unhandled ? cmd->next : NULL;
     } while(cmd);
+
+    // deprecated, to be removed
+    if(retval == Status_Unhandled && (cmd = grbl.on_get_commands ? grbl.on_get_commands() : NULL)) {
+
+        do {
+            for(idx = 0; idx < cmd->n_commands; idx++) {
+                if(!strcmp(line, cmd->commands[idx].command)) {
+                    if(sys.blocking_event && !cmd->commands[idx].flags.allow_blocking) {
+                        retval = Status_NotAllowedCriticalEvent;
+                        break;
+                    } else if(!cmd->commands[idx].flags.noargs || args == NULL) {
+                        if((retval = cmd->commands[idx].execute(state_get(), args)) != Status_Unhandled)
+                            break;
+                    }
+                }
+            }
+            cmd = retval == Status_Unhandled && cmd->on_get_commands ? cmd->on_get_commands() : NULL;
+        } while(cmd);
+    }
+    // end of to be removed
 
     // Let user code have a peek at system commands before check for global setting
     if(retval == Status_Unhandled && grbl.on_unknown_sys_command) {

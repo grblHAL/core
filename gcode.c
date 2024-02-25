@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2023 Terje Io
+  Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -420,15 +420,18 @@ static status_code_t init_sync_motion (plan_line_data_t *pl_data, float pitch)
 }
 
 // Output and free previously allocated message
-static void output_message (char *message)
+void gc_output_message (char *message)
 {
-    if(grbl.on_gcode_message)
-        grbl.on_gcode_message(message);
+    if(message) {
 
-    if(*message)
-        report_message(message, Message_Plain);
+        if(grbl.on_gcode_message)
+            grbl.on_gcode_message(message);
 
-    free(message);
+        if(*message)
+            report_message(message, Message_Plain);
+
+        free(message);
+    }
 }
 
 #if NGC_EXPRESSIONS_ENABLE
@@ -747,7 +750,7 @@ status_code_t gc_execute_block (char *block)
 
     if(block[0] == '\0') {
         if(message)
-            output_message(message);
+            gc_output_message(message);
         return Status_OK;
     }
 
@@ -760,7 +763,7 @@ status_code_t gc_execute_block (char *block)
     if (block[0] == CMD_PROGRAM_DEMARCATION && block[1] == '\0') {
         gc_state.file_run = !gc_state.file_run;
         if(message)
-            output_message(message);
+            gc_output_message(message);
         return Status_OK;
     }
 
@@ -1337,6 +1340,11 @@ status_code_t gc_execute_block (char *block)
                         word_bit.parameter.a = On;
                         gc_block.values.xyz[A_AXIS] = value;
                         break;
+#else
+                    case 'A':
+                        word_bit.parameter.a = On;
+                        gc_block.values.a = value;
+                        break;
 #endif
 
 #ifdef B_AXIS
@@ -1349,6 +1357,11 @@ status_code_t gc_execute_block (char *block)
                         word_bit.parameter.b = On;
                         gc_block.values.xyz[B_AXIS] = value;
                         break;
+#else
+                    case 'B':
+                        word_bit.parameter.b = On;
+                        gc_block.values.b = value;
+                        break;
 #endif
 
 #ifdef C_AXIS
@@ -1360,6 +1373,11 @@ status_code_t gc_execute_block (char *block)
                         axis_words.c = On;
                         word_bit.parameter.c = On;
                         gc_block.values.xyz[C_AXIS] = value;
+                        break;
+#else
+                    case 'C':
+                        word_bit.parameter.c = On;
+                        gc_block.values.c = value;
                         break;
 #endif
 
@@ -1472,22 +1490,39 @@ status_code_t gc_execute_block (char *block)
 #else
 
 #ifdef U_AXIS
-                  case 'U':
-                      axis_words.u = On;
-                      word_bit.parameter.u = On;
-                      gc_block.values.xyz[U_AXIS] = value;
-                      break;
+                    case 'U':
+                        axis_words.u = On;
+                        word_bit.parameter.u = On;
+                        gc_block.values.xyz[U_AXIS] = value;
+                        break;
+#elif !AXIS_REMAP_ABC2UVW
+                    case 'U':
+                        word_bit.parameter.u = On;
+                        gc_block.values.u = value;
+                        break;
 #endif
 
 #ifdef V_AXIS
-                  case 'V':
-                      axis_words.v = On;
-                      word_bit.parameter.v = On;
-                      gc_block.values.xyz[V_AXIS] = value;
-                      break;
+                    case 'V':
+                        axis_words.v = On;
+                        word_bit.parameter.v = On;
+                        gc_block.values.xyz[V_AXIS] = value;
+                        break;
+#elif !AXIS_REMAP_ABC2UVW
+                    case 'V':
+                        word_bit.parameter.v = On;
+                        gc_block.values.v = value;
+                        break;
 #endif
+#endif // LATHE_UVW_OPTION
+
+#if !AXIS_REMAP_ABC2UVW
+                    case 'W':
+                        word_bit.parameter.w = On;
+                        gc_block.values.w = value;
+                        break;
 #endif
-                  case 'X':
+                    case 'X':
                         axis_words.x = On;
                         word_bit.parameter.x = On;
                         gc_block.values.xyz[X_AXIS] = value;
@@ -2187,8 +2222,8 @@ status_code_t gc_execute_block (char *block)
                             gc_block.words.r = Off;
                         }
 
-                        float g59_3_offset[N_AXIS];
 #if COMPATIBILITY_LEVEL <= 1
+                        float g59_3_offset[N_AXIS];
                         if(gc_block.values.l == 11 && !settings_read_coord_data(CoordinateSystem_G59_3, &g59_3_offset))
                             FAIL(Status_SettingReadFail);
 #endif
@@ -2203,8 +2238,10 @@ status_code_t gc_execute_block (char *block)
                                     grbl.tool_table.tool[p_value].offset[idx] = gc_block.values.xyz[idx];
                                 else if(gc_block.values.l == 10)
                                     grbl.tool_table.tool[p_value].offset[idx] = gc_state.position[idx] - gc_state.modal.coord_system.xyz[idx] - gc_state.g92_coord_offset[idx] - gc_block.values.xyz[idx];
+#if COMPATIBILITY_LEVEL <= 1
                                 else if(gc_block.values.l == 11)
                                     grbl.tool_table.tool[p_value].offset[idx] = g59_3_offset[idx] - gc_block.values.xyz[idx];
+#endif
     //                            if(gc_block.values.l != 1)
     //                                tool_table[p_value].offset[idx] -= gc_state.tool_length_offset[idx];
                             } else if(gc_block.values.l == 10 || gc_block.values.l == 11)
@@ -3097,7 +3134,7 @@ status_code_t gc_execute_block (char *block)
         protocol_buffer_synchronize();
 
         if(plan_data.message) {
-            output_message(plan_data.message);
+            gc_output_message(plan_data.message);
             plan_data.message = NULL;
         }
 
@@ -3523,7 +3560,7 @@ status_code_t gc_execute_block (char *block)
     }
 
     if(plan_data.message)
-        output_message(plan_data.message);
+        gc_output_message(plan_data.message);
 
     // [21. Program flow ]:
     // M0,M1,M2,M30,M60: Perform non-running program flow actions. During a program pause, the buffer may

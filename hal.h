@@ -38,6 +38,7 @@
 #include "nvs.h"
 #include "probe.h"
 #include "ioports.h"
+#include "rgb.h"
 #include "plugins.h"
 
 #define HAL_VERSION 10
@@ -505,30 +506,6 @@ typedef struct {
     rtc_get_datetime_ptr get_datetime;  //!< Optional handler getting the current datetime.
     rtc_set_datetime_ptr set_datetime;  //!< Optional handler setting the current datetime.
 } rtc_ptrs_t;
-
-/*******************
- *  RGB (LED) API  *
- *******************/
-
-typedef union {
-    uint32_t value;
-    struct {
-        uint8_t B; //!< Blue
-        uint8_t G; //!< Green
-        uint8_t R; //!< Red
-        uint8_t W; //!< White
-    };
-} rgb_color_t;
-
-/*! \brief Pointer to function for setting RGB (LED) output.
-\param color a \a rgb_color_t union.
-*/
-typedef void (*rgb_set_color)(uint8_t device, rgb_color_t color);
-
-typedef struct {
-    rgb_set_color out;      //!< Optional handler for setting device (LED) color.
-    uint8_t num_devices;    //!< Number of devices (LEDS) available.
-} rgb_ptr_t;
 
 /**/
 

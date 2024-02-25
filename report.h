@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2023 Terje Io
+  Copyright (c) 2018-2024 Terje Io
   Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
 
   Grbl is free software: you can redistribute it and/or modify
@@ -39,6 +39,15 @@ void report_init_fns (void);
 
 // Prints feedback message, typically from gcode.
 void report_message (const char *msg, message_type_t type);
+
+// Message helper to be run as foreground task.
+void report_plain (void *message);
+
+// Message helper to be run as foreground task.
+void report_info (void *message);
+
+// Message helper to be run as foreground task.
+void report_warning (void *message);
 
 // Prints Grbl help.
 status_code_t report_help (char *args);
@@ -97,6 +106,8 @@ status_code_t report_spindle_data (sys_state_t state, char *args);
 
 // Prints pin assignments.
 status_code_t report_pins (sys_state_t state, char *args);
+
+status_code_t report_pin_states (sys_state_t state, char *args);
 
 // Prints registered spindles.
 status_code_t report_spindles (bool machine_readable);

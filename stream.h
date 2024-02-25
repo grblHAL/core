@@ -325,6 +325,10 @@ bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stream_write_
 */
 bool stream_mpg_enable (bool on);
 
+void stream_mpg_set_mode (void *data);
+
+bool stream_mpg_check_enable (char c);
+
 bool stream_buffer_all (char c);
 
 bool stream_tx_blocking (void);
@@ -347,7 +351,9 @@ io_stream_flags_t stream_get_flags (io_stream_t stream);
 
 const io_stream_t *stream_null_init (uint32_t baud_rate);
 
-io_stream_t const *stream_open_instance (uint8_t instance, uint32_t baud_rate, stream_write_char_ptr rx_handler);
+io_stream_t const *stream_open_instance (uint8_t instance, uint32_t baud_rate, stream_write_char_ptr rx_handler, const char *description);
+
+bool stream_set_description (const io_stream_t *stream, const char *description);
 
 #ifdef DEBUGOUT
 void debug_write (const char *s);

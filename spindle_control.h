@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2022 Terje Io
+  Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2012-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -137,6 +137,10 @@ typedef bool (*spindle_config_ptr)(struct spindle_ptrs *spindle);
 */
 typedef void (*spindle_set_state_ptr)(struct spindle_ptrs *spindle, spindle_state_t state, float rpm);
 
+#ifdef GRBL_ESP32
+typedef void (*esp32_spindle_off_ptr)(struct spindle_ptrs *spindle);
+#endif
+
 /*! \brief Pointer to function for getting the spindle state.
 \returns state in a \a spindle_state_t union variable.
 */
@@ -180,69 +184,6 @@ Used for Pulses Per Inch (PPI) laser mode.
 \param pulse_length spindle on length in microseconds.
 */
 typedef void (*spindle_pulse_on_ptr)(uint_fast16_t pulse_length);
-
-/*! \brief Handlers and data for spindle support. */
-struct spindle_ptrs {
-    spindle_id_t id;                    //!< Spindle id, assingned on spindle registration.
-    struct spindle_param *param;        //!< Pointer to current spindle parameters, assigned when spindle is enabled.
-    spindle_type_t type;                //!< Spindle type.
-    spindle_cap_t cap;                  //!< Spindle capabilities.
-    void *context;                      //!< Optional pointer to spindle specific context data.
-    uint_fast16_t pwm_off_value;        //!< Value for switching PWM signal off.
-//    struct spindle_pwm *pwm_data;       //!< Optional pointer to PWM configuration.
-    float rpm_min;                      //!< Minimum spindle RPM.
-    float rpm_max;                      //!< Maximum spindle RPM.
-    spindle_config_ptr config;          //!< Optional handler for configuring the spindle.
-    spindle_set_state_ptr set_state;    //!< Handler for setting spindle state.
-    spindle_get_state_ptr get_state;    //!< Handler for getting spindle state.
-    spindle_get_pwm_ptr get_pwm;        //!< Handler for calculating spindle PWM value from RPM.
-    spindle_update_pwm_ptr update_pwm;  //!< Handler for updating spindle PWM output.
-    spindle_update_rpm_ptr update_rpm;  //!< Handler for updating spindle RPM.
-#ifdef GRBL_ESP32
-    void (*esp32_off)(struct spindle_ptrs *spindle);   //!< Workaround handler for snowflake ESP32 Guru awaken by floating point data in ISR context.
-#endif
-    // Optional entry points.
-    spindle_pulse_on_ptr pulse_on;      //!< Optional handler for Pulses Per Inch (PPI) mode. Required for the laser PPI plugin.
-    spindle_get_data_ptr get_data;      //!< Optional handler for getting spindle data. Required for spindle sync, copied from hal.spindle_data.get on selection.
-    spindle_reset_data_ptr reset_data;  //!< Optional handler for resetting spindle data. Required for spindle sync, copied from hal.spindle_data.reset on selection.
-};
-
-typedef struct spindle_ptrs spindle_ptrs_t;
-
-//! \brief  Data used for Constant Surface Speed (CSS) mode calculations.
-typedef struct {
-    float surface_speed;    //!< Surface speed in millimeters/min
-    float target_rpm;       //!< Target RPM at end of movement
-    float delta_rpm;        //!< Delta between start and target RPM
-    float max_rpm;          //!< Maximum spindle RPM
-    float tool_offset;      //!< Tool offset
-    uint_fast8_t axis;      //!< Linear (tool) axis
-} spindle_css_data_t;
-
-/*! \brief Structure used for holding the current state of an enabled spindle. */
-typedef struct spindle_param {
-    float rpm;
-    float rpm_overridden;
-    spindle_state_t state;
-    override_t override_pct;    //!< Spindle RPM override value in percent
-    spindle_css_data_t css;     //!< Data used for Constant Surface Speed Mode (CSS) calculations, NULL if not in CSS mode.
-    spindle_ptrs_t *hal;
-} spindle_param_t;
-
-typedef struct {
-    spindle_get_data_ptr get;      //!< Optional handler for getting spindle data. Required for spindle sync.
-    spindle_reset_data_ptr reset;  //!< Optional handler for resetting spindle data. Required for spindle sync.
-} spindle_data_ptrs_t;
-
-/*! \brief Structure holding data passed to the callback function called by spindle_enumerate_spindles(). */
-typedef struct  {
-    spindle_id_t id;
-    spindle_num_t num;
-    const char *name;
-    bool enabled;
-    bool is_current;
-    const spindle_ptrs_t *hal;
-} spindle_info_t;
 
 typedef struct {
     float rpm;
@@ -295,6 +236,73 @@ typedef struct spindle_pwm {
     pwm_piece_t piece[SPINDLE_NPWM_PIECES];
     uint_fast16_t (*compute_value)(struct spindle_pwm *pwm_data, float rpm, bool pid_limit);
 } spindle_pwm_t;
+
+typedef union
+{
+    spindle_pwm_t *pwm;
+} spindle_context_ptr_t __attribute__ ((__transparent_union__));
+
+/*! \brief Handlers and data for spindle support. */
+struct spindle_ptrs {
+    spindle_id_t id;                    //!< Spindle id, assingned on spindle registration.
+    struct spindle_param *param;        //!< Pointer to current spindle parameters, assigned when spindle is enabled.
+    spindle_type_t type;                //!< Spindle type.
+    spindle_cap_t cap;                  //!< Spindle capabilities.
+    spindle_context_ptr_t context;      //!< Optional pointer to spindle specific context.
+    uint_fast16_t pwm_off_value;        //!< Value for switching PWM signal off.
+    float rpm_min;                      //!< Minimum spindle RPM.
+    float rpm_max;                      //!< Maximum spindle RPM.
+    spindle_config_ptr config;          //!< Optional handler for configuring the spindle.
+    spindle_set_state_ptr set_state;    //!< Handler for setting spindle state.
+    spindle_get_state_ptr get_state;    //!< Handler for getting spindle state.
+    spindle_get_pwm_ptr get_pwm;        //!< Handler for calculating spindle PWM value from RPM.
+    spindle_update_pwm_ptr update_pwm;  //!< Handler for updating spindle PWM output.
+    spindle_update_rpm_ptr update_rpm;  //!< Handler for updating spindle RPM.
+#ifdef GRBL_ESP32
+    esp32_spindle_off_ptr esp32_off;    //!< Workaround handler for snowflake ESP32 Guru awaken by floating point data in ISR context.
+#endif
+    // Optional entry points.
+    spindle_pulse_on_ptr pulse_on;      //!< Optional handler for Pulses Per Inch (PPI) mode. Required for the laser PPI plugin.
+    spindle_get_data_ptr get_data;      //!< Optional handler for getting spindle data. Required for spindle sync, copied from hal.spindle_data.get on selection.
+    spindle_reset_data_ptr reset_data;  //!< Optional handler for resetting spindle data. Required for spindle sync, copied from hal.spindle_data.reset on selection.
+};
+
+typedef struct spindle_ptrs spindle_ptrs_t;
+
+//! \brief  Data used for Constant Surface Speed (CSS) mode calculations.
+typedef struct {
+    float surface_speed;    //!< Surface speed in millimeters/min
+    float target_rpm;       //!< Target RPM at end of movement
+    float delta_rpm;        //!< Delta between start and target RPM
+    float max_rpm;          //!< Maximum spindle RPM
+    float tool_offset;      //!< Tool offset
+    uint_fast8_t axis;      //!< Linear (tool) axis
+} spindle_css_data_t;
+
+/*! \brief Structure used for holding the current state of an enabled spindle. */
+typedef struct spindle_param {
+    float rpm;
+    float rpm_overridden;
+    spindle_state_t state;
+    override_t override_pct;    //!< Spindle RPM override value in percent
+    spindle_css_data_t css;     //!< Data used for Constant Surface Speed Mode (CSS) calculations, NULL if not in CSS mode.
+    spindle_ptrs_t *hal;
+} spindle_param_t;
+
+typedef struct {
+    spindle_get_data_ptr get;      //!< Optional handler for getting spindle data. Required for spindle sync.
+    spindle_reset_data_ptr reset;  //!< Optional handler for resetting spindle data. Required for spindle sync.
+} spindle_data_ptrs_t;
+
+/*! \brief Structure holding data passed to the callback function called by spindle_enumerate_spindles(). */
+typedef struct  {
+    spindle_id_t id;
+    spindle_num_t num;
+    const char *name;
+    bool enabled;
+    bool is_current;
+    const spindle_ptrs_t *hal;
+} spindle_info_t;
 
 /*! \brief Pointer to callback function called by spindle_enumerate_spindles().
 \param spindle prointer to a \a spindle_info_t struct.

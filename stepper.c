@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2016-2023 Terje Io
+  Copyright (c) 2016-2024 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -84,9 +84,6 @@ typedef struct {
 static amass_t amass;
 #endif
 
-// Message to be output by foreground process
-static char *message = NULL; // TODO: do we need a queue for this?
-
 // Used for blocking new segments being added to the seqment buffer until deceleration starts
 // after probe signal has been asserted.
 static volatile bool probe_asserted = false;
@@ -140,6 +137,7 @@ typedef struct {
 
 static st_prep_t prep;
 
+extern void gc_output_message (char *message);
 
 /*    BLOCK VELOCITY PROFILE DEFINITION
           __________________________
@@ -181,24 +179,8 @@ static st_prep_t prep;
 
 //
 
-// Output message in sync with motion, called by foreground process.
-static void output_message (sys_state_t state)
-{
-    if(message) {
-
-        if(grbl.on_gcode_message)
-            grbl.on_gcode_message(message);
-
-        if(*message)
-            report_message(message, Message_Plain);
-
-        free(message);
-        message = NULL;
-    }
-}
-
 // Callback from delay to deenergize steppers after movement, might been cancelled
-void st_deenergize (void)
+void st_deenergize (void *data)
 {
     if(sys.steppers_deenergize) {
         hal.stepper.enable(settings.steppers.deenergize);
@@ -210,15 +192,10 @@ void st_deenergize (void)
 // enabled. Startup init and limits call this function but shouldn't start the cycle.
 void st_wake_up (void)
 {
-    if(sys.steppers_deenergize) {
-        sys.steppers_deenergize = false;
-//        hal.delay_ms(0, st_deenergize); // Cancel any pending steppers deenergize
-    }
-
     // Initialize stepper data to ensure first ISR call does not step and
     // cancel any pending steppers deenergize
     //st.exec_block = NULL;
-
+    sys.steppers_deenergize = false;
     hal.stepper.wake_up();
 }
 
@@ -232,14 +209,14 @@ ISR_CODE void ISR_FUNC(st_go_idle)(void)
     hal.stepper.go_idle(false);
 
     // Set stepper driver idle state, disabled or enabled, depending on settings and circumstances.
-    if (((settings.steppers.idle_lock_time != 255) || sys.rt_exec_alarm || state == STATE_SLEEP) && state != STATE_HOMING) {
-        if(state == STATE_SLEEP)
+    if(((settings.steppers.idle_lock_time != 255) || sys.rt_exec_alarm || state == STATE_SLEEP) && state != STATE_HOMING) {
+        if(settings.steppers.idle_lock_time == 0 || state == STATE_SLEEP)
             hal.stepper.enable((axes_signals_t){0});
         else {
             // Force stepper dwell to lock axes for a defined amount of time to ensure the axes come to a complete
             // stop and not drift from residual inertial forces at the end of the last movement.
-            sys.steppers_deenergize = true;
-            hal.delay_ms(settings.steppers.idle_lock_time, st_deenergize);
+            task_delete(st_deenergize, NULL); // Cancel any pending steppers deenergize task
+            sys.steppers_deenergize = task_add_delayed(st_deenergize, NULL, settings.steppers.idle_lock_time);
         }
     } else
         hal.stepper.enable(settings.steppers.idle_lock_time == 255 ? (axes_signals_t){AXES_BITMASK} : settings.steppers.deenergize);
@@ -351,11 +328,8 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
 
                 // Enqueue any message to be printed (by foreground process)
                 if(st.exec_block->message) {
-                    if(message == NULL) {
-                        message = st.exec_block->message;
-                        protocol_enqueue_rt_command(output_message);
-                    } else
-                        free(st.exec_block->message); //
+                    if(!protocol_enqueue_foreground_task((foreground_task_ptr)gc_output_message, st.exec_block->message))
+                        free(st.exec_block->message);
                     st.exec_block->message = NULL;
                 }
 
@@ -558,11 +532,6 @@ void st_reset (void)
 {
     if(hal.probe.configure)
         hal.probe.configure(false, false);
-
-    if(message) {
-        free(message);
-        message = NULL;
-    }
 
     // Initialize stepper driver idle state, clear step and direction port pins.
     st_go_idle();

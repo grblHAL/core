@@ -3,23 +3,23 @@
 
   Part of grblHAL
 
-  Copyright (c) 2023 Terje Io
+  Copyright (c) 2023-2024 Terje Io
 
   Algorithm based on article/code by David Austin:
   https://www.embedded.com/generate-stepper-motor-speed-profiles-in-real-time/
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "hal.h"
@@ -46,6 +46,7 @@ struct st2_motor {
     uint_fast8_t idx;
     axes_signals_t axis;
     bool is_spindle;
+    bool is_bound;
     bool position_lost;
     volatile int64_t position;  // absolute step number
     position_t ptype;           //
@@ -114,7 +115,8 @@ static void st2_settings_changed (settings_t *settings, settings_changed_flags_t
     settings_changed(settings, changed);
 
     while(motor) {
-        st_motor_config(motor);
+        if(motor->is_bound)
+            st_motor_config(motor);
         motor = motor->next;
     }
 }
@@ -200,9 +202,37 @@ static const char *st2_setting_get_description (setting_id_t id)
 
 /*! \brief Bind and initialize a motor.
 
+Binds motor 0 as a spindle.
+\param axis_idx axis index of motor to bind to. 3 = A, 4 = B, ...
+\returns \a true if successful, \a false if not.
+*/
+bool st2_motor_bind_spindle (uint_fast8_t axis_idx)
+{
+    if(motors && axis_idx > Z_AXIS) {
+
+        motors->idx = axis_idx;
+        motors->axis.mask = 1 << axis_idx;
+        motors->is_bound = motors->is_spindle = true;
+
+        spindle_motors |= motors->axis.mask;
+
+        on_set_axis_setting_unit = grbl.on_set_axis_setting_unit;
+        grbl.on_set_axis_setting_unit = st2_set_axis_setting_unit;
+
+        on_setting_get_description = grbl.on_setting_get_description;
+        grbl.on_setting_get_description = st2_setting_get_description;
+
+        st_motor_config(motors);
+    }
+
+    return motors && axis_idx > Z_AXIS;
+}
+
+/*! \brief Bind and initialize a motor.
+
 Allocates and initializes motor configuration/data structure.
-If \a is_spindle is set \a true then axis settings will be changed to step/rev etc.
-<br>__NOTE:__ X, Y or Z motor cannot be bound as a spindle.
+If \a is_spindle is set \a true then axis settings will be changed to step/rev etc. when bound.
+<br>__NOTE:__ X, Y or Z motors cannot be bound as a spindle.
 <br>__NOTE:__ currently any axis bound as a spindle should not be instructed to move via gcode commands.
 \param axis_idx axis index of motor to bind to. 0 = X, 1 = Y, 2 = Z, ...
 \param is_spindle set to \a true if axis is to be used as a spindle (infinite motion).
@@ -214,21 +244,13 @@ st2_motor_t *st2_motor_init (uint_fast8_t axis_idx, bool is_spindle)
 
     if((motor = calloc(sizeof(st2_motor_t), 1))) {
 
-        motor->idx = axis_idx;
-        motor->axis.mask = 1 << axis_idx;
-        motor->is_spindle = is_spindle;
+        if(!is_spindle) {
 
-        st_motor_config(motor);
+            motor->idx = axis_idx;
+            motor->axis.mask = 1 << axis_idx;
+            motor->is_bound = true;
 
-        if(motor->is_spindle) {
-
-            spindle_motors |= motor->axis.mask;
-
-            on_set_axis_setting_unit = grbl.on_set_axis_setting_unit;
-            grbl.on_set_axis_setting_unit = st2_set_axis_setting_unit;
-
-            on_setting_get_description = grbl.on_setting_get_description;
-            grbl.on_setting_get_description = st2_setting_get_description;
+            st_motor_config(motor);
         }
 
         if(new == NULL) {

@@ -1,6 +1,218 @@
 ## grblHAL changelog
 
-<a name="20240111"/>Build 20240111
+<a name="20240222"/>Build 20240222
+
+__NOTE:__ This build has moved the probe input to the ioPorts pool of inputs and will be allocated from it when configured.  
+The change is major and _potentially dangerous_, it may damage your probe, so please _verify correct operation_ after installing this build.  
+There were basically two reasons for doing this, one is to free the input for general use if not needed and another is to be able to add advanced
+probe protection support, via plugin code, for probe inputs that has interrupt capability.
+
+Core:
+
+* Fix for STM32F4xx [issue #161](https://github.com/grblHAL/STM32F4xx/issues/161), Ethernet connection unresponsive if USB port not powered.
+
+* Enhanced ioPorts interface: New debounce option for input pins that are interrupt capable, currently only possible to enable via plugin code - later to be made available via a $-setting.  
+Added some wrapper functions for simpler plugin code++
+
+
+* Added simple task scheduler to the core, allows interrupt routines to dispatch jobs to the foreground process, delayed tasks and repeating tasks attached to the 1 ms system timer.  
+Some drivers and plugins now uses the scheduler for input pin debouncing, regular polling etc. The core uses it for stepper disabling and sleep monitoring.
+
+Drivers:
+
+* Most: updated to support the enhanced ioPorts interface and using the new task scheduler for debouncing etc.
+  Moved probe and safety door inputs to ioPorts pin pool, if not assigned at compile time they will be free to use by M66 or plugin code.   
+  Many board maps has been updated to take advantage of the new ioPorts capabilities. PLease report anny irregularities as I do not have access to all the boards for testing.
+
+* ESP32: MKS Tinybee v1.0 map changed to use MT_DET \(pin 35\) for motor 3 limit input \(e.g. auto squared Y\) if probe input is not enabled. Ref. [issue #93}(https://github.com/grblHAL/ESP32/issues/93#issuecomment-1917467402).
+
+Plugins:
+
+* Some: updated to use the new task scheduler for polling etc.
+
+* Networking: WizNet driver code updated to use the new task scheduler for interrupt handling, resulting in faster/smoother operation.
+
+* WebUI: a bit of code "hardening", reduced memory requirement for some of the larger generated messages.
+
+---
+
+<a name="20240205"/>Build 20240205
+
+Core:
+
+* Added core support for new MPG mode that claims one serial stream and uses the `0x8B` real-time command character for switching mode. Does not require the keypad plugin.
+
+* Moved RGB API definitions to separate file and added some utilities for drivers and plugins. Fixed minor bug.
+
+* For developers: `stream_open_instance()`, signature change - added optional description string.
+
+Drivers:
+
+* Many: updated to support new MPG mode. Updated for core signature change.
+
+* ESP32, RP2040, STM32F4xx: enhanced Neopixel support. __Note:__ Not yet used by any boards.
+
+* STM32F7xx: added missing MPG mode handlers.
+
+Plugins:
+
+* Bluetooth: updated for core signature change.
+
+---
+
+<a name="20240202"/>20240202
+
+Core:
+
+* Fixed compiler warning for compatibility level > 1, added some "just in case" assertions.
+
+Drivers:
+
+* Most: "hardened" ioports code to avoid hardfault in some configurations.
+
+---
+
+<a name="20240131"/>20240131
+
+Drivers:
+
+* iMXRT1062: fixed regression causing spindle sync builds to fail.
+
+* STM32F4xx: moved board maps and code to separate directory. Fixed minor bug.
+
+* Web Builder supported boards: updated board definition files for Web Builder internal changes.
+
+---
+
+<a name="20240129"/>20240129
+
+Drivers:
+
+* ESP32: made usage of second UART/serial port more flexible for those boards that has support for it.
+
+* iMXRT1062: fixed regression blocking builds with the Bluetooth plugin enabled. Ref. Bluetooth plugin [issue #4](https://github.com/grblHAL/Plugins_Bluetooth/issues/4).
+
+---
+
+<a name="20240127"/>Build 20240127
+
+Core:
+
+* Fixed regression mainly affecting WebUI enabled builds. Some internal changes.
+
+Drivers:
+
+* ESP32: reorganized main driver code for readability, minor fixes.
+
+Plugins:
+
+* SD card: commented out unused code to avoid compiler warning.
+
+---
+
+<a name="20240125"/>Build 20240125
+
+Core, for developers:
+
+* Simplified [regstration](http://svn.io-engineering.com/grblHAL/html/system_8c.html#a480cedc4c3840cfebb4d5fdce898dd3b) of additional system commands, deprecated original method.
+* Added [improved call](http://svn.io-engineering.com/grblHAL/html/protocol_8c.html#a869dff1f8d0b3965578eb3e6a94729c1) for registering single run tasks to be executed in the foreground, deprecated [original call](http://svn.io-engineering.com/grblHAL/html/protocol_8c.html#a78fa9a198df36192acec52d28d760a6c).
+* Moved VFS events from `grbl.*` to [vfs.*](http://svn.io-engineering.com/grblHAL/html/vfs_8h.html#ab87cc94daec156bea722f9f05d7eeb0c).
+
+Drivers:
+
+* Most: updated to use new method for registering single run tasks. Updated ioports code for improved core compliance.
+
+* LPC176x: fix for [issue #44](https://github.com/grblHAL/LPC176x/issues/44), non-existing probe pin.
+
+Plugins:
+
+* Many: updated to use new method for registering single run tasks. Some bug fixes.
+
+---
+
+<a name="20240123"/>Build 20240123
+
+Core:
+
+* Enhanced RGB and ioports APIs.
+
+* Allowed use of unused \(by the core\) axis words \(ABCUVW\) in M-code commands implemented by plugin code.
+
+* Added `$PINSTATE` command, for outputting auxillary pin states, modes and capabilities. Machine readable formatting.
+
+Drivers:
+
+* RP2040: refactored allocation/initialization of PIO state machines to allow a neopixel driver, and possibly user drivers, to be installed.
+
+* ESP32, RP2040, STM32F4xx: added Neopixel driver code exposed via the core RGB API.  
+__NOTE:__ there is no official board support for this just yet.
+
+* Some: added full or partial support for new features in the ioports API.  
+__NOTE:__ This work is not yet complete, final tuning and update of remaining drivers will be done later.
+
+Plugins:
+
+* Motors: added overridable symbol for specifying R sense for Trinamic drivers.
+
+Templates:
+
+* Added plugin for RGB LED control via [M150](https://marlinfw.org/docs/gcode/M150.html), sits on top of the new RGB API.
+
+Web Builder:
+
+* Added new tab for assigning optional and dedicated inputs to auxillary inputs.  
+Some internal changes to simplify board specifications. Currently the ESP32 and STM32F1xx divers has been updated for this, more to follow later.  
+__NOTE:__ Please report any unwanted/unexpected change in behaviour of the generated firmware.
+
+For info:
+
+I have plugings in the pipeline for PWM servo control via [M280](https://marlinfw.org/docs/gcode/M280.html) plus automatic BLTouch probe deployment.  
+These are based on original work by @wakass and might be published by him if a PR I plan to submit is accepted.
+
+---
+
+<a name="20240118"/>Build 20240118
+
+Core:
+
+* Added RGB API to the HAL, with crossbar definitions for number of devices \(LEDs, NeoPixels\).
+
+* Refactored some inconsistent parts of the ioports/crossbar interfaces.  
+For developers: the signature of the [ioports_enumerate()](http://svn.io-engineering.com/grblHAL/html/ioports_8c.html#ae46c4f9a7ebeac80607a3015da5ab412) call has been changed.
+Added PWM servo capability.
+
+Drivers:
+
+* Most: updated for the changed ioports/crossbar interfaces.
+
+* ESP32: added NeoPixel driver for the new RGB API. _Experimental, no board support yet._  
+Added auxillary analog PWM out option for up to two channels. Can be configured for PWM servos.
+
+* RP2040: added NeoPixel driver for the new RGB API. _Experimental and untested, no board support yet._
+
+Plugins:
+
+* Spindle: fix for [issue #24](https://github.com/grblHAL/Plugins_spindle/issues/24) - typo, regression causing compilation failure for the MODVFD driver.
+
+* Keypad: I2C display interface, [issue #9](https://github.com/grblHAL/Plugin_keypad/issues/9) - missing update to match core changes caused compilation failure.
+
+---
+
+<a name="20240115"/>Build 20240115
+
+Core:
+
+* Updated build date and a minor insignificant fix.
+
+Drivers:
+
+* ESP32: switched to low-level I/O register access for speed, added WS2812 RGB HAL, completed 32 \(or 31?\) bit I2S shift register output for ESP32-S3, 16 bit not yet ready.
+
+* STM32F7xx: added missing code for ganged axis support \(auto squaring was not affected\).
+
+---
+
+<a name="20240109"/>Build 20240109
 
 Core:
 

@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2023 Terje Io
+  Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -212,11 +212,6 @@ static nvs_transfer_result_t memcpy_from_ram (uint8_t *destination, uint32_t sou
     return with_checksum ? (checksum == ram_get_byte(source) ? NVS_TransferResult_OK : NVS_TransferResult_Failed) : NVS_TransferResult_OK;
 }
 
-static void nvs_warning (sys_state_t state)
-{
-    report_message("Not enough heap for NVS buffer!", Message_Warning);
-}
-
 // Try to allocate RAM from heap for buffer/emulation.
 bool nvs_buffer_alloc (void)
 {
@@ -273,7 +268,7 @@ bool nvs_buffer_init (void)
                 grbl.report.status_message(Status_SettingReadFail);
         }
     } else
-        protocol_enqueue_rt_command(nvs_warning);
+        protocol_enqueue_foreground_task(report_warning, "Not enough heap for NVS buffer!");
 
     // Clear settings dirty flags
     memset(&settings_dirty, 0, sizeof(settings_dirty_t));

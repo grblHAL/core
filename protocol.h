@@ -3,25 +3,28 @@
 
   Part of grblHAL
 
+  Copyright (c) 2016-2024 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef _PROTOCOL_H_
 #define _PROTOCOL_H_
+
+#include "task.h"
 
 // Line buffer size from the input stream to be executed.
 // NOTE: Not a problem except for extreme cases, but the line buffer size can be too small
@@ -33,7 +36,12 @@
   #define LINE_BUFFER_SIZE 257 // 256 characters plus terminator
 #endif
 
-// Starts Grbl main loop. It handles all incoming characters from the input stream and executes
+typedef union {
+    foreground_task_ptr fn;
+    on_execute_realtime_ptr fn_deprecated;
+} fg_task_ptr __attribute__ ((__transparent_union__));
+
+// Starts grblHAL main loop. It handles all incoming characters from the input stream and executes
 // them as they complete. It is also responsible for finishing the initialization procedures.
 bool protocol_main_loop (void);
 
@@ -42,6 +50,7 @@ bool protocol_execute_realtime (void);
 bool protocol_exec_rt_system (void);
 void protocol_execute_noop (uint_fast16_t state);
 bool protocol_enqueue_rt_command (on_execute_realtime_ptr fn);
+bool protocol_enqueue_foreground_task (fg_task_ptr fn, void *data);
 
 // Executes the auto cycle feature, if enabled.
 void protocol_auto_cycle_start (void);
