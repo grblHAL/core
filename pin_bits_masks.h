@@ -208,7 +208,7 @@
 #endif
 
 static aux_ctrl_t aux_ctrl[] = {
-// The following pins are bound explicitly to aux pins
+// The following pins are bound explicitly to aux input pins
 #if PROBE_ENABLE && defined(PROBE_PIN) && defined(AUX_DEVICES)
 #ifdef PROBE_PORT
     { .function = Input_Probe, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .value = 0 }, .pin = PROBE_PIN, .port = PROBE_PORT },
@@ -391,6 +391,75 @@ static inline control_signals_t aux_ctrl_scan_status (control_signals_t signals)
 #define AUX_CONTROLS_ENABLED 0
 #define AUX_CONTROLS_SCAN    0
 #endif
+
+#ifdef AUX_CONTROLS_OUT
+
+// The following pins are bound explicitly to aux output pins
+static aux_ctrl_out_t aux_ctrl_out[] = {
+#ifdef DRIVER_SPINDLE_ENABLE
+    { .function = Output_SpindleOn, .aux_port = 0xFF, .pin = SPINDLE_ENABLE_PIN, .port = SPINDLE_ENABLE_PORT },
+#endif
+#ifdef DRIVER_SPINDLE_PWM_ENABLE
+    { .function = Output_SpindlePWM, .aux_port = 0xFF, .pin = SPINDLE_PWM_PIN, .port = SPINDLE_PWM_PORT },
+#endif
+#ifdef DRIVER_SPINDLE_DIR_ENABLE
+    { .function = Output_SpindleDir, .aux_port = 0xFF, .pin = SPINDLE_DIRECTION_PIN, .port = SPINDLE_DIRECTION_PORT },
+#endif
+/*
+#ifdef COOLANT_FLOOD_PIN
+    { .function = Output_CoolantFlood, .aux_port = 0xFF, .pin = COOLANT_FLOOD_PIN, .port = COOLANT_FLOOD_PORT },
+#endif
+#ifdef COOLANT_MIST_PIN
+    { .function = Output_CoolantMist, .aux_port = 0xFF, .pin = COOLANT_MIST_PIN, .port = COOLANT_MIST_PORT },
+#endif
+*/
+};
+
+static inline aux_ctrl_out_t *aux_out_remap_explicit (void *port, uint8_t pin, uint8_t aux_port, void *output)
+{
+    aux_ctrl_out_t *ctrl_pin = NULL;
+
+    uint_fast8_t idx = sizeof(aux_ctrl_out) / sizeof(aux_ctrl_out_t);
+
+    do {
+        idx--;
+        if(aux_ctrl_out[idx].port == port && aux_ctrl_out[idx].pin == pin) {
+            ctrl_pin = &aux_ctrl_out[idx];
+            ctrl_pin->aux_port = aux_port;
+            ctrl_pin->output = output;
+        }
+    } while(idx && ctrl_pin == NULL);
+
+    return ctrl_pin;
+}
+
+typedef bool (*aux_claim_explicit_out_ptr)(aux_ctrl_out_t *aux_ctrl);
+
+static bool aux_ctrl_claim_out_port (xbar_t *properties, uint8_t port, void *data)
+{
+    if(ioport_claim(Port_Digital, Port_Output, &properties->id, xbar_fn_to_pinname(((aux_ctrl_t *)data)->function)))
+        ((aux_ctrl_t *)data)->aux_port = properties->id;
+
+    return ((aux_ctrl_t *)data)->aux_port != 0xFF;
+}
+
+static inline void aux_ctrl_claim_out_ports (aux_claim_explicit_out_ptr aux_claim_explicit, ioports_enumerate_callback_ptr aux_claim)
+{
+    uint_fast8_t idx;
+
+    if(aux_claim == NULL)
+        aux_claim = aux_ctrl_claim_out_port;
+
+    for(idx = 0; idx < sizeof(aux_ctrl_out) / sizeof(aux_ctrl_out_t); idx++) {
+        if(aux_ctrl_out[idx].pin == 0xFF) {
+            if(ioports_enumerate(Port_Digital, Port_Output, (pin_cap_t){ .claimable = On }, aux_claim, (void *)&aux_ctrl_out[idx]))
+                hal.signals_cap.mask |= aux_ctrl[idx].cap.mask;
+        } else if(aux_ctrl_out[idx].aux_port != 0xFF)
+            aux_claim_explicit(&aux_ctrl_out[idx]);
+    }
+}
+
+#endif // AUX_CONTROLS_OUT
 
 //
 

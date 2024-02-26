@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+<a name="20240226"/>Build 20240226
+
+Core: 
+
+* Fixed typo preventing lathe mode UVW builds.
+
+* Added initial support for using auxillary output pin pool for spindle and coolant pins.
+
+Drivers:
+
+* STM32F7xx: updated to use auxillary output pin pool for spindle pins. Enhanced and simplified PWM support, added generic Uno and Protoneer v3 boards to Web Builder.
+
+Plugins:
+
+* WebUI: "hardened" code a bit more in attempt to make it usable with STM32F4xx driver which has limited RAM that blocks reporting settings data.
+
+---
+
 <a name="20240222"/>Build 20240222
 
 __NOTE:__ This build has moved the probe input to the ioPorts pool of inputs and will be allocated from it when configured.  

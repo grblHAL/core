@@ -1477,7 +1477,6 @@ status_code_t gc_execute_block (char *block)
                         word_bit.parameter.z = word_bit.parameter.w = On;
                         gc_block.values.uvw[Z_AXIS] = value;
                         break;
-
 #else
 
 #ifdef U_AXIS
@@ -1505,7 +1504,6 @@ status_code_t gc_execute_block (char *block)
                         gc_block.values.v = value;
                         break;
 #endif
-#endif // LATHE_UVW_OPTION
 
 #if !AXIS_REMAP_ABC2UVW
                     case 'W':
@@ -1513,6 +1511,8 @@ status_code_t gc_execute_block (char *block)
                         gc_block.values.w = value;
                         break;
 #endif
+
+#endif // !LATHE_UVW_OPTION
                     case 'X':
                         axis_words.x = On;
                         word_bit.parameter.x = On;

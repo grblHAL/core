@@ -575,6 +575,14 @@ typedef struct {
     void *input;
 } aux_ctrl_t;
 
+typedef struct {
+    pin_function_t function;
+    uint8_t aux_port;
+    uint8_t pin;
+    void *port;
+    void *output;
+} aux_ctrl_out_t;
+
 typedef struct xbar {
     uint8_t id;                     //!< Pin id.
     pin_function_t function;        //!< Pin function.
