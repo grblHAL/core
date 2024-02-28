@@ -1,5 +1,27 @@
 ## grblHAL changelog
 
+<a name="20240228"/>Build 20240228
+
+Core: 
+
+* Tentative fix for lathe CSS/feed per rev modes \(G96/G95\), ref discussion [#450](https://github.com/grblHAL/core/discussions/450).
+
+* Fixed incorrect reporting of feed rate modes in `$G` response.
+
+* Added some ioPorts call wrappers, full support for reconfiguring output auxillary pins for PWM output.
+
+Drivers:
+
+* STM32F1xx, ST32F4xx, STM32F7xx: fix for incorrect status returned from ioPort configuration call.
+
+* STM32F7xx: added full support for reconfiguring capable auxillary output pins for PWM.
+
+Plugins:
+
+* WebUI: added update that did not make it in the previous one...
+
+---
+
 <a name="20240226"/>Build 20240226
 
 Core: 

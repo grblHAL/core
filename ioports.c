@@ -148,10 +148,24 @@ void ioport_assign_function (aux_ctrl_t *aux_ctrl, pin_function_t *function)
     if((input = hal.port.get_pin_info(Port_Digital, Port_Input, aux_ctrl->aux_port))) {
 
         *function = aux_ctrl->function;
+        digital.inx.mask &= ~(1 << input->id);
         hal.signals_cap.mask |= aux_ctrl->cap.mask;
 
         if(aux_ctrl->function == Input_Probe || xbar_fn_to_signals_mask(aux_ctrl->function).mask)
-            setting_remove_elements(Settings_IoPort_InvertIn, digital.inx.mask & ~(1 << input->id));
+            setting_remove_elements(Settings_IoPort_InvertIn, digital.inx.mask);
+    }
+}
+
+void ioport_assign_out_function (aux_ctrl_out_t *aux_ctrl, pin_function_t *function)
+{
+    xbar_t *output;
+
+    if((output = hal.port.get_pin_info(Port_Digital, Port_Output, aux_ctrl->aux_port))) {
+
+        *function = aux_ctrl->function;
+        digital.outx.mask &= ~(1 << output->id);
+
+        setting_remove_elements(Settings_IoPort_InvertOut, digital.outx.mask);
     }
 }
 
@@ -180,24 +194,18 @@ bool ioports_enumerate (io_port_type_t type, io_port_direction_t dir, pin_cap_t 
 
 bool ioport_analog_out_config (uint8_t port, pwm_config_t *config)
 {
-    bool ok;
     xbar_t *pin;
+    bool ok = (pin = hal.port.get_pin_info(Port_Analog, Port_Output, port)) && pin->config;
 
-    if((ok = (pin = hal.port.get_pin_info(Port_Analog, Port_Output, port)) && pin->config))
-        pin->config(pin, config, false);
-
-    return ok;
+    return ok && pin->config(pin, config, false);
 }
 
 bool ioport_digital_in_config (uint8_t port, gpio_in_config_t *config)
 {
-    bool ok;
     xbar_t *pin;
+    bool ok = (pin = hal.port.get_pin_info(Port_Digital, Port_Input, port)) && pin->config;
 
-    if((ok = (pin = hal.port.get_pin_info(Port_Digital, Port_Input, port)) && pin->config))
-        pin->config(pin, config, false);
-
-    return ok;
+    return ok && pin->config(pin, config, false);
 }
 
 bool ioport_enable_irq (uint8_t port, pin_irq_mode_t irq_mode, ioport_interrupt_callback_ptr handler)
@@ -207,13 +215,18 @@ bool ioport_enable_irq (uint8_t port, pin_irq_mode_t irq_mode, ioport_interrupt_
 
 bool ioport_digital_out_config (uint8_t port, gpio_out_config_t *config)
 {
-    bool ok;
     xbar_t *pin;
+    bool ok = (pin = hal.port.get_pin_info(Port_Digital, Port_Output, port)) && pin->config && !(pin->mode.pwm || pin->mode.servo_pwm);
 
-    if((ok = (pin = hal.port.get_pin_info(Port_Digital, Port_Output, port)) && pin->config))
-        pin->config(pin, config, false);
+    return ok && pin->config(pin, config, false);
+}
 
-    return ok;
+bool ioport_digital_pwm_config (uint8_t port, pwm_config_t *config)
+{
+    xbar_t *pin;
+    bool ok = (pin = hal.port.get_pin_info(Port_Digital, Port_Output, port)) && pin->config && pin->mode.claimed && pin->cap.pwm;
+
+    return ok && pin->config(pin, config, false);
 }
 
 /* experimental code follows */
@@ -394,39 +407,38 @@ uint_fast16_t ioports_compute_pwm_value (ioports_pwm_t *pwm_data, float value)
     return pwm_value;
 }
 
-static void sync_input_settings (pin_function_t function, gpio_in_config_t *config)
+void ioport_save_input_settings (xbar_t *xbar, gpio_in_config_t *config)
 {
-    if(function == Input_Probe)
+    if(digital.inx.mask & (1 << xbar->id)) {
+        if(config->inverted)
+            settings.ioport.invert_in.mask |= (1 << xbar->id);
+        else
+            settings.ioport.invert_in.mask &= ~(1 << xbar->id);
+    }
+
+    if(xbar->function == Input_Probe)
         settings.probe.invert_probe_pin = config->inverted;
-    else if(function < Input_Probe) {
+    else if(xbar->function < Input_Probe) {
         control_signals_t ctrl;
-        if((ctrl = xbar_fn_to_signals_mask(function)).mask) {
+        if((ctrl = xbar_fn_to_signals_mask(xbar->function)).mask) {
             if(config->inverted)
                 settings.control_invert.mask |= ctrl.mask;
             else
                 settings.control_invert.mask &= ~ctrl.mask;
         }
     }
-}
-
-void ioport_save_input_settings (xbar_t *xbar, gpio_in_config_t *config)
-{
-    if(config->inverted)
-        settings.ioport.invert_in.mask |= (1 << xbar->id);
-    else
-        settings.ioport.invert_in.mask &= ~(1 << xbar->id);
-
-    sync_input_settings(xbar->function, config);
 
     settings_write_global();
 }
 
 void ioport_save_output_settings (xbar_t *xbar, gpio_out_config_t *config)
 {
-    if(config->inverted)
-        settings.ioport.invert_out.mask |= (1 << xbar->id);
-    else
-        settings.ioport.invert_out.mask &= ~(1 << xbar->id);
+    if(digital.outx.mask & (1 << xbar->id)) {
+        if(config->inverted)
+            settings.ioport.invert_out.mask |= (1 << xbar->id);
+        else
+            settings.ioport.invert_out.mask &= ~(1 << xbar->id);
+    }
 
     settings_write_global();
 }
@@ -439,12 +451,12 @@ static bool is_setting_available (const setting_detail_t *setting)
 
         case Settings_IoPort_InvertIn:
         case Settings_IoPort_Pullup_Disable:
-            available = digital.in.ports && digital.in.ports->n_ports > 0;
+            available = digital.in.ports && digital.inx.mask;
             break;
 
         case Settings_IoPort_InvertOut:
         case Settings_IoPort_OD_Enable:
-            available = digital.out.ports && digital.out.ports->n_ports > 0;
+            available = digital.out.ports && digital.outx.mask;
             break;
 
         default:
@@ -476,7 +488,6 @@ static status_code_t aux_set_value (setting_id_t id, uint_fast16_t value)
                             config.pull_mode = (pull_mode_t)xbar->mode.pull_mode;
                             config.inverted = !!(change.mask & (1 << xbar->id));
                             xbar->config(xbar, &config, false);
-                            sync_input_settings(xbar->function, &config);
                         }
                     }
                     port++;
@@ -504,7 +515,6 @@ static status_code_t aux_set_value (setting_id_t id, uint_fast16_t value)
                             config.inverted = xbar->mode.inverted;
                             config.debounce = xbar->mode.inverted;
                             xbar->config(xbar, &config, false);
-                            sync_input_settings(xbar->function, &config);
                         }
                     }
                     port++;
@@ -527,7 +537,7 @@ static status_code_t aux_set_value (setting_id_t id, uint_fast16_t value)
 
                 do {
                     if((changed.mask & 0x01) && (xbar = hal.port.get_pin_info(Port_Digital, Port_Output, ioports_map_reverse(digital.out.ports, port)))) {
-                        if(xbar->config) {
+                        if(xbar->config && !(xbar->mode.pwm || xbar->mode.servo_pwm)) {
                             config.inverted = !!(change.mask & (1 << xbar->id));
                             config.open_drain = xbar->mode.open_drain;
                             xbar->config(xbar, &config, false);
@@ -553,7 +563,7 @@ static status_code_t aux_set_value (setting_id_t id, uint_fast16_t value)
 
                 do {
                     if((changed.mask & 0x01) && (xbar = hal.port.get_pin_info(Port_Digital, Port_Output, ioports_map_reverse(digital.out.ports, port)))) {
-                        if(xbar->config) {
+                        if(xbar->config && !(xbar->mode.pwm || xbar->mode.servo_pwm)) {
                             config.inverted = xbar->mode.inverted;
                             config.open_drain = !!(change.mask & (1 << xbar->id));
                             xbar->config(xbar, &config, false);
@@ -636,7 +646,10 @@ static void ioport_settings_load (void)
     gpio_in_config_t in_config = {0};
     gpio_out_config_t out_config = {0};
 
-    // TODO: change labels for mapped settings?
+    settings.ioport.invert_in.mask &= digital.inx.mask;
+    settings.ioport.pullup_disable_in.mask &= digital.inx.mask;
+    settings.ioport.invert_out.mask &= digital.outx.mask;
+    settings.ioport.od_enable_out.mask &= digital.outx.mask;
 
     if(digital.in.ports && (port = digital.in.ports->n_ports)) do {
         if((xbar = hal.port.get_pin_info(Port_Digital, Port_Input, ioports_map_reverse(digital.in.ports, --port)))) {
@@ -671,7 +684,7 @@ static void ioport_settings_load (void)
 
     if(digital.out.ports && (port = digital.out.ports->n_ports)) do {
         if((xbar = hal.port.get_pin_info(Port_Digital, Port_Output, ioports_map_reverse(digital.in.ports, --port)))) {
-            if(xbar->config) {
+            if(xbar->config && !(xbar->mode.pwm || xbar->mode.servo_pwm)) {
                 out_config.inverted = !!(settings.ioport.invert_out.mask & (1 << xbar->id));
                 out_config.open_drain = !!(settings.ioport.od_enable_out.mask & (1 << xbar->id));
                 xbar->config(xbar, &out_config, false);

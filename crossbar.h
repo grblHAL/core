@@ -81,6 +81,7 @@ typedef enum {
     Input_Aux5,
     Input_Aux6,
     Input_Aux7,
+    Input_AuxMax = Input_Aux7,
     Input_Analog_Aux0,
     Input_Analog_Aux1,
     Input_Analog_Aux2,
@@ -89,6 +90,7 @@ typedef enum {
     Input_Analog_Aux5,
     Input_Analog_Aux6,
     Input_Analog_Aux7,
+    Input_Analog_AuxMax = Input_Analog_Aux7,
 // Output pins
     Output_StepX,
     Outputs = Output_StepX,
@@ -147,6 +149,7 @@ typedef enum {
     Output_Aux5,
     Output_Aux6,
     Output_Aux7,
+    Output_AuxMax = Output_Aux7,
     Output_Analog_Aux0,
     Output_Analog_Aux1,
     Output_Analog_Aux2,
@@ -155,6 +158,7 @@ typedef enum {
     Output_Analog_Aux5,
     Output_Analog_Aux6,
     Output_Analog_Aux7,
+    Output_Analog_AuxMax = Output_Analog_Aux7,
     Output_LED,
     Output_LED_R,
     Output_LED_G,
@@ -537,6 +541,7 @@ typedef struct {
 typedef struct {
     bool inverted;
     bool open_drain;
+    bool pwm;
 } gpio_out_config_t;
 
 //! /a cfg_data argument to /a xbar_config_ptr for PWM pins

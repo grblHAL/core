@@ -7,18 +7,18 @@
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <math.h>
@@ -3013,7 +3013,7 @@ status_code_t gc_execute_block (char *block)
             gc_state.spindle.css->tool_offset = gc_get_offset(gc_state.spindle.css->axis);
             float pos = gc_state.position[gc_state.spindle.css->axis] - gc_state.spindle.css->tool_offset;
             gc_block.values.s = pos <= 0.0f ? gc_state.spindle.css->max_rpm : min(gc_state.spindle.css->max_rpm, gc_state.spindle.css->surface_speed / (pos * (float)(2.0f * M_PI)));
-            gc_parser_flags.spindle_force_sync = On;
+//??            gc_parser_flags.spindle_force_sync = On;
         } else {
             if(gc_state.spindle.css) {
                 gc_state.spindle.css = NULL;
@@ -3413,7 +3413,8 @@ status_code_t gc_execute_block (char *block)
 
             case MotionMode_Linear:
                 if(gc_state.modal.feed_mode == FeedMode_UnitsPerRev) {
-                    plan_data.spindle.state.synchronized = On;
+                    plan_data.condition.units_per_rev = On;
+                    plan_data.spindle.state.synchronized = settings.mode != Mode_Lathe || gc_block.values.xyz[Z_AXIS] != gc_state.position[Z_AXIS];
                 //??    gc_state.distance_per_rev = plan_data.feed_rate;
                     // check initial feed rate - fail if zero?
                 }
@@ -3427,7 +3428,9 @@ status_code_t gc_execute_block (char *block)
 
             case MotionMode_CwArc:
             case MotionMode_CcwArc:
-                // fail if spindle synchronized motion?
+                if(gc_state.modal.feed_mode == FeedMode_UnitsPerRev)
+                    plan_data.condition.units_per_rev = plan_data.spindle.state.synchronized = On;
+
                 mc_arc(gc_block.values.xyz, &plan_data, gc_state.position, gc_block.values.ijk, gc_block.values.r,
                         plane, gc_parser_flags.arc_is_clockwise ? -gc_block.arc_turns : gc_block.arc_turns);
                 break;

@@ -2561,20 +2561,25 @@ static void setting_remove_element (setting_id_t id, uint_fast8_t pos)
 // Note: setting format string has to reside in RAM.
 void setting_remove_elements (setting_id_t id, uint32_t mask)
 {
-    char *format = (char *)setting_get_details(id, NULL)->format, *s;
-    uint_fast8_t idx, entries = strnumentries(format, ',');
+    const setting_detail_t *setting;
 
-    for(idx = 0; idx < entries; idx++ ) {
-        if(!(mask & 0x1))
-            setting_remove_element(id, idx);
-        mask >>= 1;
-    }
+    if((setting = setting_get_details(id, NULL))) {
 
-    // Strip trailing N/A's
-    while((s = strrchr(format, ','))) {
-        if(strncmp(s, ",N/A", 4))
-            break;
-        *s = '\0';
+        char *format = (char *)setting->format, *s;
+        uint_fast8_t idx, entries = strnumentries(format, ',');
+
+        for(idx = 0; idx < entries; idx++ ) {
+            if(!(mask & 0x1))
+                setting_remove_element(id, idx);
+            mask >>= 1;
+        }
+
+        // Strip trailing N/A's
+        while((s = strrchr(format, ','))) {
+            if(strncmp(s, ",N/A", 4))
+                break;
+            *s = '\0';
+        }
     }
 }
 
