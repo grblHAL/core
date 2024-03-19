@@ -3,22 +3,22 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2023 Terje Io
+  Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <math.h>
@@ -82,7 +82,7 @@ ISR_CODE static axes_signals_t ISR_FUNC(homing_signals_select)(home_signals_t si
 ISR_CODE void ISR_FUNC(limit_interrupt_handler)(limit_signals_t state) // DEFAULT: Limit pin change interrupt process.
 {
     // Ignore limit switches if already in an alarm state or in-process of executing an alarm.
-    // When in the alarm state, Grbl should have been reset or will force a reset, so any pending
+    // When in the alarm state, grblHAL should have been reset or will force a reset, so any pending
     // moves in the planner and stream input buffers are all cleared and newly sent blocks will be
     // locked out until a homing cycle or a kill lock command. Allows the user to disable the hard
     // limit setting if their limits are constantly triggering after a reset and move their axes.
@@ -490,7 +490,7 @@ static bool homing_cycle (axes_signals_t cycle, axes_signals_t auto_square)
     }
 
     // The active cycle axes should now be homed and machine limits have been located. By
-    // default, Grbl defines machine space as all negative, as do most CNCs. Since limit switches
+    // default, grblHAL defines machine space as all negative, as do most CNCs. Since limit switches
     // can be on either side of an axes, check and set axes machine zero appropriately. Also,
     // set up pull-off maneuver from axes limit switches that have been homed. This provides
     // some initial clearance off the switches and should also help prevent them from falsely
@@ -538,8 +538,6 @@ status_code_t limits_go_home (axes_signals_t cycle)
         if((auto_squared.mask & homing_signals_select(hal.homing.get_state(), (axes_signals_t){0}, SquaringMode_Both).mask) && !limits_pull_off(auto_square, settings.homing.pulloff * HOMING_AXIS_LOCATE_SCALAR))
             return Status_LimitsEngaged; // Auto squaring with limit switch asserted is not allowed.
     }
-
-    tc_clear_tlo_reference(cycle);
 
     return grbl.home_machine(cycle, auto_square) ? Status_OK : Status_Unhandled;
 }

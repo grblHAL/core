@@ -80,6 +80,16 @@ typedef struct {
     uint8_t intensity;
 } neopixel_cfg_t;
 
+static inline bool rgb_is_neopixels (rgb_ptr_t *device)
+{
+    return device->out != NULL && device->cap.R > 126 && device->cap.G > 126 && device->cap.B > 126;
+}
+
+static inline bool rgb_is_onoff (rgb_ptr_t *device)
+{
+    return device->out != NULL && device->cap.R == 1 && device->cap.G == 1 && device->cap.B == 1;
+}
+
 // Intensity conversions
 
 static inline rgb_color_t rgb_set_intensity (rgb_color_t color, uint8_t intensity)

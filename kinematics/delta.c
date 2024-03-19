@@ -3,24 +3,24 @@
 
   Part of grblHAL
 
-  Copyright (c) 2023 Terje Io
+  Copyright (c) 2023-2024 Terje Io
   Transforms derived from mzavatsky at Trossen Robotics
     https://hypertriangle.com/~alex/delta-robot-tutorial/
   get_cuboid_envelope() derived from javascript code in
     https://www.marginallyclever.com/other/samples/fk-ik-test.html
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "../grbl.h"
@@ -527,7 +527,7 @@ static void delta_go_home (void *data)
     }
 }
 
-static void delta_homing_complete (bool success)
+static void delta_homing_complete (axes_signals_t cycle, bool success)
 {
     kinematics.transform_from_cartesian = transform_from_cartesian;
 
@@ -546,7 +546,7 @@ static void delta_homing_complete (bool success)
     }
 
     if(on_homing_completed)
-        on_homing_completed(success);
+        on_homing_completed(cycle, success);
 }
 
 static void cancel_jog (sys_state_t state)

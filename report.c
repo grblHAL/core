@@ -825,10 +825,11 @@ void report_build_info (char *line, bool extended)
     // Generate compile-time build option list
 
     char *append = &buf[5];
+    spindle_ptrs_t *spindle = spindle_get(0);
 
     strcpy(buf, "[OPT:");
 
-    if(spindle_get_caps(false).variable)
+    if(spindle && spindle->cap.variable)
         *append++ = 'V';
 
     *append++ = 'N';
@@ -854,6 +855,9 @@ void report_build_info (char *line, bool extended)
 
     if(settings.probe.allow_feed_override)
         *append++ = 'A';
+
+    if(spindle && !spindle->cap.direction) // NOTE: Shown when disabled.
+        *append++ = 'D';
 
     if(settings.spindle.flags.enable_rpm_controlled)
         *append++ = '0';
@@ -1226,6 +1230,9 @@ void report_realtime_status (void)
         }
     }
 
+#elif N_SPINDLE > 1
+    if(report.spindle_id)
+        hal.stream.write_all(appendbuf(2, "|S:", uitoa((uint32_t)spindle_0->id)));
 #endif
 
     if(settings.status_report.pin_state) {
@@ -2446,6 +2453,8 @@ static void report_spindle (spindle_info_t *spindle, void *data)
             *caps++ = 'D';
         if(spindle->hal->cap.laser)
             *caps++ = 'L';
+        if(spindle->hal->cap.laser && spindle->hal->pulse_on)
+            *caps++ = 'A';
         if(spindle->hal->cap.pid)
             *caps++ = 'P';
         if(spindle->hal->cap.pwm_invert)

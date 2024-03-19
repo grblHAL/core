@@ -297,7 +297,7 @@ int grbl_enter (void)
     sys.driver_started = sys.alarm != Alarm_SelftestFailed;
 
     // "Wire" homing switches to limit switches if not provided by the driver.
-    if(hal.homing.get_state == NULL)
+    if(hal.homing.get_state == NULL || settings.homing.flags.use_limit_switches)
         hal.homing.get_state = hal.limits_cap.max.mask ? get_homing_status2 : get_homing_status;
 
     if(settings.report_interval)

@@ -95,6 +95,41 @@ uint8_t ioports_available (io_port_type_t type, io_port_direction_t dir)
     return ports;
 }
 
+/*! \brief find first free or claimed digital or analog port.
+\param type as an \a #io_port_type_t enum value.
+\param dir as an \a #io_port_direction_t enum value.
+\param description pointer to a \a char constant for the pin description of a previousely claimed port or NULL if searching for the first free port.
+\returns the port number if successful, 255 if not.
+*/
+uint8_t ioport_find_free (io_port_type_t type, io_port_direction_t dir, const char *description)
+{
+    uint8_t port;
+    bool found = false;
+    xbar_t *pin;
+
+    if(description) {
+        port = ioports_available(type, dir);
+        do {
+            if((pin = hal.port.get_pin_info(type, dir, --port))) {
+                if((found = pin->description && !strcmp(pin->description, description)))
+                    port = pin->id;
+            }
+        } while(port && !found);
+    }
+
+    if(!found) {
+        port = ioports_available(type, dir);
+        do {
+            if((pin = hal.port.get_pin_info(type, dir, --port))) {
+                if((found = !pin->mode.claimed))
+                    port = pin->id;
+            }
+        } while(port && !found);
+    }
+
+    return found ? port : 255;
+}
+
 /*! \brief Claim a digital or analog port for exclusive use.
 \param type as an \a #io_port_type_t enum value.
 \param dir as an \a #io_port_direction_t enum value.

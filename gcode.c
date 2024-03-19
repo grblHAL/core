@@ -756,7 +756,7 @@ status_code_t gc_execute_block (char *block)
 
     // Determine if the line is a program start/end marker.
     // Old comment from protocol.c:
-    // NOTE: This maybe installed to tell Grbl when a program is running vs manual input,
+    // NOTE: This maybe installed to tell grblHAL when a program is running vs manual input,
     // where, during a program, the system auto-cycle start will continue to execute
     // everything until the next '%' sign. This will help fix resuming issues with certain
     // functions that empty the planner buffer to execute its task on-time.
@@ -777,7 +777,7 @@ status_code_t gc_execute_block (char *block)
     memset(&gc_block, 0, sizeof(gc_block));                           // Initialize the parser block struct.
     memcpy(&gc_block.modal, &gc_state.modal, sizeof(gc_state.modal)); // Copy current modes
 
-    bool set_tool = false, spindle_programmed = false;
+    bool set_tool = false, spindle_event = false;
     axis_command_t axis_command = AxisCommand_None;
     io_mcode_t port_command = (io_mcode_t)0;
     plane_t plane;
@@ -1581,7 +1581,7 @@ status_code_t gc_execute_block (char *block)
      To do this, this would simply need to retain all of the data in STEP 1, such as the new block
      data struct, the modal group and value bitflag tracking variables, and axis array indices
      compatible variables. This data contains all of the information necessary to error-check the
-     new g-code block when the EOL character is received. However, this would break Grbl's startup
+     new g-code block when the EOL character is received. However, this would break grblHAL's startup
      lines in how it currently works and would require some refactoring to make it compatible.
   */
 
@@ -1736,7 +1736,7 @@ status_code_t gc_execute_block (char *block)
         gc_state.modal.spindle.rpm_mode = gc_block.modal.spindle.rpm_mode;
     }
 
-    spindle_programmed = gc_block.words.s && !user_words.s;
+    spindle_event = gc_block.words.s && !user_words.s;
 
     if (!gc_block.words.s)
         gc_block.values.s = gc_state.modal.spindle.rpm_mode == SpindleSpeedMode_RPM ? gc_state.spindle.rpm : gc_state.spindle.hal->param->css.max_rpm;
@@ -2049,7 +2049,7 @@ status_code_t gc_execute_block (char *block)
 
     // [13. Cutter radius compensation ]: G41/42 NOT SUPPORTED. Error, if enabled while G53 is active.
     // [G40 Errors]: G2/3 arc is programmed after a G40. The linear move after disabling is less than tool diameter.
-    //   NOTE: Since cutter radius compensation is never enabled, these G40 errors don't apply. Grbl supports G40
+    //   NOTE: Since cutter radius compensation is never enabled, these G40 errors don't apply. grblHAL supports G40
     //   only for the purpose to not error when G40 is sent with a g-code program header to setup the default modes.
 
     // [14. Tool length compensation ]: G43.1 and G49 are always supported, G43 and G43.2 if grbl.tool_table.n_tools > 0
@@ -3160,31 +3160,35 @@ status_code_t gc_execute_block (char *block)
     }
 
     // [7. Spindle control ]:
-    if (gc_state.modal.spindle.state.value != gc_block.modal.spindle.state.value) {
+    if(gc_state.modal.spindle.state.value != gc_block.modal.spindle.state.value) {
         // Update spindle control and apply spindle speed when enabling it in this block.
         // NOTE: All spindle state changes are synced, even in laser mode. Also, plan_data,
         // rather than gc_state, is used to manage laser state for non-laser motions.
+        bool spindle_ok = false;
         if(gc_block.spindle) {
-            if((spindle_programmed = spindle_sync(gc_block.spindle, gc_block.modal.spindle.state, plan_data.spindle.rpm)))
+            if(grbl.on_spindle_programmed)
+                grbl.on_spindle_programmed(gc_block.spindle, gc_block.modal.spindle.state,  plan_data.spindle.rpm, gc_block.modal.spindle.rpm_mode);
+            if((spindle_ok = spindle_sync(gc_block.spindle, gc_block.modal.spindle.state, plan_data.spindle.rpm)))
                 gc_block.spindle->param->state = gc_block.modal.spindle.state;
         } else {
             idx = N_SYS_SPINDLE;
             do {
                 if(spindle_is_enabled(--idx)) {
                     spindle_ptrs_t *spindle = spindle_get(idx);
-                    if(spindle_sync(spindle, gc_block.modal.spindle.state, plan_data.spindle.rpm)) {
-                        spindle_programmed = true;
+                    if(grbl.on_spindle_programmed)
+                        grbl.on_spindle_programmed(spindle, gc_block.modal.spindle.state,  plan_data.spindle.rpm, gc_block.modal.spindle.rpm_mode);
+                    if(spindle_sync(spindle, gc_block.modal.spindle.state, plan_data.spindle.rpm))
                         spindle->param->state = gc_block.modal.spindle.state;
-                    }
+                    else
+                        spindle_ok = false;
                 }
             } while(idx);
         }
-        if(spindle_programmed)
+        if(!(spindle_event = !spindle_ok))
             gc_state.modal.spindle.state = gc_block.modal.spindle.state;
     }
 
-    // TODO: add spindle argument and move into loop above?
-    if(spindle_programmed && grbl.on_spindle_programmed)
+    if(spindle_event && grbl.on_spindle_programmed)
         grbl.on_spindle_programmed(gc_state.spindle.hal, gc_state.modal.spindle.state, gc_state.spindle.rpm, gc_state.modal.spindle.rpm_mode);
 
 // TODO: Recheck spindle running in CCS mode (is_rpm_pos_adjusted == On)?

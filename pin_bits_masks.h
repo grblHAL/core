@@ -339,8 +339,8 @@ typedef bool (*aux_claim_explicit_ptr)(aux_ctrl_t *aux_ctrl);
 
 static bool aux_ctrl_claim_port (xbar_t *properties, uint8_t port, void *data)
 {
-    if(ioport_claim(Port_Digital, Port_Input, &properties->id, xbar_fn_to_pinname(((aux_ctrl_t *)data)->function)))
-        ((aux_ctrl_t *)data)->aux_port = properties->id;
+    if(ioport_claim(Port_Digital, Port_Input, &port, xbar_fn_to_pinname(((aux_ctrl_t *)data)->function)))
+        ((aux_ctrl_t *)data)->aux_port = port;
 
     return ((aux_ctrl_t *)data)->aux_port != 0xFF;
 }
@@ -396,15 +396,24 @@ static inline control_signals_t aux_ctrl_scan_status (control_signals_t signals)
 
 // The following pins are bound explicitly to aux output pins
 static aux_ctrl_out_t aux_ctrl_out[] = {
-#ifdef DRIVER_SPINDLE_ENABLE
-    { .function = Output_SpindleOn, .aux_port = 0xFF, .pin = SPINDLE_ENABLE_PIN, .port = SPINDLE_ENABLE_PORT },
+#if DRIVER_SPINDLE_ENABLE
+    { .function = Output_SpindleOn,   .aux_port = 0xFF, .pin = SPINDLE_ENABLE_PIN,     .port = SPINDLE_ENABLE_PORT },
+#if DRIVER_SPINDLE_PWM_ENABLE
+    { .function = Output_SpindlePWM,  .aux_port = 0xFF, .pin = SPINDLE_PWM_PIN,        .port = SPINDLE_PWM_PORT },
 #endif
-#ifdef DRIVER_SPINDLE_PWM_ENABLE
-    { .function = Output_SpindlePWM, .aux_port = 0xFF, .pin = SPINDLE_PWM_PIN, .port = SPINDLE_PWM_PORT },
+#if DRIVER_SPINDLE_DIR_ENABLE
+    { .function = Output_SpindleDir,  .aux_port = 0xFF, .pin = SPINDLE_DIRECTION_PIN,  .port = SPINDLE_DIRECTION_PORT },
 #endif
-#ifdef DRIVER_SPINDLE_DIR_ENABLE
-    { .function = Output_SpindleDir, .aux_port = 0xFF, .pin = SPINDLE_DIRECTION_PIN, .port = SPINDLE_DIRECTION_PORT },
+#endif // DRIVER_SPINDLE_ENABLE
+#if DRIVER_SPINDLE1_ENABLE
+    { .function = Output_Spindle1On,  .aux_port = 0xFF, .pin = SPINDLE1_ENABLE_PIN,    .port = SPINDLE1_ENABLE_PORT },
+#if DRIVER_SPINDLE1_PWM_ENABLE
+    { .function = Output_Spindle1PWM, .aux_port = 0xFF, .pin = SPINDLE1_PWM_PIN,       .port = SPINDLE1_PWM_PORT },
 #endif
+#if DRIVER_SPINDLE1_DIR_ENABLE
+    { .function = Output_Spindle1Dir, .aux_port = 0xFF, .pin = SPINDLE1_DIRECTION_PIN, .port = SPINDLE1_DIRECTION_PORT },
+#endif
+#endif // DRIVER_SPINDLE1_DIR_ENABLE
 /*
 #ifdef COOLANT_FLOOD_PIN
     { .function = Output_CoolantFlood, .aux_port = 0xFF, .pin = COOLANT_FLOOD_PIN, .port = COOLANT_FLOOD_PORT },
@@ -421,7 +430,7 @@ static inline aux_ctrl_out_t *aux_out_remap_explicit (void *port, uint8_t pin, u
 
     uint_fast8_t idx = sizeof(aux_ctrl_out) / sizeof(aux_ctrl_out_t);
 
-    do {
+    if(idx) do {
         idx--;
         if(aux_ctrl_out[idx].port == port && aux_ctrl_out[idx].pin == pin) {
             ctrl_pin = &aux_ctrl_out[idx];
@@ -437,8 +446,8 @@ typedef bool (*aux_claim_explicit_out_ptr)(aux_ctrl_out_t *aux_ctrl);
 
 static bool aux_ctrl_claim_out_port (xbar_t *properties, uint8_t port, void *data)
 {
-    if(ioport_claim(Port_Digital, Port_Output, &properties->id, xbar_fn_to_pinname(((aux_ctrl_t *)data)->function)))
-        ((aux_ctrl_t *)data)->aux_port = properties->id;
+    if(ioport_claim(Port_Digital, Port_Output, &port, xbar_fn_to_pinname(((aux_ctrl_t *)data)->function)))
+        ((aux_ctrl_t *)data)->aux_port = port;
 
     return ((aux_ctrl_t *)data)->aux_port != 0xFF;
 }
@@ -451,10 +460,9 @@ static inline void aux_ctrl_claim_out_ports (aux_claim_explicit_out_ptr aux_clai
         aux_claim = aux_ctrl_claim_out_port;
 
     for(idx = 0; idx < sizeof(aux_ctrl_out) / sizeof(aux_ctrl_out_t); idx++) {
-        if(aux_ctrl_out[idx].pin == 0xFF) {
-            if(ioports_enumerate(Port_Digital, Port_Output, (pin_cap_t){ .claimable = On }, aux_claim, (void *)&aux_ctrl_out[idx]))
-                hal.signals_cap.mask |= aux_ctrl[idx].cap.mask;
-        } else if(aux_ctrl_out[idx].aux_port != 0xFF)
+        if(aux_ctrl_out[idx].pin == 0xFF)
+            ioports_enumerate(Port_Digital, Port_Output, (pin_cap_t){ .claimable = On }, aux_claim, (void *)&aux_ctrl_out[idx]);
+        else if(aux_ctrl_out[idx].aux_port != 0xFF)
             aux_claim_explicit(&aux_ctrl_out[idx]);
     }
 }
@@ -480,6 +488,13 @@ static inline void aux_ctrl_claim_out_ports (aux_claim_explicit_out_ptr aux_clai
 #endif
 #if defined(SPINDLE_DIRECTION_PIN) && !defined(SPINDLE_DIRECTION_BIT)
 #define SPINDLE_DIRECTION_BIT (1<<SPINDLE_DIRECTION_PIN)
+#endif
+
+#if defined(SPINDLE1_ENABLE_PIN) && !defined(SPINDLE1_ENABLE_BIT)
+#define SPINDLE1_ENABLE_BIT (1<<SPINDLE1_ENABLE_PIN)
+#endif
+#if defined(SPINDLE1_DIRECTION_PIN) && !defined(SPINDLE1_DIRECTION_BIT)
+#define SPINDLE1_DIRECTION_BIT (1<<SPINDLE1_DIRECTION_PIN)
 #endif
 
 #if defined(COOLANT_FLOOD_PIN) && !defined(COOLANT_FLOOD_BIT)

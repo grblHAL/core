@@ -7,18 +7,18 @@
   Copyright (c) 2012-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef _SPINDLE_CONTROL_H_
@@ -83,7 +83,8 @@ typedef union {
                  rpm_range_locked  :1, //!< Spindle RPM range (min, max) not inherited from settings.
                  gpio_controlled   :1, //!< On/off and direction is controlled by GPIO.
                  cmd_controlled    :1, //!< Command controlled, e.g. over ModBus.
-                 unassigned        :6;
+                 cloned            :1, //!< Spindle is cloned.
+                 unassigned        :5;
     };
 } spindle_cap_t;
 
@@ -101,9 +102,10 @@ typedef struct {
 } spindle_data_t;
 
 typedef enum {
-    SpindleData_Counters,       //!< 0
-    SpindleData_RPM,            //!< 1
-    SpindleData_AngularPosition //!< 2
+    SpindleData_Counters,           //!< 0
+    SpindleData_RPM,                //!< 1
+    SpindleData_AngularPosition,    //!< 2
+    SpindleData_AtSpeed             //!< 3
 } spindle_data_request_t;
 
 typedef enum {
@@ -196,7 +198,7 @@ typedef union {
     uint8_t mask;
     struct {
         uint8_t enable_rpm_controlled :1, // PWM spindle only
-                unused                :1,
+                laser_mode_disable    :1, // PWM spindle only
                 type                  :5,
                 pwm_disable           :1; // PWM spindle only
     };
@@ -218,6 +220,24 @@ typedef struct {
     spindle_settings_flags_t flags;
 } spindle_settings_t;
 
+typedef struct {
+    uint8_t port_on;
+    uint8_t port_dir;
+    uint8_t port_pwm;
+    spindle_settings_t cfg;
+} spindle1_settings_t;
+
+typedef union {
+    uint8_t value;
+    struct {
+        uint8_t invert_pwm         :1, //!< NOTE: set (by driver) when inversion is done in code
+                always_on          :1,
+                cloned             :1,
+                laser_mode_disable :1,
+                unused             :4;
+    };
+} spindle_pwm_flags_t;
+
 //!* \brief Precalculated values that may be set/used by HAL driver to speed up RPM to PWM conversions if variable spindle is supported. */
 typedef struct spindle_pwm {
     uint32_t f_clock;
@@ -228,9 +248,10 @@ typedef struct spindle_pwm {
     uint_fast16_t max_value;
     float rpm_min;              //!< Minimum spindle RPM.
     float pwm_gradient;
-    bool invert_pwm;            //!< NOTE: set (by driver) when inversion is done in code
-    bool always_on;
-    bool cloned;
+    bool invert_pwm;            //!< deprecated, use bit in flags instead
+    bool always_on;             //!< deprecated, use bit in flags instead
+    bool cloned;                //!< deprecated, use bit in flags instead
+    spindle_pwm_flags_t flags;
     int_fast16_t offset;
     uint_fast16_t n_pieces;
     pwm_piece_t piece[SPINDLE_NPWM_PIECES];
@@ -362,4 +383,13 @@ bool spindle_is_on (void);
 
 spindle_ptrs_t *spindle_get (spindle_num_t spindle_num);
 
+#if N_SPINDLE > 1
+
+typedef void (*spindle1_settings_changed_ptr)(spindle1_settings_t *settings);
+
+spindle1_settings_t *spindle1_settings_add (bool claim_ports);
+void spindle1_settings_register (spindle_cap_t cap, spindle1_settings_changed_ptr on_changed);
+
 #endif
+
+#endif // _SPINDLE_CONTROL_H_

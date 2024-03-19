@@ -6,18 +6,18 @@
   Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2014-2016 Sungeun K. Jeon for Gnea mResearch LLC
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <math.h>
@@ -347,7 +347,7 @@ static status_code_t toggle_optional_stop (sys_state_t state, char *args)
 static status_code_t check_mode (sys_state_t state, char *args)
 {
     if (state == STATE_CHECK_MODE) {
-        // Perform reset when toggling off. Check g-code mode should only work if Grbl
+        // Perform reset when toggling off. Check g-code mode should only work if grblHAL
         // is idle and ready, regardless of alarm locks. This is mainly to keep things
         // simple and consistent.
         mc_reset();
@@ -901,12 +901,12 @@ PROGMEM static const sys_command_t sys_commands[] = {
     { "N0", set_startup_line0, {}, { .str = "N0=<gcode> - set startup line 0" } },
     { "N1", set_startup_line1, {}, { .str = "N1=<gcode> - set startup line 1" } },
     { "EA", enumerate_alarms, { .noargs = On, .allow_blocking = On }, { .str = "enumerate alarms" } },
-    { "EAG", enumerate_alarms_grblformatted, { .noargs = On, .allow_blocking = On }, { .str = "enumerate alarms, Grbl formatted" } },
+    { "EAG", enumerate_alarms_grblformatted, { .noargs = On, .allow_blocking = On }, { .str = "enumerate alarms, grblHAL formatted" } },
     { "EE", enumerate_errors, { .noargs = On, .allow_blocking = On }, { .str = "enumerate status codes" } },
-    { "EEG", enumerate_errors_grblformatted, { .noargs = On, .allow_blocking = On }, { .str = "enumerate status codes, Grbl formatted" } },
+    { "EEG", enumerate_errors_grblformatted, { .noargs = On, .allow_blocking = On }, { .str = "enumerate status codes, grblHAL formatted" } },
     { "EG", enumerate_groups, { .noargs = On, .allow_blocking = On }, { .str = "enumerate setting groups" } },
     { "ES", enumerate_settings, { .noargs = On, .allow_blocking = On }, { .str = "enumerate settings" } },
-    { "ESG", enumerate_settings_grblformatted, { .noargs = On, .allow_blocking = On }, { .str = "enumerate settings, Grbl formatted" } },
+    { "ESG", enumerate_settings_grblformatted, { .noargs = On, .allow_blocking = On }, { .str = "enumerate settings, grblHAL formatted" } },
     { "ESH", enumerate_settings_halformatted, { .noargs = On, .allow_blocking = On }, { .str = "enumerate settings, grblHAL formatted" } },
     { "E*", enumerate_all, { .noargs = On, .allow_blocking = On }, { .str = "enumerate alarms, status codes and settings" } },
     { "PINS", enumerate_pins, { .noargs = On, .allow_blocking = On, .help_fn = On }, { .fn = help_pins } },
@@ -986,9 +986,9 @@ void system_command_help (void)
 
 /*! \brief Directs and executes one line of input from protocol_process.
 
-While mostly incoming streaming g-code blocks, this also executes Grbl internal commands, such as
+While mostly incoming streaming g-code blocks, this also executes grblHAL internal commands, such as
 settings, initiating the homing cycle, and toggling switch states. This differs from
-the realtime command module by being susceptible to when Grbl is ready to execute the
+the realtime command module by being susceptible to when grblHAL is ready to execute the
 next line during a cycle, so for switches like block delete, the switch only effects
 the lines that are processed afterward, not necessarily real-time during a cycle,
 since there are motions already stored in the buffer. However, this 'lag' should not
@@ -1104,14 +1104,37 @@ status_code_t system_execute_line (char *line)
     return retval;
 }
 
-// End system commands
+// End system $-commands
+
+/*! \brief Called on homing state changes.
+
+Clears the tool length offset (TLO) when linear axis or X- or Z-axis is homed in lathe mode.
+Typically called on the grbl.on_homing complete event.
+\param id a \a axes_signals_t holding the axis flags that homed status was changed for.
+*/
+void system_clear_tlo_reference (axes_signals_t homing_cycle)
+{
+    plane_t plane;
+
+#if TOOL_LENGTH_OFFSET_AXIS >= 0
+    plane.axis_linear = TOOL_LENGTH_OFFSET_AXIS;
+#else
+    gc_get_plane_data(&plane, gc_state.modal.plane_select);
+#endif
+    if(homing_cycle.mask & (settings.mode == Mode_Lathe ? (X_AXIS_BIT|Z_AXIS_BIT) : bit(plane.axis_linear))) {
+        if(sys.tlo_reference_set.mask != 0) {
+            sys.tlo_reference_set.mask = 0;  // Invalidate tool length offset reference
+            system_add_rt_report(Report_TLOReference);
+        }
+    }
+}
 
 /*! \brief Called on a work coordinate (WCO) changes.
 
 If configured waits for the planner buffer to empty then fires the
 grbl.on_wco_changed event and sets the #Report_WCO flag to add
 the WCO report element to the next status report.
- */
+*/
 void system_flag_wco_change (void)
 {
     if(!settings.status_report.sync_on_wco_change)

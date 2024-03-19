@@ -598,7 +598,8 @@ typedef struct {
     tool_ptrs_t tool;                       //!< Optional handlers for tool changes.
     rtc_ptrs_t rtc;                         //!< Optional handlers for real time clock (RTC).
     io_port_t port;                         //!< Optional handlers for axuillary I/O (adds support for M62-M66).
-    rgb_ptr_t rgb;                          //!< Optional handler for RGB output to LEDs (neopixels) or lamps.
+    rgb_ptr_t rgb0;                         //!< Optional handler for RGB output to LEDs (neopixels) or lamps.
+    rgb_ptr_t rgb1;                         //!< Optional handler for RGB output to LEDs (neopixels) or lamps.
     periph_port_t periph_port;              //!< Optional handlers for peripheral pin registration.
     driver_reset_ptr driver_reset;          //!< Optional handler, called on soft resets. Set to a dummy handler by the core at startup.
     nvs_io_t nvs;                           //!< Optional handlers for storing/retrieving settings and data to/from non-volatile storage (NVS).

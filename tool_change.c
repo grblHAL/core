@@ -7,18 +7,18 @@
 
   Copyright (c) 2020-2024 Terje Io
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <string.h>
@@ -47,6 +47,17 @@ static coord_data_t target = {0}, previous;
 static driver_reset_ptr driver_reset = NULL;
 static enqueue_realtime_command_ptr enqueue_realtime_command = NULL;
 static control_signals_callback_ptr control_interrupt_callback = NULL;
+static on_homing_completed_ptr on_homing_completed = NULL;
+
+// Clear tool length offset on homing
+static void tc_on_homing_complete (axes_signals_t homing_cycle, bool success)
+{
+    if(on_homing_completed)
+        on_homing_completed(homing_cycle, success);
+
+    if(settings.tool_change.mode != ToolChange_Disabled)
+        system_clear_tlo_reference(homing_cycle);
+}
 
 // Set tool offset on successful $TPW probe, prompt for retry on failure.
 // Called via probe completed event.
@@ -402,6 +413,8 @@ static status_code_t tool_change (parser_state_t *parser_state)
 // TODO: change to survive a warm reset?
 void tc_init (void)
 {
+    static bool on_homing_subscribed = false;
+
     if(hal.driver_cap.atc) // Do not override driver tool change implementation!
         return;
 
@@ -423,29 +436,14 @@ void tc_init (void)
         hal.tool.select = tool_select;
         hal.tool.change = tool_change;
         grbl.on_toolchange_ack = on_toolchange_ack;
+        if(!on_homing_subscribed) {
+            on_homing_subscribed = true;
+            on_homing_completed = grbl.on_homing_completed;
+            grbl.on_homing_completed = tc_on_homing_complete;
+        }
         if(driver_reset == NULL) {
             driver_reset = hal.driver_reset;
             hal.driver_reset = reset;
-        }
-    }
-}
-
-void tc_clear_tlo_reference (axes_signals_t homing_cycle)
-{
-    if(settings.tool_change.mode != ToolChange_Disabled) {
-
-        plane_t plane;
-
-#if TOOL_LENGTH_OFFSET_AXIS >= 0
-        plane.axis_linear = TOOL_LENGTH_OFFSET_AXIS;
-#else
-        gc_get_plane_data(&plane, gc_state.modal.plane_select);
-#endif
-        if(homing_cycle.mask & (settings.mode == Mode_Lathe ? (X_AXIS_BIT|Z_AXIS_BIT) : bit(plane.axis_linear))) {
-            if(sys.tlo_reference_set.mask != 0) {
-                sys.tlo_reference_set.mask = 0;  // Invalidate tool length offset reference
-                system_add_rt_report(Report_TLOReference);
-            }
         }
     }
 }

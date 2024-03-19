@@ -1,5 +1,61 @@
 ## grblHAL changelog
 
+<a name="20240318"/>Build 20240318
+
+Core:
+
+* Changed signature of `grbl.on_homing complete` event to include the cycle flags.
+
+* Added definitions for up to four additional digital aux I/O ports.
+
+* Added real time report of selected spindle in multi spindle configurations. Reported on changes only. 
+
+* Removed limits override input invert config, for safety reasons it is always active low.
+
+* Added HAL entry points for second RGB channel, renamed first from `hal.rgb` to `hal.rgb0`.
+
+* Added option to setting `$22` to force use of limit switches for homing when homing inputs are available in the driver/board combo.
+
+* Improved handling of aux I/O pins when claimed for core functions.
+
+* Added flag to `$9` for disabling laser mode capability for primary PWM spindle. Allows leaving laser mode enabled when a
+secondary PWM spindle is available and this is used to control a laser.
+
+* Added some generic setting definitions for stepper drivers, currently used by the motors plugin.
+
+Drivers:
+
+* STM32F4xx: added support for secondary PWM spindle, home signal inputs and preliminary support for the Sienci SLB board. Moved PWM spindle code to separate file.  
+Added full WebUI support for F412 and F429 MCUs, others may work but with settings missing due to limited RAM.  
+Merged some code/adopted ideas from the Sienci SLB project for bitbanged Neopixel support and `$DFU` command for entering DFU bootloader mode \(via USB only for now\).
+
+* STM32F7xx: added support for secondary PWM spindle. Moved PWM spindle code to separate file. Added tentative support for F765 MCU. Some PWM bug fixes.
+
+* ESP32: added 6pack v2 board, fixes for v1 definitions - from [PR #103](https://github.com/grblHAL/ESP32/pull/103). Added driver support for max limit switches and missing init for e-stop input.
+
+* iMXRT1062, STM32F4xx, STM32F7xx and MSP432: updated for core change related to spindle at speed handling.
+
+* RP2040: fix for [issue #83](https://github.com/grblHAL/RP2040/issues/83), missing code guards.
+
+* iMXRT1062, STM32F4xx, RP2040 and ESP32: updated for core change related to the RGB HAL.
+
+Plugins:
+
+* Motors: updated to match improved Trinamic low level driver API. Added optional settings for some tuning parameters and made default symbols overridable.
+Merged some code/adopted ideas from the Sienci SLB project for new functionality.
+Added option for routing StallGuard signals to homing inputs when supported by the driver.  
+__NOTE:__ some of these changes has only been lightly tested.
+
+* Spindle: updated for core changes, switched to shared code for PWM spindle configuration.
+
+* Keypad: limited code guard for enabling keypad plugin to 1 - 3 range to allow other implementations.
+
+* Plasma: corrected messed up settings handling.
+
+* Trinamic drivers: improved configuration handling/inheritance, adapted support for TMC2660 from the Sienci SLB project. Some generic changes to improve consistencty among drivers.
+
+---
+
 <a name="20240228"/>Build 20240228
 
 Core: 

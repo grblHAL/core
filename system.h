@@ -6,18 +6,18 @@
   Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2014-2016 Sungeun K. Jeon for Gnea Research LLC
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef _SYSTEM_H_
@@ -186,8 +186,9 @@ typedef enum {
     Report_Encoder = (1 << 14),
     Report_TLOReference = (1 << 15),
     Report_Fan = (1 << 16),
+    Report_SpindleId = (1 << 17),
     Report_CycleStart = (1 << 30),
-    Report_All = 0x8001FFFF
+    Report_All = 0x8003FFFF
 } report_tracking_t;
 
 typedef union {
@@ -210,7 +211,8 @@ typedef union {
                  encoder       :1, //!< Add encoder information (optional: to be added by driver).
                  tlo_reference :1, //!< Tool length offset reference changed.
                  fan           :1, //!< Fan on/off changed.
-                 unassigned   :13, //
+                 spindle_id    :1, //!< Spindle changed
+                 unassigned   :12, //
                  cycle_start   :1, //!< Cycle start signal triggered. __NOTE:__ do __NOT__ add to Report_All enum above!
                  all           :1; //!< Set when CMD_STATUS_REPORT_ALL is requested, may be used by user code.
     };
@@ -355,6 +357,7 @@ void system_command_help (void);
 void system_output_help (const sys_command_t *commands, uint32_t num_commands);
 void system_register_commands (sys_commands_t *commands);
 
+void system_clear_tlo_reference (axes_signals_t homing_cycle);
 void system_add_rt_report (report_tracking_t report);
 report_tracking_flags_t system_get_rt_report_flags (void);
 
