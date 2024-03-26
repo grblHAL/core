@@ -250,7 +250,7 @@ spindle_cap_t spindle_get_caps (bool active)
     spindle_cap_t caps = {0};
     uint_fast8_t idx = n_spindle;
 
-    do {
+    if(n_spindle) do {
         --idx;
         caps.value |= (active ? spindles[idx].hal.cap.value : spindles[idx].cfg->cap.value);
     } while(idx);

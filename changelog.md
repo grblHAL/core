@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+<a name="20240326"/>Build 20240326
+
+Core:
+
+* Fixes for issue #470 and #472, index overflows.
+
+Drivers:
+
+* iMXRT1062: added support for second UART stream and missing code guard for I2C strobe.
+
+* STM32F4xx and STM32F7xx: improved analog I/O, added check for multiple calls to I2C initialization.
+
+---
+
 <a name="20240318"/>Build 20240318
 
 Core:

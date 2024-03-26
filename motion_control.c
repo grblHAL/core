@@ -1020,7 +1020,7 @@ gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_f
             idx--;
             if(fabsf(target[idx] - position.values[idx]) > TOLERANCE_EQUAL)
                 bit_true(axes.mask, bit(idx));
-        } while(idx--);
+        } while(idx);
 
         grbl.on_probe_start(axes, target, pl_data);
     }
