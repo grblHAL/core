@@ -633,7 +633,7 @@ float gc_get_offset (uint_fast8_t idx);
 spindle_ptrs_t *gc_spindle_get (void);
 
 void gc_spindle_off (void);
-void gc_coolant_off (void);
+void gc_coolant (coolant_state_t state);
 
 void gc_set_tool_offset (tool_offset_mode_t mode, uint_fast8_t idx, int32_t offset);
 plane_t *gc_get_plane_data (plane_t *plane, plane_select_t select);

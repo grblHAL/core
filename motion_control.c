@@ -882,7 +882,7 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
             gc_spindle_off();
 
         if(hal.coolant.get_state().mask)
-            gc_coolant_off();
+            gc_coolant((coolant_state_t){0});
 
         // ---------------------------------------------------------------------------
         // Perform homing routine. NOTE: Special motion case. Only system reset works.

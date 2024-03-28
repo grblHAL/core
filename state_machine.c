@@ -5,22 +5,22 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2023 Terje Io
+  Copyright (c) 2018-2024 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <string.h>
@@ -41,7 +41,7 @@ static void state_await_waypoint_retract (uint_fast16_t rt_exec);
 static void state_restore (uint_fast16_t rt_exec);
 static void state_await_resumed (uint_fast16_t rt_exec);
 
-static void (* volatile stateHandler)(uint_fast16_t rt_exec) = state_idle;
+static void (*volatile stateHandler)(uint_fast16_t rt_exec) = state_idle;
 
 typedef struct {
     coolant_state_t coolant;
@@ -101,7 +101,7 @@ static void state_restore_conditions (restore_condition_t *condition)
         // Block if safety door re-opened during prior restore actions.
         if (gc_state.modal.coolant.value != hal.coolant.get_state().value) {
             // NOTE: Laser mode will honor this delay. An exhaust system is often controlled by this signal.
-            coolant_set_state(condition->coolant);
+            gc_coolant(condition->coolant);;
             delay_sec(settings.safety_door.coolant_on_delay, DelayMode_SysSuspend);
         }
 
@@ -666,7 +666,7 @@ static void state_await_resume (uint_fast16_t rt_exec)
 
                     if (restore_condition.coolant.value != hal.coolant.get_state().value) {
                         // NOTE: Laser mode will honor this delay. An exhaust system is often controlled by coolant signals.
-                        coolant_set_state(restore_condition.coolant);
+                        gc_coolant(restore_condition.coolant);
                         delay_sec(settings.safety_door.coolant_on_delay, DelayMode_SysSuspend);
                     }
 

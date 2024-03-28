@@ -3,22 +3,22 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2022 Terje Io
+  Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef _NUTS_BOLTS_H_
@@ -219,10 +219,10 @@ status_code_t read_uint (char *line, uint_fast8_t *char_counter, uint32_t *uint_
 // Read a floating point value from a string. Line points to the input buffer, char_counter
 // is the indexer pointing to the current character of the line, while float_ptr is
 // a pointer to the result variable. Returns true when it succeeds
-bool read_float(char *line, uint_fast8_t *char_counter, float *float_ptr);
+bool read_float (char *line, uint_fast8_t *char_counter, float *float_ptr);
 
 // Non-blocking delay function used for general operation and suspend features.
-void delay_sec(float seconds, delaymode_t mode);
+bool delay_sec (float seconds, delaymode_t mode);
 
 float convert_delta_vector_to_unit_vector(float *vector);
 

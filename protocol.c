@@ -584,7 +584,7 @@ bool protocol_exec_rt_system (void)
 
             // Kill spindle and coolant. TODO: Check Mach3 behaviour?
             gc_spindle_off();
-            gc_coolant_off();
+            gc_coolant((coolant_state_t){0});
 
             flush_override_buffers();
             if(!((state_get() == STATE_ALARM) && (sys.alarm == Alarm_LimitsEngaged || sys.alarm == Alarm_HomingRequired))) {
@@ -764,8 +764,7 @@ bool protocol_exec_rt_system (void)
       // NOTE: Since coolant state always performs a planner sync whenever it changes, the current
       // run state can be determined by checking the parser state.
         if(coolant_state.value != gc_state.modal.coolant.value) {
-            coolant_set_state(coolant_state); // Report flag set in coolant_set_state().
-            gc_state.modal.coolant = coolant_state;
+            gc_coolant(coolant_state); // Report flag set in gc_coolant().
             if(grbl.on_override_changed)
                 grbl.on_override_changed(OverrideChanged_CoolantState);
         }

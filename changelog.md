@@ -1,5 +1,28 @@
 ## grblHAL changelog
 
+<a name="20240328"/>Build 20240328
+
+Core:
+
+* Added missing null spindle handler for ESP32, issue #473.
+
+* Fix for unable to set $484 to 0, issue #466.
+
+* Added setting $673 for setting coolant on delay after feedhold. Available when safety door handling is not enabled.
+Fixed obscure bug carried over from legacy Grbl related to this. Issue #467.
+
+* Enabled setting $394 for spindle on delay after feedhold. Available when safety door handling is not enabled.
+
+Drivers:
+
+* RP2040: Fixed regression causing step generation for BTT SKR Pico to partly fail in some configurations. "Hardened" code.
+
+Plugins:
+
+* Motors: Fixed bug that left ganged motor drivers in wrong state after leaving the ioSender _Trinamic tuner_ tab.
+
+---
+
 <a name="20240326"/>Build 20240326
 
 Core:

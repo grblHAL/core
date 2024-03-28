@@ -337,9 +337,9 @@ void gc_spindle_off (void)
     system_add_rt_report(Report_Spindle);
 }
 
-void gc_coolant_off (void)
+void gc_coolant (coolant_state_t state)
 {
-    gc_state.modal.coolant.value = 0;
+    gc_state.modal.coolant = state;
     hal.coolant.set_state(gc_state.modal.coolant);
     system_add_rt_report(Report_Coolant);
 }

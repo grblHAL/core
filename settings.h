@@ -433,6 +433,7 @@ typedef enum {
 
     Setting_HomePinsInvertMask = 671,
     Setting_Reserved672 = 672,
+    Setting_HoldCoolantOnDelay = 673, // made available if safety door input not provided
 
     Setting_SpindleInvertMask1 = 716,
 

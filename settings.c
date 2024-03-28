@@ -625,6 +625,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_EncoderSpindle, Group_Spindle, "Encoder spindle", NULL, Format_RadioButtons, spindle_types, NULL, NULL, Setting_IsExtendedFn, set_encoder_spindle, get_int, is_setting_available },
      { Setting_FSOptions, Group_General, "File systems options", NULL, Format_Bitfield, fs_options, NULL, NULL, Setting_IsExtended, &settings.fs_options.mask, NULL, is_setting_available },
      { Setting_HomePinsInvertMask, Group_Limits, "Invert home pins", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.home_invert.mask, NULL, is_setting_available },
+     { Setting_HoldCoolantOnDelay, Group_Coolant, "Coolant on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.coolant_on_delay, NULL, is_setting_available }
 };
 
 #ifndef NO_SETTINGS_DESCRIPTIONS
@@ -784,11 +785,12 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_DisableG92Persistence, "Disables save/restore of G92 offset to non-volatile storage (NVS)." },
 #endif
 #ifndef NO_SAFETY_DOOR_SUPPORT
-    { Setting_DoorSpindleOnDelay, "Delay to allow spindle to spin up after safety door is opened." },
-    { Setting_DoorCoolantOnDelay, "Delay to allow coolant to restart after safety door is opened." },
+    { Setting_DoorSpindleOnDelay, "Delay to allow spindle to spin up after safety door is opened or feed hold is canceled.." },
+    { Setting_DoorCoolantOnDelay, "Delay to allow coolant to restart after safety door is opened or feed hold is canceled.." },
 #else
     { Setting_DoorSpindleOnDelay, "Delay to allow spindle to spin up when spindle at speed tolerance is > 0." },
 #endif
+    { Setting_SpindleOnDelay, "Delay to allow spindle to restart after feed hold is canceled." },
     { Setting_SpindleType, "Spindle selected on startup." },
     { Setting_PlannerBlocks, "Number of blocks in the planner buffer." },
     { Setting_AutoReportInterval, "Interval the real time report will be sent, set to 0 to disable." },
@@ -803,6 +805,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_EncoderSpindle, "Specifies which spindle has the encoder attached." },
     { Setting_FSOptions, "Auto mount SD card on startup." },
     { Setting_HomePinsInvertMask, "Inverts the axis home input signals." },
+    { Setting_HoldCoolantOnDelay, "Delay to allow coolant to restart after feed hold is canceled." }
 };
 
 #endif
@@ -1102,7 +1105,7 @@ static status_code_t set_estop_unlock (setting_id_t id, uint_fast16_t int_value)
     if(!hal.signals_cap.e_stop)
         return Status_SettingDisabled;
 
-    settings.flags.no_unlock_after_estop = int_value != 0;
+    settings.flags.no_unlock_after_estop = int_value == 0;
 
     return Status_OK;
 }
@@ -2010,7 +2013,7 @@ static bool is_setting_available (const setting_detail_t *setting)
             break;
 
         case Setting_SpindleOnDelay:
-            available = !hal.signals_cap.safety_door_ajar && spindle_get_caps(true).at_speed;
+            available = !hal.signals_cap.safety_door_ajar && !spindle_get_caps(true).at_speed;
             break;
 
         case Setting_AutoReportInterval:
@@ -2035,6 +2038,10 @@ static bool is_setting_available (const setting_detail_t *setting)
 
         case Setting_HomePinsInvertMask:
             available = hal.homing.get_state != NULL && hal.home_cap.a.mask != 0;
+            break;
+
+        case Setting_HoldCoolantOnDelay:
+            available = !hal.signals_cap.safety_door_ajar;
             break;
 
         default:
