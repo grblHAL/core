@@ -2012,9 +2012,11 @@ static bool is_setting_available (const setting_detail_t *setting)
             available = spindle_get_caps(true).at_speed || hal.driver_cap.spindle_encoder;
             break;
 
+#ifdef DRIVER_SPINDLE_ENABLE
         case Setting_SpindleOnDelay:
             available = !hal.signals_cap.safety_door_ajar && !spindle_get_caps(true).at_speed;
             break;
+#endif
 
         case Setting_AutoReportInterval:
             available = hal.get_elapsed_ticks != NULL;
@@ -2040,9 +2042,11 @@ static bool is_setting_available (const setting_detail_t *setting)
             available = hal.homing.get_state != NULL && hal.home_cap.a.mask != 0;
             break;
 
+#if defined(COOLANT_FLOOD_PIN) || defined(COOLANT_MIST_PIN)
         case Setting_HoldCoolantOnDelay:
             available = !hal.signals_cap.safety_door_ajar;
             break;
+#endif
 
         default:
             break;
