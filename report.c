@@ -834,7 +834,7 @@ void report_build_info (char *line, bool extended)
 
     *append++ = 'N';
 
-    if(hal.driver_cap.mist_control)
+    if(hal.coolant_cap.mist)
         *append++ = 'M';
 
 #if COREXY

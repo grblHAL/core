@@ -718,7 +718,7 @@ static void ioport_settings_load (void)
     } while(port);
 
     if(digital.out.ports && (port = digital.out.ports->n_ports)) do {
-        if((xbar = hal.port.get_pin_info(Port_Digital, Port_Output, ioports_map_reverse(digital.in.ports, --port)))) {
+        if((xbar = hal.port.get_pin_info(Port_Digital, Port_Output, ioports_map_reverse(digital.out.ports, --port)))) {
             if(xbar->config && !(xbar->mode.pwm || xbar->mode.servo_pwm)) {
                 out_config.inverted = !!(settings.ioport.invert_out.mask & (1 << xbar->id));
                 out_config.open_drain = !!(settings.ioport.od_enable_out.mask & (1 << xbar->id));

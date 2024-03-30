@@ -301,7 +301,7 @@ uint8_t spindle_get_count (void)
     if(n_spindle == 0)
         spindle_select(0);
 
-    return n_spindle;
+    return n_spindle == 1 && spindles[0].cfg->type == SpindleType_Null ? 0 : n_spindle;
 }
 
 static spindle_num_t spindle_get_num (spindle_id_t spindle_id)

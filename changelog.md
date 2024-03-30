@@ -1,25 +1,51 @@
 ## grblHAL changelog
 
+<a name="202403230"/>Build 20240330
+
+Core:
+
+* Added capability flags to HAL for all coolant outputs.
+
+* Hide related settings when no spindle and/or coolant outputs are available. From [PR #479](https://github.com/grblHAL/core/pull/479).
+
+* Fixed typo related to Modbus direction signal. Ref. issue [#478](https://github.com/grblHAL/core/issues/478).
+
+* Fixed typo in handling of aux output port settings. Ref issue [#476](https://github.com/grblHAL/core/issues/476).
+
+Drivers:
+
+* All: updated for coolant capability flags core change.
+
+Plugins:
+
+* Spindle: added packet length to Modbus RX callback. Ref. [issue #26](https://github.com/grblHAL/Plugins_spindle/issues/26).
+
+* Macros: fixed typo causing compilation to fail.
+
+* Trinamic: switched to enum for default driver mode to avoid warnings from TI compiler.
+
+---
+
 <a name="20240328"/>Build 20240328
 
 Core:
 
-* Added missing null spindle handler for ESP32, issue #473.
+* Added missing null spindle handler for ESP32, issue [#473](https://github.com/grblHAL/core/issues/473).
 
-* Fix for unable to set $484 to 0, issue #466.
+* Fix for unable to set $484 to 0, issue [#466](https://github.com/grblHAL/core/issues/466).
 
 * Added setting $673 for setting coolant on delay after feedhold. Available when safety door handling is not enabled.
-Fixed obscure bug carried over from legacy Grbl related to this. Issue #467.
+Fixed obscure bug carried over from legacy Grbl related to this. Issue [#467](https://github.com/grblHAL/core/issues/467).
 
 * Enabled setting $394 for spindle on delay after feedhold. Available when safety door handling is not enabled.
 
 Drivers:
 
-* RP2040: Fixed regression causing step generation for BTT SKR Pico to partly fail in some configurations. "Hardened" code.
+* RP2040: fixed regression causing step generation for BTT SKR Pico to partly fail in some configurations. "Hardened" code.
 
 Plugins:
 
-* Motors: Fixed bug that left ganged motor drivers in wrong state after leaving the ioSender _Trinamic tuner_ tab.
+* Motors: fixed bug that left ganged motor drivers in wrong state after leaving the ioSender _Trinamic tuner_ tab.
 
 ---
 
@@ -27,7 +53,7 @@ Plugins:
 
 Core:
 
-* Fixes for issue #470 and #472, index overflows.
+* Fixes for issue [#470](https://github.com/grblHAL/core/issues/470) and [#472](https://github.com/grblHAL/core/issues/472), index overflows.
 
 Drivers:
 

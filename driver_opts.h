@@ -337,8 +337,8 @@
 #define MODBUS_TCP_ENABLED     0b100
 
 #if MODBUS_ENABLE == 2
-#undef MOBUS_ENABLE
-#define MOBUS_ENABLE 0b011
+#undef MODBUS_ENABLE
+#define MODBUS_ENABLE 0b011
 #endif
 
 #ifndef MODBUS_ENABLE

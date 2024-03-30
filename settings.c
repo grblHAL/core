@@ -1994,6 +1994,7 @@ static bool is_setting_available (const setting_detail_t *setting)
             break;
 
 #ifndef NO_SAFETY_DOOR_SUPPORT
+
         case Setting_ParkingEnable:
         case Setting_ParkingAxis:
         case Setting_ParkingPulloutIncrement:
@@ -2002,9 +2003,15 @@ static bool is_setting_available (const setting_detail_t *setting)
         case Setting_ParkingFastRate:
         case Setting_RestoreOverrides:
         case Setting_DoorOptions:
-        case Setting_DoorSpindleOnDelay:
-        case Setting_DoorCoolantOnDelay:
             available = hal.signals_cap.safety_door_ajar;
+            break;
+
+        case Setting_DoorSpindleOnDelay:
+            available = hal.signals_cap.safety_door_ajar && spindle_get_count() && !spindle_get_caps(true).at_speed;
+            break;
+
+        case Setting_DoorCoolantOnDelay:
+            available = hal.signals_cap.safety_door_ajar && hal.coolant_cap.mask;
             break;
 #endif
 
@@ -2013,7 +2020,7 @@ static bool is_setting_available (const setting_detail_t *setting)
             break;
 
         case Setting_SpindleOnDelay:
-            available = !hal.signals_cap.safety_door_ajar && !spindle_get_caps(true).at_speed;
+            available = !hal.signals_cap.safety_door_ajar && spindle_get_count() && !spindle_get_caps(true).at_speed;
             break;
 
         case Setting_AutoReportInterval:
@@ -2041,7 +2048,7 @@ static bool is_setting_available (const setting_detail_t *setting)
             break;
 
         case Setting_HoldCoolantOnDelay:
-            available = !hal.signals_cap.safety_door_ajar;
+            available = !hal.signals_cap.safety_door_ajar && hal.coolant_cap.mask;
             break;
 
         default:
@@ -2970,8 +2977,7 @@ void settings_init (void)
     if(hal.stepper.get_ganged)
         setting_remove_elements(Setting_GangedDirInvertMask, hal.stepper.get_ganged(false).mask);
 
-    if(!hal.driver_cap.mist_control)
-        setting_remove_element(Setting_CoolantInvertMask, 1);
+    setting_remove_element(Setting_CoolantInvertMask, hal.coolant_cap.mask);
 
 #if COMPATIBILITY_LEVEL <= 1
     if(hal.homing.get_state == NULL) {

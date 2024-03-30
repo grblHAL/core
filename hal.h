@@ -5,18 +5,18 @@
 
   Copyright (c) 2016-2024 Terje Io
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 /*! \file
@@ -47,8 +47,7 @@
 typedef union {
     uint32_t value; //!< All bitmap flags.
     struct {
-        uint32_t mist_control              :1, //!< Mist control (M7) is supported.
-                 software_debounce         :1, //!< Software debounce of input switches signals is supported.
+        uint32_t software_debounce         :1, //!< Software debounce of input switches signals is supported.
                  step_pulse_delay          :1, //!< Stepper step pulse delay is supported.
                  limits_pull_up            :1, //!< Pullup resistors for limit inputs are are supported.
                  control_pull_up           :1, //!< Pullup resistors for control inputs are supported.
@@ -69,7 +68,7 @@ typedef union {
                  odometers                 :1,
                  pwm_spindle               :1,
                  probe_latch               :1,
-                 unassigned                :9;
+                 unassigned                :10;
     };
 } driver_cap_t;
 
@@ -636,6 +635,7 @@ typedef struct {
     control_signals_t signals_cap;          //!< Control input signals supported by the driver.
     limit_signals_t limits_cap;             //!< Limit input signals supported by the driver.
     home_signals_t home_cap;                //!< Home input signals supported by the driver.
+    coolant_state_t coolant_cap;            //!< Coolant outputs supported by the driver.
 
 } grbl_hal_t;
 

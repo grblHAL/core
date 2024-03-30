@@ -742,15 +742,13 @@ bool protocol_exec_rt_system (void)
             switch(rt_exec) {
 
                 case CMD_OVERRIDE_COOLANT_MIST_TOGGLE:
-                    if (hal.driver_cap.mist_control && ((state_get() == STATE_IDLE) || (state_get() & (STATE_CYCLE | STATE_HOLD)))) {
+                    if(hal.coolant_cap.mist && ((state_get() == STATE_IDLE) || (state_get() & (STATE_CYCLE | STATE_HOLD))))
                         coolant_state.mist = !coolant_state.mist;
-                    }
                     break;
 
                 case CMD_OVERRIDE_COOLANT_FLOOD_TOGGLE:
-                    if ((state_get() == STATE_IDLE) || (state_get() & (STATE_CYCLE | STATE_HOLD))) {
+                    if(hal.coolant_cap.flood && ((state_get() == STATE_IDLE) || (state_get() & (STATE_CYCLE | STATE_HOLD))))
                         coolant_state.flood = !coolant_state.flood;
-                    }
                     break;
 
                 default:

@@ -1209,12 +1209,13 @@ status_code_t gc_execute_block (char *block)
                         switch(int_value) {
 
                             case 7:
-                                if(!hal.driver_cap.mist_control)
+                                if(!hal.coolant_cap.mist)
                                     FAIL(Status_GcodeUnsupportedCommand);
                                 gc_block.modal.coolant.mist = On;
                                 break;
 
                             case 8:
+                                // TODO: check driver cap?
                                 gc_block.modal.coolant.flood = On;
                                 break;
 

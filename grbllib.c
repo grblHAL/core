@@ -191,6 +191,7 @@ int grbl_enter (void)
     hal.irq_disable = dummy_handler;
     hal.irq_claim = dummy_irq_claim;
     hal.nvs.size = GRBL_NVS_SIZE;
+    hal.coolant_cap.flood = On;
     hal.limits.interrupt_callback = limit_interrupt_handler;
     hal.control.interrupt_callback = control_interrupt_handler;
     hal.stepper.interrupt_callback = stepper_driver_interrupt_handler;
