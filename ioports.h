@@ -126,9 +126,12 @@ typedef struct {
 uint8_t ioports_available (io_port_type_t type, io_port_direction_t dir);
 bool ioport_claim (io_port_type_t type, io_port_direction_t dir, uint8_t *port, const char *description);
 bool ioport_can_claim_explicit (void);
+uint8_t ioport_find_free (io_port_type_t type, io_port_direction_t dir, const char *description);
 bool ioports_enumerate (io_port_type_t type, io_port_direction_t dir, pin_cap_t filter, ioports_enumerate_callback_ptr callback, void *data);
 void ioport_assign_function (aux_ctrl_t *aux_ctrl, pin_function_t *function);
+void ioport_assign_out_function (aux_ctrl_out_t *aux_ctrl, pin_function_t *function);
 bool ioport_analog_out_config (uint8_t port, pwm_config_t *config);
+bool ioport_digital_pwm_config (uint8_t port, pwm_config_t *config);
 bool ioport_digital_in_config (uint8_t port, gpio_in_config_t *config);
 bool ioport_enable_irq (uint8_t port, pin_irq_mode_t irq_mode, ioport_interrupt_callback_ptr handler);
 bool ioport_digital_out_config (uint8_t port, gpio_out_config_t *config);

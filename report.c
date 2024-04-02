@@ -698,7 +698,7 @@ void report_gcode_modes (void)
     hal.stream.write(gc_state.modal.distance_incremental ? " G91" : " G90");
 
     hal.stream.write(" G");
-    hal.stream.write(uitoa((uint32_t)(94 - gc_state.modal.feed_mode)));
+    hal.stream.write(uitoa((uint32_t)(93 + (gc_state.modal.feed_mode == FeedMode_UnitsPerRev ? 2 : gc_state.modal.feed_mode ^ 1))));
 
     if(settings.mode == Mode_Lathe && gc_spindle_get()->cap.variable)
         hal.stream.write(gc_state.modal.spindle.rpm_mode == SpindleSpeedMode_RPM ? " G97" : " G96");
@@ -825,15 +825,16 @@ void report_build_info (char *line, bool extended)
     // Generate compile-time build option list
 
     char *append = &buf[5];
+    spindle_ptrs_t *spindle = spindle_get(0);
 
     strcpy(buf, "[OPT:");
 
-    if(spindle_get_caps(false).variable)
+    if(spindle && spindle->cap.variable)
         *append++ = 'V';
 
     *append++ = 'N';
 
-    if(hal.driver_cap.mist_control)
+    if(hal.coolant_cap.mist)
         *append++ = 'M';
 
 #if COREXY
@@ -854,6 +855,9 @@ void report_build_info (char *line, bool extended)
 
     if(settings.probe.allow_feed_override)
         *append++ = 'A';
+
+    if(spindle && !spindle->cap.direction) // NOTE: Shown when disabled.
+        *append++ = 'D';
 
     if(settings.spindle.flags.enable_rpm_controlled)
         *append++ = '0';
@@ -1226,6 +1230,9 @@ void report_realtime_status (void)
         }
     }
 
+#elif N_SPINDLE > 1
+    if(report.spindle_id)
+        hal.stream.write_all(appendbuf(2, "|S:", uitoa((uint32_t)spindle_0->id)));
 #endif
 
     if(settings.status_report.pin_state) {
@@ -2341,14 +2348,16 @@ status_code_t report_pin_states (sys_state_t state, char *args)
         for(idx = 0; idx < ports; idx++) {
             if((port = hal.port.get_pin_info(Port_Digital, Port_Output, idx))) {
                 hal.stream.write("[PINSTATE:DOUT|");
-                hal.stream.write(port->description);
+                hal.stream.write(port->description ? port->description : xbar_fn_to_pinname(port->function));
                 hal.stream.write("|");
                 hal.stream.write(uitoa(port->id));
                 hal.stream.write("|");
                 hal.stream.write(port->mode.inverted ? "I" : "N");
+//                hal.stream.write(port->mode.pwm ? "P" : (port->mode.servo_pwm ? "S" : "N"));
 //                hal.stream.write(port->mode.open_drain ? "O" : "-");
                 hal.stream.write("|");
                 hal.stream.write(port->cap.invert ? "I" : "-");
+//                hal.stream.write(port->cap.pwm ? "P" : (port->cap.servo_pwm ? "S" : "N"));
 //                hal.stream.write(port->cap.open_drain ? "O" : "-");
                 hal.stream.write("|");
                 hal.stream.write(port->get_value ? uitoa((uint32_t)port->get_value(port)) : "?");
@@ -2444,6 +2453,8 @@ static void report_spindle (spindle_info_t *spindle, void *data)
             *caps++ = 'D';
         if(spindle->hal->cap.laser)
             *caps++ = 'L';
+        if(spindle->hal->cap.laser && spindle->hal->pulse_on)
+            *caps++ = 'A';
         if(spindle->hal->cap.pid)
             *caps++ = 'P';
         if(spindle->hal->cap.pwm_invert)

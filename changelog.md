@@ -1,5 +1,164 @@
 ## grblHAL changelog
 
+<a name="202403230"/>Build 20240330
+
+Core:
+
+* Added capability flags to HAL for all coolant outputs.
+
+* Hide related settings when no spindle and/or coolant outputs are available. From [PR #479](https://github.com/grblHAL/core/pull/479).
+
+* Fixed typo related to Modbus direction signal. Ref. issue [#478](https://github.com/grblHAL/core/issues/478).
+
+* Fixed typo in handling of aux output port settings. Ref issue [#476](https://github.com/grblHAL/core/issues/476).
+
+Drivers:
+
+* All: updated for coolant capability flags core change.
+
+Plugins:
+
+* Spindle: added packet length to Modbus RX callback. Ref. [issue #26](https://github.com/grblHAL/Plugins_spindle/issues/26).
+
+* Macros: fixed typo causing compilation to fail.
+
+* Trinamic: switched to enum for default driver mode to avoid warnings from TI compiler.
+
+---
+
+<a name="20240328"/>Build 20240328
+
+Core:
+
+* Added missing null spindle handler for ESP32, issue [#473](https://github.com/grblHAL/core/issues/473).
+
+* Fix for unable to set $484 to 0, issue [#466](https://github.com/grblHAL/core/issues/466).
+
+* Added setting $673 for setting coolant on delay after feedhold. Available when safety door handling is not enabled.
+Fixed obscure bug carried over from legacy Grbl related to this. Issue [#467](https://github.com/grblHAL/core/issues/467).
+
+* Enabled setting $394 for spindle on delay after feedhold. Available when safety door handling is not enabled.
+
+Drivers:
+
+* RP2040: fixed regression causing step generation for BTT SKR Pico to partly fail in some configurations. "Hardened" code.
+
+Plugins:
+
+* Motors: fixed bug that left ganged motor drivers in wrong state after leaving the ioSender _Trinamic tuner_ tab.
+
+---
+
+<a name="20240326"/>Build 20240326
+
+Core:
+
+* Fixes for issue [#470](https://github.com/grblHAL/core/issues/470) and [#472](https://github.com/grblHAL/core/issues/472), index overflows.
+
+Drivers:
+
+* iMXRT1062: added support for second UART stream and missing code guard for I2C strobe.
+
+* STM32F4xx and STM32F7xx: improved analog I/O, added check for multiple calls to I2C initialization.
+
+---
+
+<a name="20240318"/>Build 20240318
+
+Core:
+
+* Changed signature of `grbl.on_homing complete` event to include the cycle flags.
+
+* Added definitions for up to four additional digital aux I/O ports.
+
+* Added real time report of selected spindle in multi spindle configurations. Reported on changes only. 
+
+* Removed limits override input invert config, for safety reasons it is always active low.
+
+* Added HAL entry points for second RGB channel, renamed first from `hal.rgb` to `hal.rgb0`.
+
+* Added option to setting `$22` to force use of limit switches for homing when homing inputs are available in the driver/board combo.
+
+* Improved handling of aux I/O pins when claimed for core functions.
+
+* Added flag to `$9` for disabling laser mode capability for primary PWM spindle. Allows leaving laser mode enabled when a
+secondary PWM spindle is available and this is used to control a laser.
+
+* Added some generic setting definitions for stepper drivers, currently used by the motors plugin.
+
+Drivers:
+
+* STM32F4xx: added support for secondary PWM spindle, home signal inputs and preliminary support for the Sienci SLB board. Moved PWM spindle code to separate file.  
+Added full WebUI support for F412 and F429 MCUs, others may work but with settings missing due to limited RAM.  
+Merged some code/adopted ideas from the Sienci SLB project for bitbanged Neopixel support and `$DFU` command for entering DFU bootloader mode \(via USB only for now\).
+
+* STM32F7xx: added support for secondary PWM spindle. Moved PWM spindle code to separate file. Added tentative support for F765 MCU. Some PWM bug fixes.
+
+* ESP32: added 6pack v2 board, fixes for v1 definitions - from [PR #103](https://github.com/grblHAL/ESP32/pull/103). Added driver support for max limit switches and missing init for e-stop input.
+
+* iMXRT1062, STM32F4xx, STM32F7xx and MSP432: updated for core change related to spindle at speed handling.
+
+* RP2040: fix for [issue #83](https://github.com/grblHAL/RP2040/issues/83), missing code guards.
+
+* iMXRT1062, STM32F4xx, RP2040 and ESP32: updated for core change related to the RGB HAL.
+
+Plugins:
+
+* Motors: updated to match improved Trinamic low level driver API. Added optional settings for some tuning parameters and made default symbols overridable.
+Merged some code/adopted ideas from the Sienci SLB project for new functionality.
+Added option for routing StallGuard signals to homing inputs when supported by the driver.  
+__NOTE:__ some of these changes has only been lightly tested.
+
+* Spindle: updated for core changes, switched to shared code for PWM spindle configuration.
+
+* Keypad: limited code guard for enabling keypad plugin to 1 - 3 range to allow other implementations.
+
+* Plasma: corrected messed up settings handling.
+
+* Trinamic drivers: improved configuration handling/inheritance, adapted support for TMC2660 from the Sienci SLB project. Some generic changes to improve consistencty among drivers.
+
+---
+
+<a name="20240228"/>Build 20240228
+
+Core: 
+
+* Tentative fix for lathe CSS/feed per rev modes \(G96/G95\), ref discussion [#450](https://github.com/grblHAL/core/discussions/450).
+
+* Fixed incorrect reporting of feed rate modes in `$G` response.
+
+* Added some ioPorts call wrappers, full support for reconfiguring output auxillary pins for PWM output.
+
+Drivers:
+
+* STM32F1xx, ST32F4xx, STM32F7xx: fix for incorrect status returned from ioPort configuration call.
+
+* STM32F7xx: added full support for reconfiguring capable auxillary output pins for PWM.
+
+Plugins:
+
+* WebUI: added update that did not make it in the previous one...
+
+---
+
+<a name="20240226"/>Build 20240226
+
+Core: 
+
+* Fixed typo preventing lathe mode UVW builds.
+
+* Added initial support for using auxillary output pin pool for spindle and coolant pins.
+
+Drivers:
+
+* STM32F7xx: updated to use auxillary output pin pool for spindle pins. Enhanced and simplified PWM support, added generic Uno and Protoneer v3 boards to Web Builder.
+
+Plugins:
+
+* WebUI: "hardened" code a bit more in attempt to make it usable with STM32F4xx driver which has limited RAM that blocks reporting settings data.
+
+---
+
 <a name="20240222"/>Build 20240222
 
 __NOTE:__ This build has moved the probe input to the ioPorts pool of inputs and will be allocated from it when configured.  

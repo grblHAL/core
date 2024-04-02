@@ -1,23 +1,23 @@
 /*
-  grbl.h - main Grbl include file for compile time configuration
+  grbl.h - main grblHAL include file for compile time configuration
 
   Part of grblHAL
 
   Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2015-2016 Sungeun K. Jeon for Gnea Research LLC
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef _GRBL_H_
@@ -36,13 +36,13 @@
 
 #include "config.h"
 
-// Grbl versioning system
+// grblHAL versioning system
 #if COMPATIBILITY_LEVEL == 0
 #define GRBL_VERSION "1.1f"
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_BUILD 20240222
+#define GRBL_BUILD 20240330
 
 #define GRBL_URL "https://github.com/grblHAL"
 
@@ -134,13 +134,13 @@
 // System motion line numbers must be zero.
 #define JOG_LINE_NUMBER 0
 
-// Number of blocks Grbl executes upon startup. These blocks are stored in non-volatile storage, where the size
+// Number of blocks grblHAL executes upon startup. These blocks are stored in non-volatile storage, where the size
 // and addresses are defined in settings.h. With the current settings, up to 2 startup blocks may
 // be stored and executed in order. These startup blocks would typically be used to set the g-code
 // parser state depending on user preferences.
 #define N_STARTUP_LINE 2 // Integer (1-2)
 
-// Number of decimal places (scale) output by Grbl for certain value types. These settings
+// Number of decimal places (scale) output by grblHAL for certain value types. These settings
 // are determined by realistic and commonly observed values in CNC machines. For example, position
 // values cannot be less than 0.001mm or 0.0001in, because machines can not be physically more
 // precise this. So, there is likely no need to change these, but you can if you need to here.

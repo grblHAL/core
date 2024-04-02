@@ -410,6 +410,33 @@ typedef enum {
 
     Setting_FSOptions = 650,
 
+    Setting_Stepper1  = 651,
+    Setting_Stepper2  = 652,
+    Setting_Stepper3  = 653,
+    Setting_Stepper4  = 654,
+    Setting_Stepper5  = 655,
+    Setting_Stepper6  = 656,
+    Setting_Stepper7  = 657,
+    Setting_Stepper8  = 658,
+    Setting_Stepper9  = 659,
+    Setting_Stepper10 = 660,
+    Setting_Stepper11 = 661,
+    Setting_Stepper12 = 662,
+    Setting_Stepper13 = 663,
+    Setting_Stepper14 = 664,
+    Setting_Stepper15 = 665,
+    Setting_Stepper16 = 666,
+    Setting_Stepper17 = 667,
+    Setting_Stepper18 = 668,
+    Setting_Stepper19 = 669,
+    Setting_Stepper20 = 670,
+
+    Setting_HomePinsInvertMask = 671,
+    Setting_Reserved672 = 672,
+    Setting_HoldCoolantOnDelay = 673, // made available if safety door input not provided
+
+    Setting_SpindleInvertMask1 = 716,
+
     Setting_RpmMax1 = 730,
     Setting_RpmMin1 = 731,
     Setting_Mode1 = 732,
@@ -580,9 +607,27 @@ typedef union {
                 manual               :1,
                 override_locks       :1,
                 keep_on_reset        :1,
-                unassigned           :1;
+                use_limit_switches   :1;
     };
 } homing_settings_flags_t;
+
+// Used internally in settings.c only.
+// TODO: replace homing_settings_flags_t with this on a settings struct revision?
+typedef union {
+    uint16_t value;
+    struct {
+        uint16_t enabled              :1,
+                 single_axis_commands :1,
+                 init_lock            :1,
+                 force_set_origin     :1,
+                 two_switches         :1, // is a limits setting
+                 manual               :1,
+                 override_locks       :1,
+                 keep_on_reset        :1,
+                 use_limit_switches   :1,
+                 unused               :7;
+    };
+} homing_flags_t;
 
 typedef struct {
     float fail_length_percent; // DEFAULT_DUAL_AXIS_HOMING_FAIL_AXIS_LENGTH_PERCENT
@@ -726,7 +771,7 @@ typedef struct {
     control_signals_t control_invert;
     control_signals_t control_disable_pullup;
     coolant_state_t coolant_invert;
-    uint8_t hole_0;
+    axes_signals_t home_invert;
     uint16_t hole_1;
     spindle_settings_t spindle;
     stepper_settings_t steppers;

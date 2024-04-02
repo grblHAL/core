@@ -8,18 +8,18 @@
   Copyright (c) 2009-2011 Simen Svale Skogsrud
   Copyright (c) 2011 Jens Geisler
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <math.h>
@@ -310,14 +310,16 @@ bool plan_check_full_buffer (void)
 // NOTE: All system motion commands, such as homing/parking, are not subject to overrides.
 float plan_compute_profile_nominal_speed (plan_block_t *block)
 {
-    float nominal_speed = block->spindle.state.synchronized ? block->programmed_rate * block->spindle.hal->get_data(SpindleData_RPM)->rpm : block->programmed_rate;
+    float nominal_speed = block->condition.units_per_rev || block->spindle.state.synchronized
+                           ? block->programmed_rate * block->spindle.hal->get_data(SpindleData_RPM)->rpm
+                           : block->programmed_rate;
 
-    if (block->condition.rapid_motion)
+    if(block->condition.rapid_motion)
         nominal_speed *= (0.01f * (float)sys.override.rapid_rate);
     else {
-        if (!block->condition.no_feed_override)
+        if(!block->condition.no_feed_override)
             nominal_speed *= (0.01f * (float)sys.override.feed_rate);
-        if (nominal_speed > block->rapid_rate)
+        if(nominal_speed > block->rapid_rate)
             nominal_speed = block->rapid_rate;
     }
 

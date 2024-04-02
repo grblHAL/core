@@ -5,18 +5,18 @@
 
   Copyright (c) 2020-2024 Terje Io
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 /*! \file
@@ -103,7 +103,10 @@ typedef void (*on_unknown_feedback_message_ptr)(stream_write_ptr stream_write);
 typedef void (*on_stream_changed_ptr)(stream_type_t type);
 typedef bool (*on_laser_ppi_enable_ptr)(uint_fast16_t ppi, uint_fast16_t pulse_length);
 typedef void (*on_homing_rate_set_ptr)(axes_signals_t axes, float rate, homing_mode_t mode);
-typedef void (*on_homing_completed_ptr)(bool success);
+
+// NOTE: cycle contains the axis flags of the executed homing cycle, success will be true when all the configured cycles are completed.
+typedef void (*on_homing_completed_ptr)(axes_signals_t cycle, bool success);
+
 typedef bool (*on_probe_fixture_ptr)(tool_data_t *tool, bool at_g59_3, bool on);
 typedef bool (*on_probe_start_ptr)(axes_signals_t axes, float *target, plan_line_data_t *pl_data);
 typedef void (*on_probe_completed_ptr)(void);

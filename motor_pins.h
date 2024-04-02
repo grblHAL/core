@@ -5,20 +5,20 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2023 Terje Io
+  Copyright (c) 2021-2024 Terje Io
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #pragma once
@@ -66,6 +66,15 @@
 #define X2_DIRECTION_PORT   M3_DIRECTION_PORT
 #define X2_DIRECTION_PIN    M3_DIRECTION_PIN
 #define X2_DIRECTION_BIT    (1<<M3_DIRECTION_PIN)
+#ifdef M3_HOME_PIN
+ #if X_AUTO_SQUARE
+  #define X2_HOME_PORT      M3_HOME_PORT
+  #define X2_HOME_PIN       M3_HOME_PIN
+  #define X2_HOME_BIT       (1<<M3_HOME_PIN)
+ #endif
+#elif X_AUTO_SQUARE && defined(X_HOME_PIN)
+  #error "Auto squared X-axis requires second home pin input"
+#endif
 #ifdef M3_LIMIT_PIN
  #if X_AUTO_SQUARE
   #define X2_LIMIT_PORT     M3_LIMIT_PORT
@@ -101,6 +110,15 @@
 #define X2_DIRECTION_PORT   M4_DIRECTION_PORT
 #define X2_DIRECTION_PIN    M4_DIRECTION_PIN
 #define X2_DIRECTION_BIT    (1<<M4_DIRECTION_PIN)
+#ifdef M4_HOME_PIN
+ #if X_AUTO_SQUARE
+  #define X2_HOME_PORT      M4_HOME_PORT
+  #define X2_HOME_PIN       M4_HOME_PIN
+  #define X2_HOME_BIT       (1<<M4_HOME_PIN)
+ #endif
+#elif X_AUTO_SQUARE && defined(X_HOME_PIN)
+  #error "Auto squared X-axis requires second home pin input"
+#endif
 #ifdef M4_LIMIT_PIN
  #if X_AUTO_SQUARE
   #define X2_LIMIT_PORT     M4_LIMIT_PORT
@@ -136,6 +154,15 @@
 #define X2_DIRECTION_PORT   M5_DIRECTION_PORT
 #define X2_DIRECTION_PIN    M5_DIRECTION_PIN
 #define X2_DIRECTION_BIT    (1<<M5_DIRECTION_PIN)
+#ifdef M5_HOME_PIN
+ #if X_AUTO_SQUARE
+  #define X2_HOME_PORT      M5_HOME_PORT
+  #define X2_HOME_PIN       M5_HOME_PIN
+  #define X2_HOME_BIT       (1<<M5_HOME_PIN)
+ #endif
+#elif X_AUTO_SQUARE && defined(X_HOME_PIN)
+  #error "Auto squared X-axis requires second home pin input"
+#endif
 #ifdef M5_LIMIT_PIN
  #if X_AUTO_SQUARE
   #define X2_LIMIT_PORT     M5_LIMIT_PORT
@@ -171,6 +198,15 @@
 #define X2_DIRECTION_PORT   M6_DIRECTION_PORT
 #define X2_DIRECTION_PIN    M6_DIRECTION_PIN
 #define X2_DIRECTION_BIT    (1<<M6_DIRECTION_PIN)
+#ifdef M6_HOME_PIN
+ #if X_AUTO_SQUARE
+  #define X2_HOME_PORT      M6_HOME_PORT
+  #define X2_HOME_PIN       M6_HOME_PIN
+  #define X2_HOME_BIT       (1<<M6_HOME_PIN)
+ #endif
+#elif X_AUTO_SQUARE && defined(X_HOME_PIN)
+  #error "Auto squared X-axis requires second home pin input"
+#endif
 #ifdef M6_LIMIT_PIN
  #if X_AUTO_SQUARE
   #define X2_LIMIT_PORT     M6_LIMIT_PORT
@@ -206,6 +242,15 @@
 #define X2_DIRECTION_PORT   M7_DIRECTION_PORT
 #define X2_DIRECTION_PIN    M7_DIRECTION_PIN
 #define X2_DIRECTION_BIT    (1<<M7_DIRECTION_PIN)
+#ifdef M7_HOME_PIN
+ #if X_AUTO_SQUARE
+  #define X2_HOME_PORT      M7_HOME_PORT
+  #define X2_HOME_PIN       M7_HOME_PIN
+  #define X2_HOME_BIT       (1<<M7_HOME_PIN)
+ #endif
+#elif X_AUTO_SQUARE && defined(X_HOME_PIN)
+  #error "Auto squared X-axis requires second home pin input"
+#endif
 #ifdef M7_LIMIT_PIN
  #if X_AUTO_SQUARE
   #define X2_LIMIT_PORT     M7_LIMIT_PORT
@@ -243,6 +288,15 @@
 #define Y2_DIRECTION_PORT   M3_DIRECTION_PORT
 #define Y2_DIRECTION_PIN    M3_DIRECTION_PIN
 #define Y2_DIRECTION_BIT    (1<<M3_DIRECTION_PIN)
+#ifdef M3_HOME_PIN
+ #if Y_AUTO_SQUARE
+  #define Y2_HOME_PORT      M3_HOME_PORT
+  #define Y2_HOME_PIN       M3_HOME_PIN
+  #define Y2_HOME_BIT       (1<<M3_HOME_PIN)
+ #endif
+#elif Y_AUTO_SQUARE && defined(Y_HOME_PIN)
+  #error "Auto squared Y-axis requires second home pin input"
+#endif
 #ifdef M3_LIMIT_PIN
  #if Y_AUTO_SQUARE
   #define Y2_LIMIT_PORT     M3_LIMIT_PORT
@@ -278,6 +332,15 @@
 #define Y2_DIRECTION_PORT   M4_DIRECTION_PORT
 #define Y2_DIRECTION_PIN    M4_DIRECTION_PIN
 #define Y2_DIRECTION_BIT    (1<<M4_DIRECTION_PIN)
+#ifdef M4_HOME_PIN
+ #if Y_AUTO_SQUARE
+  #define Y2_HOME_PORT      M4_HOME_PORT
+  #define Y2_HOME_PIN       M4_HOME_PIN
+  #define Y2_HOME_BIT       (1<<M4_HOME_PIN)
+ #endif
+#elif Y_AUTO_SQUARE && defined(Y_HOME_PIN)
+  #error "Auto squared Y-axis requires second home pin input"
+#endif
 #ifdef M4_LIMIT_PIN
  #if Y_AUTO_SQUARE
   #define Y2_LIMIT_PORT     M4_LIMIT_PORT
@@ -313,6 +376,15 @@
 #define Y2_DIRECTION_PORT   M5_DIRECTION_PORT
 #define Y2_DIRECTION_PIN    M5_DIRECTION_PIN
 #define Y2_DIRECTION_BIT    (1<<M5_DIRECTION_PIN)
+#ifdef M5_HOME_PIN
+ #if Y_AUTO_SQUARE
+  #define Y2_HOME_PORT      M5_HOME_PORT
+  #define Y2_HOME_PIN       M5_HOME_PIN
+  #define Y2_HOME_BIT       (1<<M5_HOME_PIN)
+ #endif
+#elif Y_AUTO_SQUARE && defined(Y_HOME_PIN)
+  #error "Auto squared Y-axis requires second home pin input"
+#endif
 #ifdef M5_LIMIT_PIN
  #if Y_AUTO_SQUARE
   #define Y2_LIMIT_PORT     M5_LIMIT_PORT
@@ -348,6 +420,15 @@
 #define Y2_DIRECTION_PORT   M6_DIRECTION_PORT
 #define Y2_DIRECTION_PIN    M6_DIRECTION_PIN
 #define Y2_DIRECTION_BIT    (1<<M6_DIRECTION_PIN)
+#ifdef M6_HOME_PIN
+ #if Y_AUTO_SQUARE
+  #define Y2_HOME_PORT      M6_HOME_PORT
+  #define Y2_HOME_PIN       M6_HOME_PIN
+  #define Y2_HOME_BIT       (1<<M6_HOME_PIN)
+ #endif
+#elif Y_AUTO_SQUARE && defined(Y_HOME_PIN)
+  #error "Auto squared Y-axis requires second home pin input"
+#endif
 #ifdef M6_LIMIT_PIN
  #if Y_AUTO_SQUARE
   #define Y2_LIMIT_PORT     M6_LIMIT_PORT
@@ -383,6 +464,15 @@
 #define Y2_DIRECTION_PORT   M7_DIRECTION_PORT
 #define Y2_DIRECTION_PIN    M7_DIRECTION_PIN
 #define Y2_DIRECTION_BIT    (1<<M7_DIRECTION_PIN)
+#ifdef M7_HOME_PIN
+ #if Y_AUTO_SQUARE
+  #define Y2_HOME_PORT      M7_HOME_PORT
+  #define Y2_HOME_PIN       M7_HOME_PIN
+  #define Y2_HOME_BIT       (1<<M7_HOME_PIN)
+ #endif
+#elif Y_AUTO_SQUARE && defined(Y_HOME_PIN)
+  #error "Auto squared Y-axis requires second home pin input"
+#endif
 #ifdef M7_LIMIT_PIN
  #if Y_AUTO_SQUARE
   #define Y2_LIMIT_PORT     M7_LIMIT_PORT
@@ -420,6 +510,15 @@
 #define Z2_DIRECTION_PORT   M3_DIRECTION_PORT
 #define Z2_DIRECTION_PIN    M3_DIRECTION_PIN
 #define Z2_DIRECTION_BIT    (1<<M3_DIRECTION_PIN)
+#ifdef M3_HOME_PIN
+ #if Z_AUTO_SQUARE
+  #define Z2_HOME_PORT      M3_HOME_PORT
+  #define Z2_HOME_PIN       M3_HOME_PIN
+  #define Z2_HOME_BIT       (1<<M3_HOME_PIN)
+ #endif
+#elif Z_AUTO_SQUARE && defined(Y_HOME_PIN)
+  #error "Auto squared Z-axis requires second home pin input"
+#endif
 #ifdef M3_LIMIT_PIN
  #if Z_AUTO_SQUARE
   #define Z2_LIMIT_PORT     M3_LIMIT_PORT
@@ -455,6 +554,15 @@
 #define Z2_DIRECTION_PORT   M4_DIRECTION_PORT
 #define Z2_DIRECTION_PIN    M4_DIRECTION_PIN
 #define Z2_DIRECTION_BIT    (1<<M4_DIRECTION_PIN)
+#ifdef M4_HOME_PIN
+ #if Z_AUTO_SQUARE
+  #define Z2_HOME_PORT      M4_HOME_PORT
+  #define Z2_HOME_PIN       M4_HOME_PIN
+  #define Z2_HOME_BIT       (1<<M4_HOME_PIN)
+ #endif
+#elif Z_AUTO_SQUARE && defined(Z_HOME_PIN)
+  #error "Auto squared Z-axis requires second home pin input"
+#endif
 #ifdef M4_LIMIT_PIN
  #if Z_AUTO_SQUARE
   #define Z2_LIMIT_PORT     M4_LIMIT_PORT
@@ -490,6 +598,15 @@
 #define Z2_DIRECTION_PORT   M5_DIRECTION_PORT
 #define Z2_DIRECTION_PIN    M5_DIRECTION_PIN
 #define Z2_DIRECTION_BIT    (1<<M5_DIRECTION_PIN)
+#ifdef M5_HOME_PIN
+ #if Z_AUTO_SQUARE
+  #define Z2_HOME_PORT      M5_HOME_PORT
+  #define Z2_HOME_PIN       M5_HOME_PIN
+  #define Z2_HOME_BIT       (1<<M5_HOME_PIN)
+ #endif
+#elif Z_AUTO_SQUARE && defined(Z_HOME_PIN)
+  #error "Auto squared Z-axis requires second home pin input"
+#endif
 #ifdef M5_LIMIT_PIN
  #if Z_AUTO_SQUARE
   #define Z2_LIMIT_PORT     M5_LIMIT_PORT
@@ -525,6 +642,15 @@
 #define Z2_DIRECTION_PORT   M6_DIRECTION_PORT
 #define Z2_DIRECTION_PIN    M6_DIRECTION_PIN
 #define Z2_DIRECTION_BIT    (1<<M6_DIRECTION_PIN)
+#ifdef M6_HOME_PIN
+ #if Z_AUTO_SQUARE
+  #define Z2_HOME_PORT      M6_HOME_PORT
+  #define Z2_HOME_PIN       M6_HOME_PIN
+  #define Z2_HOME_BIT       (1<<M6_HOME_PIN)
+ #endif
+#elif Z_AUTO_SQUARE && defined(Z_HOME_PIN)
+  #error "Auto squared Z-axis requires second home pin input"
+#endif
 #ifdef M6_LIMIT_PIN
  #if Z_AUTO_SQUARE
   #define Z2_LIMIT_PORT     M6_LIMIT_PORT
@@ -560,6 +686,15 @@
 #define Z2_DIRECTION_PORT   M7_DIRECTION_PORT
 #define Z2_DIRECTION_PIN    M7_DIRECTION_PIN
 #define Z2_DIRECTION_BIT    (1<<M7_DIRECTION_PIN)
+#ifdef M7_HOME_PIN
+ #if Z_AUTO_SQUARE
+  #define Z2_HOME_PORT      M7_HOME_PORT
+  #define Z2_HOME_PIN       M7_HOME_PIN
+  #define Z2_HOME_BIT       (1<<M7_HOME_PIN)
+ #endif
+#elif Z_AUTO_SQUARE && defined(Z_HOME_PIN)
+  #error "Auto squared Z-axis requires second home pin input"
+#endif
 #ifdef M7_LIMIT_PIN
  #if Z_AUTO_SQUARE
   #define Z2_LIMIT_PORT     M7_LIMIT_PORT
@@ -597,6 +732,24 @@
 
 #endif // N_GANGED
 
+#if defined(X2_HOME_PIN) || defined(Y2_HOME_PIN) || defined(Z2_HOME_PIN)
+#define DUAL_HOME_SWITCHES
+#ifndef X2_HOME_BIT
+#define X2_HOME_BIT 0
+#endif
+#ifndef Y2_HOME_BIT
+#define Y2_HOME_BIT 0
+#endif
+#ifndef Z2_HOME_BIT
+#define Z2_HOME_BIT 0
+#endif
+#define HOME2_MASK (X2_HOME_BIT|Y2_HOME_BIT|Z2_HOME_BIT)
+#define HOME2_MASK_SUM (X2_HOME_BIT+Y2_HOME_BIT+Z2_HOME_BIT)
+#else
+#define HOME2_MASK 0
+#define HOME2_MASK_SUM 0
+#endif
+
 #if defined(X2_LIMIT_PIN) || defined(Y2_LIMIT_PIN) || defined(Z2_LIMIT_PIN)
 #define DUAL_LIMIT_SWITCHES
 #ifndef X2_LIMIT_BIT
@@ -629,6 +782,11 @@
 #define A_DIRECTION_PORT    M3_DIRECTION_PORT
 #define A_DIRECTION_PIN     M3_DIRECTION_PIN
 #define A_DIRECTION_BIT     (1<<M3_DIRECTION_PIN)
+#ifdef M3_HOME_PIN
+  #define A_HOME_PORT       M3_HOME_PORT
+  #define A_HOME_PIN        M3_HOME_PIN
+  #define A_HOME_BIT        (1<<M3_HOME_PIN)
+#endif
 #ifdef M3_LIMIT_PIN
   #define A_LIMIT_PORT      M3_LIMIT_PORT
   #define A_LIMIT_PIN       M3_LIMIT_PIN
@@ -656,6 +814,11 @@
 #define B_DIRECTION_PORT    M4_DIRECTION_PORT
 #define B_DIRECTION_PIN     M4_DIRECTION_PIN
 #define B_DIRECTION_BIT     (1<<M4_DIRECTION_PIN)
+#ifdef M4_HOME_PIN
+  #define B_HOME_PORT       M4_HOME_PORT
+  #define B_HOME_PIN        M4_HOME_PIN
+  #define B_HOME_BIT        (1<<M4_HOME_PIN)
+#endif
 #ifdef M4_LIMIT_PIN
   #define B_LIMIT_PORT      M4_LIMIT_PORT
   #define B_LIMIT_PIN       M4_LIMIT_PIN
@@ -683,6 +846,11 @@
 #define C_DIRECTION_PORT    M5_DIRECTION_PORT
 #define C_DIRECTION_PIN     M5_DIRECTION_PIN
 #define C_DIRECTION_BIT     (1<<M5_DIRECTION_PIN)
+#ifdef M5_HOME_PIN
+  #define C_HOME_PORT       M5_HOME_PORT
+  #define C_HOME_PIN        M5_HOME_PIN
+  #define C_HOME_BIT        (1<<M5_HOME_PIN)
+#endif
 #ifdef M5_LIMIT_PIN
   #define C_LIMIT_PORT      M5_LIMIT_PORT
   #define C_LIMIT_PIN       M5_LIMIT_PIN
@@ -710,6 +878,11 @@
 #define U_DIRECTION_PORT    M6_DIRECTION_PORT
 #define U_DIRECTION_PIN     M6_DIRECTION_PIN
 #define U_DIRECTION_BIT     (1<<M6_DIRECTION_PIN)
+#ifdef M6_HOME_PIN
+  #define U_HOME_PORT       M6_HOME_PORT
+  #define U_HOME_PIN        M6_HOME_PIN
+  #define U_HOME_BIT        (1<<M6_HOME_PIN)
+#endif
 #ifdef M6_LIMIT_PIN
   #define U_LIMIT_PORT      M6_LIMIT_PORT
   #define U_LIMIT_PIN       M6_LIMIT_PIN
@@ -737,6 +910,11 @@
 #define V_DIRECTION_PORT    M7_DIRECTION_PORT
 #define V_DIRECTION_PIN     M7_DIRECTION_PIN
 #define V_DIRECTION_BIT     (1<<M7_DIRECTION_PIN)
+#ifdef M7_HOME_PIN
+  #define V_HOME_PORT       M7_HOME_PORT
+  #define V_HOME_PIN        M7_HOME_PIN
+  #define V_HOME_BIT        (1<<M7_HOME_PIN)
+#endif
 #ifdef M7_LIMIT_PIN
   #define V_LIMIT_PORT      M7_LIMIT_PORT
   #define V_LIMIT_PIN       M7_LIMIT_PIN
@@ -856,6 +1034,28 @@
 #endif
 #endif
 
+#ifndef X_HOME_BIT
+#ifdef X_HOME_PIN
+#define X_HOME_BIT (1<<X_HOME_PIN)
+#else
+#define X_HOME_BIT 0
+#endif
+#endif
+#ifndef Y_HOME_BIT
+#ifdef Y_HOME_PIN
+#define Y_HOME_BIT (1<<Y_HOME_PIN)
+#else
+#define Y_HOME_BIT 0
+#endif
+#endif
+#ifndef Z_HOME_BIT
+#ifdef Z_HOME_PIN
+#define Z_HOME_BIT (1<<Z_HOME_PIN)
+#else
+#define Z_HOME_BIT 0
+#endif
+#endif
+
 #ifndef X_LIMIT_BIT
 #define X_LIMIT_BIT (1<<X_LIMIT_PIN)
 #endif
@@ -964,7 +1164,35 @@
 #endif
 #endif
 
-#endif //  STEPPERS_ENABLE_MASK
+#endif // STEPPERS_ENABLE_MASK
+
+#ifndef HOME_MASK
+
+#define HOME_MASK_BASE (X_HOME_BIT|Y_HOME_BIT|Z_HOME_BIT|HOME2_MASK)
+#define HOME_MASK_BASE_SUM (X_HOME_BIT+Y_HOME_BIT+Z_HOME_BIT+HOME2_MASK_SUM)
+
+#if N_AXIS == 3
+#define HOME_MASK HOME_MASK_BASE
+#define HOME_MASK_SUM HOME_MASK_BASE_SUM
+#define HOME_MIN_CAP AXES_BITMASK
+#elif N_AXIS == 4
+#define HOME_MASK (HOME_MASK_BASE|A_HOME_BIT)
+#define HOME_MASK_SUM (HOME_MASK_BASE_SUM+A_HOME_BIT)
+#elif N_AXIS == 5
+#define HOME_MASK (HOME_MASK_BASE|A_HOME_BIT|B_HOME_BIT)
+#define HOME_MASK_SUM (HOME_MASK_BASE_SUM+A_HOME_BIT+B_HOME_BIT)
+#elif N_AXIS == 6
+#define HOME_MASK (HOME_MASK_BASE|A_HOME_BIT|B_HOME_BIT|C_HOME_BIT)
+#define HOME_MASK_SUM (HOME_MASK_BASE_SUM+A_HOME_BIT+B_HOME_BIT+C_HOME_BIT)
+#elif N_AXIS == 7
+#define HOME_MASK (HOME_MASK_BASE|A_HOME_BIT|B_HOME_BIT|C_HOME_BIT|U_HOME_BIT)
+#define HOME_MASK_SUM (HOME_MASK_BASE_SUM+A_HOME_BIT+B_HOME_BIT+C_HOME_BIT+U_HOME_BIT)
+#else
+#define HOME_MASK (HOME_MASK_BASE|A_HOME_BIT|B_HOME_BIT|C_HOME_BIT|U_HOME_BIT|V_HOME_BIT)
+#define HOME_MASK_SUM (HOME_MASK_BASE_SUM+A_HOME_BIT+B_HOME_BIT+C_HOME_BIT+U_HOME_BIT+V_HOME_BIT)
+#endif
+
+#endif // HOME_MASK
 
 #ifndef LIMIT_MASK
 
@@ -1008,8 +1236,8 @@
 #define LIMIT_MASK_BASE (X_LIMIT_BIT|Y_LIMIT_BIT|LIMIT2_MASK)
 #define LIMIT_MASK_BASE_SUM (X_LIMIT_BIT+Y_LIMIT_BIT+LIMIT2_MASK_SUM)
 #else
-#define LIMIT_MASK_BASE (X_LIMIT_BIT|Y_LIMIT_BIT|Z_LIMIT_BIT|X_LIMIT_BIT_MAX|Y_LIMIT_BIT_MAX|Z_LIMIT_BIT_MAX)
-#define LIMIT_MASK_BASE_SUM (X_LIMIT_BIT+Y_LIMIT_BIT+Z_LIMIT_BIT+X_LIMIT_BIT_MAX+Y_LIMIT_BIT_MAX+Z_LIMIT_BIT_MAX)
+#define LIMIT_MASK_BASE (X_LIMIT_BIT|Y_LIMIT_BIT|Z_LIMIT_BIT|X_LIMIT_BIT_MAX|Y_LIMIT_BIT_MAX|Z_LIMIT_BIT_MAX|LIMIT2_MASK)
+#define LIMIT_MASK_BASE_SUM (X_LIMIT_BIT+Y_LIMIT_BIT+Z_LIMIT_BIT+X_LIMIT_BIT_MAX+Y_LIMIT_BIT_MAX+Z_LIMIT_BIT_MAX+LIMIT2_MASK_SUM)
 #endif
 
 #if N_AXIS == 3
@@ -1034,10 +1262,6 @@
 #endif
 
 #endif // LIMIT_MASK
-
-#ifndef HOME_MASK
-#define HOME_MASK 0
-#endif
 
 #ifndef N_GANGED
 #define N_GANGED 0
@@ -1072,7 +1296,7 @@ static void motor_iterator (motor_iterator_callback_ptr callback)
     }
 }
 
-static limit_signals_t get_limits_cap (void)
+static inline limit_signals_t get_limits_cap (void)
 {
     limit_signals_t limits = {0};
 
@@ -1139,45 +1363,45 @@ static limit_signals_t get_limits_cap (void)
     return limits;
 }
 
-static home_signals_t get_home_cap (void)
+static inline home_signals_t get_home_cap (void)
 {
     home_signals_t home = {0};
 
 #if HOME_MASK
 
 #if X_HOME_BIT
-    home.primary.x = On;
+    home.a.x = On;
 #endif
 #if Y_HOME_BIT
-    home.primary.y = On;
+    home.a.y = On;
 #endif
 #if Z_HOME_BIT
-    home.primary.z = On;
+    home.a.z = On;
 #endif
 #if A_HOME_BIT
-    home.primary.a = On;
+    home.a.a = On;
 #endif
 #if B_HOME_BIT
-    home.primary.b = On;
+    home.a.b = On;
 #endif
 #if C_HOME_BIT
-    home.primary.c = On;
+    home.a.c = On;
 #endif
 #if U_HOME_BIT
-    home.primary.u = On;
+    home.a.u = On;
 #endif
 #if V_HOME_BIT
-    home.primary.v = On;
+    home.a.v = On;
 #endif
 
 #if X2_HOME_BIT
-    home.secondary.x = On;
+    home.b.x = On;
 #endif
 #if Y2_HOME_BIT
-    home.secondary.y = On;
+    home.b.y = On;
 #endif
 #if Z2_HOME_BIT
-    home.secondary.z = On;
+    home.b.z = On;
 #endif
 
 #endif // HOME_MASK

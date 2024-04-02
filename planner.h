@@ -3,22 +3,22 @@
 
   Part of grblHAL
 
-  Copyright (c) 2019-2023 Terje Io
+  Copyright (c) 2019-2024 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef _PLANNER_H_
@@ -33,11 +33,12 @@ typedef union {
                  backlash_motion      :1,
                  no_feed_override     :1,
                  inverse_time         :1,
+                 units_per_rev        :1,
                  is_rpm_rate_adjusted :1,
                  is_laser_ppi_mode    :1,
                  target_valid         :1,
                  target_validated     :1,
-                 unassigned           :6;
+                 unassigned           :5;
         coolant_state_t coolant;
     };
 } planner_cond_t;
