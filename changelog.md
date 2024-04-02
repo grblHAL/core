@@ -1,6 +1,24 @@
 ## grblHAL changelog
 
-<a name="202403230"/>Build 20240330
+<a name="20240402"/>Build 20240402
+
+Core:
+
+* Fixed symbol issue with Arduino Due blocking compilation of NGC parameter support.
+
+Drivers:
+
+* SAM3X8E: added driver support for additional aux inputs in order to support probe input.
+
+* iMXRT1062: fixed typo in step inject code causing direction signal to fail for A+ axes.
+
+Plugings:
+
+* Spindle: added motor enable support for stepper spindle.
+
+---
+
+<a name="20240330"/>Build 20240330
 
 Core:
 

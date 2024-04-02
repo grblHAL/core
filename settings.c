@@ -2977,7 +2977,7 @@ void settings_init (void)
     if(hal.stepper.get_ganged)
         setting_remove_elements(Setting_GangedDirInvertMask, hal.stepper.get_ganged(false).mask);
 
-    setting_remove_element(Setting_CoolantInvertMask, hal.coolant_cap.mask);
+    setting_remove_elements(Setting_CoolantInvertMask, hal.coolant_cap.mask);
 
 #if COMPATIBILITY_LEVEL <= 1
     if(hal.homing.get_state == NULL) {
