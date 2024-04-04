@@ -503,15 +503,15 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
     block->millimeters = convert_delta_vector_to_unit_vector(unit_vec);
     block->acceleration = limit_acceleration_by_axis_maximum(unit_vec);
     block->rapid_rate = limit_max_rate_by_axis_maximum(unit_vec);
+#ifdef KINEMATICS_API
+    block->rate_multiplier = pl_data->rate_multiplier;
+#endif
 
     // Store programmed rate.
     if (block->condition.rapid_motion)
         block->programmed_rate = block->rapid_rate;
     else {
         block->programmed_rate = pl_data->feed_rate;
-#ifdef KINEMATICS_API
-        block->rate_multiplier = pl_data->rate_multiplier;
-#endif
         if (block->condition.inverse_time)
             block->programmed_rate *= block->millimeters;
     }
@@ -692,6 +692,6 @@ void plan_data_init (plan_line_data_t *plan_data)
     plan_data->spindle.hal = gc_state.spindle.hal ? gc_state.spindle.hal : spindle_get(0);
     plan_data->condition.target_validated = plan_data->condition.target_valid = sys.soft_limits.mask == 0;
 #ifdef KINEMATICS_API
-    plan_data->rate_multiplier = 1.0;
+    plan_data->rate_multiplier = 1.0f;
 #endif
 }

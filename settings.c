@@ -1662,7 +1662,7 @@ static uint32_t get_int (setting_id_t id)
             homing.use_limit_switches = settings.homing.flags.use_limit_switches;
             value = homing.value;
 #else
-            value = settings.homing.flags.enable;
+            value = settings.homing.flags.enabled;
 #endif
             break;
 

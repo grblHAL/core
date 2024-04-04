@@ -290,7 +290,7 @@ static float *delta_segment_line (float *target, float *position, plan_line_data
         } else if(!pl_data->condition.rapid_motion && distance != 0.0f) {
             float rate_multiplier = get_distance(mpos.values, machine.last_pos.values) / distance;
             pl_data->feed_rate *= rate_multiplier;
-            pl_data->rate_multiplier = 1.0 / rate_multiplier;
+            pl_data->rate_multiplier = 1.0f / rate_multiplier;
         }
 
         memcpy(&machine.last_pos, &mpos, sizeof(coord_data_t));

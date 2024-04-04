@@ -1,5 +1,25 @@
 ## grblHAL changelog
 
+<a name="20240404"/>Build 20240404
+
+Core:
+
+* Fixed polar kinematics feed rate handling, some tuning. Ref. issue [#475](https://github.com/grblHAL/core/issues/475).
+
+* Allowed plugins to inject commands when controller is in alarm state. Ref. keypad plugin issue [#11](https://github.com/grblHAL/Plugin_keypad/issues/11).
+
+Drivers:
+
+* STM32F1xx, STM32F3xx, STM32F4xx, STM32F7xx and iMXRT1062: now calls stepper enable via HAL. Ref. spindle issue [#28](https://github.com/grblHAL/Plugins_spindle/issues/28).
+
+Plugins:
+
+* Spindle: improved motor enable support for stepper spindle. Ref. issue [#28](https://github.com/grblHAL/Plugins_spindle/issues/28).
+
+* Plasma: removed stray code causing compilation failure.
+
+---
+
 <a name="20240402"/>Build 20240402
 
 Core:
@@ -12,7 +32,7 @@ Drivers:
 
 * iMXRT1062: fixed typo in step inject code causing direction signal to fail for A+ axes.
 
-Plugings:
+Plugins:
 
 * Spindle: added motor enable support for stepper spindle.
 

@@ -7,18 +7,18 @@
 
   Note: homing is not implemented!
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "../grbl.h"
@@ -39,6 +39,7 @@
 
 static bool jog_cancel = false;
 static coord_data_t last_pos = {0};
+static on_program_completed_ptr on_program_completed;
 static on_report_options_ptr on_report_options;
 
 // Simple hypotenuse computation function.
@@ -68,17 +69,15 @@ static float *transform_to_cartesian (float *target, float *position)
 // Returns machine position in mm converted from system position steps.
 static float *polar_convert_array_steps_to_mpos (float *position, int32_t *steps)
 {
-    float cpos[N_AXIS];
+    coord_data_t cpos;
 
     uint_fast8_t idx = N_AXIS;
     do {
         idx--;
-        cpos[idx] = steps[idx] / settings.axis[idx].steps_per_mm;
+        cpos.values[idx] = steps[idx] / settings.axis[idx].steps_per_mm;
     } while(idx);
 
-    return transform_to_cartesian(position, cpos);
-
-    return position;
+    return transform_to_cartesian(position, cpos.values);
 }
 
 // Transform absolute position from cartesian coordinate system to polar coordinate system
@@ -130,7 +129,6 @@ static float *polar_segment_line (float *target, float *position, plan_line_data
     static bool segmented;
     static float r_offset, distance;
     static coord_data_t delta, segment_target, final_target, cpos;
-//    static plan_line_data_t plan;
 
     uint_fast8_t idx = N_AXIS;
 
@@ -159,6 +157,8 @@ static float *polar_segment_line (float *target, float *position, plan_line_data
                 delta.values[idx] = delta.values[idx] / (float)iterations;
             } while(idx);
 
+            distance /= (float)iterations;
+
         } else {
             iterations = 1;
             memcpy(&segment_target, &final_target, sizeof(coord_data_t));
@@ -175,7 +175,6 @@ static float *polar_segment_line (float *target, float *position, plan_line_data
                 idx--;
                 segment_target.values[idx] += delta.values[idx];
             } while(idx);
-
         } else
             memcpy(&segment_target, &final_target, sizeof(coord_data_t));
 
@@ -183,9 +182,11 @@ static float *polar_segment_line (float *target, float *position, plan_line_data
         transform_from_cartesian(cpos.values, segment_target.values);
         segment_target.values[RADIUS_AXIS] += r_offset;
 
-        if(!pl_data->condition.rapid_motion) {
-            float fr_mul = distance / get_distance(last_pos.values, cpos.values);
-            pl_data->feed_rate *= fr_mul == 0.0f ? 1.0 : (fr_mul < 0.5f ? 0.5f : fr_mul);
+        if(!pl_data->condition.rapid_motion && segmented) {
+            float rate_multiplier = get_distance(last_pos.values, cpos.values) / distance;
+            rate_multiplier = rate_multiplier == 0.0f ? 1.0 : (rate_multiplier < 0.5f ? 0.5f : rate_multiplier);
+            pl_data->feed_rate *= rate_multiplier;
+            pl_data->rate_multiplier = 1.0f / rate_multiplier;
         }
 
         memcpy(&last_pos, &cpos, sizeof(coord_data_t));
@@ -228,7 +229,7 @@ static void report_options (bool newopt)
     on_report_options(newopt);
 
     if(!newopt)
-        hal.stream.write("[KINEMATICS:Polar v0.01]" ASCII_EOL);
+        hal.stream.write("[KINEMATICS:Polar v0.02]" ASCII_EOL);
 }
 
 static bool polar_homing_cycle (axes_signals_t cycle, axes_signals_t auto_square)
@@ -236,6 +237,21 @@ static bool polar_homing_cycle (axes_signals_t cycle, axes_signals_t auto_square
     report_message("Homing is not implemented!", Message_Warning);
 
     return false;
+}
+
+static void onProgramCompleted (program_flow_t program_flow, bool check_mode)
+{
+    coord_data_t cpos;
+
+    memset(last_pos.values, 0, sizeof(coord_data_t));
+    transform_from_cartesian(cpos.values, gc_state.position);
+    memcpy(&last_pos, &cpos, sizeof(coord_data_t));
+
+    sys.position[POLAR_AXIS] = lroundf(last_pos.values[POLAR_AXIS] * settings.axis[POLAR_AXIS].steps_per_mm);
+    plan_sync_position();
+
+    if(on_program_completed)
+        on_program_completed(program_flow, check_mode);
 }
 
 // Initialize API pointers for Wall Plotter kinematics
@@ -250,6 +266,9 @@ void polar_init (void)
 
     grbl.home_machine = polar_homing_cycle;
     grbl.on_jog_cancel = cancel_jog;
+
+    on_program_completed = grbl.on_program_completed;
+    grbl.on_program_completed = onProgramCompleted;
 
     on_report_options = grbl.on_report_options;
     grbl.on_report_options = report_options;
