@@ -1,5 +1,27 @@
 ## grblHAL changelog
 
+<a name="20240408"/>Build 20240408
+
+Core:
+
+* Fix for bug in NGC expressions return statement handling. Ref issue [#485](https://github.com/grblHAL/core/issues/485).
+
+Drivers:
+
+* RP2040: fix for incorrect handling of safety door input inversion. Ref. issue [#85](https://github.com/grblHAL/RP2040/issues/85).
+
+* STM32F7xx: removed stray project folder from Eclipse debug build configuration.
+
+* All \(remaining\): now calls stepper enable via HAL.
+
+Plugins:
+
+* SD card: fix for potential expression stack issue when macro is terminated early with `M99`.
+
+* Spindle: improved logic, switched polling to new task handling code. Ref. issue [#27](https://github.com/grblHAL/Plugins_spindle/issues/27).
+
+---
+
 <a name="20240404"/>Build 20240404
 
 Core:

@@ -5,20 +5,20 @@
 
   Part of grblHAL
 
-  Copyright (c) 2023 Terje Io
+  Copyright (c) 2023-2024 Terje Io
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "hal.h"
@@ -192,8 +192,13 @@ static bool stack_pull (void)
     return ok;
 }
 
-
 // Public functions
+
+void ngc_flowctrl_unwind_stack (vfs_file_t *file)
+{
+    while(stack_idx >= 0 && stack[stack_idx].file == file)
+        stack_pull();
+}
 
 void ngc_flowctrl_init (void)
 {
@@ -417,16 +422,16 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
             break;
 
         case NGCFlowCtrl_Return:
-            if(!skipping && grbl.on_macro_return) {
-                vfs_file_t *file = stack[stack_idx].file;
-                while(stack_idx >= 0 && file == stack[stack_idx].file)
-                    stack_pull();
-                if(ngc_eval_expression(line, pos, &value) == Status_OK) {
-                    ngc_named_param_set("_value", value);
-                    ngc_named_param_set("_value_returned", 1.0f);
-                } else
-                    ngc_named_param_set("_value_returned", 0.0f);
-                grbl.on_macro_return();
+            if(hal.stream.file) {
+                if(!skipping && grbl.on_macro_return) {
+                    ngc_flowctrl_unwind_stack(stack[stack_idx].file);
+                    if(ngc_eval_expression(line, pos, &value) == Status_OK) {
+                        ngc_named_param_set("_value", value);
+                        ngc_named_param_set("_value_returned", 1.0f);
+                    } else
+                        ngc_named_param_set("_value_returned", 0.0f);
+                    grbl.on_macro_return();
+                }
             } else
                 status = Status_FlowControlNotExecutingMacro;
             break;
