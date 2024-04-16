@@ -637,8 +637,8 @@ void plan_cycle_reinitialize (void)
 {
     // Re-plan from a complete stop. Reset planner entry speeds and buffer planned pointer.
     st_update_plan_block_parameters();
-    block_buffer_planned = block_buffer_tail;
-    planner_recalculate();
+    if((block_buffer_planned = block_buffer_tail) != block_buffer_head)
+        planner_recalculate();
 }
 
 // Re-calculates buffered motions profile parameters upon a motion-based override change.

@@ -1,10 +1,26 @@
 ## grblHAL changelog
 
+<a name="20240416"/>Build 20240416
+
+Core:
+
+* Fix for random feed hold/cycle start sequence failures. Ref. issue [#491](https://github.com/grblHAL/core/issues/491).
+
+Drivers:
+
+* STM32F1xx: added tentative support for UART4, not tested!
+
+* STM32F7xx: added support for SPI4, not tested!
+
+* Simulator: added support for continuous 1ms systick event. Ref issue [#8](https://github.com/grblHAL/Simulator/issues/8).
+
+---
+
 <a name="20240408"/>Build 20240408
 
 Core:
 
-* Fix for bug in NGC expressions return statement handling. Ref issue [#485](https://github.com/grblHAL/core/issues/485).
+* Fix for bug in NGC expressions return statement handling. Ref. issue [#485](https://github.com/grblHAL/core/issues/485).
 
 Drivers:
 
