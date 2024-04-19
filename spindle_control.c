@@ -51,7 +51,6 @@ typedef struct {
 static uint8_t n_spindle = 0;
 static spindle_sys_t sys_spindle[N_SYS_SPINDLE] = {0};
 static spindle_reg_t spindles[N_SPINDLE] = {0}, *pwm_spindle = NULL;
-static spindle_cap_t spindle_cap;
 
 /*! \internal \brief Activates and registers a spindle as enabled with a specific spindle number.
 \param spindle_id spindle id of spindle to activate as a \ref spindle_id_t.
@@ -808,9 +807,10 @@ bool spindle_precompute_pwm_values (spindle_ptrs_t *spindle, spindle_pwm_t *pwm_
 static spindle1_settings_t sp1_settings;
 static uint32_t nvs_address;
 static char spindle_signals[] = "Spindle enable,Spindle direction,PWM";
-static spindle1_settings_changed_ptr on_settings_changed;
 static bool ports_ok = false;
 static char max_aport[4], max_dport[4];
+static spindle_cap_t spindle_cap;
+static spindle1_settings_changed_ptr on_settings_changed;
 
 #if ENABLE_SPINDLE_LINEARIZATION
 

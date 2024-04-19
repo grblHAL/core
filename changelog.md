@@ -1,5 +1,31 @@
 ## grblHAL changelog
 
+<a name="20240418"/>20240418
+
+Core:
+
+* Fix for compiler warning.
+
+Drivers:
+
+* ESP32: updated Root CNC v3 map and added Root CNC Pro map. Ref issues [#102](https://github.com/grblHAL/ESP32/discussions/102).  
+Added missing comma. Ref. ioSender issue [#367](https://github.com/terjeio/ioSender/issues/367#issuecomment-2066416027).
+Added tentative support for additional I2C API functions.  
+
+* STM32F4xx: removed stray debug message, fixed I2C strobe and MPG mode input handling. Updated FatFS \(SPI\) to use new task sceduler.
+
+* STM32F7xx: fix for compiler warning.
+
+Plugins:
+
+* Keypad (display): workaround for ESP32 compiler complaining about `static_assert`.
+
+Templates:
+
+* Persistent tool: updated for core change.
+
+---
+
 <a name="20240416"/>Build 20240416
 
 Core:
