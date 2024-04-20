@@ -3532,7 +3532,7 @@ status_code_t gc_execute_block (char *block)
 
         //  Clean out any remaining output commands (may linger on error)
         while(plan_data.output_commands) {
-            output_command_t *next = plan_data.output_commands;
+            output_command_t *next = plan_data.output_commands->next;
             free(plan_data.output_commands);
             plan_data.output_commands = next;
         }
