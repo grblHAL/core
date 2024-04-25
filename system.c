@@ -1221,12 +1221,26 @@ Fires the \ref grbl.on_rt_reports_added event.
  */
 void system_add_rt_report (report_tracking_t report)
 {
-    if(report == Report_ClearAll)
-        sys.report.value = 0;
-    else if(report == Report_MPGMode)
-        sys.report.mpg_mode = hal.driver_cap.mpg_mode;
-    else
-        sys.report.value |= (uint32_t)report;
+    switch(report) {
+
+        case Report_ClearAll:
+            sys.report.value = 0;
+            return;
+
+        case Report_MPGMode:
+            if(!hal.driver_cap.mpg_mode)
+                return;
+            break;
+
+        case Report_LatheXMode:
+            sys.report.wco = settings.status_report.work_coord_offset;
+            break;
+
+        default:
+            break;
+    }
+
+    sys.report.value |= (uint32_t)report;
 
     if(sys.report.value && grbl.on_rt_reports_added)
         grbl.on_rt_reports_added((report_tracking_flags_t)((uint32_t)report));

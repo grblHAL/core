@@ -3355,10 +3355,8 @@ status_code_t gc_execute_block (char *block)
 
         case NonModal_MacroCall:
             {
-#if NGC_EXPRESSIONS_ENABLE
                 ngc_named_param_set("_value", 0.0f);
                 ngc_named_param_set("_value_returned", 0.0f);
-#endif
                 status_code_t status = grbl.on_macro_execute((macro_id_t)gc_block.values.p);
 
                 return status == Status_Unhandled ? Status_GcodeValueOutOfRange : status;

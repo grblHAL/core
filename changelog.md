@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+<a name="20240425"/>Build 20240425
+
+Core:
+
+* Now reports WCO along with radius/diameter mode changes. Ref. issue [#500](https://github.com/grblHAL/core/issues/500).
+
+Drivers:
+
+STM32F1xx:
+
+* Fix for broken handling of control signals for RC variant processors. Ref. issue [#51](https://github.com/grblHAL/STM32F1xx/issues/51) and discussion [#499](https://github.com/grblHAL/core/discussions/499).
+
+Plugins:
+
+* File system macros: added inbuilt `G65P1Q<n>` macro for reading numeric setting value. `<n>` is setting number. Ref. issue [#493](https://github.com/grblHAL/core/issues/493).
+
+---
+
 <a name="20240420"/>Build 20240420
 
 Core:
