@@ -542,6 +542,8 @@ void report_tool_offsets (void)
     hal.stream.write("]" ASCII_EOL);
 }
 
+#if NGC_PARAMETERS_ENABLE
+
 // Prints NIST/LinuxCNC NGC parameter value
 status_code_t report_ngc_parameter (ngc_param_id_t id)
 {
@@ -576,6 +578,7 @@ status_code_t report_named_ngc_parameter (char *arg)
     return Status_OK;
 }
 
+#endif
 
 // Prints Grbl NGC parameters (coordinate offsets, probing, tool table)
 void report_ngc_parameters (void)

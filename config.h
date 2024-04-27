@@ -513,12 +513,20 @@ Number of tools in tool table, edit to enable (max. 32 allowed)
 
 /*! \def NGC_EXPRESSIONS_ENABLE
 \brief
-Set to \ref On or 1 to enable experimental support for parameters and expressions.
+Set to \ref On or 1 to enable experimental support for expressions.
 
 Some LinuxCNC extensions are supported, conditionals and subroutines are not.
 */
 #if !defined NGC_EXPRESSIONS_ENABLE || defined __DOXYGEN__
 #define NGC_EXPRESSIONS_ENABLE Off
+#endif
+
+/*! \def NGC_PARAMETERS_ENABLE
+\brief
+Set to \ref On or 1 to enable experimental support for parameters.
+*/
+#if !defined NGC_PARAMETERS_ENABLE || defined __DOXYGEN__
+#define NGC_PARAMETERS_ENABLE On
 #endif
 
 /*! \def NGC_N_ASSIGN_PARAMETERS_PER_BLOCK
@@ -1951,6 +1959,11 @@ __NOTE:__ Must be a positive values.
 #if N_SYS_SPINDLE > 8
 #undef N_SYS_SPINDLE
 #define N_SYS_SPINDLE 8
+#endif
+
+#if NGC_EXPRESSIONS_ENABLE && !NGC_PARAMETERS_ENABLE
+#undef NGC_PARAMETERS_ENABLE
+#define NGC_PARAMETERS_ENABLE On
 #endif
 
 #if (REPORT_WCO_REFRESH_BUSY_COUNT < REPORT_WCO_REFRESH_IDLE_COUNT)

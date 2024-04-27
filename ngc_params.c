@@ -24,6 +24,10 @@
   Most additional predefined parameters defined by LinuxCNC (ref section 5.2.3.1) are implemented.
 */
 
+#include "hal.h"
+
+#if NGC_PARAMETERS_ENABLE
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -655,3 +659,5 @@ bool ngc_named_param_set (char *name, float value)
 
     return ok;
 }
+
+#endif // NGC_PARAMETERS_ENABLE

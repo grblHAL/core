@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+<a name="20240427"/>Build 20240427
+
+Core:
+
+* Added config to enable NGC parameter reporting, default on.
+
+Drivers:
+
+* STM32F1xx: disabled NGC parameter reporting in order free up some flash space \(for 128K variants\).
+
+Plugins:
+
+* SD card (file system macros): added inbuilt `G65P2Q<tool>R<axis>` macro for reading tool offset from tool table. `<tool>` is tool number, `<axis>` is axis number: 0 = X, 1 = Y, ...
+
+* Keypad: allow MPG to take control when estop state is active.
+
+---
+
 <a name="20240425"/>Build 20240425
 
 Core:
@@ -8,13 +26,11 @@ Core:
 
 Drivers:
 
-STM32F1xx:
-
-* Fix for broken handling of control signals for RC variant processors. Ref. issue [#51](https://github.com/grblHAL/STM32F1xx/issues/51) and discussion [#499](https://github.com/grblHAL/core/discussions/499).
+* STM32F1xx: fix for broken handling of control signals for RC variant processors. Ref. issue [#51](https://github.com/grblHAL/STM32F1xx/issues/51) and discussion [#499](https://github.com/grblHAL/core/discussions/499).
 
 Plugins:
 
-* File system macros: added inbuilt `G65P1Q<n>` macro for reading numeric setting value. `<n>` is setting number. Ref. issue [#493](https://github.com/grblHAL/core/issues/493).
+* SD card (file system macros): added inbuilt `G65P1Q<n>` macro for reading numeric setting value. `<n>` is setting number. Ref. issue [#493](https://github.com/grblHAL/core/issues/493).
 
 ---
 
