@@ -1,5 +1,24 @@
 ## grblHAL changelog
 
+<a name="20240506"/>Build 20240506
+
+Core:
+
+* Fix for incorrect handling of some flow control statements when nested. Ref. issue [#504](https://github.com/grblHAL/core/issues/504).
+
+* Fixed defaults and added sanity checks for spindle linearization parameters settings.
+
+Drivers:
+
+* ESP32: increased max application size to 2 MB. __NOTE:__ settings and any WebUI files stored in littlefs will be overwritten on an update, backup and restore when updating!
+
+* STM32F1xx: removed stray debug message.
+
+* STM32F4xx: added printf/scanf support to STM32CubeIDE builds with spindle linearization enabled, due to run time issues.  
+Fixed incorrect EEPROM emulator flash section id, ref. core [discussion #503](https://github.com/grblHAL/core/discussions/503) and core [issue #457](https://github.com/grblHAL/core/issues/457).
+
+---
+
 <a name="20240427"/>Build 20240427
 
 Core:

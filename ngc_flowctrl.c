@@ -305,7 +305,7 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
         case NGCFlowCtrl_EndWhile:
             if(hal.stream.file) {
                 if(last_op == NGCFlowCtrl_While) {
-                    if(o_label == stack[stack_idx].o_label) {
+                    if(!skipping && o_label == stack[stack_idx].o_label) {
                         uint_fast8_t pos = 0;
                         if(!stack[stack_idx].skip && (status = ngc_eval_expression(stack[stack_idx].expr, &pos, &value)) == Status_OK) {
                             if(!(stack[stack_idx].skip = value == 0))
@@ -314,7 +314,7 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
                         if(stack[stack_idx].skip)
                             stack_pull();
                     }
-                } else
+                } else if(!skipping)
                     status = Status_FlowControlSyntaxError;
             } else
                 status = Status_FlowControlNotExecutingMacro;
@@ -338,13 +338,13 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
         case NGCFlowCtrl_EndRepeat:
             if(hal.stream.file) {
                 if(last_op == NGCFlowCtrl_Repeat) {
-                    if(o_label == stack[stack_idx].o_label) {
+                    if(!skipping && o_label == stack[stack_idx].o_label) {
                         if(stack[stack_idx].repeats && --stack[stack_idx].repeats)
                             vfs_seek(stack[stack_idx].file, stack[stack_idx].file_pos);
                         else
                             stack_pull();
                     }
-                } else
+                } else if(!skipping)
                     status = Status_FlowControlSyntaxError;
             } else
                 status = Status_FlowControlNotExecutingMacro;
@@ -443,6 +443,8 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
     if(status != Status_OK) {
         ngc_flowctrl_init();
         *skip = false;
+        if(settings.flags.ngc_debug_out)
+            report_message(line, Message_Plain);
     } else
         *skip = stack_idx >= 0 && stack[stack_idx].skip;
 

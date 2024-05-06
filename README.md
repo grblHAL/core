@@ -13,7 +13,7 @@ It has been written to complement grblHAL and has features such as proper keyboa
 
 ---
 
-Latest build date is 20240416, see the [changelog](changelog.md) for details.  
+Latest build date is 20240506, see the [changelog](changelog.md) for details.  
 
 __NOTE:__ Build 20240222 has moved the probe input to the ioPorts pool of inputs and will be allocated from it when configured.
 The change is major and _potentially dangerous_, it may damage your probe, so please _verify correct operation_ after installing this, or later, builds.
