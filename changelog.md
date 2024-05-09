@@ -8,6 +8,12 @@ Core:
 
 * Added NGC parameter 5599, debug output enabled status.
 
+Drivers:
+
+* ESP32: made UART code fully core compliant, fix for MQTT compilation error.
+
+* STM32F7xx: added missing MPG code, additional I2C port support and made UART code fully core compliant.
+
 ---
 
 <a name="20240506"/>Build 20240506
