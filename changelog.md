@@ -1,5 +1,15 @@
 ## grblHAL changelog
 
+<a name="20240508"/>Build 20240508
+
+Core:
+
+* Fix for stream regression, improved MPG stream handling. Ref. [issue #509](https://github.com/grblHAL/core/issues/509).
+
+* Added NGC parameter 5599, debug output enabled status.
+
+---
+
 <a name="20240506"/>Build 20240506
 
 Core:
