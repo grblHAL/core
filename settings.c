@@ -1178,7 +1178,7 @@ static status_code_t set_homing_enable (setting_id_t id, uint_fast16_t int_value
         settings.homing.flags.use_limit_switches = DEFAULT_HOMING_USE_LIMIT_SWITCHES;
         settings.limits.flags.two_switches = DEFAULT_LIMITS_TWO_SWITCHES_ON_AXES;
 #else
-        settings.homing.flags.value = int_value & 0b111;
+        settings.homing.flags.value = int_value & 0b1111;
         settings.limits.flags.two_switches = homing.two_switches;
         settings.homing.flags.manual = homing.manual;
         settings.homing.flags.override_locks = homing.override_locks;

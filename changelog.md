@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+<a name="20240513"/>Build 20240513
+
+Core:
+
+* Fix for homing setting regression. Ref. [issue #512](https://github.com/grblHAL/core/issues/512).
+
+Drivers:
+
+* STM32F1xx, STM32F3xx, STM32F4xx: made UART code fully core compliant.
+
+Plugins:
+
+* Networking: fixed ping response when no payload present. Ref. [issue #10](https://github.com/grblHAL/Plugin_networking/issues/10).
+
+---
+
 <a name="20240508"/>Build 20240508
 
 Core:
