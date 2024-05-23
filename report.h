@@ -70,11 +70,15 @@ void report_probe_parameters (void);
 // Prints current tool offsets.
 void report_tool_offsets (void);
 
+#if NGC_PARAMETERS_ENABLE
+
 // Prints NIST/LinuxCNC NGC parameter value
 status_code_t report_ngc_parameter (ngc_param_id_t id);
 
 // Prints named LinuxCNC NGC parameter value
 status_code_t report_named_ngc_parameter (char *arg);
+
+#endif
 
 // Prints Grbl NGC parameters (coordinate offsets, probe).
 void report_ngc_parameters (void);

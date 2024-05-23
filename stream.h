@@ -345,6 +345,8 @@ bool stream_connect_instance (uint8_t instance, uint32_t baud_rate);
 
 void stream_disconnect (const io_stream_t *stream);
 
+bool stream_connected (void);
+
 const io_stream_t *stream_get_base (void);
 
 io_stream_flags_t stream_get_flags (io_stream_t stream);

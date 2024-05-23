@@ -79,7 +79,7 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
 {
 #ifdef KINEMATICS_API
     float feed_rate = pl_data->feed_rate;
-    pl_data->rate_multiplier = 1.0;
+    pl_data->rate_multiplier = 1.0f;
     target = kinematics.segment_line(target, plan_get_position(), pl_data, true);
 #endif
 

@@ -3375,7 +3375,7 @@ status_code_t gc_execute_block (char *block)
 
         case NonModal_MacroCall:
             {
-#if NGC_EXPRESSIONS_ENABLE
+#if NGC_PARAMETERS_ENABLE
                 ngc_named_param_set("_value", 0.0f);
                 ngc_named_param_set("_value_returned", 0.0f);
 #endif
@@ -3552,7 +3552,7 @@ status_code_t gc_execute_block (char *block)
 
         //  Clean out any remaining output commands (may linger on error)
         while(plan_data.output_commands) {
-            output_command_t *next = plan_data.output_commands;
+            output_command_t *next = plan_data.output_commands->next;
             free(plan_data.output_commands);
             plan_data.output_commands = next;
         }

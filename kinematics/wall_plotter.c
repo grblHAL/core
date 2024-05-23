@@ -59,6 +59,7 @@ typedef struct {
 static bool jog_cancel = false;
 static machine_t machine = {0};
 static on_report_options_ptr on_report_options;
+static settings_changed_ptr settings_changed;
 
 // Returns machine position in mm converted from system position steps.
 // TODO: perhaps change to double precision here - float calculation results in errors of a couple of micrometers.
@@ -290,7 +291,7 @@ static void report_options (bool newopt)
     on_report_options(newopt);
 
     if(!newopt)
-        hal.stream.write("[KINEMATICS:WallPlotter v2.00]" ASCII_EOL);
+        hal.stream.write("[KINEMATICS:WallPlotter v2.01]" ASCII_EOL);
 }
 
 static bool wp_homing_cycle (axes_signals_t cycle, axes_signals_t auto_square)
@@ -300,22 +301,34 @@ static bool wp_homing_cycle (axes_signals_t cycle, axes_signals_t auto_square)
     return false;
 }
 
-// Initialize API pointers for Wall Plotter kinematics
-void wall_plotter_init (void)
+
+static void wp_settings_changed (settings_t *settings, settings_changed_flags_t changed)
 {
-    machine.width_mm = -settings.axis[A_MOTOR].max_travel;
-    machine.width = (int32_t)(machine.width_mm * settings.axis[A_MOTOR].steps_per_mm);
+    static bool init_ok = false;
+
+    if(settings_changed)
+        settings_changed(settings, changed);
+
+    machine.width_mm = -settings->axis[A_MOTOR].max_travel;
+    machine.width = (int32_t)(machine.width_mm * settings->axis[A_MOTOR].steps_per_mm);
     machine.width_2 = machine.width >> 1;
     machine.width_pow = machine.width_mm * machine.width_mm;
-    machine.height = (int32_t)((float)settings.axis[B_MOTOR].max_travel * settings.axis[B_MOTOR].steps_per_mm);
+    machine.height = (int32_t)((float)settings->axis[B_MOTOR].max_travel * settings->axis[B_MOTOR].steps_per_mm);
     machine.height_2 = machine.height >> 1;
     machine.spindlezero[A_MOTOR] = 0; // machine.width_2;
     machine.spindlezero[B_MOTOR] = 0; // machine.height_2;
-    machine.spindlezero_mm[A_MOTOR] = (float)machine.spindlezero[A_MOTOR] / settings.axis[A_MOTOR].steps_per_mm;
-    machine.spindlezero_mm[B_MOTOR] = (float)machine.spindlezero[B_MOTOR] / settings.axis[B_MOTOR].steps_per_mm;
+    machine.spindlezero_mm[A_MOTOR] = (float)machine.spindlezero[A_MOTOR] / settings->axis[A_MOTOR].steps_per_mm;
+    machine.spindlezero_mm[B_MOTOR] = (float)machine.spindlezero[B_MOTOR] / settings->axis[B_MOTOR].steps_per_mm;
 
-    sys.position[B_MOTOR] = machine.width;
+    if(!init_ok) {
+        sys.position[B_MOTOR] = machine.width;
+        init_ok = false;
+    } // else do what? recalculate or issue warning?
+}
 
+// Initialize API pointers for Wall Plotter kinematics
+void wall_plotter_init (void)
+{
     kinematics.limits_set_target_pos = wp_limits_set_target_pos;
     kinematics.limits_get_axis_mask = wp_limits_get_axis_mask;
     kinematics.limits_set_machine_positions = wp_limits_set_machine_positions;
@@ -328,6 +341,9 @@ void wall_plotter_init (void)
 
     on_report_options = grbl.on_report_options;
     grbl.on_report_options = report_options;
+
+    settings_changed = hal.settings_changed;
+    hal.settings_changed = wp_settings_changed;
 }
 
 #endif

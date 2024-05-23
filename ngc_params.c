@@ -3,26 +3,30 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2023 Terje Io
+  Copyright (c) 2021-2024 Terje Io
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 /*
   All predefined parameters defined in NIST RS274NGC version 3 (ref section 3.2.1) are implemented.
   Most additional predefined parameters defined by LinuxCNC (ref section 5.2.3.1) are implemented.
 */
+
+#include "hal.h"
+
+#if NGC_PARAMETERS_ENABLE
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -207,6 +211,11 @@ static float work_position (ngc_param_id_t id)
     return value;
 }
 
+static float debug_output (ngc_param_id_t id)
+{
+    return (float)settings.flags.ngc_debug_out;
+}
+
 PROGMEM static const ngc_ro_param_t ngc_ro_params[] = {
     { .id_min = 5061, .id_max = 5069, .get = probe_coord },        // LinuxCNC
     { .id_min = 5070, .id_max = 5070, .get = probe_result },       // LinuxCNC
@@ -228,7 +237,8 @@ PROGMEM static const ngc_ro_param_t ngc_ro_params[] = {
     { .id_min = 5399, .id_max = 5399, .get = m66_result },         // LinuxCNC
     { .id_min = 5400, .id_max = 5400, .get = tool_number },        // LinuxCNC
     { .id_min = 5401, .id_max = 5409, .get = tool_offset },        // LinuxCNC
-    { .id_min = 5420, .id_max = 5428, .get = work_position }       // LinuxCNC
+    { .id_min = 5420, .id_max = 5428, .get = work_position },      // LinuxCNC
+    { .id_min = 5599, .id_max = 5599, .get = debug_output }        // LinuxCNC
 };
 
 bool ngc_param_get (ngc_param_id_t id, float *value)
@@ -655,3 +665,5 @@ bool ngc_named_param_set (char *name, float value)
 
     return ok;
 }
+
+#endif // NGC_PARAMETERS_ENABLE

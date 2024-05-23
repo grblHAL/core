@@ -1231,7 +1231,7 @@ static status_code_t set_homing_enable (setting_id_t id, uint_fast16_t int_value
         settings.homing.flags.use_limit_switches = DEFAULT_HOMING_USE_LIMIT_SWITCHES;
         settings.limits.flags.two_switches = DEFAULT_LIMITS_TWO_SWITCHES_ON_AXES;
 #else
-        settings.homing.flags.value = int_value & 0b111;
+        settings.homing.flags.value = int_value & 0b1111;
         settings.limits.flags.two_switches = homing.two_switches;
         settings.homing.flags.manual = homing.manual;
         settings.homing.flags.override_locks = homing.override_locks;
@@ -1740,7 +1740,7 @@ static uint32_t get_int (setting_id_t id)
             homing.use_limit_switches = settings.homing.flags.use_limit_switches;
             value = homing.value;
 #else
-            value = settings.homing.flags.enable;
+            value = settings.homing.flags.enabled;
 #endif
             break;
 
@@ -3055,7 +3055,7 @@ void settings_init (void)
     if(hal.stepper.get_ganged)
         setting_remove_elements(Setting_GangedDirInvertMask, hal.stepper.get_ganged(false).mask);
 
-    setting_remove_element(Setting_CoolantInvertMask, hal.coolant_cap.mask);
+    setting_remove_elements(Setting_CoolantInvertMask, hal.coolant_cap.mask);
 
 #if COMPATIBILITY_LEVEL <= 1
     if(hal.homing.get_state == NULL) {

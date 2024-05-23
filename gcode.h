@@ -539,6 +539,7 @@ typedef struct {
 typedef struct {
     float offset[N_AXIS];   //!< Tool offset
     float radius;           //!< Radius of tool (currently unsupported)
+// TODO: add float max_rpm; ?
     tool_id_t tool_id;      //!< Tool number
 } tool_data_t;
 

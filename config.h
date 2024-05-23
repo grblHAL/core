@@ -516,12 +516,20 @@ Number of tools in tool table, edit to enable (max. 32 allowed)
 
 /*! \def NGC_EXPRESSIONS_ENABLE
 \brief
-Set to \ref On or 1 to enable experimental support for parameters and expressions.
+Set to \ref On or 1 to enable experimental support for expressions.
 
 Some LinuxCNC extensions are supported, conditionals and subroutines are not.
 */
 #if !defined NGC_EXPRESSIONS_ENABLE || defined __DOXYGEN__
 #define NGC_EXPRESSIONS_ENABLE Off
+#endif
+
+/*! \def NGC_PARAMETERS_ENABLE
+\brief
+Set to \ref On or 1 to enable experimental support for parameters.
+*/
+#if !defined NGC_PARAMETERS_ENABLE || defined __DOXYGEN__
+#define NGC_PARAMETERS_ENABLE On
 #endif
 
 /*! \def NGC_N_ASSIGN_PARAMETERS_PER_BLOCK
@@ -1129,7 +1137,7 @@ Defines the parameters for the first entry in the spindle RPM linearization tabl
 */
 ///@{
 #if !defined DEFAULT_RPM_POINT01 || defined __DOXYGEN__
-#define DEFAULT_RPM_POINT01 DEFAULT_SPINDLE_RPM_MIN  // Don not change! Set DEFAULT_SPINDLE_RPM_MIN instead.
+#define DEFAULT_RPM_POINT01 NAN // DEFAULT_SPINDLE_RPM_MIN  // Replace NAN with DEFAULT_SPINDLE_RPM_MIN to enable.
 #endif
 #if !defined DEFAULT_RPM_LINE_A1 || defined __DOXYGEN__
 #define DEFAULT_RPM_LINE_A1 3.197101e-03f
@@ -1144,7 +1152,7 @@ Defines the parameters for the second entry in the spindle RPM linearization tab
 */
 ///@{
 #if !defined DEFAULT_RPM_POINT12 || defined __DOXYGEN__
-#define DEFAULT_RPM_POINT12 9627.8  // Set to a float constant to enable.
+#define DEFAULT_RPM_POINT12 NAN  // Change NAN to a float constant to enable.
 #endif
 #if !defined DEFAULT_RPM_LINE_A2 || defined __DOXYGEN__
 #define DEFAULT_RPM_LINE_A2  1.722950e-2f
@@ -1159,7 +1167,7 @@ Defines the parameters for the third entry in the spindle RPM linearization tabl
 */
 ///@{
 #if !defined DEFAULT_RPM_POINT23 || defined __DOXYGEN__
-#define DEFAULT_RPM_POINT23 10813.9  // Set to a float constant to enable.
+#define DEFAULT_RPM_POINT23 NAN  // Change NAN to a float constant to enable.
 #endif
 #if !defined DEFAULT_RPM_LINE_A3 || defined __DOXYGEN__
 #define DEFAULT_RPM_LINE_A3 5.901518e-02f
@@ -1174,7 +1182,7 @@ Defines the parameters for the fourth entry in the spindle RPM linearization tab
 */
 ///@{
 #if !defined DEFAULT_RPM_POINT34 || defined __DOXYGEN__
-#define DEFAULT_RPM_POINT34 NAN  // Set to a float constant to enable.
+#define DEFAULT_RPM_POINT34 NAN  // Change NAN to a float constant to enable.
 #endif
 #if !defined DEFAULT_RPM_LINE_A4 || defined __DOXYGEN__
 #define DEFAULT_RPM_LINE_A4  1.203413e-01f
@@ -1985,6 +1993,11 @@ __NOTE:__ Must be a positive values.
 #if N_SYS_SPINDLE > 8
 #undef N_SYS_SPINDLE
 #define N_SYS_SPINDLE 8
+#endif
+
+#if NGC_EXPRESSIONS_ENABLE && !NGC_PARAMETERS_ENABLE
+#undef NGC_PARAMETERS_ENABLE
+#define NGC_PARAMETERS_ENABLE On
 #endif
 
 #if (REPORT_WCO_REFRESH_BUSY_COUNT < REPORT_WCO_REFRESH_IDLE_COUNT)
