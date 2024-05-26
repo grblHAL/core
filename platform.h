@@ -21,8 +21,28 @@
 
 #pragma once
 
-#if defined(STM32F103xB) || defined(STM32F103xE) || defined(STM32F401xC) || defined(STM32F401xE) || defined(STM32F407xx) || defined(STM32F411xE) || \
-    defined(STM32F412Vx) || defined(STM32F446xx) || defined(STM32F756xx) || defined(STM32F765xx) || defined(STM32H743xx) || defined(STM32H723xx)
+#if defined(STM32F103xB) || defined(STM32F103xE)
+#define STM32_F1_PLATFORM
+#endif
+
+#if defined(STM32F303xC)
+#define STM32_F3_PLATFORM
+#endif
+
+#if defined(STM32F401xC) || defined(STM32F401xE) || defined(STM32F407xx) || defined(STM32F411xE) || \
+    defined(STM32F412Vx) || defined(STM32F446xx)
+#define STM32_F4_PLATFORM
+#endif
+
+#if defined(STM32F756xx) || defined(STM32F765xx)
+#define STM32_F7_PLATFORM
+#endif
+
+#if defined(STM32H743xx) || defined(STM32H723xx)
+#define STM32_H7_PLATFORM
+#endif
+
+#if defined(STM32_F1_PLATFORM) || defined(STM32_F3_PLATFORM) || defined(STM32_F4_PLATFORM) || defined(STM32_F7_PLATFORM) || defined(STM32_H7_PLATFORM)
 #define STM32_PLATFORM
 #endif
 

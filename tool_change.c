@@ -143,7 +143,7 @@ static bool restore (void)
         spindle_restore(plan_data.spindle.hal, gc_state.modal.spindle.state, gc_state.spindle.rpm);
 
         if(!settings.flags.no_restore_position_after_M6) {
-            previous.values[plane.axis_linear] += gc_get_offset(plane.axis_linear);
+            previous.values[plane.axis_linear] += gc_get_offset(plane.axis_linear, false);
             mc_line(previous.values, &plan_data);
         }
     }
@@ -360,7 +360,7 @@ static status_code_t tool_change (parser_state_t *parser_state)
 
     // Establish axis assignments.
 
-    previous.values[plane.axis_linear] -= gc_get_offset(plane.axis_linear);
+    previous.values[plane.axis_linear] -= gc_get_offset(plane.axis_linear, false);
 
     plan_line_data_t plan_data;
 

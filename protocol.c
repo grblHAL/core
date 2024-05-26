@@ -375,9 +375,13 @@ bool protocol_main_loop (void)
 bool protocol_buffer_synchronize (void)
 {
     bool ok = true;
+
     // If system is queued, ensure cycle resumes if the auto start flag is present.
     protocol_auto_cycle_start();
+
+    sys.flags.synchronizing = On;
     while ((ok = protocol_execute_realtime()) && (plan_get_current_block() || state_get() == STATE_CYCLE));
+    sys.flags.synchronizing = Off;
 
     return ok;
 }
@@ -939,12 +943,12 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(char c)
             break;
 
         case CMD_MPG_MODE_TOGGLE:           // Switch off MPG mode
-            if(hal.stream.type == StreamType_MPG)
+            if((drop = hal.stream.type == StreamType_MPG))
                 protocol_enqueue_foreground_task(stream_mpg_set_mode, NULL);
             break;
 
         case CMD_AUTO_REPORTING_TOGGLE:
-            if(settings.report_interval)
+            if((drop = settings.report_interval != 0))
                 sys.flags.auto_reporting = !sys.flags.auto_reporting;
             break;
 

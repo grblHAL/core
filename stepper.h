@@ -51,6 +51,7 @@ typedef struct st_block {
     output_command_t *output_commands; //!< Output commands (linked list) to be performed when block is executed
     bool backlash_motion;
     bool dynamic_rpm;                  //!< Tracks motions that require dynamic RPM adjustment
+    offset_id_t offset_id;
     spindle_ptrs_t *spindle;           //!< Pointer to current spindle for motions that require dynamic RPM adjustment
 } st_block_t;
 
@@ -136,5 +137,7 @@ void st_update_plan_block_parameters (void);
 float st_get_realtime_rate (void);
 
 void stepper_driver_interrupt_handler (void);
+
+offset_id_t st_get_offset_id (void);
 
 #endif

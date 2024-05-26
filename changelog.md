@@ -1,5 +1,35 @@
 ## grblHAL changelog
 
+<a name="20240526"/>Build 20240526
+
+Core:
+
+* Added experimental support for M70-M73, save and restore of modal state.
+
+* Added experimental support of LinuxCNC style subroutines.
+Available for gcode run from local filesystem such as on a SD card or in littlefs.
+
+* Improved handling of G92 when G92 offset is changed while motion is ongoing.
+Position and WCO offset in the realtime report will now be the actual realtime values and not
+the values based on the parser state which may be quite a bit ahead of the machine. Ref. [issue #241](https://github.com/grblHAL/core/discussions/241#discussioncomment-9463390).
+
+* Fix for [issue #521](https://github.com/grblHAL/core/issues/521), crash when running G65 macro on ESP32.
+
+* "Hardened" stream switching code, likely fix for [discussion #456](https://github.com/grblHAL/core/discussions/456#discussioncomment-9533613).
+
+Drivers:
+
+* STM32F7xx: added initial support for WizNet W5500 and W5100S ethernet modules. Stack starts up but fails later, likely due to SPI issue?.
+To be completed later.
+
+Plugins:
+
+* Keypad, OpenPNP and Encoder: updated for core signature change related to improved G92 handling.
+
+* Networking: fixed incorrect signature of WizNet ethernet init function.
+
+---
+
 <a name="20240513"/>Build 20240513
 
 Core:

@@ -166,6 +166,20 @@ char *ftoa (float n, uint8_t decimal_places)
     return bptr;
 }
 
+// Trim trailing zeros and possibly decimal point
+char *trim_float (char *s)
+{
+    if(strchr(s, '.')) {
+        char *s2 = strchr(s, '\0') - 1;
+        while(*s2 == '0')
+            *s2-- = '\0';
+        if(*s2 == '.')
+            *s2 = '\0';
+    }
+
+    return s;
+}
+
 // Extracts an unsigned integer value from a string.
 status_code_t read_uint (char *line, uint_fast8_t *char_counter, uint32_t *uint_ptr)
 {

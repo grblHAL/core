@@ -211,6 +211,9 @@ char *uitoa (uint32_t n);
 // Converts a float variable to string with the specified number of decimal places.
 char *ftoa (float n, uint8_t decimal_places);
 
+// Trim trailing zeros and possibly decimal point
+char *trim_float (char *s);
+
 // Returns true if float value is a whole number (integer)
 bool isintf (float value);
 

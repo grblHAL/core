@@ -52,6 +52,7 @@ typedef struct plan_block {
     uint32_t step_event_count;      // The maximum step axis count and number of steps required to complete this block.
     axes_signals_t direction_bits;  // The direction bit set for this block (refers to *_DIRECTION_PIN in config.h)
 
+    offset_id_t offset_id;
     // Block condition data to ensure correct execution depending on states and overrides.
     gc_override_flags_t overrides;  // Block bitfield variable for overrides
     planner_cond_t condition;       // Block bitfield variable defining block run conditions. Copied from pl_line_data.
@@ -95,6 +96,7 @@ typedef struct {
     spindle_t spindle;              // Desired spindle parameters, such as RPM, through line motion.
     planner_cond_t condition;       // Bitfield variable to indicate planner conditions. See defines above.
     gc_override_flags_t overrides;  // Block bitfield variable for overrides
+    offset_id_t offset_id;
     int32_t line_number;            // Desired line number to report when executing.
 //    void *parameters;               // TODO: pointer to extra parameters, for canned cycles and threading?
     char *message;                  // Message to be displayed when block is executed.

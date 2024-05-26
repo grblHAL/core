@@ -47,7 +47,7 @@ typedef struct stream_connection {
     const io_stream_t *stream;
     stream_is_connected_ptr is_up;
     stream_connection_flags_t flags;
-    struct stream_connection *next;
+    struct stream_connection *next, *prev;
 } stream_connection_t;
 
 static const io_stream_properties_t null_stream = {
@@ -232,6 +232,7 @@ static stream_connection_t *add_connection (const io_stream_t *stream)
                 return NULL;
             }
         }
+        connection->prev = last;
         last->next = connection;
     }
 
@@ -246,42 +247,42 @@ static bool stream_select (const io_stream_t *stream, bool add)
 {
     static const io_stream_t *active_stream = NULL;
 
-    bool send_init_message = false;
+    bool send_init_message = false, mpg_enable = false;
 
     if(stream == base.stream) {
         base.is_up = add ? (stream->is_connected ? stream->is_connected : stream_connected) : is_not_connected;
         return true;
     }
 
-    if(add) {
+    if(!add) { // disconnect
 
-        if(add_connection(stream) == NULL)
-            return false;
+        if(stream == base.stream || stream == mpg.stream)
+        	return false;
 
-    } else { // disconnect
+        bool disconnected = false;
+        stream_connection_t *connection = connections->next;
 
-        const io_stream_t *org_stream;
-        stream_connection_t *prev, *last = connections;
-
-        while(last->next) {
-            prev = last;
-            last = last->next;
-            if(prev->stream != mpg.stream)
-                org_stream = prev->stream;
-            if(last->stream == stream) {
-                prev->next = last->next;
-                free(last);
-                if(prev->next)
-                    return false;
-                else {
-                    if(mpg.flags.mpg_control || stream->type == StreamType_MPG)
-                        protocol_enqueue_foreground_task(stream_mpg_set_mode, (void *)1);
-                    stream = org_stream;
-                    break;
+        while(connection) {
+        	if(stream == connection->stream) {
+        		if((connection->prev->next = connection->next))
+        			connection->next->prev = connection->prev;
+                if((stream = connection->prev->stream) == mpg.stream) {
+                	mpg_enable = mpg.flags.mpg_control;
+                	if((stream = connection->prev->prev->stream) == NULL)
+                		stream = base.stream;
                 }
-            }
+                free(connection);
+        		connection = NULL;
+        		disconnected = true;
+        	} else
+        		connection = connection->next;
         }
-    }
+
+        if(!disconnected)
+        	return false;
+
+	} else if(add_connection(stream) == NULL)
+        return false;
 
     bool webui_connected = hal.stream.state.webui_connected;
 
@@ -323,7 +324,8 @@ static bool stream_select (const io_stream_t *stream, bool add)
     if(hal.stream.type == StreamType_MPG) {
         stream_mpg_enable(false);
         mpg.flags.mpg_control = On;
-    }
+    } else if(mpg_enable)
+		protocol_enqueue_foreground_task(stream_mpg_set_mode, (void *)1);
 
     memcpy(&hal.stream, stream, sizeof(io_stream_t));
 
@@ -455,7 +457,7 @@ void stream_mpg_set_mode (void *data)
 ISR_CODE bool ISR_FUNC(stream_mpg_check_enable)(char c)
 {
     if(c == CMD_MPG_MODE_TOGGLE)
-        protocol_enqueue_foreground_task(stream_mpg_set_mode, (void *)1);
+    	task_add_immediate(stream_mpg_set_mode, (void *)1);
     else {
         protocol_enqueue_realtime_command(c);
         if((c == CMD_CYCLE_START || c == CMD_CYCLE_START_LEGACY) && settings.status_report.pin_state)
@@ -492,6 +494,7 @@ bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stream_write_
         memcpy(&mpg, connection, sizeof(stream_connection_t));
 
         mpg.flags.is_mpg_tx = On;
+        mpg.flags.mpg_control = Off;
 
         if(mpg_write_char)
             mpg.stream->set_enqueue_rt_handler(mpg_write_char);

@@ -1143,7 +1143,7 @@ the WCO report element to the next status report.
 */
 void system_flag_wco_change (void)
 {
-    if(!settings.status_report.sync_on_wco_change)
+    if(settings.status_report.sync_on_wco_change)
         protocol_buffer_synchronize();
 
     if(grbl.on_wco_changed)
