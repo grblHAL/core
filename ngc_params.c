@@ -572,21 +572,20 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
 }
 
 // Lowercase name, remove control characters and spaces
-// Assumes names stored in flash are lowercase...
-static char *ngc_name_tolower (char *name)
+static char *ngc_name_tolower (char *s)
 {
-	char c, *s1 = name, *s2 = name;
-	bool convert = false;
+    static char name[NGC_MAX_PARAM_LENGTH + 1];
 
-    while((c = *s1++) && c > ' ')
-        convert = (c & 0x20) == 0 || c <= ' ';
+    uint_fast8_t len = 0;
+	char c, *s1 = s, *s2 = name;
 
-    if(convert) {
-    	s1 = name;
-		while((c = *s1++) && c > ' ')
-			*s2++ = LCAPS(c);
-	    *s2 = '\0';
+    while((c = *s1++) && len < NGC_MAX_PARAM_LENGTH) {
+        if(c > ' ') {
+            *s2++ = LCAPS(c);
+            len++;
+        }
     }
+    *s2 = '\0';
 
 	return name;
 }
@@ -596,7 +595,7 @@ bool ngc_named_param_get (char *name, float *value)
     bool found = false;
     uint_fast8_t idx = sizeof(ngc_named_ro_param) / sizeof(ngc_named_ro_param_t);
 
-    ngc_name_tolower(name);
+    name = ngc_name_tolower(name);
 
     *value = 0.0f;
 
@@ -625,7 +624,7 @@ bool ngc_named_param_exists (char *name)
     bool ok = false;
     uint_fast8_t idx = sizeof(ngc_named_ro_param) / sizeof(ngc_named_ro_param_t);
 
-    ngc_name_tolower(name);
+    name = ngc_name_tolower(name);
 
     // Check if name is supplied, return false if not.
     if((*name == '_' ? *(name + 1) : *name) == '\0')
@@ -657,7 +656,7 @@ bool ngc_named_param_set (char *name, float value)
     bool ok = false;
     uint_fast8_t idx = sizeof(ngc_named_ro_param) / sizeof(ngc_named_ro_param_t);
 
-    ngc_name_tolower(name);
+    name = ngc_name_tolower(name);
 
     // Check if name is supplied, return false if not.
     if((*name == '_' ? *(name + 1) : *name) == '\0')
@@ -796,6 +795,11 @@ bool ngc_call_pop (void)
 uint_fast8_t ngc_call_level (void)
 {
     return (uint_fast8_t)(call_level + 1);
+}
+
+uint8_t ngc_float_decimals (void)
+{
+	return settings.flags.report_inches ? N_DECIMAL_COORDVALUE_INCH : N_DECIMAL_COORDVALUE_MM;
 }
 
 #endif // NGC_PARAMETERS_ENABLE

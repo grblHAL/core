@@ -1,5 +1,13 @@
 ## grblHAL changelog
 
+<a name="20240527"/>Build 20240527
+
+Core:
+
+* "Hardened" NGC parameter name case swapping, changed to use float precision according to metric/inches setting for parameter reporting. 
+
+---
+
 <a name="20240526"/>Build 20240526
 
 Core:
@@ -11,7 +19,7 @@ Available for gcode run from local filesystem such as on a SD card or in littlef
 
 * Improved handling of G92 when G92 offset is changed while motion is ongoing.
 Position and WCO offset in the realtime report will now be the actual realtime values and not
-the values based on the parser state which may be quite a bit ahead of the machine. Ref. [issue #241](https://github.com/grblHAL/core/discussions/241#discussioncomment-9463390).
+the values based on the parser state which may be quite a bit ahead of the machine. Ref. [discussion #241](https://github.com/grblHAL/core/discussions/241#discussioncomment-9463390).
 
 * Fix for [issue #521](https://github.com/grblHAL/core/issues/521), crash when running G65 macro on ESP32.
 

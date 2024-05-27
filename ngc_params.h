@@ -87,6 +87,7 @@ typedef enum {
     NGCParam_Last
 } ncg_name_param_id_t;
 
+uint8_t ngc_float_decimals (void);
 bool ngc_param_get (ngc_param_id_t id, float *value);
 bool ngc_param_set (ngc_param_id_t id, float value);
 bool ngc_param_is_rw (ngc_param_id_t id);

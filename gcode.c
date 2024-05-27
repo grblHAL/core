@@ -620,7 +620,7 @@ char *gc_normalize_block (char *block, char **message)
                                     if(c == '#') {
                                         char_counter--;
                                         if(read_parameter(comment, &char_counter, &value) == Status_OK)
-                                            len += strlen(trim_float(ftoa(value, 6)));
+                                            len += strlen(trim_float(ftoa(value, ngc_float_decimals())));
                                         else
                                             len += 3; // "N/A"
                                     } else
@@ -637,7 +637,7 @@ char *gc_normalize_block (char *block, char **message)
                                         if(c == '#') {
                                             char_counter--;
                                             if(read_parameter(comment, &char_counter, &value) == Status_OK)
-                                                strcat(s3, trim_float(ftoa(value, 6)));
+                                                strcat(s3, trim_float(ftoa(value, ngc_float_decimals())));
                                             else
                                                 strcat(s3, "N/A");
                                             s3 = strchr(s3, '\0');

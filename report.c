@@ -553,7 +553,7 @@ status_code_t report_ngc_parameter (ngc_param_id_t id)
     hal.stream.write(uitoa(id));
     if(ngc_param_get(id, &value)) {
         hal.stream.write("=");
-        hal.stream.write(ftoa(value, 3));
+        hal.stream.write(trim_float(ftoa(value, ngc_float_decimals())));
     } else
         hal.stream.write("=N/A");
     hal.stream.write("]" ASCII_EOL);
@@ -570,7 +570,7 @@ status_code_t report_named_ngc_parameter (char *arg)
     hal.stream.write(arg);
     if(ngc_named_param_get(arg, &value)) {
         hal.stream.write("=");
-        hal.stream.write(ftoa(value, 3));
+        hal.stream.write(trim_float(ftoa(value, ngc_float_decimals())));
     } else
         hal.stream.write("=N/A");
     hal.stream.write("]" ASCII_EOL);
