@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+<a name="20240602"/>Build 20240602
+
+Core:
+
+* Fixed typo/bug in expression precedence handling. Ref. [issue #527](https://github.com/grblHAL/core/issues/527).
+
+Drivers:
+
+* STM32F4xx, STM32F7xx: added cast to suppress compiler warning.
+
+* STM32F7xx: added DMA support for SPI4, fix for SPI SCK pin reporting. WizNet code still not working.
+
+---
+
 <a name="20240527"/>Build 20240527
 
 Core:

@@ -791,7 +791,7 @@ status_code_t ngc_eval_expression (char *line, uint_fast8_t *pos, float *value)
                     return status;
 
                 operators[stack_index - 1] = operators[stack_index];
-                if((stack_index > 1) && precedence(operators[stack_index - 1] <= precedence(operators[stack_index - 2])))
+                if(stack_index > 1 && precedence(operators[stack_index - 1]) <= precedence(operators[stack_index - 2]))
                     stack_index--;
                 else
                     break;
