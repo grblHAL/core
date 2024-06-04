@@ -1,5 +1,15 @@
 ## grblHAL changelog
 
+<a name="20240604"/>Build 20240604
+
+Core:
+
+* Fixed incorrect implementation of `EXISTS` function. Ref. [issue #527](https://github.com/grblHAL/core/issues/527).
+
+* Added missing clear of parser tool change state when cycle start signal is asserted. Affects tool change mode 'Normal' ($341=0).
+
+---
+
 <a name="20240602"/>Build 20240602
 
 Core:

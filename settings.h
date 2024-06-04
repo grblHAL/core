@@ -391,6 +391,17 @@ typedef enum {
     Setting_Panel_Encoder3_Cpd       = 559,
     Setting_Panel_SettingsMax        = 579,
 
+    Setting_ButtonAction0 = 590,
+    Setting_ButtonAction1 = 591,
+    Setting_ButtonAction2 = 592,
+    Setting_ButtonAction3 = 593,
+    Setting_ButtonAction4 = 594,
+    Setting_ButtonAction5 = 595,
+    Setting_ButtonAction6 = 596,
+    Setting_ButtonAction7 = 597,
+    Setting_ButtonAction8 = 598,
+    Setting_ButtonAction9 = 599,
+
     Setting_ModbusTCPBase       = 600,    // Reserving settings values 600 to 639 for ModBus TCP (8 sets)
     Setting_ModbusIpAddressBase = Setting_ModbusTCPBase + Setting_ModbusIpAddress,
     Setting_ModbusPortBase      = Setting_ModbusTCPBase + Setting_ModbusPort,
