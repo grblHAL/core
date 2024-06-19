@@ -486,11 +486,11 @@ non-volatile storage until the controller is in IDLE state.
 
 /*! \def TOOLSETTER_RADIUS
 \brief
-The grbl.on_probe_fixture event handler is called by the default tool change algorithm when probing at G59.3.
+The grbl.on_probe_toolsetter event handler is called by the default tool change algorithm when probing at G59.3.
 In addition it will be called on a "normal" probe sequence if the XY position is
 within the radius of the G59.3 position defined below.
 Change if the default value of 5mm is not suitable or set it to 0.0f to disable.
-<br>__NOTE:__ A grbl.on_probe_fixture event handler is not installed by the core, it has to be provided
+<br>__NOTE:__ A grbl.on_probe_toolsetter event handler is not installed by the core, it has to be provided
 by a driver or a plugin.
 */
 #if !defined TOOLSETTER_RADIUS || defined __DOXYGEN__

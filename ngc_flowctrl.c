@@ -156,7 +156,7 @@ static status_code_t read_command (char *line, uint_fast8_t *pos, ngc_cmd_t *ope
                 *operation = NGCFlowCtrl_If;
                 (*pos)++;
             } else
-                *operation = Status_FlowControlSyntaxError; // Unknown statement name starting with F
+                status = Status_FlowControlSyntaxError; // Unknown statement name starting with F
             break;
 
         case 'R':
@@ -167,7 +167,7 @@ static status_code_t read_command (char *line, uint_fast8_t *pos, ngc_cmd_t *ope
                 *operation = NGCFlowCtrl_Return;
                 *pos += 5;
             } else
-                *operation = Status_FlowControlSyntaxError; // Unknown statement name starting with R
+                status = Status_FlowControlSyntaxError; // Unknown statement name starting with R
             break;
 
         case 'S':
@@ -531,7 +531,7 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
                         status = Status_FlowControlSyntaxError;
                     else {
 
-                        float params[29];
+                        float params[30];
                         ngc_param_id_t param_id = 1;
 
                         while(line[*pos] && status == Status_OK && param_id <= 30) {

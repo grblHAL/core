@@ -1,5 +1,29 @@
 ## grblHAL changelog
 
+<a name="20240619"/>Build 20240619
+
+Core:
+
+* Renamed `grbl.on_probe_fixture` event to `grbl.on_probe_toolsetter` and added pointer to toolsetter coordinates as an additional parameter.
+This will allow plugin code to modify the coordinates before moving to the toolsetter so that tools with off center cutting surfaces can be properly measured.
+Ref. [ioSender issue #386](https://github.com/terjeio/ioSender/issues/386).
+
+* Increased backlash parameters precision to 5 decimals. Ref [issue #452](https://github.com/grblHAL/core/issues/452#issuecomment-2159050856).
+
+* Some bug fixes in NGC parameters and flow control handling.
+
+Drivers:
+
+* ESP32: improved SPI code.
+
+* SAM3X8E: added support for native and MCP3221 I2C ADCs. Ref [issue #24](https://github.com/grblHAL/SAM3X8E/issues/24).
+
+Plugins:
+
+* Templates: Updated some for core event rename and signature change.
+
+---
+
 <a name="20240604"/>Build 20240604
 
 Core:

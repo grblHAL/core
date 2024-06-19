@@ -992,10 +992,10 @@ gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_f
     hal.probe.configure(parser_flags.probe_is_away, true);
 
 #if COMPATIBILITY_LEVEL <= 1
-    bool at_g59_3 = false, probe_fixture = grbl.on_probe_fixture != NULL && state_get() != STATE_TOOL_CHANGE && (sys.homed.mask & (X_AXIS_BIT|Y_AXIS_BIT));
+    bool at_g59_3 = false, probe_toolsetter = grbl.on_probe_toolsetter != NULL && state_get() != STATE_TOOL_CHANGE && (sys.homed.mask & (X_AXIS_BIT|Y_AXIS_BIT));
 
-    if(probe_fixture)
-        grbl.on_probe_fixture(NULL, at_g59_3 = system_xy_at_fixture(CoordinateSystem_G59_3, TOOLSETTER_RADIUS), true);
+    if(probe_toolsetter)
+        grbl.on_probe_toolsetter(NULL, NULL, at_g59_3 = system_xy_at_fixture(CoordinateSystem_G59_3, TOOLSETTER_RADIUS), true);
 #endif
 
     // After syncing, check if probe is already triggered or not connected. If so, halt and issue alarm.
@@ -1054,8 +1054,8 @@ gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_f
     protocol_execute_realtime();        // Check and execute run-time commands
 
 #if COMPATIBILITY_LEVEL <= 1
-    if(probe_fixture)
-        grbl.on_probe_fixture(NULL, at_g59_3, false);
+    if(probe_toolsetter)
+        grbl.on_probe_toolsetter(NULL, NULL, at_g59_3, false);
 #endif
 
     // Reset the stepper and planner buffers to remove the remainder of the probe motion.
