@@ -1,5 +1,28 @@
 ## grblHAL changelog
 
+<a name="20240624"/>Build 20240624
+
+Core:
+
+* Some minor changes to better support keypad macro and networking plugins.
+
+Drivers:
+
+* ESP32: disabled cycle start input for MKS DLC32 board due to incompatible use. Ref. [issue #111](https://github.com/grblHAL/ESP32/issues/111).
+
+* RP2040: fixed incorrect handling of WiFi BSSID.
+
+* STM32F7xx: completed support for WizNet ethernet modules \(W5100S & W5500\). Added code by @dresco for getting unique MAC address, Ref. [discussion #17](https://github.com/grblHAL/STM32F7xx/discussions/17).
+
+Plugins:
+
+* Networking \(WizNet\): fixed incorrect MAC address handling, added weak functions for getting default MAC addresses ++. Ref. [discussion #17](https://github.com/grblHAL/STM32F7xx/discussions/17).
+
+* Keypad macros: added settings for binding single character realtime commands to macro pin event.  
+__NOTE:__ this change will reset _all_ plugin settings to default, backup/restore if this plugin is in use.
+
+---
+
 <a name="20240619"/>Build 20240619
 
 Core:
@@ -8,7 +31,7 @@ Core:
 This will allow plugin code to modify the coordinates before moving to the toolsetter so that tools with off center cutting surfaces can be properly measured.
 Ref. [ioSender issue #386](https://github.com/terjeio/ioSender/issues/386).
 
-* Increased backlash parameters precision to 5 decimals. Ref [issue #452](https://github.com/grblHAL/core/issues/452#issuecomment-2159050856).
+* Increased backlash parameters precision to 5 decimals. Ref. [issue #452](https://github.com/grblHAL/core/issues/452#issuecomment-2159050856).
 
 * Some bug fixes in NGC parameters and flow control handling.
 
@@ -16,7 +39,7 @@ Drivers:
 
 * ESP32: improved SPI code.
 
-* SAM3X8E: added support for native and MCP3221 I2C ADCs. Ref [issue #24](https://github.com/grblHAL/SAM3X8E/issues/24).
+* SAM3X8E: added support for native and MCP3221 I2C ADCs. Ref. [issue #24](https://github.com/grblHAL/SAM3X8E/issues/24).
 
 Plugins:
 

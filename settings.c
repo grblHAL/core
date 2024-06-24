@@ -1434,6 +1434,8 @@ inline static setting_id_t normalize_id (setting_id_t id)
         id = (setting_id_t)(Setting_EncoderSettingsBase + (id % ENCODER_SETTINGS_INCREMENT));
     else if(id > Setting_ModbusTCPBase && id <= Setting_ModbusTCPMax)
         id = (setting_id_t)(Setting_ModbusTCPBase + (id % MODBUS_TCP_SETTINGS_INCREMENT));
+    else if((id > Setting_Macro0 && id <= Setting_Macro9) || (id > Setting_MacroPort0 && id <= Setting_MacroPort9) || (id > Setting_ButtonAction0 && id <= Setting_ButtonAction9))
+        id = (setting_id_t)(id - (id % 10));
 
     return id;
 }
