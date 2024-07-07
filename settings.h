@@ -779,7 +779,8 @@ typedef struct {
     control_signals_t control_disable_pullup;
     coolant_state_t coolant_invert;
     axes_signals_t home_invert;
-    uint16_t hole_1;
+    uint8_t modbus_baud;
+    uint8_t canbus_baud;
     spindle_settings_t spindle;
     stepper_settings_t steppers;
     reportmask_t status_report; // Mask to indicate desired report data.

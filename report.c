@@ -38,6 +38,7 @@
 #include "nvs_buffer.h"
 #include "machine_limits.h"
 #include "state_machine.h"
+#include "canbus.h"
 #include "regex.h"
 
 #if ENABLE_SPINDLE_LINEARIZATION
@@ -984,6 +985,9 @@ void report_build_info (char *line, bool extended)
 
         if(hal.rtc.get_datetime)
             strcat(buf, "RTC,");
+
+        if(canbus_enabled())
+            strcat(buf, "CAN,");
 
     #ifdef PID_LOG
         strcat(buf, "PID,");

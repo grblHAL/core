@@ -37,6 +37,7 @@
 #define B_MOTOR Y_AXIS // Must be Y_AXIS
 
 static on_report_options_ptr on_report_options;
+static travel_limits_ptr check_travel_limits;
 
 // Returns x or y-axis "steps" based on CoreXY motor steps.
 inline static int32_t corexy_convert_to_a_motor_steps (int32_t *steps)
@@ -77,11 +78,24 @@ static inline float *transform_from_cartesian (float *target, float *position)
     return target;
 }
 
+// Transform position from motor (corexy) coordinate system to cartesian coordinate system
+static inline float *transform_to_cartesian (float *target, float *position)
+{
+    uint_fast8_t idx;
+
+    target[X_AXIS] = (position[X_AXIS] + position[Y_AXIS]) * 0.5f;
+    target[Y_AXIS] = (position[X_AXIS] - position[Y_AXIS]) * 0.5f;
+
+    for(idx = Z_AXIS; idx < N_AXIS; idx++)
+        target[idx] = position[idx];
+
+    return target;
+}
+
 static uint_fast8_t corexy_limits_get_axis_mask (uint_fast8_t idx)
 {
     return ((idx == A_MOTOR) || (idx == B_MOTOR)) ? (bit(X_AXIS) | bit(Y_AXIS)) : bit(idx);
 }
-
 
 static void corexy_limits_set_target_pos (uint_fast8_t idx) // fn name?
 {
@@ -102,6 +116,19 @@ static void corexy_limits_set_target_pos (uint_fast8_t idx) // fn name?
     }
 }
 
+// Checks and reports if target array exceeds machine travel limits. Returns false if check failed.
+// NOTE: target for axes X and Y are in motor coordinates if is_cartesian is false.
+static bool corexy_check_travel_limits (float *target, axes_signals_t axes, bool is_cartesian)
+{
+    if(is_cartesian)
+        return check_travel_limits(target, axes, true);
+
+    float cartesian_coords[N_AXIS];
+
+    transform_to_cartesian(cartesian_coords, target);
+
+    return check_travel_limits(cartesian_coords, axes, true);
+}
 
 // Set machine positions for homed limit switches. Don't update non-homed axes.
 // NOTE: settings.max_travel[] is stored as a negative value.
@@ -207,7 +234,7 @@ static void report_options (bool newopt)
     on_report_options(newopt);
 
     if(!newopt)
-        hal.stream.write("[KINEMATICS:CoreXY v2.00]" ASCII_EOL);
+        hal.stream.write("[KINEMATICS:CoreXY v2.01]" ASCII_EOL);
 }
 
 // Initialize API pointers for CoreXY kinematics
@@ -221,6 +248,9 @@ void corexy_init (void)
     kinematics.segment_line = kinematics_segment_line;
     kinematics.homing_cycle_validate = homing_cycle_validate;
     kinematics.homing_cycle_get_feedrate = homing_cycle_get_feedrate;
+
+    check_travel_limits = grbl.check_travel_limits;
+    grbl.check_travel_limits = corexy_check_travel_limits;
 
     on_report_options = grbl.on_report_options;
     grbl.on_report_options = report_options;

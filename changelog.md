@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+<a name="20240704"/>Build 20240704
+
+Core:
+
+* Added high level CANbus API for plugin use. If driver/board combo provides the required lowlevel HAL API the `NEWOPT` string in the `$I` output will contain the `CAN` element when CAN is enabled.  
+Ref. [issue #179](https://github.com/grblHAL/STM32F4xx/issues/179).
+
+* Added soft limits check for corexy kinematics, ref. [discussion #536](https://github.com/grblHAL/core/discussions/536).
+
+Drivers:
+
+* ESP32: fixed WebUI regression. Ref. [issue #116](https://github.com/grblHAL/ESP32/issues/116).
+
+* STM32F7xx, STM32F4xx: Added lowlevel CANbus API and enabled it for some boards.
+
+---
+
+
 <a name="20240624"/>Build 20240624
 
 Core:
