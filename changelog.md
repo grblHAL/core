@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+<a name="20240709"/>Build 20240709
+
+Core:
+
+* For developers: added printf style debug output function and corresponding macro. See _grbl/stream.h_ for details. Added `grbl.on_report_ngc_parameters` event.
+
+* Fixed silly mistakes in CAN code. Ref. [issue #179](https://github.com/grblHAL/STM32F4xx/issues/179#issuecomment-2217912406).
+
+Drivers:
+
+* SAM3X8E: [PR #25](https://github.com/grblHAL/SAM3X8E/pull/25), adds missing guards around references.
+
+* STM32F1xx: added tentative board map for Creality v4.4.2 and v4.4.7. Ref. [issue #33](https://github.com/grblHAL/STM32F1xx/issues/33). Not tested!
+
+---
+
 <a name="20240704"/>Build 20240704
 
 Core:
@@ -13,7 +29,7 @@ Drivers:
 
 * ESP32: fixed WebUI regression. Ref. [issue #116](https://github.com/grblHAL/ESP32/issues/116).
 
-* STM32F7xx, STM32F4xx: Added lowlevel CANbus API and enabled it for some boards.
+* STM32F7xx, STM32F4xx: added lowlevel CANbus API and enabled it for some boards.
 
 ---
 

@@ -95,6 +95,7 @@ typedef void (*on_unknown_accessory_override_ptr)(uint8_t cmd);
 typedef bool (*on_unknown_realtime_cmd_ptr)(char c);
 typedef void (*on_report_handlers_init_ptr)(void);
 typedef void (*on_report_options_ptr)(bool newopt);
+typedef void (*on_report_ngc_parameters_ptr)(void);
 typedef void (*on_report_command_help_ptr)(void);
 typedef const char *(*on_setting_get_description_ptr)(setting_id_t id);
 typedef void (*on_global_settings_restore_ptr)(void);
@@ -156,6 +157,7 @@ typedef struct {
     on_execute_realtime_ptr on_execute_delay;
     on_unknown_accessory_override_ptr on_unknown_accessory_override;
     on_report_options_ptr on_report_options;
+    on_report_ngc_parameters_ptr on_report_ngc_parameters;
     on_report_command_help_ptr on_report_command_help; //!< Deprecated, use system_register_commands() to register new commands.
     on_rt_reports_added_ptr on_rt_reports_added;
     on_global_settings_restore_ptr on_global_settings_restore;

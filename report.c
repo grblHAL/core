@@ -21,7 +21,7 @@
 */
 
 /*
-  This file functions as the primary feedback interface for Grbl. Any outgoing data, such
+  This file functions as the primary feedback interface for grblHAL. Any outgoing data, such
   as the protocol status messages, feedback messages, and status reports, are stored here.
   For the most part, these functions primarily are called from protocol.c methods. If a
   different style feedback is desired (i.e. JSON), then a user can change these following
@@ -267,6 +267,10 @@ void report_message (const char *msg, message_type_t type)
                 hal.stream.write("Warning: ");
                 break;
 
+            case Message_Debug:
+                hal.stream.write("Debug: ");
+                break;
+
             default:
                 break;
         }
@@ -405,7 +409,7 @@ status_code_t report_help (char *args)
 }
 
 
-// Grbl settings print out.
+// grblHAL settings print out.
 
 static int cmp_settings (const void *a, const void *b)
 {
@@ -508,7 +512,7 @@ void report_grbl_settings (bool all, void *data)
 
 // Prints current probe parameters. Upon a probe command, these parameters are updated upon a
 // successful probe or upon a failed probe with the G38.3 without errors command (if supported).
-// These values are retained until Grbl is power-cycled, whereby they will be re-zeroed.
+// These values are retained until grblHAL is power-cycled, whereby they will be re-zeroed.
 void report_probe_parameters (void)
 {
     // Report in terms of machine position.
@@ -581,7 +585,7 @@ status_code_t report_named_ngc_parameter (char *arg)
 
 #endif
 
-// Prints Grbl NGC parameters (coordinate offsets, probing, tool table)
+// Prints grblHAL NGC parameters (coordinate offsets, probing, tool table)
 void report_ngc_parameters (void)
 {
     uint_fast8_t idx;
@@ -656,6 +660,9 @@ void report_ngc_parameters (void)
         hal.stream.write(get_axis_value(sys.tlo_reference[plane.axis_linear] / settings.axis[plane.axis_linear].steps_per_mm));
         hal.stream.write("]" ASCII_EOL);
     }
+
+    if(grbl.on_report_ngc_parameters)
+        grbl.on_report_ngc_parameters();
 }
 
 static inline bool is_g92_active (void)
@@ -1082,8 +1089,8 @@ void report_build_info (char *line, bool extended)
 }
 
 
-// Prints the character string line Grbl has received from the user, which has been pre-parsed,
-// and has been sent into protocol_execute_line() routine to be executed by Grbl.
+// Prints the character string line grblHAL has received from the user, which has been pre-parsed,
+// and has been sent into protocol_execute_line() routine to be executed by grblHAL.
 void report_echo_line_received (char *line)
 {
     hal.stream.write("[echo: ");

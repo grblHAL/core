@@ -31,7 +31,7 @@
 #define CANBUS_BUFFER_LEN 8
 #endif
 #ifndef CANBUS_BAUDRATE
-#define CANBUS_BAUDRATE 0  // 125,000
+#define CANBUS_BAUDRATE 0  // 125000
 #endif
 
 typedef struct {
@@ -96,8 +96,8 @@ ISR_CODE static bool ISR_FUNC(canbus_queue_rx)(canbus_message_t message, can_rx_
     uint8_t next_head = (rx_buffer.head + 1) % CANBUS_BUFFER_LEN;
 
     if((ok = next_head != rx_buffer.tail)) {
-        rx_buffer.rx[next_head].callback = callback;
-        rx_buffer.rx[next_head].message = message;
+        rx_buffer.rx[rx_buffer.head].callback = callback;
+        rx_buffer.rx[rx_buffer.head].message = message;
 
         rx_buffer.head = next_head;
     }
@@ -131,8 +131,6 @@ static bool canbus_start (uint32_t baud)
 static status_code_t canbus_set_baud (setting_id_t id, uint_fast16_t value)
 {
     settings.canbus_baud = value;
-
-    can_set_baud(baud[settings.canbus_baud]);
 
     return can_set_baud(baud[settings.canbus_baud]) ? Status_OK : Status_SettingValueOutOfRange;
 }

@@ -26,6 +26,14 @@
 #include "protocol.h"
 #include "state_machine.h"
 
+#if defined(DEBUG) || defined(DEBUGOUT)
+#include <stdio.h>
+#include <stdarg.h>
+#ifndef DEBUG_BUFFER
+#define DEBUG_BUFFER 100
+#endif
+#endif
+
 static stream_rx_buffer_t rxbackup;
 
 typedef struct {
@@ -664,6 +672,20 @@ void debug_writeln (const char *s)
     }
 }
 
+void debug_printf (const char *fmt, ...)
+{
+    char debug_out[DEBUG_BUFFER];
+
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(debug_out, sizeof(debug_out) - 1, fmt, args);
+    va_end(args);
+
+    debug_writeln(debug_out);
+    while(hal.stream.get_tx_buffer_count()) // Wait until message is delivered
+        grbl.on_execute_realtime(state_get());
+}
+
 static bool debug_claim_stream (io_stream_properties_t const *stream)
 {
     io_stream_t const *claimed = NULL;
@@ -692,6 +714,31 @@ bool debug_stream_init (void)
         protocol_enqueue_foreground_task(report_warning, "Failed to initialize debug stream!");
 
     return hal.debug.write == debug_write;
+}
+
+#elif defined(DEBUG)
+
+void debug_printf (const char *fmt, ...)
+{
+    char debug_out[DEBUG_BUFFER];
+
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(debug_out, sizeof(debug_out) - 1, fmt, args);
+    va_end(args);
+
+    if(hal.stream.write) {
+        report_message(debug_out, Message_Debug);
+        while(hal.stream.get_tx_buffer_count()) // Wait until message is delivered
+            grbl.on_execute_realtime(state_get());
+    }
+}
+
+#else
+
+void debug_printf (const char *fmt, ...)
+{
+    // NOOP
 }
 
 #endif
