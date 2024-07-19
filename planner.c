@@ -469,13 +469,13 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
 
     if(!block->condition.inverse_time &&
         !block->condition.rapid_motion &&
-         (motion.mask & settings.steppers.is_rotational.mask) &&
-          (motion.mask & ~settings.steppers.is_rotational.mask)) {
+         (motion.mask & settings.steppers.is_rotary.mask) &&
+          (motion.mask & ~settings.steppers.is_rotary.mask)) {
 
         float linear_magnitude = 0.0f;
 
         idx = 0;
-        motion.mask &= ~settings.steppers.is_rotational.mask;
+        motion.mask &= ~settings.steppers.is_rotary.mask;
 
         while(motion.mask) {
             if(motion.mask & 0x01)

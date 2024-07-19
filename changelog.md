@@ -1,5 +1,27 @@
 ## grblHAL changelog
 
+<a name="20240715">Build 20240719
+
+Core:
+
+* Limited tool change probe moves to be within machine limits. Ref. [issue #542](https://github.com/grblHAL/core/issues/542).
+
+* Added setting `$358` to enable experimental functionality for fast rotary 'rewind' to stored G28 position. Return move should complete in half a rotation or less.  
+To use program:
+```
+G91G28<axisletter>0
+G90
+```
+where \<axisletter\> is the axisletter of the rotary axis to move.
+
+* For developers: added option to redirect debug via driver provided function when `DEBUGOUT` is set to `-1` in _config.h_. Can be used to send debug output to debugger interfaces.
+
+Plugins:
+
+* WebUI: fix for crash when settings page is opened with macros plugin enabled. Ref. [issue #14](https://github.com/grblHAL/Plugin_WebUI/issues/14).
+
+---
+
 <a name="20240709"/>Build 20240709
 
 Core:

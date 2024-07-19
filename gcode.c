@@ -1287,7 +1287,7 @@ status_code_t gc_execute_block (char *block)
                     case 56:
                         if(!settings.parking.flags.enable_override_control) // TODO: check if enabled?
                             FAIL(Status_GcodeUnsupportedCommand); // [Unsupported M command]
-                        // no break;
+                        // no break
                     case 48: case 49: case 50: case 51: case 53:
                         word_bit.modal_group.M9 = On;
                         gc_block.override_command = (override_mode_t)int_value;
@@ -1979,7 +1979,7 @@ status_code_t gc_execute_block (char *block)
     if (gc_block.modal.units_imperial) do { // Axes indices are consistent, so loop may be used.
         idx--;
 #if N_AXIS > 3
-        if (bit_istrue(axis_words.mask, bit(idx)) && bit_isfalse(settings.steppers.is_rotational.mask, bit(idx))) {
+        if (bit_istrue(axis_words.mask, bit(idx)) && bit_isfalse(settings.steppers.is_rotary.mask, bit(idx))) {
 #else
         if (bit_istrue(axis_words.mask, bit(idx))) {
 #endif
@@ -3408,12 +3408,60 @@ status_code_t gc_execute_block (char *block)
             break;
 
         case NonModal_GoHome_0:
+#if N_AXIS > 3
+            {
+                axes_signals_t wrap = { (axis_words.mask & settings.steppers.is_rotary.mask) & settings.steppers.rotary_wrap.mask };
+                if(gc_state.modal.distance_incremental && wrap.mask) {
+                    for(idx = Z_AXIS + 1; idx < N_AXIS; idx++) {
+                        if(bit_istrue(wrap.mask, bit(idx)) && gc_block.values.xyz[idx] == gc_state.position[idx])
+                            gc_block.rotary_wrap.mask |= bit(idx);
+                    }
+                }
+            }
+            // no break
+#endif
+
         case NonModal_GoHome_1:
             // Move to intermediate position before going home. Obeys current coordinate system and offsets
             // and absolute and incremental modes.
             plan_data.condition.rapid_motion = On; // Set rapid motion condition flag.
-            if (axis_command)
+            if(axis_command)
                 mc_line(gc_block.values.xyz, &plan_data);
+#if N_AXIS > 3
+            if(gc_block.rotary_wrap.mask) {
+
+                coord_system_t wrap_target;
+
+                protocol_buffer_synchronize();
+                memcpy(wrap_target.xyz, gc_block.values.coord_data.xyz, sizeof(coord_system_t));
+
+                for(idx = Z_AXIS + 1; idx < N_AXIS; idx++) {
+                    if(bit_istrue(gc_block.rotary_wrap.mask, bit(idx))) {
+                        float position, delta;
+                        if((wrap_target.xyz[idx] = fmodf(wrap_target.xyz[idx], 360.0f)) < 0.0f)
+                            wrap_target.xyz[idx] = 360.0f + wrap_target.xyz[idx];
+                        if((position = fmodf(gc_state.position[idx], 360.0f)) < 0.0)
+                            position = 360.0f + position;
+                        if((delta = position - wrap_target.xyz[idx]) < -180.0f)
+                            position += 360.0f;
+                        else if(delta > 180.0f)
+                            position -= 360.0f;
+                        sys.position[idx] = lroundf(position * settings.axis[idx].steps_per_mm);
+                    }
+                }
+
+                sync_position();
+                mc_line(wrap_target.xyz, &plan_data);
+                protocol_buffer_synchronize();
+
+                for(idx = Z_AXIS + 1; idx < N_AXIS; idx++) {
+                    if(bit_istrue(gc_block.rotary_wrap.mask, bit(idx)))
+                        sys.position[idx] = lroundf(gc_block.values.coord_data.xyz[idx] * settings.axis[idx].steps_per_mm);
+                }
+
+                sync_position();
+            } else
+#endif
             mc_line(gc_block.values.coord_data.xyz, &plan_data);
             memcpy(gc_state.position, gc_block.values.coord_data.xyz, sizeof(gc_state.position));
             set_scaling(1.0f);

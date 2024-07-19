@@ -296,7 +296,7 @@ static bool homing_cycle (axes_signals_t cycle, axes_signals_t auto_square)
         // NOTE: settings.axis[].max_travel is stored as a negative value.
         if(bit_istrue(cycle.mask, bit(idx))) {
 #if N_AXIS > 3
-            if(bit_istrue(settings.steppers.is_rotational.mask, bit(idx)))
+            if(bit_istrue(settings.steppers.is_rotary.mask, bit(idx)))
                 max_travel = max(max_travel, (-HOMING_AXIS_SEARCH_SCALAR) * (settings.axis[idx].max_travel < -0.0f ? settings.axis[idx].max_travel : -360.0f));
             else
 #endif

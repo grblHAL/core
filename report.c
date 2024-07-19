@@ -118,7 +118,7 @@ static char *get_axis_values_inches (float *axis_values)
         if(idx == X_AXIS && gc_state.modal.diameter_mode)
             strcat(buf, ftoa(axis_values[idx] * INCH_PER_MM * 2.0f, N_DECIMAL_COORDVALUE_INCH));
 #if N_AXIS > 3
-        else if(idx > Z_AXIS && bit_istrue(settings.steppers.is_rotational.mask, bit(idx)))
+        else if(idx > Z_AXIS && bit_istrue(settings.steppers.is_rotary.mask, bit(idx)))
             strcat(buf, ftoa(axis_values[idx], N_DECIMAL_COORDVALUE_MM));
 #endif
         else

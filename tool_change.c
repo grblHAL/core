@@ -180,6 +180,15 @@ static void execute_restore (void *data)
         system_set_exec_state_flag(EXEC_CYCLE_START);
 }
 
+// Set and limit probe travel to be within machine limits.
+static void set_probe_target (coord_data_t *target, uint8_t axis)
+{
+    target->values[axis] -= settings.tool_change.probing_distance;
+
+    if(bit_istrue(sys.homed.mask, bit(axis)) && settings.axis[axis].max_travel < -0.0f)
+        target->values[axis] = max(min(target->values[axis], sys.work_envelope.max.values[axis]), sys.work_envelope.min.values[axis]);
+}
+
 // Execute touch off on cycle start event from @ G59.3 position.
 // Used in SemiAutomatic mode ($341=3) only. Called from the foreground process.
 static void execute_probe (void *data)
@@ -213,7 +222,8 @@ static void execute_probe (void *data)
         plan_data.feed_rate = settings.tool_change.seek_rate;
         plan_data.condition.value = 0;
         plan_data.spindle.state.value = 0;
-        target.values[plane.axis_linear] -= settings.tool_change.probing_distance;
+
+        set_probe_target(&target, plane.axis_linear);
 
         if((ok = ok && mc_probe_cycle(target.values, &plan_data, flags) == GCProbe_Found))
         {
@@ -485,7 +495,7 @@ status_code_t tc_probe_workpiece (void)
     plan_data_init(&plan_data);
     plan_data.feed_rate = settings.tool_change.seek_rate;
 
-    target.values[plane.axis_linear] -= settings.tool_change.probing_distance;
+    set_probe_target(&target, plane.axis_linear);
 
     if((ok = mc_probe_cycle(target.values, &plan_data, flags) == GCProbe_Found))
     {

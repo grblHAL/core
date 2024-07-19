@@ -624,6 +624,9 @@ typedef struct {
 #if NGC_PARAMETERS_ENABLE
     modal_state_action_t state_action;  //!< M70-M73 modal state action
 #endif
+#if N_AXIS > 3
+    axes_signals_t rotary_wrap;
+#endif
 } parser_block_t;
 
 // Initialize the parser

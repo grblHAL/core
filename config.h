@@ -1783,6 +1783,18 @@ Timezone offset from UTC in hours, allowed range is -12.0 - 12.0.
 #endif
 ///@}
 
+/*! @name $538 - Setting_RotaryWrap
+Enable fast return to G28 position for rotary axes by \ref axismask.
+Use:
+G91G28<axisletter>0
+G90
+*/
+///@{
+#if !defined DEFAULT_AXIS_ROTARY_WRAP_MASK || defined __DOXYGEN__
+#define DEFAULT_AXIS_ROTARY_WRAP_MASK 0
+#endif
+///@}
+
 // Axis settings (Group_XAxis - Group_VAxis)
 
 /*! @name $10x - Setting_AxisStepsPerMM

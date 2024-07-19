@@ -103,7 +103,8 @@ PROGMEM const settings_t defaults = {
 #endif
     .steppers.deenergize.mask = DEFAULT_STEPPER_DEENERGIZE_MASK,
 #if N_AXIS > 3
-    .steppers.is_rotational.mask = (DEFAULT_AXIS_ROTATIONAL_MASK & AXES_BITMASK) & 0b11111000,
+    .steppers.is_rotary.mask = (DEFAULT_AXIS_ROTATIONAL_MASK & AXES_BITMASK) & 0b11111000,
+    .steppers.rotary_wrap.mask = (DEFAULT_AXIS_ROTARY_WRAP_MASK & AXES_BITMASK) & 0b11111000,
 #endif
 #if DEFAULT_HOMING_ENABLE
     .homing.flags.enabled = DEFAULT_HOMING_ENABLE,
@@ -406,7 +407,8 @@ static status_code_t set_linear_piece (setting_id_t id, char *svalue);
 static char *get_linear_piece (setting_id_t id);
 #endif
 #if N_AXIS > 3
-static status_code_t set_rotational_axes (setting_id_t id, uint_fast16_t int_value);
+static status_code_t set_rotary_axes (setting_id_t id, uint_fast16_t int_value);
+static status_code_t set_rotary_wrap_axes (setting_id_t id, uint_fast16_t int_value);
 #endif
 #if COMPATIBILITY_LEVEL > 2
 static status_code_t set_enable_invert_mask (setting_id_t id, uint_fast16_t int_value);
@@ -434,6 +436,28 @@ static char control_signals[] = "Reset,Feed hold,Cycle start,Safety door,Block d
 static char spindle_signals[] = "Spindle enable,Spindle direction,PWM";
 static char coolant_signals[] = "Flood,Mist";
 static char ganged_axes[] = "X-Axis,Y-Axis,Z-Axis";
+#if !AXIS_REMAP_ABC2UVW
+  #if N_AXIS == 4
+   static const char rotary_axes[] = "A-Axis";
+  #elif N_AXIS == 5
+   static const char rotary_axes[] = "A-Axis,B-Axis";
+  #elif N_AXIS == 6
+   static const char rotary_axes[] = "A-Axis,B-Axis,C-Axis";
+  #elif N_AXIS == 7
+   static const char rotary_axes[] = "A-Axis,B-Axis,C-Axis,U-Axis";
+  #elif N_AXIS == 8
+   static const char rotary_axes[] = "A-Axis,B-Axis,C-Axis,U-Axis,V-Axis";
+  #endif
+#else
+  #if N_AXIS == 4
+     static const char rotary_axes[] = "U-Axis";
+  #elif N_AXIS == 5
+     static const char rotary_axes[] = "U-Axis,V-Axis";
+  #elif N_AXIS == 6
+     static const char rotary_axes[] = "U-Axis,V-Axis,W-Axis";
+  #endif
+#endif
+
 static char fs_options[] = "Auto mount SD card,Hide LittleFS";
 static char spindle_types[100] = "";
 static char axis_dist[4] = "mm";
@@ -585,26 +609,8 @@ PROGMEM static const setting_detail_t setting_detail[] = {
 #if COMPATIBILITY_LEVEL <= 1
      { Setting_DisableG92Persistence, Group_General, "Disable G92 persistence", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_g92_disable_persistence, get_int, NULL },
 #endif
-#if !AXIS_REMAP_ABC2UVW
-  #if N_AXIS == 4
-   { Settings_Axis_Rotational, Group_Stepper, "Rotational axes", NULL, Format_Bitfield, "A-Axis", NULL, NULL, Setting_IsExtendedFn, set_rotational_axes, get_int, NULL },
-  #elif N_AXIS == 5
-   { Settings_Axis_Rotational, Group_Stepper, "Rotational axes", NULL, Format_Bitfield, "A-Axis,B-Axis", NULL, NULL, Setting_IsExtendedFn, set_rotational_axes, get_int, NULL },
-  #elif N_AXIS == 6
-   { Settings_Axis_Rotational, Group_Stepper, "Rotational axes", NULL, Format_Bitfield, "A-Axis,B-Axis,C-Axis", NULL, NULL, Setting_IsExtendedFn, set_rotational_axes, get_int, NULL },
-  #elif N_AXIS == 7
-   { Settings_Axis_Rotational, Group_Stepper, "Rotational axes", NULL, Format_Bitfield, "A-Axis,B-Axis,C-Axis,U-Axis", NULL, NULL, Setting_IsExtendedFn, set_rotational_axes, get_int, NULL },
-  #elif N_AXIS == 8
-   { Settings_Axis_Rotational, Group_Stepper, "Rotational axes", NULL, Format_Bitfield, "A-Axis,B-Axis,C-Axis,U-Axis,V-Axis", NULL, NULL, Setting_IsExtendedFn, set_rotational_axes, get_int, NULL },
-  #endif
-#else
-  #if N_AXIS == 4
-     { Settings_Axis_Rotational, Group_Stepper, "Rotational axes", NULL, Format_Bitfield, "U-Axis", NULL, NULL, Setting_IsExtendedFn, set_rotational_axes, get_int, NULL },
-  #elif N_AXIS == 5
-     { Settings_Axis_Rotational, Group_Stepper, "Rotational axes", NULL, Format_Bitfield, "U-Axis,V-Axis", NULL, NULL, Setting_IsExtendedFn, set_rotational_axes, get_int, NULL },
-  #elif N_AXIS == 6
-     { Settings_Axis_Rotational, Group_Stepper, "Rotational axes", NULL, Format_Bitfield, "U-Axis,V-Axis,W-Axis", NULL, NULL, Setting_IsExtendedFn, set_rotational_axes, get_int, NULL },
-  #endif
+#if N_AXIS > 3
+     { Settings_RotaryAxes, Group_Stepper, "Rotary axes", NULL, Format_Bitfield, rotary_axes, NULL, NULL, Setting_IsExtendedFn, set_rotary_axes, get_int, NULL },
 #endif
 #ifndef NO_SAFETY_DOOR_SUPPORT
      { Setting_DoorSpindleOnDelay, Group_SafetyDoor, "Spindle on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.spindle_on_delay, NULL, is_setting_available },
@@ -623,6 +629,9 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_OffsetLock, Group_General, "Lock coordinate systems", NULL, Format_Bitfield, "G59.1,G59.2,G59.3", NULL, NULL, Setting_IsExtendedFn, set_offset_lock, get_int, NULL },
 #endif
      { Setting_EncoderSpindle, Group_Spindle, "Encoder spindle", NULL, Format_RadioButtons, spindle_types, NULL, NULL, Setting_IsExtendedFn, set_encoder_spindle, get_int, is_setting_available },
+#if N_AXIS > 3
+     { Setting_RotaryWrap, Group_Stepper, "Fast rotary go to G28", NULL, Format_Bitfield, rotary_axes, NULL, NULL, Setting_IsExtendedFn, set_rotary_wrap_axes, get_int, NULL },
+#endif
      { Setting_FSOptions, Group_General, "File systems options", NULL, Format_Bitfield, fs_options, NULL, NULL, Setting_IsExtended, &settings.fs_options.mask, NULL, is_setting_available },
      { Setting_HomePinsInvertMask, Group_Limits, "Invert home pins", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.home_invert.mask, NULL, is_setting_available },
      { Setting_HoldCoolantOnDelay, Group_Coolant, "Coolant on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.coolant_on_delay, NULL, is_setting_available }
@@ -784,9 +793,12 @@ PROGMEM static const setting_descr_t setting_descr[] = {
 #if COMPATIBILITY_LEVEL <= 1
     { Setting_DisableG92Persistence, "Disables save/restore of G92 offset to non-volatile storage (NVS)." },
 #endif
+#if N_AXIS > 3
+     { Settings_RotaryAxes, "Designates axes as rotary, interpretation some other relevant axis settings is changed accordingly." },
+#endif
 #ifndef NO_SAFETY_DOOR_SUPPORT
-    { Setting_DoorSpindleOnDelay, "Delay to allow spindle to spin up after safety door is opened or feed hold is canceled.." },
-    { Setting_DoorCoolantOnDelay, "Delay to allow coolant to restart after safety door is opened or feed hold is canceled.." },
+    { Setting_DoorSpindleOnDelay, "Delay to allow spindle to spin up after safety door is opened or feed hold is canceled." },
+    { Setting_DoorCoolantOnDelay, "Delay to allow coolant to restart after safety door is opened or feed hold is canceled." },
 #else
     { Setting_DoorSpindleOnDelay, "Delay to allow spindle to spin up when spindle at speed tolerance is > 0." },
 #endif
@@ -803,6 +815,13 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_NGCDebugOut, "Example: (debug, metric mode: #<_metric>, coord system: #5220)" },
 #endif
     { Setting_EncoderSpindle, "Specifies which spindle has the encoder attached." },
+#if N_AXIS > 3
+    { Setting_RotaryWrap, "Perform fast move to angle stored in G28 position.\\n"
+                          "Use:\\n"
+                          " G91G28<axisletter>0\\n"
+                          " G90\\n"
+    },
+#endif
     { Setting_FSOptions, "Auto mount SD card on startup." },
     { Setting_HomePinsInvertMask, "Inverts the axis home input signals." },
     { Setting_HoldCoolantOnDelay, "Delay to allow coolant to restart after feed hold is canceled." }
@@ -1128,7 +1147,7 @@ static inline void tmp_set_hard_limits (void)
     sys.hard_limits.mask = settings.limits.flags.hard_enabled ? AXES_BITMASK : 0;
   #if N_AXIS > 3
     if(settings.limits.flags.hard_disabled_rotary)
-        sys.hard_limits.mask &= ~settings.steppers.is_rotational.mask;
+        sys.hard_limits.mask &= ~settings.steppers.is_rotary.mask;
   #endif
 }
 
@@ -1340,16 +1359,23 @@ static inline void set_axis_unit (const setting_detail_t *setting, const char *u
 
 #if N_AXIS > 3
 
-static status_code_t set_rotational_axes (setting_id_t id, uint_fast16_t int_value)
+static status_code_t set_rotary_axes (setting_id_t id, uint_fast16_t int_value)
 {
-    settings.steppers.is_rotational.mask = (int_value << 3) & AXES_BITMASK;
+    settings.steppers.is_rotary.mask = (int_value << 3) & AXES_BITMASK;
+
+    return Status_OK;
+}
+
+static status_code_t set_rotary_wrap_axes (setting_id_t id, uint_fast16_t int_value)
+{
+    settings.steppers.rotary_wrap.mask = (int_value << 3) & AXES_BITMASK;
 
     return Status_OK;
 }
 
 static inline bool axis_is_rotary (uint_fast8_t axis_idx)
 {
-    return bit_istrue(settings.steppers.is_rotational.mask, bit(axis_idx));
+    return bit_istrue(settings.steppers.is_rotary.mask, bit(axis_idx));
 }
 
 static const char *set_axis_setting_unit (setting_id_t setting_id, uint_fast8_t axis_idx)
@@ -1730,8 +1756,12 @@ static uint32_t get_int (setting_id_t id)
             break;
 
 #if N_AXIS > 3
-        case Settings_Axis_Rotational:
-            value = (settings.steppers.is_rotational.mask & AXES_BITMASK) >> 3;
+        case Settings_RotaryAxes:
+            value = (settings.steppers.is_rotary.mask & AXES_BITMASK) >> 3;
+            break;
+
+        case Setting_RotaryWrap:
+            value = (settings.steppers.rotary_wrap.mask & AXES_BITMASK) >> 3;
             break;
 #endif
 
@@ -2184,6 +2214,7 @@ bool read_global_settings ()
     bool ok = hal.nvs.type != NVS_None && SETTINGS_VERSION == hal.nvs.get_byte(0) && hal.nvs.memcpy_from_nvs((uint8_t *)&settings, NVS_ADDR_GLOBAL, sizeof(settings_t), true) == NVS_TransferResult_OK;
 
     // Sanity check of settings, board map could have been changed...
+
 #if LATHE_UVW_OPTION
     settings.mode = Mode_Lathe;
 #else
@@ -2207,6 +2238,10 @@ bool read_global_settings ()
 #if COMPATIBILITY_LEVEL > 2
     if(settings.steppers.enable_invert.mask)
         settings.steppers.enable_invert.mask = AXES_BITMASK;
+#endif
+
+#if N_AXIS > 3
+    settings.steppers.rotary_wrap.mask &= settings.steppers.is_rotary.mask;
 #endif
 
     settings.control_invert.mask |= limits_override.mask;

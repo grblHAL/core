@@ -651,6 +651,38 @@ const io_stream_t *stream_null_init (uint32_t baud_rate)
 
 #ifdef DEBUGOUT
 
+#if DEBUGOUT == -1
+
+__attribute__((weak)) void debug_write (const char *s)
+{
+    // NOOP
+}
+
+void debug_writeln (const char *s)
+{
+    debug_write(s);
+    debug_write(ASCII_EOL);
+}
+
+void debug_printf (const char *fmt, ...)
+{
+    char debug_out[DEBUG_BUFFER];
+
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(debug_out, sizeof(debug_out) - 1, fmt, args);
+    va_end(args);
+
+    debug_writeln(debug_out);
+}
+
+bool debug_stream_init (void)
+{
+    return true;
+}
+
+#else
+
 static stream_write_ptr dbg_write = NULL;
 
 void debug_write (const char *s)
@@ -682,8 +714,6 @@ void debug_printf (const char *fmt, ...)
     va_end(args);
 
     debug_writeln(debug_out);
-    while(hal.stream.get_tx_buffer_count()) // Wait until message is delivered
-        grbl.on_execute_realtime(state_get());
 }
 
 static bool debug_claim_stream (io_stream_properties_t const *stream)
@@ -715,6 +745,8 @@ bool debug_stream_init (void)
 
     return hal.debug.write == debug_write;
 }
+
+#endif // DEBUGOUT
 
 #elif defined(DEBUG)
 

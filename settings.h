@@ -7,18 +7,18 @@
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef _SETTINGS_H_
@@ -247,7 +247,7 @@ typedef enum {
     Settings_IoPort_OD_Enable = 373,
     Settings_ModBus_BaudRate = 374,
     Settings_ModBus_RXTimeout = 375,
-    Settings_Axis_Rotational = 376,
+    Settings_RotaryAxes = 376,
     Setting_BlueToothInitOK = 377,
     Setting_CoolantOnDelay = 378,
     Setting_CoolantOffDelay = 379,
@@ -370,6 +370,7 @@ typedef enum {
     Setting_NetworkMAC = 535,
     Setting_RGB_StripLengt0 = 536,
     Setting_RGB_StripLengt1 = 537,
+    Setting_RotaryWrap = 538,
 
     Setting_Panel_SpindleSpeed       = 540,  // NOTE: Reserving settings values 540 to 579 for panel settings.
     Setting_Panel_ModbusAddress      = 541,
@@ -664,7 +665,8 @@ typedef struct {
     axes_signals_t enable_invert;
     axes_signals_t deenergize;
 #if N_AXIS > 3
-    axes_signals_t is_rotational; // rotational axes distances are not scaled in imperial mode
+    axes_signals_t is_rotary;   // rotary axes distances are not scaled in imperial mode
+    axes_signals_t rotary_wrap;     // rotary axes that allows G28 wrap for faster move to home position
 #endif
     float pulse_microseconds;
     float pulse_delay_microseconds;
