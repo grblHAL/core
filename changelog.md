@@ -1,12 +1,12 @@
 ## grblHAL changelog
 
-<a name="20240715">Build 20240719
+<a name="20240719">Build 20240719
 
 Core:
 
 * Limited tool change probe moves to be within machine limits. Ref. [issue #542](https://github.com/grblHAL/core/issues/542).
 
-* Added setting `$358` to enable experimental functionality for fast rotary 'rewind' to stored G28 position. Return move should complete in half a rotation or less.  
+* Added setting `$538` to enable experimental functionality for fast rotary 'rewind' to stored G28 position. Return move should complete in half a rotation or less.  
 To use program:
 ```
 G91G28<axisletter>0
