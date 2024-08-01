@@ -874,8 +874,10 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
 
         state_set(STATE_HOMING);                        // Set homing system state.
 #if COMPATIBILITY_LEVEL == 0
-        system_set_exec_state_flag(EXEC_STATUS_REPORT); // Force a status report and
-        delay_sec(0.1f, DelayMode_Dwell);               // delay a bit to get it sent (or perhaps wait a bit for a request?)
+        if(!settings.status_report.when_homing) {
+            system_set_exec_state_flag(EXEC_STATUS_REPORT); // Force a status report and
+            delay_sec(0.1f, DelayMode_Dwell);               // delay a bit to get it sent (or perhaps wait a bit for a request?)
+        }
 #endif
         // Turn off spindle and coolant (and update parser state)
         if(spindle_is_on())

@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2023 Terje Io
+  Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -565,7 +565,8 @@ typedef union {
                  parser_state       :1,
                  alarm_substate     :1,
                  run_substate       :1,
-                 unassigned         :4;
+                 when_homing        :1,
+                 unassigned         :3;
     };
 } reportmask_t;
 

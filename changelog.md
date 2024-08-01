@@ -1,5 +1,20 @@
 ## grblHAL changelog
 
+<a name="20240801">Build 20240801
+
+Core:
+
+* Added option bit for enabling realtime reporting while homing to `$10`, _Status report options_. Ref. [issue #551](https://github.com/grblHAL/core/issues/551).  
+__NOTE:__ Enabling this may affect some senders.
+
+Drivers:
+
+* iMXRT1062, LPC176x, SAM3X8E and STM32F1xx: moved board maps/board specific code to new _boards_ directory. 
+
+* STM32F4xx: fixed regression in SD card code affecting boards using SDIO interface.
+
+---
+
 <a name="20240719">Build 20240719
 
 Core:

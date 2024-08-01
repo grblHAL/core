@@ -144,6 +144,7 @@ PROGMEM const settings_t defaults = {
     .status_report.parser_state = DEFAULT_REPORT_PARSER_STATE,
     .status_report.alarm_substate = DEFAULT_REPORT_ALARM_SUBSTATE,
     .status_report.run_substate = DEFAULT_REPORT_RUN_SUBSTATE,
+    .status_report.when_homing = DEFAULT_REPORT_WHEN_HOMING,
     .limits.flags.hard_enabled = DEFAULT_HARD_LIMIT_ENABLE,
     .limits.flags.soft_enabled = DEFAULT_SOFT_LIMIT_ENABLE,
     .limits.flags.jog_soft_limited = DEFAULT_JOG_LIMIT_ENABLE,
@@ -490,7 +491,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_GangedDirInvertMask, Group_Stepper, "Ganged axes direction invert", NULL, Format_Bitfield, ganged_axes, NULL, NULL, Setting_IsExtendedFn, set_ganged_dir_invert, get_int, is_setting_available },
      { Setting_SpindlePWMOptions, Group_Spindle, "PWM Spindle", NULL, Format_XBitfield, "Enable,RPM controls spindle enable signal,Disable laser mode capability", NULL, NULL, Setting_IsExtendedFn, set_pwm_options, get_int, is_setting_available },
 #if COMPATIBILITY_LEVEL <= 1
-     { Setting_StatusReportMask, Group_General, "Status report options", NULL, Format_Bitfield, "Position in machine coordinate,Buffer state,Line numbers,Feed & speed,Pin state,Work coordinate offset,Overrides,Probe coordinates,Buffer sync on WCO change,Parser state,Alarm substatus,Run substatus", NULL, NULL, Setting_IsExtendedFn, set_report_mask, get_int, NULL },
+     { Setting_StatusReportMask, Group_General, "Status report options", NULL, Format_Bitfield, "Position in machine coordinate,Buffer state,Line numbers,Feed & speed,Pin state,Work coordinate offset,Overrides,Probe coordinates,Buffer sync on WCO change,Parser state,Alarm substatus,Run substatus,Enable when homing", NULL, NULL, Setting_IsExtendedFn, set_report_mask, get_int, NULL },
 #else
      { Setting_StatusReportMask, Group_General, "Status report options", NULL, Format_Bitfield, "Position in machine coordinate,Buffer state", NULL, NULL, Setting_IsLegacyFn, set_report_mask, get_int, NULL },
 #endif
@@ -661,7 +662,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_GangedDirInvertMask, "Inverts the direction signals for the second motor used for ganged axes.\\n\\n"
                                    "NOTE: This inversion will be applied in addition to the inversion from setting $3."
     },
-    { Setting_StatusReportMask, "Specifies optional data included in status reports.\\n"
+    { Setting_StatusReportMask, "Specifies optional data included in status reports and if report is sent when homing.\\n"
                                 "If Run substatus is enabled it may be used for simple probe protection.\\n\\n"
                                 "NOTE: Parser state will be sent separately after the status report and only on changes."
     },

@@ -761,8 +761,10 @@ void debug_printf (const char *fmt, ...)
 
     if(hal.stream.write) {
         report_message(debug_out, Message_Debug);
-        while(hal.stream.get_tx_buffer_count()) // Wait until message is delivered
-            grbl.on_execute_realtime(state_get());
+        if(hal.stream.get_tx_buffer_count) {
+            while(hal.stream.get_tx_buffer_count()) // Wait until message is delivered
+                grbl.on_execute_realtime(state_get());
+        }
     }
 }
 

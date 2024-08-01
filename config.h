@@ -696,6 +696,16 @@ The following codes are defined:
 #define DEFAULT_REPORT_RUN_SUBSTATE Off // Default off. Set to \ref On or 1 to enable.
 #endif
 
+/*! \def DEFAULT_REPORT_WHEN_HOMING
+\brief
+Enabling this setting enables status reporting while homing.
+<br>__NOTE:__ Enabling this option may break senders.
+\internal Bit 12 in settings.status_report.
+*/
+#if !defined DEFAULT_REPORT_WHEN_HOMING || defined __DOXYGEN__
+#define DEFAULT_REPORT_WHEN_HOMING Off // Default off. Set to \ref On or 1 to enable.
+#endif
+
 ///@}
 
 /*! @name $11 - Setting_JunctionDeviation
