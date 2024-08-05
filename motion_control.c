@@ -247,9 +247,7 @@ void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *o
     if(labs(turns) > 1) {
 
         uint32_t n_turns = labs(turns) - 1;
-        float arc_travel = 2.0f * M_PI * n_turns - angular_travel;
-		if (turns > 0)
-			arc_travel = 2.0f * M_PI * n_turns + angular_travel;
+        float arc_travel = 2.0f * M_PI * (float)n_turns + (turns > 0 ? angular_travel : -angular_travel);
         coord_data_t arc_target;
 #if N_AXIS > 3
         uint_fast8_t idx = N_AXIS;
