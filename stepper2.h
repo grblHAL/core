@@ -33,6 +33,7 @@ typedef struct st2_motor st2_motor_t;
 
 st2_motor_t *st2_motor_init (uint_fast8_t axis_idx, bool is_spindle);
 bool st2_motor_bind_spindle (uint_fast8_t axis_idx);
+float st2_get_speed (st2_motor_t *motor);
 float st2_motor_set_speed (st2_motor_t *motor, float speed);
 bool st2_motor_move (st2_motor_t *motor, const float move, const float speed, position_t type);
 bool st2_motor_run (st2_motor_t *motor);

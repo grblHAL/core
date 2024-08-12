@@ -333,6 +333,16 @@ static void report_help_message (void)
     hal.stream.write("[HLP:$$ $# $G $I $N $x=val $Nx=line $J=line $SLP $C $X $H $B ~ ! ? ctrl-x]" ASCII_EOL);
 }
 
+// Prints plugin info.
+void report_plugin (const char *name, const char *version)
+{
+    hal.stream.write("[PLUGIN:");
+    hal.stream.write(name);
+    hal.stream.write(" v");
+    hal.stream.write(version);
+    hal.stream.write("]" ASCII_EOL);
+}
+
 static bool report_group_settings (const setting_group_detail_t *groups, const uint_fast8_t n_groups, char *args)
 {
     bool found = false;
@@ -1088,7 +1098,6 @@ void report_build_info (char *line, bool extended)
     }
 }
 
-
 // Prints the character string line grblHAL has received from the user, which has been pre-parsed,
 // and has been sent into protocol_execute_line() routine to be executed by grblHAL.
 void report_echo_line_received (char *line)
@@ -1098,6 +1107,15 @@ void report_echo_line_received (char *line)
     hal.stream.write("]" ASCII_EOL);
 }
 
+#if N_SYS_SPINDLE == 1 &&  N_SPINDLE > 1
+
+static void report_spindle_num (spindle_info_t *spindle, void *data)
+{
+    if(spindle->id == *((spindle_id_t *)data))
+        hal.stream.write_all(appendbuf(2, "|S:", uitoa((uint32_t)spindle->num)));
+}
+
+#endif
 
  // Prints real-time data. This function grabs a real-time snapshot of the stepper subprogram
  // and the actual location of the CNC machine. Users may change the following function to their
@@ -1246,7 +1264,7 @@ void report_realtime_status (void)
 
 #elif N_SPINDLE > 1
     if(report.spindle_id)
-        hal.stream.write_all(appendbuf(2, "|S:", uitoa((uint32_t)spindle_0->id)));
+        spindle_enumerate_spindles(report_spindle_num, &spindle_0->id);
 #endif
 
     if(settings.status_report.pin_state) {
@@ -2516,9 +2534,56 @@ static void report_spindle (spindle_info_t *spindle, void *data)
     }
 }
 
+#if N_SPINDLE > 1
+
+typedef struct {
+    uint32_t idx;
+    uint32_t n_spindles;
+    spindle_info_t *spindles;
+} spindle_rdata_t;
+
+static void get_spindles (spindle_info_t *spindle, void *data)
+{
+    memcpy(&((spindle_rdata_t *)data)->spindles[((spindle_rdata_t *)data)->idx++], spindle, sizeof(spindle_info_t));
+}
+
+static int cmp_spindles (const void *a, const void *b)
+{
+    uint32_t key_a = ((spindle_info_t *)a)->num == -1 ? ((((spindle_info_t *)a)->hal->type + 1) << 8) | ((spindle_info_t *)a)->id : ((spindle_info_t *)a)->num,
+             key_b = ((spindle_info_t *)b)->num == -1 ? ((((spindle_info_t *)b)->hal->type + 1) << 8) | ((spindle_info_t *)b)->id : ((spindle_info_t *)b)->num;
+
+    return key_a - key_b;
+}
+
+#endif
+
 status_code_t report_spindles (bool machine_readable)
 {
-    if(!spindle_enumerate_spindles(report_spindle, (void *)machine_readable) && !machine_readable)
+    bool has_spindles;
+
+#if N_SPINDLE > 1
+
+    spindle_rdata_t spindle_data = {0};
+
+    if((spindle_data.spindles = malloc(N_SPINDLE * sizeof(spindle_info_t)))) {
+
+        has_spindles = spindle_enumerate_spindles(get_spindles, &spindle_data);
+
+        spindle_data.n_spindles = spindle_data.idx;
+
+        qsort(spindle_data.spindles, spindle_data.n_spindles, sizeof(spindle_info_t), cmp_spindles);
+        for(spindle_data.idx = 0; spindle_data.idx < spindle_data.n_spindles; spindle_data.idx++)
+            report_spindle(&spindle_data.spindles[spindle_data.idx], (void *)machine_readable);
+
+        free(spindle_data.spindles);
+
+    } else
+
+#endif
+
+    has_spindles = spindle_enumerate_spindles(report_spindle, (void *)machine_readable);
+
+    if(!has_spindles && !machine_readable)
         hal.stream.write("No spindles registered." ASCII_EOL);
 
     return Status_OK;

@@ -272,6 +272,15 @@ st2_motor_t *st2_motor_init (uint_fast8_t axis_idx, bool is_spindle)
     return motor;
 }
 
+/*! \brief Get current speed (RPM).
+\param motor pointer to a \a st2_motor structure.
+\returns current speed in RPM.
+*/
+float st2_get_speed (st2_motor_t *motor)
+{
+    return motor->state == State_Idle ? 0.0f : 60.0f / ((float)motor->delay * settings.axis[motor->idx].steps_per_mm / 1000000.0f);
+}
+
 /*! \brief Set speed.
 
 Change speed of a running motor. Typically used for motors bound as a spindle.

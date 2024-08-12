@@ -848,7 +848,7 @@ status_code_t gc_execute_block (char *block)
     // Initialize command and value words and parser flags variables.
     modal_groups_t command_words = {0};         // Bitfield for tracking G and M command words. Also used for modal group violations.
     gc_parser_flags_t gc_parser_flags = {0};    // Parser flags for handling special cases.
-    static parameter_words_t user_words = {0};  // User M-code words "taken"
+    parameter_words_t user_words = {0};         // User M-code words "taken"
 
     // Determine if the line is a jogging motion or a normal g-code block.
     if (block[0] == '$') { // NOTE: `$J=` already parsed when passed to this function.
@@ -1680,6 +1680,24 @@ status_code_t gc_execute_block (char *block)
     // same way. If there is an explicit/implicit axis command, XYZ words are always used and are
     // are removed at the end of error-checking.
 
+    // [0. User defined M commands ]:
+    if(command_words.M10 && gc_block.user_mcode) {
+
+        user_words.mask = gc_block.words.mask;
+        if((int_value = (uint_fast16_t)hal.user_mcode.validate(&gc_block, &gc_block.words)))
+            FAIL((status_code_t)int_value);
+        user_words.mask ^= gc_block.words.mask; // Flag "taken" words for execution
+
+        if(user_words.i)
+            ijk_words.i = Off;
+        if(user_words.j)
+            ijk_words.j = Off;
+        if(user_words.k)
+            ijk_words.k = Off;
+
+        axis_words.mask = 0;
+    }
+
     // [1. Comments ]: MSG's may be supported by driver layer. Comment handling performed by protocol.
 
     // [2. Set feed rate mode ]: G93 F word missing with G1,G2/3 active, implicitly or explicitly. Feed rate
@@ -1736,7 +1754,7 @@ status_code_t gc_execute_block (char *block)
 
     // [4. Set spindle speed and address spindle ]: S or D is negative (done.)
     if(gc_block.words.$) {
-        bool single_spindle_only = (gc_block.words.s && !user_words.s) ||
+        bool single_spindle_only = gc_block.words.s ||
                                     (command_words.G0 && (gc_block.modal.motion == MotionMode_SpindleSynchronized ||
                                                            gc_block.modal.motion == MotionMode_RigidTapping ||
                                                             gc_block.modal.motion == MotionMode_Threading)) ||
@@ -1779,11 +1797,11 @@ status_code_t gc_execute_block (char *block)
         gc_state.modal.spindle.rpm_mode = gc_block.modal.spindle.rpm_mode;
     }
 
-    spindle_event = gc_block.words.s && !user_words.s;
+    spindle_event = gc_block.words.s;
 
-    if (!gc_block.words.s)
+    if(!gc_block.words.s)
         gc_block.values.s = gc_state.modal.spindle.rpm_mode == SpindleSpeedMode_RPM ? gc_state.spindle.rpm : gc_state.spindle.hal->param->css.max_rpm;
-    else if(!user_words.s && gc_state.modal.spindle.rpm_mode == SpindleSpeedMode_CSS) {
+    else if(gc_state.modal.spindle.rpm_mode == SpindleSpeedMode_CSS) {
         // Unsure what to do about S values when in SpindleSpeedMode_CSS - ignore? For now use it to (re)calculate surface speed.
         // Reinsert commented out code above if this is removed!!
         gc_block.values.s *= (gc_block.modal.units_imperial ? MM_PER_INCH * 12.0f : 1000.0f); // convert surface speed to mm/min
@@ -1796,9 +1814,9 @@ status_code_t gc_execute_block (char *block)
     if(set_tool) { // M61
         if(!gc_block.words.q)
             FAIL(Status_GcodeValueWordMissing);
-        if (floorf(gc_block.values.q) - gc_block.values.q != 0.0f)
+        if(!isintf(gc_block.values.q))
             FAIL(Status_GcodeCommandValueNotInteger);
-        if ((uint32_t)gc_block.values.q > (grbl.tool_table.n_tools ? grbl.tool_table.n_tools : MAX_TOOL_NUMBER))
+        if((uint32_t)gc_block.values.q > (grbl.tool_table.n_tools ? grbl.tool_table.n_tools : MAX_TOOL_NUMBER))
             FAIL(Status_GcodeIllegalToolTableEntry);
 
         gc_block.values.t = (uint32_t)gc_block.values.q;
@@ -1815,7 +1833,7 @@ status_code_t gc_execute_block (char *block)
             }
         }
 #endif
-    } else if (!gc_block.words.t)
+    } else if(!gc_block.words.t)
         gc_block.values.t = gc_state.tool_pending;
 
     if(command_words.M10 && port_command) {
@@ -1950,15 +1968,6 @@ status_code_t gc_execute_block (char *block)
             default:
                 break;
         }
-    }
-
-    // [9a. User defined M commands ]:
-    if (command_words.M10 && gc_block.user_mcode) {
-        user_words.mask = gc_block.words.mask;
-        if((int_value = (uint_fast16_t)hal.user_mcode.validate(&gc_block, &gc_block.words)))
-            FAIL((status_code_t)int_value);
-        user_words.mask ^= gc_block.words.mask; // Flag "taken" words for execution
-        axis_words.mask = ijk_words.mask = 0;
     }
 
     // [10. Dwell ]: P value missing. NOTE: See below.
@@ -3071,7 +3080,7 @@ status_code_t gc_execute_block (char *block)
         }
     }
 
-    if(!user_words.s && ((gc_state.spindle.rpm != gc_block.values.s) || gc_parser_flags.spindle_force_sync)) {
+    if(gc_state.spindle.rpm != gc_block.values.s || gc_parser_flags.spindle_force_sync) {
         if(gc_state.modal.spindle.state.on && !gc_parser_flags.laser_is_motion) {
             if(gc_block.spindle) {
                 gc_block.spindle->param->rpm = gc_block.values.s;
@@ -3215,7 +3224,7 @@ status_code_t gc_execute_block (char *block)
         bool spindle_ok = false;
         if(gc_block.spindle) {
             if(grbl.on_spindle_programmed)
-                grbl.on_spindle_programmed(gc_block.spindle, gc_block.modal.spindle.state,  plan_data.spindle.rpm, gc_block.modal.spindle.rpm_mode);
+                grbl.on_spindle_programmed(gc_block.spindle, gc_block.modal.spindle.state, plan_data.spindle.rpm, gc_block.modal.spindle.rpm_mode);
             if((spindle_ok = spindle_sync(gc_block.spindle, gc_block.modal.spindle.state, plan_data.spindle.rpm)))
                 gc_block.spindle->param->state = gc_block.modal.spindle.state;
         } else {
@@ -3224,7 +3233,7 @@ status_code_t gc_execute_block (char *block)
                 if(spindle_is_enabled(--idx)) {
                     spindle_ptrs_t *spindle = spindle_get(idx);
                     if(grbl.on_spindle_programmed)
-                        grbl.on_spindle_programmed(spindle, gc_block.modal.spindle.state,  plan_data.spindle.rpm, gc_block.modal.spindle.rpm_mode);
+                        grbl.on_spindle_programmed(spindle, gc_block.modal.spindle.state, plan_data.spindle.rpm, gc_block.modal.spindle.rpm_mode);
                     if(spindle_sync(spindle, gc_block.modal.spindle.state, plan_data.spindle.rpm))
                         spindle->param->state = gc_block.modal.spindle.state;
                     else

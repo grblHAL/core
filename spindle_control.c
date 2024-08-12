@@ -51,6 +51,7 @@ typedef struct {
 static uint8_t n_spindle = 0;
 static spindle_sys_t sys_spindle[N_SYS_SPINDLE] = {0};
 static spindle_reg_t spindles[N_SPINDLE] = {0}, *pwm_spindle = NULL;
+static const spindle_data_ptrs_t *encoder;
 
 /*! \internal \brief Activates and registers a spindle as enabled with a specific spindle number.
 \param spindle_id spindle id of spindle to activate as a \ref spindle_id_t.
@@ -95,20 +96,6 @@ static bool spindle_activate (spindle_id_t spindle_id, spindle_num_t spindle_num
             spindle_ptrs_t spindle_hal;
 
             memcpy(&spindle_hal, &spindle->hal, sizeof(spindle_ptrs_t));
-
-            if(spindle->cfg->get_data == NULL) {
-                if(settings.offset_lock.encoder_spindle == spindle_id) {
-                    spindle_hal.get_data = hal.spindle_data.get;
-                    spindle_hal.reset_data = hal.spindle_data.reset;
-                    if(!spindle->cfg->cap.at_speed)
-                        spindle_hal.cap.at_speed = !!spindle_hal.get_data;
-                } else {
-                    spindle_hal.get_data = NULL;
-                    spindle_hal.reset_data = NULL;
-                    if(!spindle->cfg->cap.at_speed)
-                        spindle_hal.cap.at_speed = Off;
-                }
-            }
 
             spindle_hal.cap.laser &= settings.mode == Mode_Laser;
 
@@ -305,20 +292,66 @@ uint8_t spindle_get_count (void)
 
 static spindle_num_t spindle_get_num (spindle_id_t spindle_id)
 {
-    uint_fast8_t idx = N_SPINDLE_SELECTABLE;
-    spindle_num_t spindle_num = -1;
+    spindle_num_t spindle_num;
 
-    const setting_detail_t *setting;
+    if((spindle_num = spindle_get_count() == 1 ? 0 : -1) == -1) {
 
-    do {
-        idx--;
-        if((setting = setting_get_details(idx == 0 ? Setting_SpindleType : (setting_id_t)(Setting_SpindleEnable0 + idx), NULL))) {
-            if(setting_get_int_value(setting, 0) == spindle_id)
-                spindle_num = idx;
-        }
-    } while(idx && spindle_num == -1);
+        const setting_detail_t *setting;
+        uint_fast8_t idx = N_SPINDLE_SELECTABLE;
+
+        do {
+            idx--;
+            if((setting = setting_get_details(idx == 0 ? Setting_SpindleType : (setting_id_t)(Setting_SpindleEnable0 + idx), NULL))) {
+                if(setting_get_int_value(setting, 0) == spindle_id)
+                    spindle_num = idx;
+            }
+        } while(idx && spindle_num == -1);
+    }
 
     return spindle_num;
+}
+
+void spindle_bind_encoder (const spindle_data_ptrs_t *encoder_data)
+{
+    uint_fast8_t idx;
+    spindle_ptrs_t *spindle;
+    spindle_num_t spindle_num;
+
+    encoder = encoder_data;
+
+    for(idx = 0; idx < n_spindle; idx++) {
+
+        spindle = spindle_get((spindle_num = spindle_get_num(idx)));
+
+        if(encoder_data && spindle_num == settings.offset_lock.encoder_spindle) {
+            spindles[idx].hal.get_data = encoder_data->get;
+            spindles[idx].hal.reset_data = encoder_data->reset;
+            spindles[idx].hal.cap.at_speed = spindles[idx].hal.cap.variable;
+        } else {
+            spindles[idx].hal.get_data = spindles[idx].cfg->get_data;
+            spindles[idx].hal.reset_data = spindles[idx].cfg->reset_data;
+            spindles[idx].hal.cap.at_speed = spindles[idx].cfg->cap.at_speed;
+        }
+
+        if(spindle) {
+            spindle->get_data = spindles[idx].hal.get_data;
+            spindle->reset_data = spindles[idx].hal.reset_data;
+            spindle->cap.at_speed = spindles[idx].hal.cap.at_speed;
+        }
+    }
+}
+
+bool spindle_set_at_speed_range (spindle_ptrs_t *spindle, spindle_data_t *spindle_data, float rpm)
+{
+    spindle_data->rpm_programmed = rpm;
+    spindle_data->state_programmed.at_speed = false;
+
+    if((spindle_data->at_speed_enabled = spindle->at_speed_tolerance > 0.0f)) {
+        spindle_data->rpm_low_limit = rpm * (1.0f - (spindle->at_speed_tolerance / 100.0f));
+        spindle_data->rpm_high_limit = rpm * (1.0f + (spindle->at_speed_tolerance / 100.0f));
+    }
+
+    return spindle_data->at_speed_enabled;
 }
 
 /*! \brief Enumerate registered spindles by calling a callback function for each of them.
@@ -555,7 +588,7 @@ bool spindle_sync (spindle_ptrs_t *spindle, spindle_state_t state, float rpm)
 
     if (!(ok = state_get() == STATE_CHECK_MODE)) {
 
-        bool at_speed = !state.on || !spindle->cap.at_speed || settings.spindle.at_speed_tolerance <= 0.0f;
+        bool at_speed = !state.on || !spindle->cap.at_speed || spindle->at_speed_tolerance <= 0.0f;
 
         // Empty planner buffer to ensure spindle is set when programmed.
         if((ok = protocol_buffer_synchronize()) && set_state(spindle, state, rpm) && !at_speed) {
@@ -595,7 +628,7 @@ bool spindle_restore (spindle_ptrs_t *spindle, spindle_state_t state, float rpm)
         if(state.on) {
             if((ok = !spindle->cap.at_speed))
                 ok = delay_sec(settings.safety_door.spindle_on_delay, DelayMode_SysSuspend);
-            else if((ok == (settings.spindle.at_speed_tolerance <= 0.0f))) {
+            else if((ok == (spindle->at_speed_tolerance <= 0.0f))) {
                 float delay = 0.0f;
                 while(!(ok = spindle->get_state(spindle).at_speed)) {
                     if(!(ok = delay_sec(0.1f, DelayMode_SysSuspend)))
@@ -624,13 +657,7 @@ float spindle_set_rpm (spindle_ptrs_t *spindle, float rpm, override_t override_p
     if(override_pct != 100)
         rpm *= 0.01f * (float)override_pct; // Scale RPM by override value.
 
-    // Apply RPM limits
-    if (rpm <= 0.0f) // TODO: remove this test?
-        rpm = 0.0f;
-    else if (rpm > spindle->rpm_max)
-        rpm = spindle->rpm_max;
-    else if (rpm < spindle->rpm_min)
-        rpm = spindle->rpm_min;
+    rpm = rpm <= 0.0f ? 0.0f : constrain(rpm, spindle->rpm_min, spindle->rpm_max);
 
     spindle->param->rpm_overridden = rpm;
     spindle->param->override_pct = override_pct;
@@ -756,6 +783,7 @@ bool spindle_precompute_pwm_values (spindle_ptrs_t *spindle, spindle_pwm_t *pwm_
     pwm_data->settings = settings;
     spindle->rpm_min = pwm_data->rpm_min = settings->rpm_min;
     spindle->rpm_max = settings->rpm_max;
+    spindle->at_speed_tolerance = settings->at_speed_tolerance;
     spindle->cap.rpm_range_locked = On;
 
     if((spindle->cap.variable = !settings->flags.pwm_disable && spindle->rpm_max > spindle->rpm_min)) {

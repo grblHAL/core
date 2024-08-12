@@ -1,5 +1,40 @@
 ## grblHAL changelog
 
+<a name="20240812">Build 20240812
+
+Core:
+
+* Improved handling of extended M commands \(plugin based\) command words. Fixes issues for programs containing extended M-codes using single meaning words \(which they as a rule should not do\).
+
+* Added core support for spindle encoder binding to spindles.
+
+* Added sorting of spindle report: enabled spindles are sorted first in order of spindle number, disabled by type then spindle id.
+
+* Changed realtime report to report spindle number instead of spindle id on changes in the `|S:` element. Part of fix for ioSender [issue #399](https://github.com/terjeio/ioSender/issues/399).
+
+Drivers:
+
+* imXRT1061, MSP432, STM32F4xx, STM32F7xx: Updated to take advandage of new spindle encoder binding functionality.
+
+Plugins:
+
+* Spindle: updated relevant drivers to use new spindle encoder binding functionality, simplified code. Fixes [issue #30](https://github.com/grblHAL/Plugins_spindle/issues/30).
+
+---
+
+<a name="20240805">Build 20240805
+
+Core:
+
+* Added function for getting speed \(RPM\) of stepper controlled by secondary stepper motor driver.
+
+Plugins:
+
+* Spindle: stepper spindle code now uses new function for getting speed \(RPM\) of motor.
+HAL functions for getting spindle data \(actual RPM, angular position etc.\) directed to stepper spindle code,
+
+---
+
 <a name="20240801">Build 20240801
 
 Core:
