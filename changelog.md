@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+<a name="20240817">Build 20240817
+
+Core:
+
+* Simplified keypad and MPG symbol handling.
+
+Drivers:
+
+* Most: updated for simplified keypad and MPG symbol handling.
+
+* LPC176x: added support for keypad and MPG plugin. I2C keypad not fully supported and not tested.
+
+Plugins:
+
+* Keypad: updated for simplified keypad and MPG symbol handling.
+
+---
+
 <a name="20240812">Build 20240812
 
 Core:
@@ -14,7 +32,7 @@ Core:
 
 Drivers:
 
-* imXRT1061, MSP432, STM32F4xx, STM32F7xx: Updated to take advandage of new spindle encoder binding functionality.
+* imXRT1061, MSP432, STM32F4xx, STM32F7xx: updated to take advantage of new spindle encoder binding functionality.
 
 Plugins:
 
