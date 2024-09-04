@@ -118,12 +118,21 @@
     embroidery_init();
 #endif
 
+#if RGB_LED_ENABLE
+    extern void rgb_led_init (void);
+    rgb_led_init();
+#endif
+
     extern void my_plugin_init (void);
     my_plugin_init();
 
 #if N_SPINDLE > 1
     extern void spindle_select_init(void);
     spindle_select_init();
+  #if SPINDLE_OFFSET == 1
+    extern void spindle_offset_init (void);
+    spindle_offset_init();
+  #endif
 #endif
 
 // Third party plugin definitions.
@@ -164,6 +173,11 @@
 #if PANEL_ENABLE
     extern void panel_init (void);
     panel_init();
+#endif
+
+#if EVENTOUT_ENABLE
+    extern void event_out_init (void);
+    event_out_init();
 #endif
 
 // End third party plugin definitions.

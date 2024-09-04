@@ -1793,6 +1793,24 @@ Timezone offset from UTC in hours, allowed range is -12.0 - 12.0.
 #endif
 ///@}
 
+/*! @name $536 - Setting_RGB_StripLengt0
+Number of LEDs in NeoPixel/WS2812 strip 1.
+*/
+///@{
+#if !defined DEFAULT_RGB_STRIP0_LENGTH || defined __DOXYGEN__
+#define DEFAULT_RGB_STRIP0_LENGTH 0
+#endif
+///@}
+
+/*! @name $537 - Setting_RGB_StripLengt1
+Number of LEDs in NeoPixel/WS2812 strip 2.
+*/
+///@{
+#if !defined DEFAULT_RGB_STRIP1_LENGTH || defined __DOXYGEN__
+#define DEFAULT_RGB_STRIP1_LENGTH 0
+#endif
+///@}
+
 /*! @name $538 - Setting_RotaryWrap
 Enable fast return to G28 position for rotary axes by \ref axismask.
 Use:

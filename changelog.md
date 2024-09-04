@@ -1,5 +1,51 @@
 ## grblHAL changelog
 
+<a name="20240903">Build 20240903
+
+Core:
+
+* Added some new plugin init calls and setting ids. Added defaults for RGB strip lengths.
+
+Drivers:
+
+* ESP32, RP2040, STM32F4xx, STM32F7xx: updated for core changes related to the RGB HAL.
+
+* RP2040: renamed bluetooth files to avoid conflict with SDK.
+
+* STM32F7xx: moved board maps to separate directory.
+
+Plugins:
+
+* SD card: removed superfluous code. Made _.macro_ file type visible by default. Ref. [ioSender issue #403](https://github.com/terjeio/ioSender/issues/403).
+
+* Misc: initial commit of [new plugins](https://github.com/grblHAL/Plugins_misc), some moved from [Templates](https://github.com/grblHAL/Templates/tree/master/my_plugin).
+
+* WebUI: now delays soft reset commands for ESP32 driver to avoid crash when more than 3 axes are enabled. Ref. [issue #15](https://github.com/grblHAL/Plugin_WebUI/issues/15)
+
+---
+
+<a name="20240827">Build 20240827
+
+Core:
+
+* Added setting definitions for plugins and some new plugin initialization calls.
+
+Drivers:
+
+* ESP32: changed spindle on signal to GPIO32 when On/Off spindle is configured for MKS DLC32 board. Ref. this [discussion](https://github.com/grblHAL/core/discussions/203#discussioncomment-10454788).
+
+* RP2040: fixed build issues when native Bluetooth is enabled. Ref. [issue #94](https://github.com/grblHAL/RP2040/issues/94).
+
+Plugins:
+
+* Spindle: added "Offset" plugin for spindle \(laser\) movement to be executed when switching between spindles.
+
+* WebUI: workaround for [issue #15](https://github.com/grblHAL/Plugin_WebUI/issues/15), ESP32 crash on soft reset when > 3 axes configured.
+
+* Miscellaneous: added a number of smallish plugins; BLTouch, PWM servo, EventOut, RGB LED strips, RGB LED M150. These are work in progress and requires specific driver configurations.
+
+---
+
 <a name="20240817">Build 20240817
 
 Core:

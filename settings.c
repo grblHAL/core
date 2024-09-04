@@ -308,7 +308,10 @@ PROGMEM const settings_t defaults = {
     .safety_door.flags.ignore_when_idle = DEFAULT_DOOR_IGNORE_WHEN_IDLE,
     .safety_door.flags.keep_coolant_on = DEFAULT_DOOR_KEEP_COOLANT_ON,
     .safety_door.spindle_on_delay = DEFAULT_SAFETY_DOOR_SPINDLE_DELAY,
-    .safety_door.coolant_on_delay = DEFAULT_SAFETY_DOOR_COOLANT_DELAY
+    .safety_door.coolant_on_delay = DEFAULT_SAFETY_DOOR_COOLANT_DELAY,
+
+    .rgb_strip0_length = DEFAULT_RGB_STRIP0_LENGTH,
+    .rgb_strip1_length = DEFAULT_RGB_STRIP1_LENGTH
 };
 
 static bool group_is_available (const setting_group_detail_t *group)
@@ -1461,7 +1464,11 @@ inline static setting_id_t normalize_id (setting_id_t id)
         id = (setting_id_t)(Setting_EncoderSettingsBase + (id % ENCODER_SETTINGS_INCREMENT));
     else if(id > Setting_ModbusTCPBase && id <= Setting_ModbusTCPMax)
         id = (setting_id_t)(Setting_ModbusTCPBase + (id % MODBUS_TCP_SETTINGS_INCREMENT));
-    else if((id > Setting_Macro0 && id <= Setting_Macro9) || (id > Setting_MacroPort0 && id <= Setting_MacroPort9) || (id > Setting_ButtonAction0 && id <= Setting_ButtonAction9))
+    else if((id > Setting_Macro0 && id <= Setting_Macro9) ||
+             (id > Setting_MacroPort0 && id <= Setting_MacroPort9) ||
+              (id > Setting_ButtonAction0 && id <= Setting_ButtonAction9) ||
+               (id > Setting_Action0 && id <= Setting_Action9) ||
+                (id > Setting_ActionPort0 && id <= Setting_ActionPort9))
         id = (setting_id_t)(id - (id % 10));
 
     return id;
@@ -2315,11 +2322,16 @@ void settings_restore (settings_restore_t restore)
         settings_write_build_info(BUILD_INFO);
     }
 
+    if(restore.defaults && hal.settings_changed)
+        hal.settings_changed(&settings, (settings_changed_flags_t){-1});
+
     setting_details_t *details = setting_details.next;
 
     if(details) do {
         if(details->restore)
             details->restore();
+        if(details->on_changed)
+            details->on_changed(&settings, restore.defaults ? (settings_changed_flags_t){-1} : (settings_changed_flags_t){0});
     } while((details = details->next));
 
     nvs_buffer_sync_physical();

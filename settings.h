@@ -459,16 +459,52 @@ typedef enum {
     Setting_PWMOffValue1 = 734,
     Setting_PWMMinValue1 = 735,
     Setting_PWMMaxValue1 = 736,
+
 // Optional driver implemented settings for piecewise linear spindle PWM algorithm
     Setting_LinearSpindle1Piece1 = 737,
     Setting_LinearSpindle1Piece2 = 738,
     Setting_LinearSpindle1Piece3 = 739,
     Setting_LinearSpindle1Piece4 = 740,
+
+    Setting_Action0    = 750,
+    Setting_ActionBase = Setting_Action0,
+    Setting_Action1    = 751,
+    Setting_Action2    = 752,
+    Setting_Action3    = 753,
+    Setting_Action4    = 754,
+    Setting_Action5    = 755,
+    Setting_Action6    = 756,
+    Setting_Action7    = 757,
+    Setting_Action8    = 758,
+    Setting_Action9    = 759,
+
+    Setting_ActionPort0    = 760,
+    Setting_ActionPortBase = Setting_ActionPort0,
+    Setting_ActionPort1    = 761,
+    Setting_ActionPort2    = 762,
+    Setting_ActionPort3    = 763,
+    Setting_ActionPort4    = 764,
+    Setting_ActionPort5    = 765,
+    Setting_ActionPort6    = 766,
+    Setting_ActionPort7    = 767,
+    Setting_ActionPort8    = 768,
+    Setting_ActionPort9    = 769,
+
+    Setting_SpindleOffsetX = 770,
+    Setting_SpindleOffsetY = 771,
+//
+// 772-779 - reserved for spindle offset settings
+//
+
 //
 // 900-999 - reserved for automatic tool changers (ATC)
 //
+
+// ---
     Setting_SettingsMax,
     Setting_SettingsAll = Setting_SettingsMax,
+
+// ---
 
     // Calculated base values for core stepper settings
     Setting_AxisStepsPerMM       = Setting_AxisSettingsBase,

@@ -319,7 +319,7 @@ bool delay_sec (float seconds, delaymode_t mode)
     while(--i && ok) {
         if(mode == DelayMode_Dwell)
             ok = protocol_execute_realtime();
-        else // DelayMode_SysSuspende, xecute rt_system() only to avoid nesting suspend loops.
+        else // DelayMode_SysSuspend, execute rt_system() only to avoid nesting suspend loops.
             ok = protocol_exec_rt_system() && !state_door_reopened(); // Bail, if safety door reopens.
         if(ok)
             hal.delay_ms(DWELL_TIME_STEP, NULL); // Delay DWELL_TIME_STEP increment
