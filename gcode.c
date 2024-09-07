@@ -804,6 +804,12 @@ status_code_t gc_execute_block (char *block)
 #endif
 
     char *message = NULL;
+    struct {
+        float f;
+        uint32_t o;
+        float s;
+        tool_id_t t;
+    } single_meaning_value = {0};
 
     block = gc_normalize_block(block, &message);
 
@@ -1694,7 +1700,22 @@ status_code_t gc_execute_block (char *block)
             ijk_words.j = Off;
         if(user_words.k)
             ijk_words.k = Off;
-
+        if(user_words.f) {
+            single_meaning_value.f = gc_block.values.f;
+            gc_block.values.f = 0.0f;
+        }
+        if(user_words.o) {
+            single_meaning_value.o = gc_block.values.o;
+            gc_block.values.o = 0;
+        }
+        if(user_words.s) {
+            single_meaning_value.s = gc_block.values.s;
+            gc_block.values.s = 0.0f;
+        }
+        if(user_words.t) {
+            single_meaning_value.t = gc_block.values.t;
+            gc_block.values.t = (tool_id_t)0;
+        }
         axis_words.mask = 0;
     }
 
@@ -3313,7 +3334,12 @@ status_code_t gc_execute_block (char *block)
 
         if(gc_block.user_mcode_sync)
             protocol_buffer_synchronize(); // Ensure user defined mcode is executed when specified in program.
+
         gc_block.words.mask = user_words.mask;
+        gc_block.values.f = single_meaning_value.f;
+        gc_block.values.o = single_meaning_value.o;
+        gc_block.values.s = single_meaning_value.s;
+        gc_block.values.t = single_meaning_value.t;
         hal.user_mcode.execute(state_get(), &gc_block);
         gc_block.words.mask = 0;
     }

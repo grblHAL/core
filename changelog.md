@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+<a name="20240907">Build 20240907
+
+Core:
+
+* Added some RGB LED strip properties, improved handling of single meaning G-code words claimed by user M-codes.
+
+Plugins:
+
+* Misc: updated for new RGB LED strip properties.
+
+Drivers:
+
+* iMRX1062, STM32F4xx and STM32F7xx: updated for new RGB LED strip properties.
+
+* RP2040: revised pin mappings for BTT SKR Pico board. Added misc. plugins to compilation.
+
+---
+
 <a name="20240903">Build 20240903
 
 Core:
@@ -8,7 +26,7 @@ Core:
 
 Drivers:
 
-* ESP32, RP2040, STM32F4xx, STM32F7xx: updated for core changes related to the RGB HAL.
+* ESP32, RP2040, STM32F4xx and  STM32F7xx: updated for core changes related to the RGB HAL.
 
 * RP2040: renamed bluetooth files to avoid conflict with SDK.
 
