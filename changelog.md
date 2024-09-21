@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+<a name="20240921">Build 20240921
+
+Core:
+
+* Added generic HAL timer API and function for getting which `G65` parameter words were supplied. 
+
+Networking:
+
+* Made parsing of HTTP header keywords case insensitive. Ref. [issue #11](https://github.com/grblHAL/Plugin_networking/issues/11).
+
+SD card (macros):
+
+* Added inbuilt `G65` macro `P3` for getting and setting NGC numerical parameters, typical use case will be for indexed access. Ref. [discussion #309 comment](https://github.com/grblHAL/core/discussions/309#discussioncomment-10710468). 
+
+---
+
 <a name="20240907">Build 20240907
 
 Core:

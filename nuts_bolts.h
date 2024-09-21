@@ -129,6 +129,7 @@ extern char const *const axis_letter[];
 
 typedef union {
     uint8_t mask;
+    uint8_t bits;
     uint8_t value;
     struct {
         uint8_t x :1,

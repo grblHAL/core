@@ -509,10 +509,16 @@ static status_code_t read_parameter (char *line, uint_fast8_t *char_counter, flo
     return status;
 }
 
-
 #endif // NGC_EXPRESSIONS_ENABLE
 
 #if NGC_PARAMETERS_ENABLE
+
+static parameter_words_t g65_words = {0};
+
+parameter_words_t gc_get_g65_arguments (void)
+{
+    return g65_words;
+}
 
 bool gc_modal_state_restore (gc_modal_t *copy)
 {
@@ -950,6 +956,7 @@ status_code_t gc_execute_block (char *block)
         if(!is_user_mcode && isnanf(value))
             FAIL(Status_BadNumberFormat);   // [Expected word value]
 
+        g65_words.value = 0;
 #else
 
         if((letter < 'A' && letter != '$') || letter > 'Z')
@@ -2435,11 +2442,14 @@ status_code_t gc_execute_block (char *block)
 
                         while(gc_block.words.value) {
                             if(gc_block.words.value & 0x1 && gc_value_ptr[idx].value) switch(gc_value_ptr[idx].type) {
+
                                 case ValueType_Float:
+                                    g65_words.value |= (1 << idx);
                                     ngc_param_set((ngc_param_id_t)idx, *(float *)gc_value_ptr[idx].value);
                                     break;
 
                                 case ValueType_UInt32:
+                                    g65_words.value |= (1 << idx);
                                     ngc_param_set((ngc_param_id_t)idx, (float)*(uint32_t *)gc_value_ptr[idx].value);
                                     break;
 

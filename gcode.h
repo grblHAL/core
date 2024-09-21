@@ -238,8 +238,8 @@ typedef enum {
     UserMCode_Generic3 = 103,           //!< 103 - For private use only
     UserMCode_Generic4 = 104,           //!< 104 - For private use only
     OpenPNP_GetADCReading = 105,        //!< 105 - M105
-    Fan_On = 106,                       //!< 106 - M106
-    Fan_Off = 107,                      //!< 107 - M107
+    Fan_On = 106,                       //!< 106 - M106, Marlin format
+    Fan_Off = 107,                      //!< 107 - M107, Marlin format
     OpenPNP_GetCurrentPosition = 114,   //!< 114 - M114
     OpenPNP_FirmwareInfo = 115,         //!< 115 - M115
     Trinamic_DebugReport = 122,         //!< 122 - M122, Marlin format
@@ -685,6 +685,7 @@ void gc_set_tool_offset (tool_offset_mode_t mode, uint_fast8_t idx, int32_t offs
 plane_t *gc_get_plane_data (plane_t *plane, plane_select_t select);
 
 #if NGC_PARAMETERS_ENABLE
+parameter_words_t gc_get_g65_arguments (void);
 bool gc_modal_state_restore (gc_modal_t *copy);
 #endif
 

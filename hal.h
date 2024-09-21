@@ -302,6 +302,13 @@ typedef void (*stepper_output_step_ptr)(axes_signals_t step_outbits, axes_signal
 */
 typedef axes_signals_t (*stepper_get_ganged_ptr)(bool auto_squared);
 
+/*! \brief Pointer to function for claiming/releasing motor(s) from/to normal step/dir signalling.
+
+\param axis_id a \a the axis to claim/release motor(s) for.
+\param claim \a true to claim a motor(s), \a false to release.
+*/
+typedef void (*stepper_claim_motor_ptr)(uint_fast8_t axis_id, bool claim);
+
 /*! \brief Pointer to callback function for outputting the next direction and step pulse signals. _Set by the core on startup._
 
 To be called by the driver from the main stepper interrupt handler (when the timer times out).
@@ -318,6 +325,7 @@ typedef struct {
     stepper_pulse_start_ptr pulse_start;                //!< Handler for starting outputting direction signals and a step pulse. Called from interrupt context.
     stepper_interrupt_callback_ptr interrupt_callback;  //!< Callback for informing about the next step pulse to output. _Set by the core at startup._
     stepper_get_ganged_ptr get_ganged;                  //!< Optional handler getting which axes are configured for ganging or auto squaring.
+    stepper_claim_motor_ptr claim_motor;                //!< Optional handler for claiming/releasing motor(s) from normal step/dir control.
     stepper_output_step_ptr output_step;                //!< Optional handler for outputting a single step pulse. _Experimental._ Called from interrupt context.
     motor_iterator_ptr motor_iterator;                  //!< Optional handler iteration over motor vs. axis mappings. Required for the motors plugin (Trinamic drivers).
 } stepper_ptrs_t;
@@ -484,6 +492,73 @@ typedef struct {
 */
 typedef bool (*irq_claim_ptr)(irq_type_t irq, uint_fast8_t id, irq_callback_ptr callback);
 
+/************
+ *  Timers  *
+ ************/
+
+typedef void *hal_timer_t;  //!< Timer handle, actual type defined by driver implementation.
+
+typedef enum {
+    Timer_16bit = 0,
+    Timer_32bit,
+    Timer_64bit
+} timer_resolution_t;
+
+typedef union {
+    uint8_t value; //!< All bitmap flags.
+    struct {
+        uint8_t periodic :1, //!<
+                up       :1, //!< Timer supports upcounting
+                comp1    :1, //!< Timer supports compare interrupt 0
+                comp2    :1; //!< Timer supports compare interrupt 1
+    };
+} timer_cap_t;
+
+typedef void (*timer_irq_handler_ptr)(void *context);
+
+typedef struct {
+    void *context;                          //!< Pointer to data to be passed on to the interrupt handlers
+    bool single_shot;                       //!< Set to true if timer is single shot
+    timer_irq_handler_ptr timeout_callback; //!< Pointer to main timeout callback
+    uint32_t irq0;                          //!< Compare value for compare interrupt 0
+    timer_irq_handler_ptr irq0_callback;    //!< Pointer to compare interrupt 0 callback
+    uint32_t irq1;                          //!< Compare value for compare interrupt 10
+    timer_irq_handler_ptr irq1_callback;    //!< Pointer to compare interrupt 1 callback
+} timer_cfg_t;
+
+/*! \brief Pointer to function for claiming a timer.
+\param cap pointer to a \a timer_cap_t struct containing the required capabilities.
+\param timebase timebase in ns.
+\returns a \a hal_timer_t pointer if successful, \a NULL if not.
+*/
+typedef hal_timer_t (*timer_claim_ptr)(timer_cap_t cap, uint32_t timebase);
+
+/*! \brief Pointer to function for configuring a timer.
+\param timer a \a hal_timer_t pointer.
+\param cfg pointer to a \a timer_cfg_t struct.
+\returns \a true if successful.
+*/
+typedef bool (*timer_cfg_ptr)(hal_timer_t timer, timer_cfg_t *cfg);
+
+/*! \brief Pointer to function for starting a timer.
+\param timer a \a hal_timer_t pointer.
+\param period delay in.
+\returns \a true if successful.
+*/
+typedef bool (*timer_start_ptr)(hal_timer_t timer, uint32_t period);
+
+/*! \brief Pointer to function for stopping a running timer.
+\param timer a \a hal_timer_t pointer.
+\returns \a true if successful.
+*/
+typedef bool (*timer_stop_ptr)(hal_timer_t timer);
+
+typedef struct {
+    timer_claim_ptr claim;
+    timer_cfg_ptr configure;
+    timer_start_ptr start;
+    timer_stop_ptr stop;
+} timer_ptrs_t;
 
 /**************************
  *  RTC (Real Time Clock  *
@@ -491,13 +566,13 @@ typedef bool (*irq_claim_ptr)(irq_type_t irq, uint_fast8_t id, irq_callback_ptr 
 
 /*! \brief Pointer to function for setting the current datetime.
 \param datetime pointer to a \a tm struct.
-\returns true if successful.
+\\returns \a true if successful.
 */
 typedef bool (*rtc_get_datetime_ptr)(struct tm *datetime);
 
 /*! \brief Pointer to function for setting the current datetime.
 \param datetime pointer to a \a tm struct.
-\returns true if successful.
+\returns \a true if successful.
 */
 typedef bool (*rtc_set_datetime_ptr)(struct tm *datetime);
 
@@ -541,7 +616,7 @@ typedef struct {
     /*! \brief Driver setup handler.
     Called once by the core after settings has been loaded. The driver should enable MCU peripherals in the provided function.
     \param settings pointer to settings_t structure.
-    \returns true if completed successfully and the driver supports the _settings->version_ number, false otherwise.
+    \returns \a true if completed successfully and the driver supports the _settings->version_ number, false otherwise.
     */
     driver_setup_ptr driver_setup;
 
@@ -595,6 +670,7 @@ typedef struct {
     settings_changed_ptr settings_changed;  //!< Callback handler to be called on settings loaded or settings changed events.
     probe_ptrs_t probe;                     //!< Optional handlers for probe input(s).
     tool_ptrs_t tool;                       //!< Optional handlers for tool changes.
+    timer_ptrs_t timer;                     //!< Optional handlers for claiming and controlling timers.
     rtc_ptrs_t rtc;                         //!< Optional handlers for real time clock (RTC).
     io_port_t port;                         //!< Optional handlers for axuillary I/O (adds support for M62-M66).
     rgb_ptr_t rgb0;                         //!< Optional handler for RGB output to LEDs (neopixels) or lamps.
@@ -649,7 +725,7 @@ Then _hal.driver_setup()_ will be called so that the driver can configure the re
 
 __NOTE__: This is the only driver function that is called directly from the core, all others are called via HAL function pointers.
 
-\returns true if completed successfully and the driver matches the _hal.version number_, false otherwise.
+\returns \a true if completed successfully and the driver matches the _hal.version number_, \a false otherwise.
 */
 extern bool driver_init (void);
 

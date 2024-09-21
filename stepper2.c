@@ -47,6 +47,7 @@ struct st2_motor {
     axes_signals_t axis;
     bool is_spindle;
     bool is_bound;
+    bool polling;
     bool position_lost;
     volatile int64_t position;  // absolute step number
     position_t ptype;           //
@@ -66,6 +67,8 @@ struct st2_motor {
     float acceleration;         // acceleration steps/s^2
     axes_signals_t dir;         // current direction
     uint64_t next_step;
+    hal_timer_t step_inject_timer;
+    foreground_task_ptr on_stopped;
     st2_motor_t *next;
 };
 
@@ -75,6 +78,8 @@ static settings_changed_ptr settings_changed;
 static on_set_axis_setting_unit_ptr on_set_axis_setting_unit;
 static on_setting_get_description_ptr on_setting_get_description;
 static on_reset_ptr on_reset;
+
+static void motor_irq (void *context);
 
 /*! \brief Calculate basic motor configuration.
 
@@ -200,6 +205,11 @@ static const char *st2_setting_get_description (setting_id_t id)
                  : (on_setting_get_description ? on_setting_get_description(id) : NULL);
 }
 
+void st2_motor_register_stopped_callback (st2_motor_t *motor, foreground_task_ptr callback)
+{
+    motor->on_stopped = callback;
+}
+
 /*! \brief Bind and initialize a motor.
 
 Binds motor 0 as a spindle.
@@ -240,9 +250,23 @@ If \a is_spindle is set \a true then axis settings will be changed to step/rev e
 */
 st2_motor_t *st2_motor_init (uint_fast8_t axis_idx, bool is_spindle)
 {
-    st2_motor_t *motor, *new = motors;
+    st2_motor_t *motor = NULL, *new = motors;
 
-    if((motor = calloc(sizeof(st2_motor_t), 1))) {
+    if(hal.stepper.output_step && (motor = calloc(sizeof(st2_motor_t), 1))) {
+
+        if(hal.timer.claim && (motor->step_inject_timer = hal.timer.claim((timer_cap_t){ .periodic = Off }, 1000))) {
+            timer_cfg_t step_inject_cfg = {
+                .single_shot = true,
+                .timeout_callback = motor_irq
+            };
+            step_inject_cfg.context = motor;
+            hal.timer.configure(motor->step_inject_timer, &step_inject_cfg);
+        } else if(hal.get_micros)
+            motor->polling = true;
+        else {
+            free(motor);
+            return NULL;
+        }
 
         if(!is_spindle) {
 
@@ -417,6 +441,9 @@ bool st2_motor_move (st2_motor_t *motor, const float move, const float speed, po
     motor->step_no   = 0;                   // step counter
     motor->next_step = hal.get_micros();
 
+    if(motor->step_inject_timer)
+        hal.timer.start(motor->step_inject_timer, motor->delay);
+
 #ifdef DEBUGOUT
     uint32_t nn = motor->n;
     float cn = motor->first_delay;
@@ -464,17 +491,12 @@ bool st2_set_position (st2_motor_t *motor, int64_t position)
 }
 
 /*! \brief Execute a move commanded by st2_motor_move().
-
-This should be called from the foreground process as often as possible.
 \param motor pointer to a \a st2_motor structure.
 \returns \a true if motor is moving (steps are output), \a false if not (motion is completed).
 */
-bool st2_motor_run (st2_motor_t *motor)
+__attribute__((always_inline)) static inline bool _motor_run (st2_motor_t *motor)
 {
-    uint64_t t = hal.get_micros();
-
-    if(motor->state == State_Idle || t - motor->next_step < motor->delay)
-        return motor->state != State_Idle;
+    st2_state_t prev_state = motor->state;
 
     switch(motor->state) {
 
@@ -483,7 +505,7 @@ bool st2_motor_run (st2_motor_t *motor)
                 motor->denom += 4;
                 motor->c64 -= (motor->c64 << 1) / motor->denom; // ramp algorithm
                 motor->delay = (motor->c64 + 32768) >> 16;      // round 24.16 format -> int16
-                if (motor->delay < motor->min_delay) {         // go to constant speed?
+                if (motor->delay < motor->min_delay) {          // go to constant speed?
               //      motor->denom -= 6; // causes issues with speed override for infinite moves
                     motor->state = motor->ptype == Stepper2_InfiniteSteps ? State_RunInfinite : State_Run;
                     motor->step_down = motor->move - motor->step_no;
@@ -540,7 +562,41 @@ bool st2_motor_run (st2_motor_t *motor)
         motor->position++;
 
     motor->step_no++;
-    motor->next_step = t;
+
+    if(motor->state == State_Idle && prev_state != State_Idle && motor->on_stopped)
+        task_add_delayed(motor->on_stopped, motor, 2);
+
+    return motor->state != State_Idle;
+}
+
+ISR_CODE static void ISR_FUNC(motor_irq)(void *context)
+{
+    if(_motor_run((st2_motor_t *)context))
+        hal.timer.start(((st2_motor_t *)context)->step_inject_timer, ((st2_motor_t *)context)->delay);
+    else
+        hal.timer.stop(((st2_motor_t *)context)->step_inject_timer);
+}
+
+/*! \brief Execute a move commanded by st2_motor_move().
+
+This should be called from the foreground process as often as possible
+when step output is not driven by interrupts (polling mode).
+\param motor pointer to a \a st2_motor structure.
+\returns \a true if motor is moving (steps are output), \a false if not (motion is completed).
+*/
+bool st2_motor_run (st2_motor_t *motor)
+{
+    if(motor->polling && motor->state != State_Idle) {
+
+        uint64_t t = hal.get_micros();
+
+        if(t - motor->next_step >= motor->delay) {
+
+            _motor_run(motor);
+
+            motor->next_step = t;
+        }
+    }
 
     return motor->state != State_Idle;
 }
@@ -573,6 +629,15 @@ bool st2_motor_stop (st2_motor_t *motor)
     }
 
     return motor->state != State_Idle;
+}
+
+/*! \brief Check if motor is run by polling.
+\param motor pointer to a \a st2_motor structure.
+\returns \a true if motor is run by polling, \a false if not.
+*/
+bool st2_motor_poll (st2_motor_t *motor)
+{
+    return motor->polling;
 }
 
 /*! \brief Check if motor is running.
