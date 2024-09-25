@@ -509,46 +509,7 @@ static status_code_t read_parameter (char *line, uint_fast8_t *char_counter, flo
     return status;
 }
 
-#endif // NGC_EXPRESSIONS_ENABLE
-
-#if NGC_PARAMETERS_ENABLE
-
-static parameter_words_t g65_words = {0};
-
-parameter_words_t gc_get_g65_arguments (void)
-{
-    return g65_words;
-}
-
-bool gc_modal_state_restore (gc_modal_t *copy)
-{
-    bool ok = false;
-
-    if((ok = !!copy && !ABORTED)) {
-
-        copy->auto_restore = false;
-        copy->motion = gc_state.modal.motion;
-
-        if(copy->coolant.value != gc_state.modal.coolant.value) {
-            hal.coolant.set_state(copy->coolant);
-            delay_sec(settings.safety_door.coolant_on_delay, DelayMode_SysSuspend);
-        }
-
-        if(copy->spindle.state.value != gc_state.modal.spindle.state.value || copy->rpm != gc_state.modal.rpm)
-            spindle_restore(gc_state.spindle.hal, copy->spindle.state, copy->rpm);
-
-        memcpy(&gc_state.modal, copy, sizeof(gc_modal_t));
-
-        gc_state.spindle.rpm = gc_state.modal.rpm;
-        gc_state.feed_rate = gc_state.modal.feed_rate;
-    }
-
-    return ok;
-}
-
-#endif // NGC_PARAMETERS_ENABLE
-
-void substitute_parameters(char *comment, char **message) {
+static void substitute_parameters(char *comment, char **message) {
     size_t len = 0;
     float value;
     char *s3;
@@ -592,6 +553,45 @@ void substitute_parameters(char *comment, char **message) {
         }
     }
 }
+
+#endif // NGC_EXPRESSIONS_ENABLE
+
+#if NGC_PARAMETERS_ENABLE
+
+static parameter_words_t g65_words = {0};
+
+parameter_words_t gc_get_g65_arguments (void)
+{
+    return g65_words;
+}
+
+bool gc_modal_state_restore (gc_modal_t *copy)
+{
+    bool ok = false;
+
+    if((ok = !!copy && !ABORTED)) {
+
+        copy->auto_restore = false;
+        copy->motion = gc_state.modal.motion;
+
+        if(copy->coolant.value != gc_state.modal.coolant.value) {
+            hal.coolant.set_state(copy->coolant);
+            delay_sec(settings.safety_door.coolant_on_delay, DelayMode_SysSuspend);
+        }
+
+        if(copy->spindle.state.value != gc_state.modal.spindle.state.value || copy->rpm != gc_state.modal.rpm)
+            spindle_restore(gc_state.spindle.hal, copy->spindle.state, copy->rpm);
+
+        memcpy(&gc_state.modal, copy, sizeof(gc_modal_t));
+
+        gc_state.spindle.rpm = gc_state.modal.rpm;
+        gc_state.feed_rate = gc_state.modal.feed_rate;
+    }
+
+    return ok;
+}
+
+#endif // NGC_PARAMETERS_ENABLE
 
 // Remove whitespace, control characters, comments and if block delete is active block delete lines
 // else the block delete character. Remaining characters are converted to upper case.
@@ -641,7 +641,7 @@ char *gc_normalize_block (char *block, char **message)
 
                         if(message && *message == NULL && !strncmp(comment, "(MSG,", 5) && (*message = malloc(len))) {
                             comment += 5;
-#if NGC_PARAMETERS_ENABLE
+#if NGC_EXPRESSIONS_ENABLE
                             substitute_parameters(comment, message);
 #else
                             while(*comment == ' ') {
