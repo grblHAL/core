@@ -509,6 +509,51 @@ static status_code_t read_parameter (char *line, uint_fast8_t *char_counter, flo
     return status;
 }
 
+static void substitute_parameters(char *comment, char **message) {
+    size_t len = 0;
+    float value;
+    char *s3;
+    uint_fast8_t char_counter = 0;
+    char c = *(comment + char_counter);
+
+    // Trim leading spaces
+    while(*comment == ' ')
+        comment++;
+
+    // Calculate length of substituted string
+    while((c = comment[char_counter++])) {
+        if(c == '#') {
+            char_counter--;
+            if(read_parameter(comment, &char_counter, &value) == Status_OK)
+                len += strlen(trim_float(ftoa(value, ngc_float_decimals())));
+            else
+                len += 3; // "N/A"
+        } else
+            len++;
+    }
+
+    // Perform substitution
+    if((s3 = *message = malloc(len + 1))) {
+
+        *s3 = '\0';
+        char_counter = 0;
+
+        while((c = comment[char_counter++])) {
+            if(c == '#') {
+                char_counter--;
+                if(read_parameter(comment, &char_counter, &value) == Status_OK)
+                    strcat(s3, trim_float(ftoa(value, ngc_float_decimals())));
+                else
+                    strcat(s3, "N/A");
+                s3 = strchr(s3, '\0');
+            } else {
+                *s3++ = c;
+                *s3 = '\0';
+            }
+        }
+    }
+}
+
 #endif // NGC_EXPRESSIONS_ENABLE
 
 #if NGC_PARAMETERS_ENABLE
@@ -596,12 +641,15 @@ char *gc_normalize_block (char *block, char **message)
 
                         if(message && *message == NULL && !strncmp(comment, "(MSG,", 5) && (*message = malloc(len))) {
                             comment += 5;
-                            // Trim leading spaces
+#if NGC_EXPRESSIONS_ENABLE
+                            substitute_parameters(comment, message);
+#else
                             while(*comment == ' ') {
                                 comment++;
                                 len--;
                             }
                             memcpy(*message, comment, len);
+#endif
                         }
 
 #if NGC_EXPRESSIONS_ENABLE
@@ -609,50 +657,8 @@ char *gc_normalize_block (char *block, char **message)
                         if(message && *message == NULL && !strncmp(comment, "(DEBUG,", 7)) {
 
                             if(settings.flags.ngc_debug_out) {
-
-                                float value;
-                                char *s3;
-                                uint_fast8_t char_counter = 0;
-
-                                len = 0;
                                 comment += 7;
-
-                                // Trim leading spaces
-                                while(*comment == ' ')
-                                    comment++;
-
-                                // Calculate length of substituted string
-                                while((c = comment[char_counter++])) {
-                                    if(c == '#') {
-                                        char_counter--;
-                                        if(read_parameter(comment, &char_counter, &value) == Status_OK)
-                                            len += strlen(trim_float(ftoa(value, ngc_float_decimals())));
-                                        else
-                                            len += 3; // "N/A"
-                                    } else
-                                        len++;
-                                }
-
-                                // Perform substitution
-                                if((s3 = *message = malloc(len + 1))) {
-
-                                    *s3 = '\0';
-                                    char_counter = 0;
-
-                                    while((c = comment[char_counter++])) {
-                                        if(c == '#') {
-                                            char_counter--;
-                                            if(read_parameter(comment, &char_counter, &value) == Status_OK)
-                                                strcat(s3, trim_float(ftoa(value, ngc_float_decimals())));
-                                            else
-                                                strcat(s3, "N/A");
-                                            s3 = strchr(s3, '\0');
-                                        } else {
-                                            *s3++ = c;
-                                            *s3 = '\0';
-                                        }
-                                    }
-                                }
+                                substitute_parameters(comment, message);
                             }
 
                             *comment = '\0'; // Do not generate grbl.on_gcode_comment event!
