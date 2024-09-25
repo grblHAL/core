@@ -595,13 +595,49 @@ char *gc_normalize_block (char *block, char **message)
                         size_t len = s1 - comment - 4;
 
                         if(message && *message == NULL && !strncmp(comment, "(MSG,", 5) && (*message = malloc(len))) {
+                            float value;
+                            char *s3;
+                            uint_fast8_t char_counter = 0;
+
+                            len = 0;
                             comment += 5;
+
                             // Trim leading spaces
-                            while(*comment == ' ') {
+                            while(*comment == ' ')
                                 comment++;
-                                len--;
+
+                            // Calculate length of substituted string
+                            while((c = comment[char_counter++])) {
+                                if(c == '#') {
+                                    char_counter--;
+                                    if(read_parameter(comment, &char_counter, &value) == Status_OK)
+                                        len += strlen(trim_float(ftoa(value, ngc_float_decimals())));
+                                    else
+                                        len += 3; // "N/A"
+                                } else
+                                    len++;
                             }
-                            memcpy(*message, comment, len);
+
+                            // Perform substitution
+                            if((s3 = *message = malloc(len + 1))) {
+
+                                *s3 = '\0';
+                                char_counter = 0;
+
+                                while((c = comment[char_counter++])) {
+                                    if(c == '#') {
+                                        char_counter--;
+                                        if(read_parameter(comment, &char_counter, &value) == Status_OK)
+                                            strcat(s3, trim_float(ftoa(value, ngc_float_decimals())));
+                                        else
+                                            strcat(s3, "N/A");
+                                        s3 = strchr(s3, '\0');
+                                    } else {
+                                        *s3++ = c;
+                                        *s3 = '\0';
+                                    }
+                                }
+                            }
                         }
 
 #if NGC_EXPRESSIONS_ENABLE
