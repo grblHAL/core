@@ -595,12 +595,12 @@ char *gc_normalize_block (char *block, char **message)
                         size_t len = s1 - comment - 4;
 
                         if(message && *message == NULL && !strncmp(comment, "(MSG,", 5) && (*message = malloc(len))) {
+                            comment += 5;
+#if NGC_PARAMETERS_ENABLE
+                            len = 0;
                             float value;
                             char *s3;
                             uint_fast8_t char_counter = 0;
-
-                            len = 0;
-                            comment += 5;
 
                             // Trim leading spaces
                             while(*comment == ' ')
@@ -638,6 +638,13 @@ char *gc_normalize_block (char *block, char **message)
                                     }
                                 }
                             }
+#else
+                            while(*comment == ' ') {
+                                comment++;
+                                len--;
+                            }
+                            memcpy(*message, comment, len);
+#endif
                         }
 
 #if NGC_EXPRESSIONS_ENABLE
