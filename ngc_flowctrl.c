@@ -692,8 +692,10 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
                     if(read_real_value(line, pos, &value) == Status_OK) {
                         ngc_named_param_set("_value", value);
                         ngc_named_param_set("_value_returned", 1.0f);
-                    } else
+                    } else {
+                        ngc_named_param_set("_value", 0.0f);
                         ngc_named_param_set("_value_returned", 0.0f);
+                    }
 
                     if(g65_return)
                         grbl.on_macro_return();
