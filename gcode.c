@@ -639,16 +639,18 @@ char *gc_normalize_block (char *block, char **message)
 
                         size_t len = s1 - comment - 4;
 
-                        if(message && *message == NULL && !strncmp(comment, "(MSG,", 5) && (*message = malloc(len))) {
+                        if(message && *message == NULL && !strncmp(comment, "(MSG,", 5)) {
                             comment += 5;
 #if NGC_EXPRESSIONS_ENABLE
                             substitute_parameters(comment, message);
 #else
-                            while(*comment == ' ') {
-                                comment++;
-                                len--;
+                            if (*message = malloc(len)) {
+                                while(*comment == ' ') {
+                                    comment++;
+                                    len--;
+                                }
+                                memcpy(*message, comment, len);
                             }
-                            memcpy(*message, comment, len);
 #endif
                         }
 
