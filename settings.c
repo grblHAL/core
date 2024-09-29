@@ -101,7 +101,7 @@ PROGMEM const settings_t defaults = {
 #else
     .steppers.enable_invert.mask = AXES_BITMASK,
 #endif
-    .steppers.deenergize.mask = DEFAULT_STEPPER_DEENERGIZE_MASK,
+    .steppers.energize.mask = DEFAULT_STEPPER_DEENERGIZE_MASK,
 #if N_AXIS > 3
     .steppers.is_rotary.mask = (DEFAULT_AXIS_ROTATIONAL_MASK & AXES_BITMASK) & 0b11111000,
     .steppers.rotary_wrap.mask = (DEFAULT_AXIS_ROTARY_WRAP_MASK & AXES_BITMASK) & 0b11111000,
@@ -396,7 +396,7 @@ static status_code_t set_tool_change_mode (setting_id_t id, uint_fast16_t int_va
 static status_code_t set_tool_change_probing_distance (setting_id_t id, float value);
 static status_code_t set_tool_restore_pos (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_ganged_dir_invert (setting_id_t id, uint_fast16_t int_value);
-static status_code_t set_stepper_deenergize_mask (setting_id_t id, uint_fast16_t int_value);
+static status_code_t set_stepper_energize_mask (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_report_interval (setting_id_t setting, uint_fast16_t int_value);
 static status_code_t set_estop_unlock (setting_id_t id, uint_fast16_t int_value);
 #if COMPATIBILITY_LEVEL <= 1
@@ -538,7 +538,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_PWMOffValue, Group_Spindle, "Spindle PWM off value", "percent", Format_Decimal, "##0.0", NULL, "100", Setting_IsExtended, &settings.spindle.pwm_off_value, NULL, is_setting_available },
      { Setting_PWMMinValue, Group_Spindle, "Spindle PWM min value", "percent", Format_Decimal, "##0.0", NULL, "100", Setting_IsExtended, &settings.spindle.pwm_min_value, NULL, is_setting_available },
      { Setting_PWMMaxValue, Group_Spindle, "Spindle PWM max value", "percent", Format_Decimal, "##0.0", NULL, "100", Setting_IsExtended, &settings.spindle.pwm_max_value, NULL, is_setting_available },
-     { Setting_StepperDeenergizeMask, Group_Stepper, "Steppers deenergize", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_stepper_deenergize_mask, get_int, NULL },
+     { Setting_SteppersEnergize, Group_Stepper, "Steppers to keep enabled", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_stepper_energize_mask, get_int, NULL },
      { Setting_SpindlePPR, Group_Spindle, "Spindle pulses per revolution (PPR)", NULL, Format_Int16, "###0", NULL, NULL, Setting_IsExtended, &settings.spindle.ppr, NULL, is_setting_available, { .reboot_required = On } },
      { Setting_EnableLegacyRTCommands, Group_General, "Enable legacy RT commands", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_enable_legacy_rt_commands, get_int, NULL },
      { Setting_JogSoftLimited, Group_Jogging, "Limit jog commands", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_jog_soft_limited, get_int, NULL },
@@ -710,7 +710,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_PWMOffValue, "Spindle PWM off value in percent (duty cycle)." },
     { Setting_PWMMinValue, "Spindle PWM min value in percent (duty cycle)." },
     { Setting_PWMMaxValue, "Spindle PWM max value in percent (duty cycle)." },
-    { Setting_StepperDeenergizeMask, "Specifies which steppers not to disable when stopped." },
+    { Setting_SteppersEnergize, "Specifies which steppers not to disable when stopped." },
     { Setting_SpindlePPR, "Spindle encoder pulses per revolution." },
     { Setting_EnableLegacyRTCommands, "Enables \"normal\" processing of ?, ! and ~ characters when part of $-setting or comment. If disabled then they are added to the input string instead." },
     { Setting_JogSoftLimited, "Limit jog commands to machine limits for homed axes." },
@@ -956,11 +956,11 @@ static status_code_t set_ganged_dir_invert (setting_id_t id, uint_fast16_t int_v
     return Status_OK;
 }
 
-static status_code_t set_stepper_deenergize_mask (setting_id_t id, uint_fast16_t int_value)
+static status_code_t set_stepper_energize_mask (setting_id_t id, uint_fast16_t int_value)
 {
-    settings.steppers.deenergize.mask = int_value;
+    settings.steppers.energize.mask = int_value;
 
-    hal.stepper.enable(settings.steppers.deenergize);
+    hal.stepper.enable(settings.steppers.energize, true);
 
     return Status_OK;
 }
@@ -1468,7 +1468,8 @@ inline static setting_id_t normalize_id (setting_id_t id)
              (id > Setting_MacroPort0 && id <= Setting_MacroPort9) ||
               (id > Setting_ButtonAction0 && id <= Setting_ButtonAction9) ||
                (id > Setting_Action0 && id <= Setting_Action9) ||
-                (id > Setting_ActionPort0 && id <= Setting_ActionPort9))
+                (id > Setting_ActionPort0 && id <= Setting_ActionPort9) ||
+                 (id > Setting_SpindleToolStart0 && id <= Setting_SpindleToolStart7))
         id = (setting_id_t)(id - (id % 10));
 
     return id;
@@ -1702,8 +1703,8 @@ static uint32_t get_int (setting_id_t id)
 #endif
             break;
 
-        case Setting_StepperDeenergizeMask:
-            value = settings.steppers.deenergize.mask;
+        case Setting_SteppersEnergize:
+            value = settings.steppers.energize.mask;
             break;
 
         case Setting_EnableLegacyRTCommands:
@@ -2271,6 +2272,15 @@ void settings_write_global (void)
         hal.nvs.memcpy_to_nvs(NVS_ADDR_GLOBAL, (uint8_t *)&settings, sizeof(settings_t), true);
 }
 
+#if N_SPINDLE > 1
+
+static void get_default_spindle (spindle_info_t *spindle, void *data)
+{
+    if(spindle->ref_id == (uint8_t)((uint32_t)data))
+        settings.spindle.flags.type = spindle->id;
+}
+
+#endif
 
 // Restore global settings to defaults and write to persistent storage
 void settings_restore (settings_restore_t restore)
@@ -2283,7 +2293,7 @@ void settings_restore (settings_restore_t restore)
 
     hal.nvs.put_byte(0, SETTINGS_VERSION); // Forces write to physical storage
 
-    if (restore.defaults) {
+    if(restore.defaults) {
 
         memcpy(&settings, &defaults, sizeof(settings_t));
 
@@ -2294,6 +2304,9 @@ void settings_restore (settings_restore_t restore)
 #if ENABLE_BACKLASH_COMPENSATION
         if(sys.driver_started)
             mc_backlash_init((axes_signals_t){AXES_BITMASK});
+#endif
+#if N_SPINDLE > 1
+        spindle_enumerate_spindles(get_default_spindle, (void *)DEFAULT_SPINDLE);
 #endif
         settings_write_global();
     }

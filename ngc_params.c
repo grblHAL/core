@@ -87,6 +87,20 @@ static ngc_param_context_t call_levels[NGC_MAX_CALL_LEVEL];
 static ngc_rw_param_t *rw_params = NULL;
 static ngc_named_rw_param_t *rw_global_params = NULL;
 
+static float _absolute_pos (uint_fast8_t axis)
+{
+    float value;
+
+    if(axis < N_AXIS) {
+        value = sys.position[axis] / settings.axis[axis].steps_per_mm;
+        if(settings.flags.report_inches)
+            value *= 25.4f;
+    } else
+        value = 0.0f;
+
+    return value;
+}
+
 static float _relative_pos (uint_fast8_t axis)
 {
     float value;
@@ -373,6 +387,15 @@ PROGMEM static const ngc_named_ro_param_t ngc_named_ro_param[] = {
     { .name = "_u",                   .id = NGCParam_u },
     { .name = "_v",                   .id = NGCParam_v },
     { .name = "_w",                   .id = NGCParam_w },
+    { .name = "_abs_x",               .id = NGCParam_abs_x },
+    { .name = "_abs_y",               .id = NGCParam_abs_y },
+    { .name = "_abs_z",               .id = NGCParam_abs_z },
+    { .name = "_abs_a",               .id = NGCParam_abs_a },
+    { .name = "_abs_b",               .id = NGCParam_abs_b },
+    { .name = "_abs_c",               .id = NGCParam_abs_c },
+    { .name = "_abs_u",               .id = NGCParam_abs_u },
+    { .name = "_abs_v",               .id = NGCParam_abs_v },
+    { .name = "_abs_w",               .id = NGCParam_abs_w },
     { .name = "_current_tool",        .id = NGCParam_current_tool },
     { .name = "_current_pocket",      .id = NGCParam_current_pocket },
     { .name = "_selected_tool",       .id = NGCParam_selected_tool },
@@ -542,6 +565,26 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             //no break
         case NGCParam_w:
             value = _relative_pos(id - NGCParam_x);
+            break;
+
+        case NGCParam_abs_x:
+            //no break
+        case NGCParam_abs_y:
+            //no break
+        case NGCParam_abs_z:
+            //no break
+        case NGCParam_abs_a:
+            //no break
+        case NGCParam_abs_b:
+            //no break
+        case NGCParam_abs_c:
+            //no break
+        case NGCParam_abs_u:
+            //no break
+        case NGCParam_abs_v:
+            //no break
+        case NGCParam_abs_w:
+            value = _absolute_pos(id - NGCParam_abs_x);
             break;
 
         case NGCParam_current_tool:

@@ -81,7 +81,7 @@ typedef enum {
     Setting_PWMOffValue = 34,
     Setting_PWMMinValue = 35,
     Setting_PWMMaxValue = 36,
-    Setting_StepperDeenergizeMask = 37,
+    Setting_SteppersEnergize = 37,
     Setting_SpindlePPR = 38,
     Setting_EnableLegacyRTCommands = 39,
     Setting_JogSoftLimited = 40,
@@ -700,7 +700,7 @@ typedef struct {
     axes_signals_t dir_invert;
     axes_signals_t ganged_dir_invert; // applied after inversion for the master motor
     axes_signals_t enable_invert;
-    axes_signals_t deenergize;
+    axes_signals_t energize;
 #if N_AXIS > 3
     axes_signals_t is_rotary;   // rotary axes distances are not scaled in imperial mode
     axes_signals_t rotary_wrap;     // rotary axes that allows G28 wrap for faster move to home position

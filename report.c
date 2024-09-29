@@ -229,6 +229,9 @@ static status_code_t report_status_message (status_code_t status_code)
 {
     switch(status_code) {
 
+        case Status_Handled:
+            status_code = Status_OK;
+            // no break
         case Status_OK: // STATUS_OK
             hal.stream.write("ok" ASCII_EOL);
             break;
@@ -499,7 +502,7 @@ void report_grbl_settings (bool all, void *data)
         if(all && (details = details->next)) do {
             for(idx = 0; idx < details->n_settings; idx++) {
                 setting = &details->settings[idx];
-                if(setting->is_available == NULL ||setting->is_available(setting)) {
+                if(setting->is_available == NULL || setting->is_available(setting)) {
                     *psetting++ = (setting_detail_t *)setting;
                     n_settings++;
                 }

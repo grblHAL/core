@@ -74,6 +74,7 @@ typedef union {
                 G15 :1, //!< [G7,G8] Lathe Diameter Mode
 
                  M4 :1, //!< [M0,M1,M2,M30] Stopping
+                 M5 :1, //!< [M62,M63,M64,M65,M66,M67,M68] Aux I/O
                  M6 :1, //!< [M6] Tool change
                  M7 :1, //!< [M3,M4,M5] Spindle turning
                  M8 :1, //!< [M7,M8,M9] Coolant control
@@ -509,12 +510,66 @@ static status_code_t read_parameter (char *line, uint_fast8_t *char_counter, flo
     return status;
 }
 
-static void substitute_parameters(char *comment, char **message) {
+static int8_t get_format (char c, int8_t pos, uint8_t *decimals)
+{
+    static uint8_t d;
+
+    // lcaps c?
+
+    switch(pos) {
+
+        case 1:
+
+            switch(c) {
+
+                case 'd':
+                    *decimals = 0;
+                    pos = -2;
+                    break;
+
+                case 'f':
+                    *decimals = ngc_float_decimals();
+                    pos = -2;
+                    break;
+
+                case '.':
+                    pos = 2;
+                    break;
+
+                default:
+                    pos = 0;
+                    break;
+            }
+            break;
+
+        case 2:
+            if(c >= '0' && c <= '9') {
+                d = c - '0';
+                pos = 3;
+            } else
+                pos = 0;
+            break;
+
+        default:
+            if(c == 'f') {
+                *decimals = d;
+                pos = -4;
+            } else
+                pos = 0;
+            break;
+    }
+
+    return pos;
+}
+
+static void substitute_parameters (char *comment, char **message)
+{
     size_t len = 0;
     float value;
-    char *s3;
+    char *s, c;
     uint_fast8_t char_counter = 0;
-    char c = *(comment + char_counter);
+    int8_t parse_format = 0;
+    uint8_t decimals = ngc_float_decimals(); // LinuxCNC is 1 (or l?)
 
     // Trim leading spaces
     while(*comment == ' ')
@@ -522,10 +577,17 @@ static void substitute_parameters(char *comment, char **message) {
 
     // Calculate length of substituted string
     while((c = comment[char_counter++])) {
-        if(c == '#') {
+        if(parse_format) {
+            if((parse_format = get_format(c, parse_format, &decimals)) < 0) {
+                len -= parse_format;
+                parse_format = 0;
+            }
+        } else if(c == '%')
+            parse_format = 1;
+        else if(c == '#') {
             char_counter--;
             if(read_parameter(comment, &char_counter, &value) == Status_OK)
-                len += strlen(trim_float(ftoa(value, ngc_float_decimals())));
+                len += strlen(decimals ? ftoa(value, decimals) : trim_float(ftoa(value, decimals)));
             else
                 len += 3; // "N/A"
         } else
@@ -533,22 +595,36 @@ static void substitute_parameters(char *comment, char **message) {
     }
 
     // Perform substitution
-    if((s3 = *message = malloc(len + 1))) {
+    if((s = *message = malloc(len + 1))) {
 
-        *s3 = '\0';
+        char fmt[5] = {0};
+
+        *s = '\0';
         char_counter = 0;
 
         while((c = comment[char_counter++])) {
-            if(c == '#') {
+            if(parse_format) {
+                fmt[parse_format] = c;
+                if((parse_format = get_format(c, parse_format, &decimals)) < 0)
+                    parse_format = 0;
+                else if(parse_format == 0) {
+                    strcat(s, fmt);
+                    s = strchr(s, '\0');
+                    continue;
+                }
+            } else if(c == '%') {
+                parse_format = 1;
+                fmt[0] = c;
+            } else if(c == '#') {
                 char_counter--;
                 if(read_parameter(comment, &char_counter, &value) == Status_OK)
-                    strcat(s3, trim_float(ftoa(value, ngc_float_decimals())));
+                    strcat(s, decimals ? ftoa(value, decimals) : trim_float(ftoa(value, decimals)));
                 else
-                    strcat(s3, "N/A");
-                s3 = strchr(s3, '\0');
+                    strcat(s, "N/A");
+                s = strchr(s, '\0');
             } else {
-                *s3++ = c;
-                *s3 = '\0';
+                *s++ = c;
+                *s = '\0';
             }
         }
     }
@@ -639,31 +715,35 @@ char *gc_normalize_block (char *block, char **message)
 
                         size_t len = s1 - comment - 4;
 
-                        if(message && *message == NULL && !strncmp(comment, "(MSG,", 5) && (*message = malloc(len))) {
-                            comment += 5;
+                        if(message && *message == NULL) {
 #if NGC_EXPRESSIONS_ENABLE
-                            substitute_parameters(comment, message);
-#else
-                            while(*comment == ' ') {
-                                comment++;
-                                len--;
-                            }
-                            memcpy(*message, comment, len);
-#endif
-                        }
-
-#if NGC_EXPRESSIONS_ENABLE
-                        // Debug message string substitution
-                        if(message && *message == NULL && !strncmp(comment, "(DEBUG,", 7)) {
-
-                            if(settings.flags.ngc_debug_out) {
+                            if(!strncmp(comment, "(DEBUG,", 7)) { // Debug message string substitution
+                                if(settings.flags.ngc_debug_out) {
+                                    comment += 7;
+                                    substitute_parameters(comment, message);
+                                }
+                                *comment = '\0'; // Do not generate grbl.on_gcode_comment event!
+                            } else if(!strncmp(comment, "(PRINT,", 7)) { // Print message string substitution
                                 comment += 7;
                                 substitute_parameters(comment, message);
+                                *comment = '\0'; // Do not generate grbl.on_gcode_comment event!
+                            } else if(!strncmp(comment, "(MSG,", 5)) {
+                                    comment += 5;
+                                    substitute_parameters(comment, message);
+                                }
                             }
+#else
+                            if(!strncmp(comment, "(MSG,", 5) && (*message = malloc(len))) {
 
-                            *comment = '\0'; // Do not generate grbl.on_gcode_comment event!
+                                comment += 5;
+                                while(*comment == ' ') {
+                                    comment++;
+                                    len--;
+                                }
+                                memcpy(*message, comment, len);
+                            }
                         }
-#endif // NGC_EXPRESSIONS_ENABLE
+#endif
                     }
 
                     if(*comment && *message == NULL && grbl.on_gcode_comment)
@@ -679,7 +759,7 @@ char *gc_normalize_block (char *block, char **message)
         }
 
 #if NGC_EXPRESSIONS_ENABLE
-        if(comment && s1 - comment < (strncmp(comment, "(DEBU,", 5) ? 5 : 7))
+        if(comment && s1 - comment < (strncmp(comment, "(DEBU", 5) && strncmp(comment, "(PRIN", 5) ? 5 : 7))
             *s1 = CAPS(c);
 #else
         if(comment && s1 - comment < 5)
@@ -1323,14 +1403,14 @@ status_code_t gc_execute_block (char *block)
                     case 65:
                         if(hal.port.digital_out == NULL || hal.port.num_digital_out == 0)
                             FAIL(Status_GcodeUnsupportedCommand); // [Unsupported M command]
-                        word_bit.modal_group.M10 = On;
+                        word_bit.modal_group.M5 = On;
                         port_command = (io_mcode_t)int_value;
                         break;
 
                     case 66:
                         if(hal.port.wait_on_input == NULL || (hal.port.num_digital_in == 0 && hal.port.num_analog_in == 0))
                             FAIL(Status_GcodeUnsupportedCommand); // [Unsupported M command]
-                        word_bit.modal_group.M10 = On;
+                        word_bit.modal_group.M5 = On;
                         port_command = (io_mcode_t)int_value;
                         break;
 
@@ -1338,7 +1418,7 @@ status_code_t gc_execute_block (char *block)
                     case 68:
                         if(hal.port.analog_out == NULL || hal.port.num_analog_out == 0)
                             FAIL(Status_GcodeUnsupportedCommand); // [Unsupported M command]
-                        word_bit.modal_group.M10 = On;
+                        word_bit.modal_group.M5 = On;
                         port_command = (io_mcode_t)int_value;
                         break;
 
@@ -2363,7 +2443,7 @@ status_code_t gc_execute_block (char *block)
             // target position with the coordinate system offsets, G92 offsets, absolute override, and distance
             // modes applied. This includes the motion mode commands. We can now pre-compute the target position.
             // NOTE: Tool offsets may be appended to these conversions when/if this feature is added.
-            if (axis_words.mask && axis_command != AxisCommand_ToolLengthOffset) { // TLO block any axis command.
+            if((axis_words.mask || gc_block.modal.motion == MotionMode_CwArc || gc_block.modal.motion == MotionMode_CcwArc) && axis_command != AxisCommand_ToolLengthOffset) { // TLO block any axis command.
                 idx = N_AXIS;
                 do { // Axes indices are consistent, so loop may be used to save flash space.
                     if(bit_isfalse(axis_words.mask, bit(--idx)))
@@ -2724,13 +2804,13 @@ status_code_t gc_execute_block (char *block)
                     //   point and the radius to the target point differs more than 0.002mm (EMC def. 0.5mm OR 0.005mm and 0.1% radius).
                     // [G2/3 Full-Circle-Mode Errors]: Axis words exist. No offsets programmed. P must be an integer.
                     // NOTE: Both radius and offsets are required for arc tracing and are pre-computed with the error-checking.
-
+                    if (gc_block.words.r) { // Arc Radius Mode
                     if (!axis_words.mask)
                         FAIL(Status_GcodeNoAxisWords); // [No axis words]
 
                     if (!(axis_words.mask & (bit(plane.axis_0)|bit(plane.axis_1))))
                         FAIL(Status_GcodeNoAxisWordsInPlane); // [No axis words in plane]
-
+                    }
                     if (gc_block.words.p) { // Number of turns
                         if(!isintf(gc_block.values.p))
                             FAIL(Status_GcodeCommandValueNotInteger); // [P word is not an integer]
@@ -3532,9 +3612,14 @@ status_code_t gc_execute_block (char *block)
                 ngc_named_param_set("_value", 0.0f);
                 ngc_named_param_set("_value_returned", 0.0f);
 #endif
+
                 status_code_t status = grbl.on_macro_execute((macro_id_t)gc_block.values.p);
 
-                return status == Status_Unhandled ? Status_GcodeValueOutOfRange : status;
+#if NGC_PARAMETERS_ENABLE
+                if(status != Status_Handled)
+                    ngc_call_pop();
+#endif
+                return status == Status_Unhandled ? Status_GcodeValueOutOfRange : (status == Status_Handled ? Status_OK : status);
             }
             break;
 

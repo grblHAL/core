@@ -246,10 +246,11 @@ typedef void (*stepper_go_idle_ptr)(bool clear_signals);
 /*! \brief Pointer to function for enabling/disabling stepper motors.
 
 \param enable a \a axes_signals_t union containing separate flags for each motor to enable/disable.
+\param hold a \a true to keep motor powered with reduced current, \a false otherwise.
 
 __NOTE:__ this function may be called from an interrupt context.
 */
-typedef void (*stepper_enable_ptr)(axes_signals_t enable);
+typedef void (*stepper_enable_ptr)(axes_signals_t enable, bool hold);
 
 /*! \brief Pointer to function for enabling/disabling step signals for individual motors.
 

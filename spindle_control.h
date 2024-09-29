@@ -26,7 +26,6 @@
 
 #include "pid.h"
 
-#define SPINDLE_ALL        -1
 #define SPINDLE_NONE        0
 #define SPINDLE_HUANYANG1   1
 #define SPINDLE_HUANYANG2   2
@@ -49,6 +48,9 @@
 #define SPINDLE_STEPPER    19
 #define SPINDLE_NOWFOREVER 20
 #define SPINDLE_MY_SPINDLE 30
+
+#define SPINDLE_ALL_VFD ((1<<SPINDLE_HUANYANG1)|(1<<SPINDLE_HUANYANG2)|(1<<SPINDLE_GS20)|(1<<SPINDLE_YL620A)|(1<<SPINDLE_MODVFD)|(1<<SPINDLE_H100)|(1<<SPINDLE_NOWFOREVER))
+#define SPINDLE_ALL (SPINDLE_ALL_VFD|(1<<SPINDLE_PWM0))
 
 typedef int8_t spindle_id_t;
 typedef int8_t spindle_num_t;
@@ -266,7 +268,8 @@ typedef union
 
 /*! \brief Handlers and data for spindle support. */
 struct spindle_ptrs {
-    spindle_id_t id;                    //!< Spindle id, assingned on spindle registration.
+    spindle_id_t id;                    //!< Spindle id, assigned on spindle registration.
+    uint8_t ref_id;                     //!< Spindle id, assigned on spindle registration.
     struct spindle_param *param;        //!< Pointer to current spindle parameters, assigned when spindle is enabled.
     spindle_type_t type;                //!< Spindle type.
     spindle_cap_t cap;                  //!< Spindle capabilities.
@@ -320,6 +323,7 @@ typedef struct {
 /*! \brief Structure holding data passed to the callback function called by spindle_enumerate_spindles(). */
 typedef struct  {
     spindle_id_t id;
+    uint8_t ref_id;
     spindle_num_t num;
     const char *name;
     bool enabled;

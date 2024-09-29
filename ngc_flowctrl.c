@@ -404,8 +404,8 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
         case NGCFlowCtrl_EndRepeat:
             if(hal.stream.file) {
                 if(last_op == NGCFlowCtrl_Repeat) {
-                    if(!skipping && o_label == stack[stack_idx].o_label) {
-                        if(stack[stack_idx].repeats && --stack[stack_idx].repeats)
+                    if(o_label == stack[stack_idx].o_label) {
+                        if(!skipping && stack[stack_idx].repeats && --stack[stack_idx].repeats)
                             vfs_seek(stack[stack_idx].file, stack[stack_idx].file_pos);
                         else
                             stack_pull();

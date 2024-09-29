@@ -1,18 +1,42 @@
 ## grblHAL changelog
 
+<a name="20240928">Build 20240928
+
+* Added `(PRINT, <msg>)` support and parameter formatting for `DEBUG` and `PRINT` commands. Available when expression support is enabled.
+
+* Added named parameters for getting absolute \(G53\) position: `_abs_x`, `abs_y`, ... Available when expression support is enabled.
+
+* Changed stepper enable HAL signature to allow current reduction when idle. Requires compatible stepper drivers and low level code support.
+
+* Added reference id to spindle registration in order to allow configuring default spindle, and possibly additional spindles, at compile time.
+
+* Fix for hardfault when some $-settings are changed and there are no auxilary inputs defined in the board map. Ref. [issue #588](https://github.com/grblHAL/core/issues/588).
+
+Drivers:
+
+* All: updated for core changes mentioned above.
+
+* ESP32, STM32F4xx, STM32F7xx: added basic support for the core HAL timer API. Changed step inject code to interrupt driven instead of polled.
+
+Plugins:
+
+* Spindle: updated to support new spindle reference id in the core, simplified code.
+
+* SD Card \(macros\): fixed bug in handling of repeat loops.
+
+---
+
 <a name="20240921">Build 20240921
 
 Core:
 
 * Added generic HAL timer API and function for getting which `G65` parameter words were supplied. 
 
-Networking:
+Plugins:
 
-* Made parsing of HTTP header keywords case insensitive. Ref. [issue #11](https://github.com/grblHAL/Plugin_networking/issues/11).
+* Networking: made parsing of HTTP header keywords case insensitive. Ref. [issue #11](https://github.com/grblHAL/Plugin_networking/issues/11).
 
-SD card (macros):
-
-* Added inbuilt `G65` macro `P3` for getting and setting NGC numerical parameters, typical use case will be for indexed access. Ref. [discussion #309 comment](https://github.com/grblHAL/core/discussions/309#discussioncomment-10710468). 
+* SD card \(macros\): added inbuilt `G65` macro `P3` for getting and setting NGC numerical parameters, typical use case will be for indexed access. Ref. [discussion #309 comment](https://github.com/grblHAL/core/discussions/309#discussioncomment-10710468). 
 
 ---
 

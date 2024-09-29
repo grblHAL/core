@@ -370,6 +370,7 @@ bool spindle_enumerate_spindles (spindle_enumerate_callback_ptr callback, void *
     for(idx = 0; idx < n_spindle; idx++) {
 
         spindle.id = idx;
+        spindle.ref_id = spindles[idx].cfg->ref_id;
         spindle.name = spindles[idx].name;
         spindle.num = spindle_get_num(idx);
         spindle.enabled = spindle.num != -1;

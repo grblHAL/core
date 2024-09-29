@@ -1115,6 +1115,14 @@ Default value is 0, meaning spindle sync is disabled
 #endif
 ///@}
 
+/*! @name $395 - Setting_SpindleType
+*/
+///@{
+#if !defined DEFAULT_SPINDLE || defined __DOXYGEN__
+#define DEFAULT_SPINDLE SPINDLE_PWM0 // Spindle number from spindle_control.h
+#endif
+///@}
+
 // Closed loop spindle settings (Group_Spindle_ClosedLoop)
 
 // $9 - Setting_SpindlePWMOptions
