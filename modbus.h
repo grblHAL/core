@@ -25,7 +25,7 @@
 #define _MODBUS_H_
 
 #ifndef MODBUS_MAX_ADU_SIZE
-#define MODBUS_MAX_ADU_SIZE 10
+#define MODBUS_MAX_ADU_SIZE 12
 #endif
 #ifndef MODBUS_QUEUE_LENGTH
 #define MODBUS_QUEUE_LENGTH 8

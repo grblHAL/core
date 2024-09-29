@@ -43,7 +43,7 @@
 #error "I2C keypad/strobe is not supported in this configuration!"
 #endif
 
-#if MPG_MODE == 1 && !defined(MPG_MODE_PIN)
+#if MPG_ENABLE == 1 && !defined(MPG_MODE_PIN)
 #error "MPG mode input is not supported in this configuration!"
 #endif
 
@@ -197,7 +197,7 @@
 
 #if SAFETY_DOOR_ENABLE || MOTOR_FAULT_ENABLE || MOTOR_WARNING_ENABLE || PROBE_DISCONNECT_ENABLE || \
     STOP_DISABLE_ENABLE || BLOCK_DELETE_ENABLE || SINGLE_BLOCK_ENABLE || LIMITS_OVERRIDE_ENABLE || \
-    (defined(AUX_DEVICES) && (PROBE_ENABLE || I2C_STROBE_ENABLE || MPG_MODE == 1 || QEI_SELECT_ENABLE)) || defined __DOXYGEN__
+    (defined(AUX_DEVICES) && (PROBE_ENABLE || I2C_STROBE_ENABLE || MPG_ENABLE == 1 || QEI_SELECT_ENABLE)) || defined __DOXYGEN__
 
 #define AUX_CONTROLS_ENABLED 1
 
@@ -244,7 +244,7 @@ static aux_ctrl_t aux_ctrl[] = {
     { .function = Input_I2CStrobe, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Change), .cap = { .value = 0 }, .pin = I2C_STROBE_PIN, .port = NULL },
 #endif
 #endif
-#if MPG_MODE == 1 && defined(MPG_MODE_PIN) && defined(AUX_DEVICES)
+#if MPG_ENABLE == 1 && defined(MPG_MODE_PIN) && defined(AUX_DEVICES)
 #ifdef MPG_MODE_PORT
     { .function = Input_MPGSelect, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Change), .cap = { .value = 0 }, .pin = MPG_MODE_PIN, .port = MPG_MODE_PORT },
 #else

@@ -53,7 +53,8 @@ typedef enum {
 typedef enum {
     Message_Plain = 0,
     Message_Info,
-    Message_Warning
+    Message_Warning,
+    Message_Debug
 } message_type_t;
 
 typedef struct {

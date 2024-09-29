@@ -166,6 +166,20 @@ char *ftoa (float n, uint8_t decimal_places)
     return bptr;
 }
 
+// Trim trailing zeros and possibly decimal point
+char *trim_float (char *s)
+{
+    if(strchr(s, '.')) {
+        char *s2 = strchr(s, '\0') - 1;
+        while(*s2 == '0')
+            *s2-- = '\0';
+        if(*s2 == '.')
+            *s2 = '\0';
+    }
+
+    return s;
+}
+
 // Extracts an unsigned integer value from a string.
 status_code_t read_uint (char *line, uint_fast8_t *char_counter, uint32_t *uint_ptr)
 {
@@ -305,7 +319,7 @@ bool delay_sec (float seconds, delaymode_t mode)
     while(--i && ok) {
         if(mode == DelayMode_Dwell)
             ok = protocol_execute_realtime();
-        else // DelayMode_SysSuspende, xecute rt_system() only to avoid nesting suspend loops.
+        else // DelayMode_SysSuspend, execute rt_system() only to avoid nesting suspend loops.
             ok = protocol_exec_rt_system() && !state_door_reopened(); // Bail, if safety door reopens.
         if(ok)
             hal.delay_ms(DWELL_TIME_STEP, NULL); // Delay DWELL_TIME_STEP increment

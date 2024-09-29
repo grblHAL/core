@@ -53,7 +53,7 @@ typedef enum {
     NGCBinaryOp_LE,
     NGCBinaryOp_GE,
     NGCBinaryOp_GT,
-    NGCBinaryOp_RelationalLast = NGCBinaryOp_GT,
+    NGCBinaryOp_RelationalLast = NGCBinaryOp_GT
 } ngc_binary_op_t;
 
 typedef enum {
@@ -70,7 +70,7 @@ typedef enum {
     NGCUnaryOp_SIN,
     NGCUnaryOp_SQRT,
     NGCUnaryOp_TAN,
-    NGCUnaryOp_Exists,  // Not implemented
+    NGCUnaryOp_Exists
 } ngc_unary_op_t;
 
 /*! \brief Executes the operations: /, MOD, ** (POW), *.
@@ -675,19 +675,22 @@ static status_code_t read_unary (char *line, uint_fast8_t *pos, float *value)
 
         else {
 
-            if (operation == NGCUnaryOp_Exists) {
+            if(operation == NGCUnaryOp_Exists) {
 
-                char *arg = &line[++(*pos)], *s;
+                char *arg = &line[++(*pos)], *s = NULL;
 
-                s = arg;
-                while(*s && *s != ']')
-                    s++;
+                if(*arg == '#' && *(arg + 1) == '<') {
+                    arg += 2;
+                    s = arg;
+                    while(*s && *s != ']')
+                        s++;
+                }
 
-                if(*s == ']') {
-                    *s = '\0';
+                if(s && *s == ']' && *(s - 1) == '>') {
+                    *(s - 1) = '\0';
                     *value = ngc_named_param_exists(arg) ? 1.0f : 0.0f;
-                    *s = ']';
-                    *pos = *pos + s - arg + 1;
+                    *(s - 1) = '>';
+                    *pos = *pos + s - arg + 3;
                 } else
                     status = Status_ExpressionSyntaxError;
 
@@ -791,7 +794,7 @@ status_code_t ngc_eval_expression (char *line, uint_fast8_t *pos, float *value)
                     return status;
 
                 operators[stack_index - 1] = operators[stack_index];
-                if((stack_index > 1) && precedence(operators[stack_index - 1] <= precedence(operators[stack_index - 2])))
+                if(stack_index > 1 && precedence(operators[stack_index - 1]) <= precedence(operators[stack_index - 2]))
                     stack_index--;
                 else
                     break;

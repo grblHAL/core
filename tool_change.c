@@ -37,7 +37,7 @@
 #define TOOL_CHANGE_PROBE_RETRACT_DISTANCE 2.0f
 #endif
 
-static bool block_cycle_start, probe_fixture;
+static bool block_cycle_start, probe_toolsetter;
 static volatile bool execute_posted = false;
 static volatile uint32_t spin_lock = 0;
 static float tool_change_position;
@@ -89,11 +89,11 @@ static void change_completed (void)
         hal.irq_enable();
     }
 
-    if(probe_fixture)
-        grbl.on_probe_fixture(&current_tool, true, false);
+    if(probe_toolsetter)
+        grbl.on_probe_toolsetter(&current_tool, NULL, true, false);
 
     grbl.on_probe_completed = NULL;
-    gc_state.tool_change = probe_fixture = false;
+    gc_state.tool_change = probe_toolsetter = false;
 }
 
 
@@ -143,7 +143,7 @@ static bool restore (void)
         spindle_restore(plan_data.spindle.hal, gc_state.modal.spindle.state, gc_state.spindle.rpm);
 
         if(!settings.flags.no_restore_position_after_M6) {
-            previous.values[plane.axis_linear] += gc_get_offset(plane.axis_linear);
+            previous.values[plane.axis_linear] += gc_get_offset(plane.axis_linear, false);
             mc_line(previous.values, &plan_data);
         }
     }
@@ -180,6 +180,15 @@ static void execute_restore (void *data)
         system_set_exec_state_flag(EXEC_CYCLE_START);
 }
 
+// Set and limit probe travel to be within machine limits.
+static void set_probe_target (coord_data_t *target, uint8_t axis)
+{
+    target->values[axis] -= settings.tool_change.probing_distance;
+
+    if(bit_istrue(sys.homed.mask, bit(axis)) && settings.axis[axis].max_travel < -0.0f)
+        target->values[axis] = max(min(target->values[axis], sys.work_envelope.max.values[axis]), sys.work_envelope.min.values[axis]);
+}
+
 // Execute touch off on cycle start event from @ G59.3 position.
 // Used in SemiAutomatic mode ($341=3) only. Called from the foreground process.
 static void execute_probe (void *data)
@@ -190,9 +199,6 @@ static void execute_probe (void *data)
     plan_line_data_t plan_data;
     gc_parser_flags_t flags = {0};
 
-    if(probe_fixture)
-        grbl.on_probe_fixture(next_tool, true, true);
-
     // G59.3 contains offsets to position of TLS.
     settings_read_coord_data(CoordinateSystem_G59_3, &offset.values);
 
@@ -202,15 +208,22 @@ static void execute_probe (void *data)
     target.values[plane.axis_0] = offset.values[plane.axis_0];
     target.values[plane.axis_1] = offset.values[plane.axis_1];
 
+    if(probe_toolsetter)
+        grbl.on_probe_toolsetter(next_tool, &target, false, true);
+
     if((ok = mc_line(target.values, &plan_data))) {
 
         target.values[plane.axis_linear] = offset.values[plane.axis_linear];
         ok = mc_line(target.values, &plan_data);
 
+        if(ok && probe_toolsetter)
+            grbl.on_probe_toolsetter(next_tool, NULL, true, true);
+
         plan_data.feed_rate = settings.tool_change.seek_rate;
         plan_data.condition.value = 0;
         plan_data.spindle.state.value = 0;
-        target.values[plane.axis_linear] -= settings.tool_change.probing_distance;
+
+        set_probe_target(&target, plane.axis_linear);
 
         if((ok = ok && mc_probe_cycle(target.values, &plan_data, flags) == GCProbe_Found))
         {
@@ -350,17 +363,17 @@ static status_code_t tool_change (parser_state_t *parser_state)
     hal.coolant.set_state((coolant_state_t){0});
 
     execute_posted = false;
-    probe_fixture = grbl.on_probe_fixture != NULL &&
-                     (settings.tool_change.mode == ToolChange_Manual ||
-                       settings.tool_change.mode == ToolChange_Manual_G59_3 ||
-                        settings.tool_change.mode == ToolChange_SemiAutomatic);
+    probe_toolsetter = grbl.on_probe_toolsetter != NULL &&
+                       (settings.tool_change.mode == ToolChange_Manual ||
+                         settings.tool_change.mode == ToolChange_Manual_G59_3 ||
+                          settings.tool_change.mode == ToolChange_SemiAutomatic);
 
     // Save current position.
     system_convert_array_steps_to_mpos(previous.values, sys.position);
 
     // Establish axis assignments.
 
-    previous.values[plane.axis_linear] -= gc_get_offset(plane.axis_linear);
+    previous.values[plane.axis_linear] -= gc_get_offset(plane.axis_linear, false);
 
     plan_line_data_t plan_data;
 
@@ -389,12 +402,19 @@ static status_code_t tool_change (parser_state_t *parser_state)
         float tmp_pos = target.values[plane.axis_linear];
 
         target.values[plane.axis_linear] = tool_change_position;
+
+        if(probe_toolsetter)
+            grbl.on_probe_toolsetter(next_tool, &target, false, true);
+
         if(!mc_line(target.values, &plan_data))
             return Status_Reset;
 
         target.values[plane.axis_linear] = tmp_pos;
         if(!mc_line(target.values, &plan_data))
             return Status_Reset;
+
+        if(probe_toolsetter)
+            grbl.on_probe_toolsetter(next_tool, NULL, true, true);
     }
 #endif
 
@@ -463,8 +483,8 @@ status_code_t tc_probe_workpiece (void)
     plan_line_data_t plan_data;
 
 #if COMPATIBILITY_LEVEL <= 1
-    if(probe_fixture)
-        grbl.on_probe_fixture(next_tool, system_xy_at_fixture(CoordinateSystem_G59_3, TOOLSETTER_RADIUS), true);
+    if(probe_toolsetter)
+        grbl.on_probe_toolsetter(next_tool, NULL, system_xy_at_fixture(CoordinateSystem_G59_3, TOOLSETTER_RADIUS), true);
 #endif
 
     // Get current position.
@@ -475,7 +495,7 @@ status_code_t tc_probe_workpiece (void)
     plan_data_init(&plan_data);
     plan_data.feed_rate = settings.tool_change.seek_rate;
 
-    target.values[plane.axis_linear] -= settings.tool_change.probing_distance;
+    set_probe_target(&target, plane.axis_linear);
 
     if((ok = mc_probe_cycle(target.values, &plan_data, flags) == GCProbe_Found))
     {

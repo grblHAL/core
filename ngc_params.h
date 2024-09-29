@@ -1,22 +1,22 @@
 /*
-  ngc_params.c - get/set NGC parameter value by id or name
+  ngc_params.h - get/set NGC parameter value by id or name
 
   Part of grblHAL
 
-  Copyright (c) 2021 Terje Io
+  Copyright (c) 2021-2024 Terje Io
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 /*
@@ -27,6 +27,8 @@
 
 #ifndef _NGC_PARAMS_H_
 #define _NGC_PARAMS_H_
+
+#include "gcode.h"
 
 typedef uint16_t ngc_param_id_t;
 
@@ -77,13 +79,24 @@ typedef enum {
     NGCParam_u,
     NGCParam_v,
     NGCParam_w,
+    NGCParam_abs_x,
+    NGCParam_abs_y,
+    NGCParam_abs_z,
+    NGCParam_abs_a,
+    NGCParam_abs_b,
+    NGCParam_abs_c,
+    NGCParam_abs_u,
+    NGCParam_abs_v,
+    NGCParam_abs_w,
     NGCParam_current_tool,
     NGCParam_current_pocket,
     NGCParam_selected_tool,
     NGCParam_selected_pocket,
+    NGCParam_call_level,
     NGCParam_Last
 } ncg_name_param_id_t;
 
+uint8_t ngc_float_decimals (void);
 bool ngc_param_get (ngc_param_id_t id, float *value);
 bool ngc_param_set (ngc_param_id_t id, float value);
 bool ngc_param_is_rw (ngc_param_id_t id);
@@ -92,5 +105,11 @@ bool ngc_named_param_get (char *name, float *value);
 float ngc_named_param_get_by_id (ncg_name_param_id_t id);
 bool ngc_named_param_set (char *name, float value);
 bool ngc_named_param_exists (char *name);
+bool ngc_call_push (void *context);
+bool ngc_call_pop (void);
+uint_fast8_t ngc_call_level (void);
+bool ngc_modal_state_save (gc_modal_t *state, bool auto_restore);
+bool ngc_modal_state_restore (void);
+void ngc_modal_state_invalidate (void);
 
-#endif
+#endif // _NGC_PARAMS_H_

@@ -183,7 +183,7 @@ extern void gc_output_message (char *message);
 void st_deenergize (void *data)
 {
     if(sys.steppers_deenergize) {
-        hal.stepper.enable(settings.steppers.deenergize);
+        hal.stepper.enable(settings.steppers.energize, true);
         sys.steppers_deenergize = false;
     }
 }
@@ -211,7 +211,7 @@ ISR_CODE void ISR_FUNC(st_go_idle)(void)
     // Set stepper driver idle state, disabled or enabled, depending on settings and circumstances.
     if(((settings.steppers.idle_lock_time != 255) || sys.rt_exec_alarm || state == STATE_SLEEP) && state != STATE_HOMING) {
         if(settings.steppers.idle_lock_time == 0 || state == STATE_SLEEP)
-            hal.stepper.enable((axes_signals_t){0});
+            hal.stepper.enable((axes_signals_t){0}, true);
         else {
             // Force stepper dwell to lock axes for a defined amount of time to ensure the axes come to a complete
             // stop and not drift from residual inertial forces at the end of the last movement.
@@ -219,7 +219,7 @@ ISR_CODE void ISR_FUNC(st_go_idle)(void)
             sys.steppers_deenergize = task_add_delayed(st_deenergize, NULL, settings.steppers.idle_lock_time);
         }
     } else
-        hal.stepper.enable(settings.steppers.idle_lock_time == 255 ? (axes_signals_t){AXES_BITMASK} : settings.steppers.deenergize);
+        hal.stepper.enable(settings.steppers.idle_lock_time == 255 ? (axes_signals_t){AXES_BITMASK} : settings.steppers.energize, true);
 }
 
 
@@ -305,6 +305,10 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
 
                 if((st.dir_change = st.exec_block == NULL || st.dir_outbits.value != st.exec_segment->exec_block->direction_bits.value))
                     st.dir_outbits = st.exec_segment->exec_block->direction_bits;
+
+                if(st.exec_block != NULL && st.exec_block->offset_id != st.exec_segment->exec_block->offset_id)
+                    sys.report.wco = sys.report.force_wco = On; // Do not generate grbl.on_rt_reports_added event!
+
                 st.exec_block = st.exec_segment->exec_block;
                 st.step_event_count = st.exec_block->step_event_count;
                 st.new_block = true;
@@ -704,9 +708,10 @@ void st_prep_buffer (void)
                 st_prep_block->spindle = pl_block->spindle.hal;
                 st_prep_block->output_commands = pl_block->output_commands;
                 st_prep_block->overrides = pl_block->overrides;
+                st_prep_block->offset_id = pl_block->offset_id;
                 st_prep_block->backlash_motion = pl_block->condition.backlash_motion;
                 st_prep_block->message = pl_block->message;
-                pl_block->message= NULL;
+                pl_block->message = NULL;
 
                 // Initialize segment buffer data for generating the segments.
                 prep.steps_per_mm = st_prep_block->steps_per_mm;
@@ -1132,4 +1137,15 @@ float st_get_realtime_rate (void)
             ? prep.current_speed
 #endif
             : 0.0f;
+}
+
+offset_id_t st_get_offset_id (void)
+{
+    plan_block_t *pl_block;
+
+    return st.exec_block
+            ? st.exec_block->offset_id
+            : (sys.holding_state == Hold_Complete && (pl_block = plan_get_current_block())
+                ? pl_block->offset_id
+                : -1);
 }

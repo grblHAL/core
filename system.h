@@ -187,6 +187,7 @@ typedef enum {
     Report_TLOReference = (1 << 15),
     Report_Fan = (1 << 16),
     Report_SpindleId = (1 << 17),
+    Report_ForceWCO = (1 << 29),
     Report_CycleStart = (1 << 30),
     Report_All = 0x8003FFFF
 } report_tracking_t;
@@ -212,7 +213,8 @@ typedef union {
                  tlo_reference :1, //!< Tool length offset reference changed.
                  fan           :1, //!< Fan on/off changed.
                  spindle_id    :1, //!< Spindle changed
-                 unassigned   :12, //
+                 unassigned   :11, //
+                 force_wco     :1, //!< Add work coordinates (due to WCO changed during motion).
                  cycle_start   :1, //!< Cycle start signal triggered. __NOTE:__ do __NOT__ add to Report_All enum above!
                  all           :1; //!< Set when CMD_STATUS_REPORT_ALL is requested, may be used by user code.
     };
@@ -249,7 +251,8 @@ typedef union {
                  single_block            :1, //!< Set to true to disable M1 (optional stop), via realtime command.
                  keep_input              :1, //!< Set to true to not flush stream input buffer on executing STOP.
                  auto_reporting          :1, //!< Set to true when auto real time reporting is enabled.
-                 unused                  :6;
+                 synchronizing           :1, //!< Set to true when protocol_buffer_synchronize() is running.
+                 unused                  :5;
     };
 } system_flags_t;
 

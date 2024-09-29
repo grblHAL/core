@@ -74,11 +74,11 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
 
         sys.last_event.control.value = signals.value;
 
-        if ((signals.reset || signals.e_stop || signals.motor_fault) && state_get() != STATE_ESTOP)
+        if((signals.reset || signals.e_stop || signals.motor_fault) && state_get() != STATE_ESTOP)
             mc_reset();
         else {
 #ifndef NO_SAFETY_DOOR_SUPPORT
-            if (signals.safety_door_ajar && hal.signals_cap.safety_door_ajar) {
+            if(signals.safety_door_ajar && hal.signals_cap.safety_door_ajar) {
                 if(settings.safety_door.flags.ignore_when_idle) {
                     // Only stop the spindle (laser off) when idle or jogging,
                     // this to allow positioning the controlled point (spindle) when door is open.
@@ -91,27 +91,27 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
                     system_set_exec_state_flag(EXEC_SAFETY_DOOR);
             }
 #endif
-
             if(signals.probe_overtravel) {
                 limit_signals_t overtravel = { .min.z = On};
                 hal.limits.interrupt_callback(overtravel);
                 // TODO: add message?
-            } else if (signals.probe_triggered) {
+            } else if(signals.probe_triggered) {
                 if(sys.probing_state == Probing_Off && (state_get() & (STATE_CYCLE|STATE_JOG))) {
                     system_set_exec_state_flag(EXEC_STOP);
                     sys.alarm_pending = Alarm_ProbeProtect;
                 } else
                     hal.probe.configure(false, false);
-            } else if (signals.probe_disconnected) {
+            } else if(signals.probe_disconnected) {
                 if(sys.probing_state == Probing_Active && state_get() == STATE_CYCLE) {
                     system_set_exec_state_flag(EXEC_FEED_HOLD);
                     sys.alarm_pending = Alarm_ProbeProtect;
                 }
-            } else if (signals.feed_hold)
+            } else if(signals.feed_hold)
                 system_set_exec_state_flag(EXEC_FEED_HOLD);
-            else if (signals.cycle_start) {
+            else if(signals.cycle_start) {
                 system_set_exec_state_flag(EXEC_CYCLE_START);
                 sys.report.cycle_start = settings.status_report.pin_state;
+                gc_state.tool_change = false;
             }
 
             if(signals.block_delete)
@@ -1143,7 +1143,7 @@ the WCO report element to the next status report.
 */
 void system_flag_wco_change (void)
 {
-    if(!settings.status_report.sync_on_wco_change)
+    if(settings.status_report.sync_on_wco_change)
         protocol_buffer_synchronize();
 
     if(grbl.on_wco_changed)

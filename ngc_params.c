@@ -38,7 +38,12 @@
 #include "settings.h"
 #include "ngc_params.h"
 
-#define MAX_PARAM_LENGTH 20
+#ifndef NGC_MAX_CALL_LEVEL
+#define NGC_MAX_CALL_LEVEL 10
+#endif
+#ifndef NGC_MAX_PARAM_LENGTH
+#define NGC_MAX_PARAM_LENGTH 20
+#endif
 
 typedef float (*ngc_param_get_ptr)(ngc_param_id_t id);
 typedef float (*ngc_named_param_get_ptr)(void);
@@ -50,6 +55,7 @@ typedef struct {
 } ngc_ro_param_t;
 
 typedef struct ngc_rw_param {
+    void *context;
     ngc_param_id_t id;
     float value;
     struct ngc_rw_param *next;
@@ -62,20 +68,45 @@ typedef struct {
 } ngc_named_ro_param_t;
 
 typedef struct ngc_named_rw_param {
-    char name[MAX_PARAM_LENGTH + 1];
+    void *context;
+    char name[NGC_MAX_PARAM_LENGTH + 1];
     float value;
     struct ngc_named_rw_param *next;
 } ngc_named_rw_param_t;
 
-ngc_rw_param_t *rw_params = NULL;
-ngc_named_rw_param_t *rw_global_params = NULL;
+typedef struct {
+    uint32_t level;
+    void *context;
+    gc_modal_t *modal_state;
+} ngc_param_context_t;
+
+static int32_t call_level = -1;
+static void *call_context;
+static gc_modal_t *modal_state;
+static ngc_param_context_t call_levels[NGC_MAX_CALL_LEVEL];
+static ngc_rw_param_t *rw_params = NULL;
+static ngc_named_rw_param_t *rw_global_params = NULL;
+
+static float _absolute_pos (uint_fast8_t axis)
+{
+    float value;
+
+    if(axis < N_AXIS) {
+        value = sys.position[axis] / settings.axis[axis].steps_per_mm;
+        if(settings.flags.report_inches)
+            value *= 25.4f;
+    } else
+        value = 0.0f;
+
+    return value;
+}
 
 static float _relative_pos (uint_fast8_t axis)
 {
     float value;
 
     if(axis < N_AXIS) {
-        value = sys.position[axis] / settings.axis[axis].steps_per_mm - gc_get_offset(axis);
+        value = sys.position[axis] / settings.axis[axis].steps_per_mm - gc_get_offset(axis, false);
         if(settings.flags.report_inches)
             value *= 25.4f;
     } else
@@ -249,9 +280,10 @@ bool ngc_param_get (ngc_param_id_t id, float *value)
     *value = 0.0f;
 
     if(found) {
+        void *context = id > (ngc_param_id_t)30 ? NULL : call_context;
         ngc_rw_param_t *rw_param = rw_params;
         while(rw_param) {
-            if(rw_param->id == id) {
+            if(rw_param->context == context && rw_param->id == id) {
                 *value = rw_param->value;
                 rw_param = NULL;
             } else
@@ -282,10 +314,11 @@ bool ngc_param_set (ngc_param_id_t id, float value)
 
     if(ok) {
 
+        void *context = id > (ngc_param_id_t)30 ? NULL : call_context;
         ngc_rw_param_t *rw_param = rw_params, *rw_param_last = rw_params;
 
         while(rw_param) {
-            if(rw_param->id == id) {
+            if(rw_param->context == context && rw_param->id == id) {
                 break;
             } else {
                 rw_param_last = rw_param;
@@ -295,6 +328,7 @@ bool ngc_param_set (ngc_param_id_t id, float value)
 
         if(rw_param == NULL && value != 0.0f && (rw_param = malloc(sizeof(ngc_rw_param_t)))) {
             rw_param->id = id;
+            rw_param->context = context;
             rw_param->next = NULL;
             if(rw_params == NULL)
                 rw_params = rw_param;
@@ -353,10 +387,20 @@ PROGMEM static const ngc_named_ro_param_t ngc_named_ro_param[] = {
     { .name = "_u",                   .id = NGCParam_u },
     { .name = "_v",                   .id = NGCParam_v },
     { .name = "_w",                   .id = NGCParam_w },
+    { .name = "_abs_x",               .id = NGCParam_abs_x },
+    { .name = "_abs_y",               .id = NGCParam_abs_y },
+    { .name = "_abs_z",               .id = NGCParam_abs_z },
+    { .name = "_abs_a",               .id = NGCParam_abs_a },
+    { .name = "_abs_b",               .id = NGCParam_abs_b },
+    { .name = "_abs_c",               .id = NGCParam_abs_c },
+    { .name = "_abs_u",               .id = NGCParam_abs_u },
+    { .name = "_abs_v",               .id = NGCParam_abs_v },
+    { .name = "_abs_w",               .id = NGCParam_abs_w },
     { .name = "_current_tool",        .id = NGCParam_current_tool },
     { .name = "_current_pocket",      .id = NGCParam_current_pocket },
     { .name = "_selected_tool",       .id = NGCParam_selected_tool },
     { .name = "_selected_pocket",     .id = NGCParam_selected_pocket },
+    { .name = "_call_level",          .id = NGCParam_call_level },
 };
 
 
@@ -523,6 +567,26 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             value = _relative_pos(id - NGCParam_x);
             break;
 
+        case NGCParam_abs_x:
+            //no break
+        case NGCParam_abs_y:
+            //no break
+        case NGCParam_abs_z:
+            //no break
+        case NGCParam_abs_a:
+            //no break
+        case NGCParam_abs_b:
+            //no break
+        case NGCParam_abs_c:
+            //no break
+        case NGCParam_abs_u:
+            //no break
+        case NGCParam_abs_v:
+            //no break
+        case NGCParam_abs_w:
+            value = _absolute_pos(id - NGCParam_abs_x);
+            break;
+
         case NGCParam_current_tool:
             value = (float)gc_state.tool->tool_id;
             break;
@@ -539,6 +603,10 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             value = 0.0f;
             break;
 
+        case NGCParam_call_level:
+            value = (float)ngc_call_level();
+            break;
+
         default:
             value = NAN;
     }
@@ -546,15 +614,31 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
     return value;
 }
 
+// Lowercase name, remove control characters and spaces
+static char *ngc_name_tolower (char *s)
+{
+    static char name[NGC_MAX_PARAM_LENGTH + 1];
+
+    uint_fast8_t len = 0;
+	char c, *s1 = s, *s2 = name;
+
+    while((c = *s1++) && len < NGC_MAX_PARAM_LENGTH) {
+        if(c > ' ') {
+            *s2++ = LCAPS(c);
+            len++;
+        }
+    }
+    *s2 = '\0';
+
+	return name;
+}
+
 bool ngc_named_param_get (char *name, float *value)
 {
-    char c, *s = name;
     bool found = false;
     uint_fast8_t idx = sizeof(ngc_named_ro_param) / sizeof(ngc_named_ro_param_t);
 
-    // Lowercase name
-    while((c = *s))
-        *s++ = LCAPS(c);
+    name = ngc_name_tolower(name);
 
     *value = 0.0f;
 
@@ -565,9 +649,10 @@ bool ngc_named_param_get (char *name, float *value)
     } while(idx && !found);
 
     if(!found) {
+        void *context = *name == '_' ? NULL : call_context;
         ngc_named_rw_param_t *rw_param = rw_global_params;
         while(rw_param && !found) {
-            if((found = !strcmp(rw_param->name, name)))
+            if((found = rw_param->context == context && !strcmp(rw_param->name, name)))
                 *value = rw_param->value;
             else
                 rw_param = rw_param->next;
@@ -579,15 +664,10 @@ bool ngc_named_param_get (char *name, float *value)
 
 bool ngc_named_param_exists (char *name)
 {
-    char c, *s1 = name, *s2 = name;
     bool ok = false;
     uint_fast8_t idx = sizeof(ngc_named_ro_param) / sizeof(ngc_named_ro_param_t);
 
-    // Lowercase name, remove control characters and spaces
-    while((c = *s1++) && c > ' ')
-        *s2++ = LCAPS(c);
-
-    *s2 = '\0';
+    name = ngc_name_tolower(name);
 
     // Check if name is supplied, return false if not.
     if((*name == '_' ? *(name + 1) : *name) == '\0')
@@ -595,36 +675,31 @@ bool ngc_named_param_exists (char *name)
 
     // Check if it is a (read only) predefined parameter.
     if(*name == '_') do {
-        idx--;
-        ok = !strcmp(name, ngc_named_ro_param[idx].name);
+        ok = !strcmp(name, ngc_named_ro_param[--idx].name);
     } while(idx && !ok);
 
     // If not predefined attempt to find it.
-    if(!ok && rw_global_params && strlen(name) < MAX_PARAM_LENGTH) {
+    if(!ok && rw_global_params && strlen(name) < NGC_MAX_PARAM_LENGTH) {
 
+        void *context = *name == '_' ? NULL : call_context;
         ngc_named_rw_param_t *rw_param = rw_global_params;
 
         while(rw_param) {
-            if((ok = !strcmp(rw_param->name, name)))
+            if((ok = rw_param->context == context && !strcmp(rw_param->name, name)))
                 break;
             rw_param = rw_param->next;
-         }
-     }
+        }
+    }
 
     return ok;
 }
 
 bool ngc_named_param_set (char *name, float value)
 {
-    char c, *s1 = name, *s2 = name;
     bool ok = false;
     uint_fast8_t idx = sizeof(ngc_named_ro_param) / sizeof(ngc_named_ro_param_t);
 
-    // Lowercase name, remove control characters and spaces
-    while((c = *s1++) && c > ' ')
-        *s2++ = LCAPS(c);
-
-    *s2 = '\0';
+    name = ngc_name_tolower(name);
 
     // Check if name is supplied, return false if not.
     if((*name == '_' ? *(name + 1) : *name) == '\0')
@@ -637,12 +712,13 @@ bool ngc_named_param_set (char *name, float value)
     } while(idx && !ok);
 
     // If not predefined attempt to set it.
-    if(!ok && (ok = strlen(name) < MAX_PARAM_LENGTH)) {
+    if(!ok && (ok = strlen(name) < NGC_MAX_PARAM_LENGTH)) {
 
+        void *context = *name == '_' ? NULL : call_context;
         ngc_named_rw_param_t *rw_param = rw_global_params, *rw_param_last = rw_global_params;
 
          while(rw_param) {
-             if(!strcmp(rw_param->name, name)) {
+             if(rw_param->context == context && !strcmp(rw_param->name, name)) {
                  break;
              } else {
                  rw_param_last = rw_param;
@@ -652,6 +728,7 @@ bool ngc_named_param_set (char *name, float value)
 
          if(rw_param == NULL && (rw_param = malloc(sizeof(ngc_named_rw_param_t)))) {
              strcpy(rw_param->name, name);
+             rw_param->context = context;
              rw_param->next = NULL;
              if(rw_global_params == NULL)
                  rw_global_params = rw_param;
@@ -664,6 +741,108 @@ bool ngc_named_param_set (char *name, float value)
      }
 
     return ok;
+}
+
+bool ngc_modal_state_save (gc_modal_t *state, bool auto_restore)
+{
+    gc_modal_t **saved_state = call_level == -1 ? &modal_state : &call_levels[call_level].modal_state;
+
+    if(*saved_state == NULL)
+        *saved_state = malloc(sizeof(gc_modal_t));
+
+    if(*saved_state)
+        memcpy(*saved_state, state, sizeof(gc_modal_t));
+
+    return *saved_state != NULL;
+}
+
+void ngc_modal_state_invalidate (void)
+{
+    gc_modal_t **saved_state = call_level == -1 ? &modal_state : &call_levels[call_level].modal_state;
+
+    if(*saved_state) {
+        free(*saved_state);
+        *saved_state = NULL;
+    }
+}
+
+bool ngc_modal_state_restore (void)
+{
+    return gc_modal_state_restore(call_level == -1 ? modal_state : call_levels[call_level].modal_state);
+}
+
+bool ngc_call_push (void *context)
+{
+    bool ok;
+
+    if((ok = call_level < (NGC_MAX_CALL_LEVEL - 1)))
+        call_levels[++call_level].context = call_context = context;
+
+    return ok;
+}
+
+bool ngc_call_pop (void)
+{
+    if(call_level >= 0) {
+
+        if(call_context) {
+
+        ngc_rw_param_t *rw_param = rw_params, *rw_param_last = rw_params;
+
+        while(rw_param) {
+            if(rw_param->context == call_context) {
+                ngc_rw_param_t *rw_param_free = rw_param;
+                rw_param = rw_param->next;
+                if(rw_param_free == rw_params)
+                    rw_params = rw_param_last = rw_param;
+                else
+                    rw_param_last->next = rw_param;
+                free(rw_param_free);
+            } else {
+                rw_param_last = rw_param;
+                rw_param = rw_param->next;
+            }
+        }
+
+        ngc_named_rw_param_t *rw_named_param = rw_global_params, *rw_named_param_last = rw_global_params;
+
+        while(rw_named_param) {
+            if(rw_named_param->context == call_context) {
+                ngc_named_rw_param_t *rw_named_param_free = rw_named_param;
+                rw_named_param = rw_named_param->next;
+                if(rw_named_param_free == rw_global_params)
+                    rw_global_params = rw_named_param_last = rw_named_param;
+                else
+                    rw_named_param_last->next = rw_named_param;
+                free(rw_named_param_free);
+            } else {
+                rw_named_param_last = rw_named_param;
+                rw_named_param = rw_named_param->next;
+            }
+        }
+        }
+
+        if(call_levels[call_level].modal_state) {
+            if(call_levels[call_level].modal_state->auto_restore)
+                gc_modal_state_restore(call_levels[call_level].modal_state);
+            free(call_levels[call_level].modal_state);
+            call_levels[call_level].modal_state = NULL;
+        }
+
+        call_context = --call_level >= 0 ? call_levels[call_level].context : NULL;
+    }
+
+    return call_level >= 0;
+}
+
+uint_fast8_t ngc_call_level (void)
+{
+    return (uint_fast8_t)(call_level + 1);
+}
+
+uint8_t ngc_float_decimals (void)
+{
+	return settings.flags.report_inches ? N_DECIMAL_COORDVALUE_INCH : N_DECIMAL_COORDVALUE_MM;
 }
 
 #endif // NGC_PARAMETERS_ENABLE

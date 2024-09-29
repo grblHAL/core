@@ -95,6 +95,7 @@ typedef void (*on_unknown_accessory_override_ptr)(uint8_t cmd);
 typedef bool (*on_unknown_realtime_cmd_ptr)(char c);
 typedef void (*on_report_handlers_init_ptr)(void);
 typedef void (*on_report_options_ptr)(bool newopt);
+typedef void (*on_report_ngc_parameters_ptr)(void);
 typedef void (*on_report_command_help_ptr)(void);
 typedef const char *(*on_setting_get_description_ptr)(setting_id_t id);
 typedef void (*on_global_settings_restore_ptr)(void);
@@ -107,7 +108,7 @@ typedef void (*on_homing_rate_set_ptr)(axes_signals_t axes, float rate, homing_m
 // NOTE: cycle contains the axis flags of the executed homing cycle, success will be true when all the configured cycles are completed.
 typedef void (*on_homing_completed_ptr)(axes_signals_t cycle, bool success);
 
-typedef bool (*on_probe_fixture_ptr)(tool_data_t *tool, bool at_g59_3, bool on);
+typedef bool (*on_probe_toolsetter_ptr)(tool_data_t *tool, coord_data_t *position, bool at_g59_3, bool on);
 typedef bool (*on_probe_start_ptr)(axes_signals_t axes, float *target, plan_line_data_t *pl_data);
 typedef void (*on_probe_completed_ptr)(void);
 typedef void (*on_tool_selected_ptr)(tool_data_t *tool);
@@ -156,6 +157,7 @@ typedef struct {
     on_execute_realtime_ptr on_execute_delay;
     on_unknown_accessory_override_ptr on_unknown_accessory_override;
     on_report_options_ptr on_report_options;
+    on_report_ngc_parameters_ptr on_report_ngc_parameters;
     on_report_command_help_ptr on_report_command_help; //!< Deprecated, use system_register_commands() to register new commands.
     on_rt_reports_added_ptr on_rt_reports_added;
     on_global_settings_restore_ptr on_global_settings_restore;
@@ -172,7 +174,7 @@ typedef struct {
     on_stream_changed_ptr on_stream_changed;
     on_homing_rate_set_ptr on_homing_rate_set;
     on_homing_completed_ptr on_homing_completed;
-    on_probe_fixture_ptr on_probe_fixture;
+    on_probe_toolsetter_ptr on_probe_toolsetter;
     on_probe_start_ptr on_probe_start;
     on_probe_completed_ptr on_probe_completed;
     on_set_axis_setting_unit_ptr on_set_axis_setting_unit;

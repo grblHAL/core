@@ -416,6 +416,7 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
     block->condition = pl_data->condition;
     block->overrides = pl_data->overrides;
     block->line_number = pl_data->line_number;
+    block->offset_id = pl_data->offset_id;
     block->output_commands = pl_data->output_commands;
     block->message = pl_data->message;
 
@@ -487,13 +488,13 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
 
     if(!block->condition.inverse_time &&
         !block->condition.rapid_motion &&
-         (motion.mask & settings.steppers.is_rotational.mask) &&
-          (motion.mask & ~settings.steppers.is_rotational.mask)) {
+         (motion.mask & settings.steppers.is_rotary.mask) &&
+          (motion.mask & ~settings.steppers.is_rotary.mask)) {
 
         float linear_magnitude = 0.0f;
 
         idx = 0;
-        motion.mask &= ~settings.steppers.is_rotational.mask;
+        motion.mask &= ~settings.steppers.is_rotary.mask;
 
         while(motion.mask) {
             if(motion.mask & 0x01)
@@ -720,6 +721,7 @@ void plan_feed_override (override_t feed_override, override_t rapid_override)
 void plan_data_init (plan_line_data_t *plan_data)
 {
     memset(plan_data, 0, sizeof(plan_line_data_t));
+    plan_data->offset_id = gc_state.offset_id;
     plan_data->spindle.hal = gc_state.spindle.hal ? gc_state.spindle.hal : spindle_get(0);
     plan_data->condition.target_validated = plan_data->condition.target_valid = sys.soft_limits.mask == 0;
 #ifdef KINEMATICS_API

@@ -489,11 +489,11 @@ non-volatile storage until the controller is in IDLE state.
 
 /*! \def TOOLSETTER_RADIUS
 \brief
-The grbl.on_probe_fixture event handler is called by the default tool change algorithm when probing at G59.3.
+The grbl.on_probe_toolsetter event handler is called by the default tool change algorithm when probing at G59.3.
 In addition it will be called on a "normal" probe sequence if the XY position is
 within the radius of the G59.3 position defined below.
 Change if the default value of 5mm is not suitable or set it to 0.0f to disable.
-<br>__NOTE:__ A grbl.on_probe_fixture event handler is not installed by the core, it has to be provided
+<br>__NOTE:__ A grbl.on_probe_toolsetter event handler is not installed by the core, it has to be provided
 by a driver or a plugin.
 */
 #if !defined TOOLSETTER_RADIUS || defined __DOXYGEN__
@@ -697,6 +697,16 @@ The following codes are defined:
 */
 #if !defined DEFAULT_REPORT_RUN_SUBSTATE || defined __DOXYGEN__
 #define DEFAULT_REPORT_RUN_SUBSTATE Off // Default off. Set to \ref On or 1 to enable.
+#endif
+
+/*! \def DEFAULT_REPORT_WHEN_HOMING
+\brief
+Enabling this setting enables status reporting while homing.
+<br>__NOTE:__ Enabling this option may break senders.
+\internal Bit 12 in settings.status_report.
+*/
+#if !defined DEFAULT_REPORT_WHEN_HOMING || defined __DOXYGEN__
+#define DEFAULT_REPORT_WHEN_HOMING Off // Default off. Set to \ref On or 1 to enable.
 #endif
 
 ///@}
@@ -1105,6 +1115,14 @@ Default value is 0, meaning spindle sync is disabled
 ///@{
 #if !defined DEFAULT_SPINDLE_AT_SPEED_TOLERANCE || defined __DOXYGEN__
 #define DEFAULT_SPINDLE_AT_SPEED_TOLERANCE 0.0f // Percent - 0 means not checked
+#endif
+///@}
+
+/*! @name $395 - Setting_SpindleType
+*/
+///@{
+#if !defined DEFAULT_SPINDLE || defined __DOXYGEN__
+#define DEFAULT_SPINDLE SPINDLE_PWM0 // Spindle number from spindle_control.h
 #endif
 ///@}
 
@@ -1783,6 +1801,36 @@ Timezone offset from UTC in hours, allowed range is -12.0 - 12.0.
 ///@{
 #if !defined DEFAULT_TIMEZONE_OFFSET || defined __DOXYGEN__
 #define DEFAULT_TIMEZONE_OFFSET 0.0f
+#endif
+///@}
+
+/*! @name $536 - Setting_RGB_StripLengt0
+Number of LEDs in NeoPixel/WS2812 strip 1.
+*/
+///@{
+#if !defined DEFAULT_RGB_STRIP0_LENGTH || defined __DOXYGEN__
+#define DEFAULT_RGB_STRIP0_LENGTH 0
+#endif
+///@}
+
+/*! @name $537 - Setting_RGB_StripLengt1
+Number of LEDs in NeoPixel/WS2812 strip 2.
+*/
+///@{
+#if !defined DEFAULT_RGB_STRIP1_LENGTH || defined __DOXYGEN__
+#define DEFAULT_RGB_STRIP1_LENGTH 0
+#endif
+///@}
+
+/*! @name $538 - Setting_RotaryWrap
+Enable fast return to G28 position for rotary axes by \ref axismask.
+Use:
+G91G28<axisletter>0
+G90
+*/
+///@{
+#if !defined DEFAULT_AXIS_ROTARY_WRAP_MASK || defined __DOXYGEN__
+#define DEFAULT_AXIS_ROTARY_WRAP_MASK 0
 #endif
 ///@}
 

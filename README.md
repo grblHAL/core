@@ -13,7 +13,7 @@ It has been written to complement grblHAL and has features such as proper keyboa
 
 ---
 
-Latest build date is 20240513, see the [changelog](changelog.md) for details.  
+Latest build date is 20240928, see the [changelog](changelog.md) for details.  
 
 __NOTE:__ Build 20240222 has moved the probe input to the ioPorts pool of inputs and will be allocated from it when configured.
 The change is major and _potentially dangerous_, it may damage your probe, so please _verify correct operation_ after installing this, or later, builds.
@@ -78,8 +78,9 @@ This is a port/rewrite of [grbl 1.1f](https://github.com/gnea/grbl) and should b
   - Tool Change: M6* (Two modes possible: manual** - supports jogging, ATC), M61
   - Switches: M48, M49, M50, M51, M53
   - Input/output control***: M62, M63, M64, M65, M66, M67, M68
+  - Modal state handling*: M70, M71, M72, M73
   - Return from macro*****: M99
-  - Valid Non-Command Words: A*, B*, C*, D, E*, F, H*, I, J, K, L, N, P, Q*, R, S, T, U*, V*, W*, X, Y, Z
+  - Valid Non-Command Words: A*, B*, C*, D, E*, F, H*, I, J, K, L, N, O*, P, Q*, R, S, T, U*, V*, W*, X, Y, Z
 
   * driver/configuration dependent. W axis only available when ABC axes are remapped to UVW or when lathe UVW mode is enabled.
   ** requires compatible GCode sender due to protocol extensions, new state and RT command.
@@ -93,4 +94,4 @@ G/M-codes not supported by [legacy Grbl](https://github.com/gnea/grbl/wiki) are 
 Some [plugins](https://github.com/grblHAL/plugins) implements additional M-codes.
 
 ---
-20240402
+20240523

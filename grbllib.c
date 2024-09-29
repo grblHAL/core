@@ -283,7 +283,7 @@ int grbl_enter (void)
         protocol_enqueue_foreground_task(report_driver_error, NULL);
     }
 
-    hal.stepper.enable(settings.steppers.deenergize);
+    hal.stepper.enable(settings.steppers.energize, true);
 
     spindle_all_off();
     hal.coolant.set_state((coolant_state_t){0});

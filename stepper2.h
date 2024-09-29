@@ -22,6 +22,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "task.h"
+
 typedef enum {
     Stepper2_Steps = 0,     //!< 0
     Stepper2_InfiniteSteps, //!< 1
@@ -32,7 +34,9 @@ struct st2_motor; // members defined in stepper2.c
 typedef struct st2_motor st2_motor_t;
 
 st2_motor_t *st2_motor_init (uint_fast8_t axis_idx, bool is_spindle);
+bool st2_motor_poll (st2_motor_t *motor);
 bool st2_motor_bind_spindle (uint_fast8_t axis_idx);
+float st2_get_speed (st2_motor_t *motor);
 float st2_motor_set_speed (st2_motor_t *motor, float speed);
 bool st2_motor_move (st2_motor_t *motor, const float move, const float speed, position_t type);
 bool st2_motor_run (st2_motor_t *motor);
@@ -41,3 +45,4 @@ bool st2_motor_cruising (st2_motor_t *motor);
 bool st2_motor_stop (st2_motor_t *motor);
 int64_t st2_get_position (st2_motor_t *motor);
 bool st2_set_position (st2_motor_t *motor, int64_t position);
+void st2_motor_register_stopped_callback (st2_motor_t *motor, foreground_task_ptr callback);

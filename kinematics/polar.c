@@ -135,7 +135,7 @@ static float *polar_segment_line (float *target, float *position, plan_line_data
     if(init) {
 
         jog_cancel = false;
-        r_offset = gc_get_offset(RADIUS_AXIS) * 2.0f; //??
+        r_offset = gc_get_offset(RADIUS_AXIS, false) * 2.0f; //??
 
         memcpy(final_target.values, target, sizeof(final_target));
 
@@ -229,7 +229,7 @@ static void report_options (bool newopt)
     on_report_options(newopt);
 
     if(!newopt)
-        hal.stream.write("[KINEMATICS:Polar v0.02]" ASCII_EOL);
+        hal.stream.write("[KINEMATICS:Polar v0.03]" ASCII_EOL);
 }
 
 static bool polar_homing_cycle (axes_signals_t cycle, axes_signals_t auto_square)

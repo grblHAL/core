@@ -26,7 +26,6 @@
 
 #include "pid.h"
 
-#define SPINDLE_ALL        -1
 #define SPINDLE_NONE        0
 #define SPINDLE_HUANYANG1   1
 #define SPINDLE_HUANYANG2   2
@@ -49,6 +48,9 @@
 #define SPINDLE_STEPPER    19
 #define SPINDLE_NOWFOREVER 20
 #define SPINDLE_MY_SPINDLE 30
+
+#define SPINDLE_ALL_VFD ((1<<SPINDLE_HUANYANG1)|(1<<SPINDLE_HUANYANG2)|(1<<SPINDLE_GS20)|(1<<SPINDLE_YL620A)|(1<<SPINDLE_MODVFD)|(1<<SPINDLE_H100)|(1<<SPINDLE_NOWFOREVER))
+#define SPINDLE_ALL (SPINDLE_ALL_VFD|(1<<SPINDLE_PWM0))
 
 typedef int8_t spindle_id_t;
 typedef int8_t spindle_num_t;
@@ -98,6 +100,7 @@ typedef struct {
     uint32_t index_count;
     uint32_t pulse_count;
     uint32_t error_count;
+    bool at_speed_enabled;
     spindle_state_t state_programmed;
 } spindle_data_t;
 
@@ -208,14 +211,14 @@ typedef struct {
     float rpm_max;
     float rpm_min;
     float pwm_freq;
-    float pwm_period; // currently unused
+    float pwm_period;                           // currently unused
     float pwm_off_value;
     float pwm_min_value;
     float pwm_max_value;
-    float at_speed_tolerance;
+    float at_speed_tolerance;                   //!< Tolerance in percent of programmed speed.
     pwm_piece_t pwm_piece[SPINDLE_NPWM_PIECES];
     pid_values_t pid;
-    uint16_t ppr; // Spindle encoder pulses per revolution
+    uint16_t ppr;                               //!< Spindle encoder pulses per revolution (PPR).
     spindle_state_t invert;
     spindle_settings_flags_t flags;
 } spindle_settings_t;
@@ -265,7 +268,8 @@ typedef union
 
 /*! \brief Handlers and data for spindle support. */
 struct spindle_ptrs {
-    spindle_id_t id;                    //!< Spindle id, assingned on spindle registration.
+    spindle_id_t id;                    //!< Spindle id, assigned on spindle registration.
+    uint8_t ref_id;                     //!< Spindle id, assigned on spindle registration.
     struct spindle_param *param;        //!< Pointer to current spindle parameters, assigned when spindle is enabled.
     spindle_type_t type;                //!< Spindle type.
     spindle_cap_t cap;                  //!< Spindle capabilities.
@@ -273,6 +277,7 @@ struct spindle_ptrs {
     uint_fast16_t pwm_off_value;        //!< Value for switching PWM signal off.
     float rpm_min;                      //!< Minimum spindle RPM.
     float rpm_max;                      //!< Maximum spindle RPM.
+    float at_speed_tolerance;           //!< Tolerance in percent of programmed speed.
     spindle_config_ptr config;          //!< Optional handler for configuring the spindle.
     spindle_set_state_ptr set_state;    //!< Handler for setting spindle state.
     spindle_get_state_ptr get_state;    //!< Handler for getting spindle state.
@@ -318,6 +323,7 @@ typedef struct {
 /*! \brief Structure holding data passed to the callback function called by spindle_enumerate_spindles(). */
 typedef struct  {
     spindle_id_t id;
+    uint8_t ref_id;
     spindle_num_t num;
     const char *name;
     bool enabled;
@@ -350,6 +356,15 @@ void spindle_all_off (void);
 // The following functions are not called by the core, may be called by driver code.
 //
 
+#define spindle_validate_at_speed(d, r) { d.rpm = r; d.state_programmed.at_speed = !d.at_speed_enabled || (d.rpm >= d.rpm_low_limit && d.rpm <= d.rpm_high_limit); }
+/*
+__attribute__((always_inline)) static inline void spindle_validate_at_speed (spindle_data_t *spindle_data, float rpm)
+{
+    spindle_data->rpm = rpm;
+    spindle_data->state_programmed.at_speed = !spindle_data->at_speed_enabled || (spindle_data->rpm >= spindle_data->rpm_low_limit && spindle_data->rpm <= spindle_data->rpm_high_limit);
+}
+*/
+
 bool spindle_precompute_pwm_values (spindle_ptrs_t *spindle, spindle_pwm_t *pwm_data, spindle_settings_t *settings, uint32_t clock_hz);
 
 spindle_id_t spindle_register (const spindle_ptrs_t *spindle, const char *name);
@@ -364,6 +379,9 @@ spindle_cap_t spindle_get_caps (bool active);
 
 void spindle_update_caps (spindle_ptrs_t *spindle, spindle_pwm_t *pwm_caps);
 
+void spindle_bind_encoder (const spindle_data_ptrs_t *encoder_data);
+
+bool spindle_set_at_speed_range (spindle_ptrs_t *spindle, spindle_data_t *spindle_data, float rpm);
 
 spindle_ptrs_t *spindle_get_hal (spindle_id_t spindle_id, spindle_hal_t hal);
 

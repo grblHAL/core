@@ -94,26 +94,33 @@
 #define SERIAL_STREAM       0
 #endif
 
-#ifndef KEYPAD_ENABLE
-#define KEYPAD_ENABLE       0
-#endif
-
 #ifndef MACROS_ENABLE
 #define MACROS_ENABLE       0
 #endif
 
-#ifndef MPG_ENABLE
-#define MPG_ENABLE          0
+#ifndef KEYPAD_ENABLE
+#define KEYPAD_ENABLE       0
 #endif
 
-#if MPG_ENABLE == 1 && KEYPAD_ENABLE == 2
-#define MPG_MODE            2
-#elif MPG_ENABLE == 2
-#define MPG_MODE            3
-#elif MPG_ENABLE
-#define MPG_MODE            1
+#if KEYPAD_ENABLE == 1
+#ifdef I2C_STROBE_ENABLE
+#undef I2C_STROBE_ENABLE
+#endif
+#define I2C_STROBE_ENABLE 1
+#elif KEYPAD_ENABLE == 2 && !defined(KEYPAD_STREAM)
+#if USB_SERIAL_CDC
+#define KEYPAD_STREAM     0
 #else
-#define MPG_MODE            0
+#define KEYPAD_STREAM     1
+#endif
+#endif
+
+#ifndef I2C_STROBE_ENABLE
+#define I2C_STROBE_ENABLE   0
+#endif
+
+#ifndef MPG_ENABLE
+#define MPG_ENABLE          0
 #endif
 
 #if MPG_ENABLE && !defined(MPG_STREAM)
@@ -122,24 +129,6 @@
 #else
 #define MPG_STREAM          1
 #endif
-#endif
-
-#if KEYPAD_ENABLE == 1
-#ifdef I2C_STROBE_ENABLE
-#undef I2C_STROBE_ENABLE
-#endif
-#define I2C_STROBE_ENABLE 1
-#elif KEYPAD_ENABLE == 2 && !defined(MPG_STREAM)
-#ifndef KEYPAD_STREAM
-#if USB_SERIAL_CDC
-#define KEYPAD_STREAM     0
-#else
-#define KEYPAD_STREAM     1
-#endif
-#endif
-#endif
-#ifndef I2C_STROBE_ENABLE
-#define I2C_STROBE_ENABLE   0
 #endif
 
 #if DISPLAY_ENABLE == 2
@@ -236,40 +225,38 @@
 #endif
 #endif
 
-// TODO: remove?
-#ifndef VFD_SPINDLE
-#if VFD_ENABLE
-#define VFD_SPINDLE         1
-#else
-#define VFD_SPINDLE         0
-#endif
-#endif
-
 #ifndef SPINDLE0_ENABLE
-  #if VFD_ENABLE
-    #define SPINDLE0_ENABLE VFD_ENABLE
-    #if N_SPINDLE > 1 && !defined(SPINDLE1_ENABLE)
-      #define SPINDLE1_ENABLE SPINDLE_PWM0
-    #endif
-  #else
-    #define SPINDLE0_ENABLE SPINDLE_PWM0
-  #endif
+#define SPINDLE0_ENABLE SPINDLE_PWM0
 #endif
 
 #ifndef SPINDLE1_ENABLE
+#define SPINDLE1_ENABLE     0
+#elif SPINDLE1_ENABLE == -1 || SPINDLE1_ENABLE == SPINDLE_ALL || SPINDLE1_ENABLE == SPINDLE_ALL_VFD
+#warning "SPINDLE1_ENABLE cannot be set to -1, SPINDLE_ALL or SPINDLE_ALL_VFD"
+#undef SPINDLE1_ENABLE
 #define SPINDLE1_ENABLE     0
 #endif
 
 #ifndef SPINDLE2_ENABLE
 #define SPINDLE2_ENABLE     0
+#elif SPINDLE2_ENABLE == -1 || SPINDLE2_ENABLE == SPINDLE_ALL || SPINDLE2_ENABLE == SPINDLE_ALL_VFD
+#warning "SPINDLE2_ENABLE cannot be set to -1, SPINDLE_ALL or SPINDLE_ALL_VFD"
+#undef SPINDLE2_ENABLE
+#define SPINDLE2_ENABLE     0
 #endif
 
 #ifndef SPINDLE3_ENABLE
 #define SPINDLE3_ENABLE     0
+#elif SPINDLE3_ENABLE == -1 || SPINDLE3_ENABLE == SPINDLE_ALL || SPINDLE3_ENABLE == SPINDLE_ALL_VFD
+#warning "SPINDLE3_ENABLE cannot be set to -1, SPINDLE_ALL or SPINDLE_ALL_VFD"
+#undef SPINDLE1_ENABLE
+#define SPINDLE1_ENABLE     0
 #endif
 
-#if SPINDLE0_ENABLE == SPINDLE_ALL
-#define SPINDLE_ENABLE SPINDLE_ALL
+#if SPINDLE0_ENABLE == -1 || SPINDLE0_ENABLE == SPINDLE_ALL
+#define SPINDLE_ENABLE (SPINDLE_ALL|(1<<SPINDLE1_ENABLE)|(1<<SPINDLE2_ENABLE)|(1<<SPINDLE3_ENABLE))
+#elif SPINDLE0_ENABLE == SPINDLE_ALL_VFD
+#define SPINDLE_ENABLE (SPINDLE_ALL_VFD|SPINDLE_ALL|(1<<SPINDLE1_ENABLE)|(1<<SPINDLE2_ENABLE)|(1<<SPINDLE3_ENABLE))
 #else
 #define SPINDLE_ENABLE ((1<<SPINDLE0_ENABLE)|(1<<SPINDLE1_ENABLE)|(1<<SPINDLE2_ENABLE)|(1<<SPINDLE3_ENABLE))
 #endif
@@ -325,7 +312,7 @@
 //
 
 #ifndef VFD_ENABLE
-  #if SPINDLE_ENABLE & ((1<<SPINDLE_HUANYANG1)|(1<<SPINDLE_HUANYANG2)|(1<<SPINDLE_GS20)|(1<<SPINDLE_YL620A)|(1<<SPINDLE_MODVFD)|(1<<SPINDLE_H100)|(1<<SPINDLE_NOWFOREVER))
+  #if SPINDLE_ENABLE & SPINDLE_ALL_VFD
     #define VFD_ENABLE 1
   #else
     #define VFD_ENABLE 0

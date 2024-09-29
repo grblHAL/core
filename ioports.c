@@ -749,7 +749,7 @@ void ioport_setting_changed (setting_id_t id)
     if(on_setting_changed)
         on_setting_changed(id);
 
-    else switch(id) {
+    else if(digital.in.ports && digital.in.ports->n_ports) switch(id) {
 
         case Setting_InvertProbePin:
         case Setting_ProbePullUpDisable:

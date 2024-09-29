@@ -3,22 +3,22 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2023 Terje Io
+  Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef _GCODE_H_
@@ -29,8 +29,11 @@
 #include "spindle_control.h"
 #include "errors.h"
 
+#define MAX_OFFSET_ENTRIES 4 // must be a power of 2
+
 typedef uint32_t tool_id_t;
 typedef uint16_t macro_id_t;
+typedef int8_t offset_id_t;
 
 // Define command actions for within execution-type modal groups (motion, stopping, non-modal). Used
 // internally by the parser to know which command to execute.
@@ -63,6 +66,15 @@ typedef enum {
     NonModal_RestoreCoordinateOffset = 122 //!< 122 - G92.3
  #endif
 } non_modal_t;
+
+
+typedef enum {
+    ModalState_NoAction = 0,                //!< 0 - Default, must be zero
+    ModalState_Save = 70,                   //!< 70 - M70
+    ModalState_Invalidate = 71,             //!< 71 - M71
+    ModalState_Restore = 72,                //!< 72 - M72
+    ModalState_SaveAutoRestore = 73,        //!< 73 - M73
+} modal_state_action_t;
 
 /*! Modal Group G1: Motion modes
 
@@ -231,8 +243,8 @@ typedef enum {
     UserMCode_Generic3 = 103,           //!< 103 - For private use only
     UserMCode_Generic4 = 104,           //!< 104 - For private use only
     OpenPNP_GetADCReading = 105,        //!< 105 - M105
-    Fan_On = 106,                       //!< 106 - M106
-    Fan_Off = 107,                      //!< 107 - M107
+    Fan_On = 106,                       //!< 106 - M106, Marlin format
+    Fan_Off = 107,                      //!< 107 - M107, Marlin format
     OpenPNP_GetCurrentPosition = 114,   //!< 114 - M114
     OpenPNP_FirmwareInfo = 115,         //!< 115 - M115
     Trinamic_DebugReport = 122,         //!< 122 - M122, Marlin format
@@ -355,6 +367,26 @@ typedef union {
         float v;
 #endif
     };
+    struct {
+        float m0;
+        float m1;
+        float m2;
+#if N_AXIS > 3
+        float m3;
+#endif
+#if N_AXIS > 4
+        float m4;
+#endif
+#if N_AXIS > 5
+        float m5;
+#endif
+#if N_AXIS > 6
+        float m6;
+#endif
+#if N_AXIS == 8
+        float m7;
+#endif
+    };
 } coord_data_t;
 
 //! Coordinate data including id.
@@ -416,7 +448,7 @@ typedef struct {
     coord_system_t coord_data; //!< Coordinate data
     int32_t $;                 //!< Spindle id - single-meaning word
     int32_t n;                 //!< Line number - single-meaning word
-    uint32_t o;                //!< Subroutine identifier - single-meaning word (not used by the core)
+    uint32_t o;                //!< Subroutine identifier - single-meaning word
     uint32_t h;                //!< Tool number or number of G76 thread spring passes
     tool_id_t t;               //!< Tool selection - single-meaning word
     uint8_t l;                 //!< G10 or canned cycles parameters
@@ -498,6 +530,11 @@ typedef struct {
     bool scaling_active;                 //!< {G50,G51}
     bool canned_cycle_active;
     float spline_pq[2];                  //!< {G5}
+#if NGC_PARAMETERS_ENABLE
+    bool auto_restore;
+    float feed_rate;                     //!< {F} NOTE: only set when saving modal state
+    float rpm;                           //!< {S} NOTE: only set when saving modal state
+#endif
 } gc_modal_t;
 
 //! Data for canned cycles.
@@ -575,6 +612,8 @@ typedef struct {
     bool tool_change;
     bool skip_blocks;                   //!< true if skipping conditional blocks
     status_code_t last_error;           //!< last return value from parser
+    offset_id_t offset_id;              //!< id(x) of last G92 coordinate offset (into circular buffer)
+    coord_data_t offset_queue[MAX_OFFSET_ENTRIES];
     //!< The following variables are not cleared upon warm restart when COMPATIBILITY_LEVEL <= 1
     bool g92_coord_offset_applied;      //!< true when G92 offset applied
     float g92_coord_offset[N_AXIS];     //!< Retains the G92 coordinate offset (work coordinates) relative to
@@ -607,6 +646,12 @@ typedef struct {
     output_command_t output_command;    //!< Details about M62-M68 output command to execute if present in block.
     uint32_t arc_turns;                 //
     spindle_ptrs_t *spindle;            //!< Spindle to control, NULL for all
+#if NGC_PARAMETERS_ENABLE
+    modal_state_action_t state_action;  //!< M70-M73 modal state action
+#endif
+#if N_AXIS > 3
+    axes_signals_t rotary_wrap;
+#endif
 } parser_block_t;
 
 // Initialize the parser
@@ -634,7 +679,7 @@ axes_signals_t gc_get_g51_state (void);
 float *gc_get_scaling (void);
 
 // Get current axis offset.
-float gc_get_offset (uint_fast8_t idx);
+float gc_get_offset (uint_fast8_t idx, bool real_time);
 
 spindle_ptrs_t *gc_spindle_get (void);
 
@@ -644,4 +689,9 @@ void gc_coolant (coolant_state_t state);
 void gc_set_tool_offset (tool_offset_mode_t mode, uint_fast8_t idx, int32_t offset);
 plane_t *gc_get_plane_data (plane_t *plane, plane_select_t select);
 
+#if NGC_PARAMETERS_ENABLE
+parameter_words_t gc_get_g65_arguments (void);
+bool gc_modal_state_restore (gc_modal_t *copy);
 #endif
+
+#endif // _GCODE_H_

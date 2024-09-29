@@ -52,6 +52,8 @@ void report_warning (void *message);
 // Prints Grbl help.
 status_code_t report_help (char *args);
 
+void report_plugin (const char *name, const char *version);
+
 // Prints Grbl settings
 void report_grbl_settings (bool all, void *data);
 

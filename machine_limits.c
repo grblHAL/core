@@ -273,6 +273,7 @@ static bool homing_cycle (axes_signals_t cycle, axes_signals_t auto_square)
     squaring_mode_t squaring_mode = SquaringMode_Both;
     coord_data_t target;
     plan_line_data_t plan_data;
+    rt_exec_t rt_exec, rt_exec_states = EXEC_SAFETY_DOOR|EXEC_RESET|EXEC_CYCLE_COMPLETE;
 
     plan_data_init(&plan_data);
     plan_data.condition.system_motion = On;
@@ -296,7 +297,7 @@ static bool homing_cycle (axes_signals_t cycle, axes_signals_t auto_square)
         // NOTE: settings.axis[].max_travel is stored as a negative value.
         if(bit_istrue(cycle.mask, bit(idx))) {
 #if N_AXIS > 3
-            if(bit_istrue(settings.steppers.is_rotational.mask, bit(idx)))
+            if(bit_istrue(settings.steppers.is_rotary.mask, bit(idx)))
                 max_travel = max(max_travel, (-HOMING_AXIS_SEARCH_SCALAR) * (settings.axis[idx].max_travel < -0.0f ? settings.axis[idx].max_travel : -360.0f));
             else
 #endif
@@ -319,6 +320,9 @@ static bool homing_cycle (axes_signals_t cycle, axes_signals_t auto_square)
         fail_distance = max(fail_distance, settings.homing.dual_axis.fail_distance_min);
         autosquare_fail_distance = truncf(fail_distance * settings.axis[dual_motor_axis].steps_per_mm);
     }
+
+    if(settings.status_report.when_homing)
+        rt_exec_states |= EXEC_STATUS_REPORT;
 
     // Set search mode with approach at seek rate to quickly engage the specified cycle.mask limit switches.
     do {
@@ -420,36 +424,40 @@ static bool homing_cycle (axes_signals_t cycle, axes_signals_t auto_square)
             st_prep_buffer(); // Check and prep segment buffer.
 
             // Exit routines: No time to run protocol_execute_realtime() in this loop.
-            if (sys.rt_exec_state & (EXEC_SAFETY_DOOR | EXEC_RESET | EXEC_CYCLE_COMPLETE)) {
+            if((rt_exec = (sys.rt_exec_state & rt_exec_states))) {
 
-                uint_fast16_t rt_exec = sys.rt_exec_state;
-
-                // Homing failure condition: Reset issued during cycle.
-                if (rt_exec & EXEC_RESET)
-                    system_set_exec_alarm(Alarm_HomingFailReset);
-
-                // Homing failure condition: Safety door was opened.
-                if (rt_exec & EXEC_SAFETY_DOOR)
-                    system_set_exec_alarm(Alarm_HomingFailDoor);
-
-                hal.delay_ms(2, NULL);
-
-                // Homing failure condition: Homing switch(es) still engaged after pull-off motion
-                if (mode == HomingMode_Pulloff && (homing_signals_select(hal.homing.get_state(), (axes_signals_t){0}, SquaringMode_Both).mask & cycle.mask))
-                    system_set_exec_alarm(Alarm_FailPulloff);
-
-                // Homing failure condition: Limit switch not found during approach.
-                if (mode != HomingMode_Pulloff && (rt_exec & EXEC_CYCLE_COMPLETE))
-                    system_set_exec_alarm(Alarm_HomingFailApproach);
-
-                if (sys.rt_exec_alarm) {
-                    mc_reset(); // Stop motors, if they are running.
-                    protocol_execute_realtime();
-                    return false;
+                if(rt_exec == EXEC_STATUS_REPORT) {
+                    system_clear_exec_state_flag(EXEC_STATUS_REPORT);
+                    report_realtime_status();
                 } else {
-                    // Pull-off motion complete. Disable CYCLE_STOP from executing.
-                    system_clear_exec_state_flag(EXEC_CYCLE_COMPLETE);
-                    break;
+
+                    // Homing failure condition: Reset issued during cycle.
+                    if (rt_exec & EXEC_RESET)
+                        system_set_exec_alarm(Alarm_HomingFailReset);
+
+                    // Homing failure condition: Safety door was opened.
+                    if (rt_exec & EXEC_SAFETY_DOOR)
+                        system_set_exec_alarm(Alarm_HomingFailDoor);
+
+                    hal.delay_ms(2, NULL);
+
+                    // Homing failure condition: Homing switch(es) still engaged after pull-off motion
+                    if (mode == HomingMode_Pulloff && (homing_signals_select(hal.homing.get_state(), (axes_signals_t){0}, SquaringMode_Both).mask & cycle.mask))
+                        system_set_exec_alarm(Alarm_FailPulloff);
+
+                    // Homing failure condition: Limit switch not found during approach.
+                    if (mode != HomingMode_Pulloff && (rt_exec & EXEC_CYCLE_COMPLETE))
+                        system_set_exec_alarm(Alarm_HomingFailApproach);
+
+                    if (sys.rt_exec_alarm) {
+                        mc_reset(); // Stop motors, if they are running.
+                        protocol_execute_realtime();
+                        return false;
+                    } else {
+                        // Pull-off motion complete. Disable CYCLE_STOP from executing.
+                        system_clear_exec_state_flag(EXEC_CYCLE_COMPLETE);
+                        break;
+                    }
                 }
             }
 

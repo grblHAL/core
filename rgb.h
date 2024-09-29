@@ -41,6 +41,15 @@ typedef union {
     };
 } rgb_color_t;
 
+typedef union {
+    uint8_t mask;
+    struct {
+        uint8_t is_blocking :1,
+                is_strip    :1,
+                unassigned  :6;
+    };
+} rgb_properties_t;
+
 /*! \brief Pointer to function for setting RGB (LED) output.
 \param color a \a rgb_color_t union.
 */
@@ -68,6 +77,7 @@ typedef struct {
     rgb_write_ptr write;                    //!< Optional handler for outputting data to Neopixel strip.
     rgb_set_intensity_ptr set_intensity;    //!< Optional handler for setting intensity, range 0 - 255.
     rgb_color_t cap;                        //!< Driver capability, color value: 0 - not available, 1 - on off, > 1 - intensity range 0 - n.
+    rgb_properties_t flags;                 //!< Driver property flags.
     uint16_t num_devices;                   //!< Number of devices (LEDs) available.
 } rgb_ptr_t;
 
