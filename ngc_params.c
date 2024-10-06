@@ -488,11 +488,11 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             break;
 
         case NGCParam_spindle_rpm_mode:
-            value = gc_state.modal.spindle.rpm_mode == SpindleSpeedMode_RPM ? 1.0f : 0.0f;
+            value = gc_spindle_get(0)->rpm_mode == SpindleSpeedMode_RPM ? 1.0f : 0.0f;
             break;
 
         case NGCParam_spindle_css_mode:
-            value = gc_state.modal.spindle.rpm_mode == SpindleSpeedMode_CSS ? 1.0f : 0.0f;
+            value = gc_spindle_get(0)->rpm_mode == SpindleSpeedMode_CSS ? 1.0f : 0.0f;
             break;
 
         case NGCParam_ijk_absolute_mode:
@@ -508,11 +508,11 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             break;
 
         case NGCParam_spindle_on:
-            value = gc_state.modal.spindle.state.on ? 1.0f : 0.0f;
+            value = gc_spindle_get(0)->state.on ? 1.0f : 0.0f;
             break;
 
         case NGCParam_spindle_cw:
-            value = gc_state.modal.spindle.state.ccw ? 1.0f : 0.0f;
+            value = gc_spindle_get(0)->state.ccw ? 1.0f : 0.0f;
             break;
 
         case NGCParam_mist:
@@ -544,7 +544,7 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             break;
 
         case NGCParam_rpm:
-            value = gc_state.spindle.rpm;
+            value = gc_spindle_get(0)->rpm;
             break;
 
         case NGCParam_x:

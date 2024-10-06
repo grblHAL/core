@@ -510,19 +510,22 @@ void spindle_set_override (spindle_ptrs_t *spindle, override_t speed_override)
 
     speed_override = constrain(speed_override, MIN_SPINDLE_RPM_OVERRIDE, MAX_SPINDLE_RPM_OVERRIDE);
 
-    if ((uint8_t)speed_override != spindle->param->override_pct) {
+    if((uint8_t)speed_override != spindle->param->override_pct) {
 
-        spindle->param->override_pct = speed_override;
+        spindle_set_rpm(spindle, spindle->param->rpm, speed_override);
 
-        if(state_get() == STATE_IDLE)
-            spindle_set_state(spindle, gc_state.modal.spindle.state, gc_state.spindle.rpm);
-        else
+        if(state_get() == STATE_IDLE) {
+            if(spindle->get_pwm && spindle->update_pwm)
+                spindle->update_pwm(spindle, spindle->get_pwm(spindle, spindle->param->rpm_overridden));
+            else if(spindle->update_rpm)
+                spindle->update_rpm(spindle, spindle->param->rpm_overridden);
+        } else
             sys.step_control.update_spindle_rpm = On;
 
         system_add_rt_report(Report_Overrides); // Set to report change immediately
 
-       if(grbl.on_spindle_programmed)
-           grbl.on_spindle_programmed(spindle, gc_state.modal.spindle.state, spindle_set_rpm(spindle, gc_state.spindle.rpm, speed_override), gc_state.modal.spindle.rpm_mode);
+//       if(grbl.on_spindle_programmed)
+//           grbl.on_spindle_programmed(spindle, spindle->param->state, spindle->param->rpm, spindle->param->rpm_mode);
 
        if(grbl.on_override_changed)
            grbl.on_override_changed(OverrideChanged_SpindleRPM);
@@ -542,16 +545,19 @@ static bool set_state (spindle_ptrs_t *spindle, spindle_state_t state, float rpm
     if (!ABORTED) { // Block during abort.
 
         if (!state.on) { // Halt or set spindle direction and rpm.
-            spindle->param->rpm = rpm = 0.0f;
+            rpm = 0.0f;
             spindle->set_state(spindle, (spindle_state_t){0}, 0.0f);
         } else {
-            // NOTE: Assumes all calls to this function is when Grbl is not moving or must remain off.
+            // NOTE: Assumes all calls to this function is when grblHAL is not moving or must remain off.
             // TODO: alarm/interlock if going from CW to CCW directly in non-laser mode?
             if (spindle->cap.laser && state.ccw)
                 rpm = 0.0f; // TODO: May need to be rpm_min*(100/MAX_SPINDLE_RPM_OVERRIDE);
 
             spindle->set_state(spindle, state, spindle_set_rpm(spindle, rpm, spindle->param->override_pct));
         }
+
+        spindle->param->rpm = rpm;
+        spindle->param->state = state;
 
         system_add_rt_report(Report_Spindle); // Set to report change immediately
 

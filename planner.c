@@ -691,7 +691,7 @@ void plan_data_init (plan_line_data_t *plan_data)
 {
     memset(plan_data, 0, sizeof(plan_line_data_t));
     plan_data->offset_id = gc_state.offset_id;
-    plan_data->spindle.hal = gc_state.spindle.hal ? gc_state.spindle.hal : spindle_get(0);
+    plan_data->spindle.hal = gc_spindle_get(-1)->hal;
     plan_data->condition.target_validated = plan_data->condition.target_valid = sys.soft_limits.mask == 0;
 #ifdef KINEMATICS_API
     plan_data->rate_multiplier = 1.0f;

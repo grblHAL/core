@@ -1,6 +1,32 @@
 ## grblHAL changelog
 
+<a name="2024106">Build 2024106
+
+Core:
+
+* Fix for `M62` - `M68` regression. Ref. [issue #600](https://github.com/grblHAL/core/issues/600).
+
+* Fixed incorrect handling of `G65` call parameters, axis words had offsets added.  Ref. [issue #594](https://github.com/grblHAL/core/issues/594).
+
+* Refactored handling of multiple spindles. There are still some limitations but should work better now. Disabled override delays for now, needs investigation. Ref. [issue #598](https://github.com/grblHAL/core/issues/598).  
+__NOTE:__ Please report any erratic behaviour after installing this version since it is a rather major change.
+
+Drivers:
+
+* ESP32: fix for compilation error. Ref. [issue #122](https://github.com/grblHAL/ESP32/issues/122).  
+Fixes for handling multiple devices on a single SPI port. Fixed xPro v5 map for Modbus comms. Ref. [issue #121](https://github.com/grblHAL/ESP32/issues/121).
+
+* STM32F4xx: fix for compilation error for some boards when configured for Trinamic drivers.
+
+Plugins:
+
+* BLTouch: implemented `$BLTEST` command, verified.
+
+---
+
 <a name="20240928">Build 20240928
+
+Core:
 
 * Added `(PRINT, <msg>)` support and parameter formatting for `DEBUG` and `PRINT` commands. Available when expression support is enabled.
 

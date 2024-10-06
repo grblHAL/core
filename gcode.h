@@ -498,9 +498,17 @@ typedef struct {
 } gc_value_ptr_t;
 
 typedef struct {
+    float rpm;                      //!< Spindle speed
     spindle_state_t state;          //!< {M3,M4,M5}
     spindle_rpm_mode_t rpm_mode;    //!< {G96,G97}
-} spindle_mode_t;
+    spindle_css_data_t *css;        //!< Data used for Constant Surface Speed Mode calculations
+    spindle_ptrs_t *hal;            //!< Spindle function pointers etc. Must be last!
+} spindle_t;
+
+typedef struct {
+    spindle_state_t state;          //!< {M3,M4,M5}
+    spindle_rpm_mode_t rpm_mode;    //!< {G96,G97}
+} spindle_modal_t;
 
 // NOTE: When this struct is zeroed, the above defines set the defaults for the system.
 typedef struct {
@@ -519,7 +527,11 @@ typedef struct {
 #endif
     program_flow_t program_flow;         //!< {M0,M1,M2,M30,M60}
     coolant_state_t coolant;             //!< {M7,M8,M9}
-    spindle_mode_t spindle;              //!< {M3,M4,M5 and G96,G97}
+#if N_SYS_SPINDLE > 1
+    spindle_t spindle[N_SYS_SPINDLE];
+#else
+    spindle_t spindle;                   //!< {M3,M4,M5 and G96,G97}
+#endif
     gc_override_flags_t override_ctrl;   //!< {M48,M49,M50,M51,M53,M56}
     cc_retract_mode_t retract_mode;      //!< {G98,G99}
     bool scaling_active;                 //!< {G50,G51}
@@ -528,7 +540,6 @@ typedef struct {
 #if NGC_PARAMETERS_ENABLE
     bool auto_restore;
     float feed_rate;                     //!< {F} NOTE: only set when saving modal state
-    float rpm;                           //!< {S} NOTE: only set when saving modal state
 #endif
 } gc_modal_t;
 
@@ -575,20 +586,13 @@ typedef struct {
     tool_id_t tool_id;      //!< Tool number
 } tool_data_t;
 
-typedef struct {
-    float rpm;                  //!< Spindle speed
-    spindle_state_t state;
-    spindle_css_data_t *css;    //!< Data used for Constant Surface Speed Mode calculations
-    spindle_ptrs_t *hal;
-} spindle_t;
-
 /*! \brief Parser state
 
 */
 typedef struct {
     gc_modal_t modal;
     gc_canned_t canned;
-    spindle_t spindle;                  //!< RPM
+    spindle_t *spindle;                 //!< Last referenced spindle
     float feed_rate;                    //!< Millimeters/min
     float distance_per_rev;             //!< Millimeters/rev
     float position[N_AXIS];             //!< Where the interpreter considers the tool to be at this point in the code
@@ -636,11 +640,11 @@ typedef struct {
     user_mcode_t user_mcode;            //!< Set > #UserMCode_Ignore if a user M-code is found.
     bool user_mcode_sync;               //!< Set to \a true by M-code validation handler if M-code is to be executed after synchronization.
     gc_modal_t modal;                   //!< The current modal state is copied here before parsing starts.
+    spindle_modal_t spindle_modal;
     gc_values_t values;                 //!< Parameter values for block.
     parameter_words_t words;            //!< Bitfield for tracking found parameter values.
     output_command_t output_command;    //!< Details about M62-M68 output command to execute if present in block.
     uint32_t arc_turns;                 //
-    spindle_ptrs_t *spindle;            //!< Spindle to control, NULL for all
 #if NGC_PARAMETERS_ENABLE
     modal_state_action_t state_action;  //!< M70-M73 modal state action
 #endif
@@ -676,7 +680,7 @@ float *gc_get_scaling (void);
 // Get current axis offset.
 float gc_get_offset (uint_fast8_t idx, bool real_time);
 
-spindle_ptrs_t *gc_spindle_get (void);
+spindle_t *gc_spindle_get (spindle_num_t spindle);
 
 void gc_spindle_off (void);
 void gc_coolant (coolant_state_t state);

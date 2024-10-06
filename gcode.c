@@ -38,7 +38,7 @@
 
 // NOTE: Max line number is defined by the g-code standard to be 99999. It seems to be an
 // arbitrary value, and some GUIs may require more. So we increased it based on a max safe
-// value when converting a float (7.2 digit precision)s to an integer.
+// value when converting a float (7.2 digit precision) to an integer.
 #define MAX_LINE_NUMBER 10000000
 #define MAX_TOOL_NUMBER 4294967294 // Limited by max unsigned 32-bit value - 1
 
@@ -147,6 +147,14 @@ inline static bool motion_is_lasercut (motion_mode_t motion)
 parser_state_t *gc_get_state (void)
 {
     return &gc_state;
+}
+
+static void set_spindle_override (spindle_t *spindle, bool disable)
+{
+    if(spindle->hal && spindle->hal->param->state.override_disable != disable) {
+        if((spindle->state.override_disable = spindle->hal->param->state.override_disable = disable))
+            spindle_set_override(gc_state.spindle->hal, DEFAULT_SPINDLE_RPM_OVERRIDE);
+    }
 }
 
 static void set_scaling (float factor)
@@ -299,7 +307,14 @@ void gc_init (void)
 
     // Load default override status
     gc_state.modal.override_ctrl = sys.override.control;
-    gc_state.spindle.hal = spindle_get(0);
+
+#if N_SYS_SPINDLE > 1
+    gc_state.spindle = &gc_state.modal.spindle[0];
+    gc_state.modal.spindle[0].hal = spindle_get(0);
+#else
+    gc_state.spindle = &gc_state.modal.spindle;
+    gc_state.modal.spindle.hal = spindle_get(0);
+#endif
 
     set_scaling(1.0f);
 
@@ -343,10 +358,25 @@ bool gc_laser_ppi_enable (uint_fast16_t ppi, uint_fast16_t pulse_length)
     return grbl.on_laser_ppi_enable && grbl.on_laser_ppi_enable(ppi, pulse_length);
 }
 
+spindle_t *gc_spindle_get (spindle_num_t spindle)
+{
+#if N_SYS_SPINDLE > 1
+    return spindle < 0 ? gc_state.spindle : &gc_state.modal.spindle[spindle];
+#else
+    return &gc_state.modal.spindle;
+#endif
+}
+
 void gc_spindle_off (void)
 {
-    gc_state.spindle.rpm = 0.0f;
-    gc_state.modal.spindle.state.value = 0;
+#if N_SYS_SPINDLE > 1
+    uint_fast8_t idx;
+    for(idx = 0; idx < N_SYS_SPINDLE; idx++) {
+        memset(&gc_state.modal.spindle[idx], 0, offsetof(spindle_t, hal));
+    }
+#else
+    memset(&gc_state.modal.spindle, 0, offsetof(spindle_t, hal));
+#endif
 
     spindle_all_off();
     system_add_rt_report(Report_Spindle);
@@ -357,11 +387,6 @@ void gc_coolant (coolant_state_t state)
     gc_state.modal.coolant = state;
     hal.coolant.set_state(gc_state.modal.coolant);
     system_add_rt_report(Report_Coolant);
-}
-
-spindle_ptrs_t *gc_spindle_get (void)
-{
-    return gc_state.spindle.hal;
 }
 
 static void add_offset (void)
@@ -655,12 +680,23 @@ bool gc_modal_state_restore (gc_modal_t *copy)
             delay_sec(settings.safety_door.coolant_on_delay, DelayMode_SysSuspend);
         }
 
-        if(copy->spindle.state.value != gc_state.modal.spindle.state.value || copy->rpm != gc_state.modal.rpm)
-            spindle_restore(gc_state.spindle.hal, copy->spindle.state, copy->rpm);
+#if N_SYS_SPINDLE > 1
+        uint_fast8_t idx = N_SYS_SPINDLE;
+        spindle_t *spindle, *spindle_copy;
+        do {
+            if((spindle = &gc_state.modal.spindle[--idx])->hal) {
+                spindle_copy = &copy->spindle[idx];
+                if(!memcmp(spindle_copy, spindle, offsetof(spindle_t, hal)))
+                    spindle_restore(spindle->hal, spindle_copy->state, spindle_copy->rpm);
+            }
+        } while(idx);
+#else
+        if(!memcmp(&copy->spindle, &gc_state.modal.spindle, offsetof(spindle_t, hal)))
+            spindle_restore(gc_state.modal.spindle.hal, copy->spindle.state, copy->spindle.rpm);
+#endif
 
         memcpy(&gc_state.modal, copy, sizeof(gc_modal_t));
 
-        gc_state.spindle.rpm = gc_state.modal.rpm;
         gc_state.feed_rate = gc_state.modal.feed_rate;
     }
 
@@ -713,8 +749,6 @@ char *gc_normalize_block (char *block, char **message)
                     *s1 = '\0';
                     if(!hal.driver_cap.no_gcode_message_handling) {
 
-                        size_t len = s1 - comment - 4;
-
                         if(message && *message == NULL) {
 #if NGC_EXPRESSIONS_ENABLE
                             if(!strncmp(comment, "(DEBUG,", 7)) { // Debug message string substitution
@@ -733,6 +767,8 @@ char *gc_normalize_block (char *block, char **message)
                                 }
                             }
 #else
+                            size_t len = s1 - comment - 4;
+
                             if(!strncmp(comment, "(MSG,", 5) && (*message = malloc(len))) {
 
                                 comment += 5;
@@ -937,11 +973,12 @@ status_code_t gc_execute_block (char *block)
     bool set_tool = false, spindle_event = false;
     axis_command_t axis_command = AxisCommand_None;
     io_mcode_t port_command = (io_mcode_t)0;
+    spindle_t *sspindle = gc_state.spindle;
     plane_t plane;
 
     // Initialize bitflag tracking variables for axis indices compatible operations.
-    axes_signals_t axis_words = {0}; // XYZ tracking
-    ijk_words_t ijk_words = {0}; // IJK tracking
+    axes_signals_t axis_words = {0};    // XYZ tracking
+    ijk_words_t ijk_words = {0};        // IJK tracking
 
     // Initialize command and value words and parser flags variables.
     modal_groups_t command_words = {0};         // Bitfield for tracking G and M command words. Also used for modal group violations.
@@ -954,7 +991,7 @@ status_code_t gc_execute_block (char *block)
         gc_parser_flags.jog_motion = On;
         gc_block.modal.motion = MotionMode_Linear;
         gc_block.modal.feed_mode = FeedMode_UnitsPerMin;
-        gc_block.modal.spindle.rpm_mode = SpindleSpeedMode_RPM;
+        gc_block.spindle_modal.rpm_mode = SpindleSpeedMode_RPM;
         gc_block.values.n = JOG_LINE_NUMBER; // Initialize default line number reported during jog.
     }
 
@@ -1275,7 +1312,7 @@ status_code_t gc_execute_block (char *block)
                     case 96: case 97:
                         if(settings.mode == Mode_Lathe) {
                             word_bit.modal_group.G14 = On;
-                            gc_block.modal.spindle.rpm_mode = (spindle_rpm_mode_t)((int_value - 96) ^ 1);
+                            gc_block.spindle_modal.rpm_mode = (spindle_rpm_mode_t)((int_value - 96) ^ 1);
                         } else
                             FAIL(Status_GcodeUnsupportedCommand);
                         break;
@@ -1346,9 +1383,9 @@ status_code_t gc_execute_block (char *block)
 
                     case 3: case 4: case 5:
                         word_bit.modal_group.M7 = On;
-                        gc_block.modal.spindle.state.on = !(int_value == 5);
-                        gc_block.modal.spindle.state.ccw = int_value == 4;
-                        sys.override_delay.spindle = On;
+                        gc_block.spindle_modal.state.on = !(int_value == 5);
+                        gc_block.spindle_modal.state.ccw = int_value == 4;
+//                        sys.override_delay.spindle = On; TODO: only when spindle sync?
                         break;
 
                     case 6:
@@ -1362,7 +1399,7 @@ status_code_t gc_execute_block (char *block)
 
                     case 7: case 8: case 9:
                         word_bit.modal_group.M8 = On;
-                        sys.override_delay.coolant = On;
+//                        sys.override_delay.coolant = On; TODO: ?
                         gc_parser_flags.set_coolant = On;
                         switch(int_value) {
 
@@ -1757,6 +1794,10 @@ status_code_t gc_execute_block (char *block)
 
   // [0. Non-specific/common error-checks and miscellaneous setup]:
 
+    // If a G65 block remove axis and ijk words flags since values are to be passed unmodified.
+    if(word_bit.modal_group.G0 && gc_block.non_modal_command == NonModal_MacroCall)
+        axis_words.mask = ijk_words.mask = 0;
+
     // Determine implicit axis command conditions. Axis words have been passed, but no explicit axis
     // command has been sent. If so, set axis command to current motion mode.
     if (axis_words.mask && !axis_command)
@@ -1872,55 +1913,65 @@ status_code_t gc_execute_block (char *block)
                                     (command_words.G0 && (gc_block.modal.motion == MotionMode_SpindleSynchronized ||
                                                            gc_block.modal.motion == MotionMode_RigidTapping ||
                                                             gc_block.modal.motion == MotionMode_Threading)) ||
-                                      command_words.G14 ||
-                                       (command_words.M9 && gc_block.override_command == Override_SpindleSpeed);
+                                     (command_words.G5 && gc_block.modal.feed_mode == FeedMode_UnitsPerRev) ||
+                                       command_words.G14 ||
+                                        (command_words.M9 && gc_block.override_command == Override_SpindleSpeed);
         if(command_words.M7 || single_spindle_only) {
             if(gc_block.values.$ < (single_spindle_only ? 0 : -1))
                 FAIL(single_spindle_only ? Status_NegativeValue : Status_GcodeValueOutOfRange);
-            if(!spindle_is_enabled(gc_block.values.$))
+#if N_SYS_SPINDLE > 1
+            if(gc_block.values.$ < 0)
+                sspindle = NULL;
+            else {
+                if(!spindle_is_enabled(gc_block.values.$))
+                    FAIL(Status_GcodeValueOutOfRange);
+                if(gc_state.modal.spindle[gc_block.values.$].hal == NULL)
+                    gc_state.modal.spindle[gc_block.values.$].hal = spindle_get(gc_block.values.$);
+                sspindle = &gc_state.modal.spindle[gc_block.values.$];
+            }
+#else
+            if(gc_block.values.$ > 0)
                 FAIL(Status_GcodeValueOutOfRange);
-            if(gc_block.values.$ >= 0)
-                gc_state.spindle.hal = gc_block.spindle = spindle_get(gc_block.values.$);
+#endif
             gc_block.words.$ = Off;
         }
-    } else if(gc_block.spindle == NULL)
-        gc_block.spindle = gc_state.spindle.hal;
+    }
 
-    if(gc_block.modal.feed_mode == FeedMode_UnitsPerRev && !gc_state.spindle.hal->get_data)
+    if(gc_block.modal.feed_mode == FeedMode_UnitsPerRev && (sspindle == NULL || !sspindle->hal->get_data))
         FAIL(Status_GcodeUnsupportedCommand); // [G95 not supported]
 
-    if (command_words.G14) {
-        if(gc_block.modal.spindle.rpm_mode == SpindleSpeedMode_CSS) {
-            if(!gc_state.spindle.hal->cap.variable)
+    if(command_words.G14) {
+        if(gc_block.spindle_modal.rpm_mode == SpindleSpeedMode_CSS) {
+            if(!sspindle->hal->cap.variable)
                 FAIL(Status_GcodeUnsupportedCommand);
-            if (!gc_block.words.s) // TODO: add check for S0?
+            if(!gc_block.words.s) // TODO: add check for S0?
                 FAIL(Status_GcodeValueWordMissing);
     // see below!! gc_block.values.s *= (gc_block.modal.units_imperial ? MM_PER_INCH * 12.0f : 1000.0f); // convert surface speed to mm/min
-            if (gc_block.words.d) {
-                gc_state.spindle.hal->param->css.max_rpm = min(gc_block.values.d, gc_state.spindle.hal->rpm_max);
+            if(gc_block.words.d) {
+                sspindle->hal->param->css.max_rpm = min(gc_block.values.d, sspindle->hal->rpm_max);
                 gc_block.words.d = Off;
             } else
-                gc_state.spindle.hal->param->css.max_rpm = gc_state.spindle.hal->rpm_max;
-        } else if(gc_state.modal.spindle.rpm_mode == SpindleSpeedMode_CSS) {
-            if(gc_state.spindle.css) {
-                gc_state.spindle.css = NULL;
+                sspindle->hal->param->css.max_rpm = sspindle->hal->rpm_max;
+        } else if(sspindle->rpm_mode == SpindleSpeedMode_CSS) {
+            if(sspindle->css) {
+                sspindle->css = NULL;
                 protocol_buffer_synchronize(); // Empty planner buffer to ensure we get RPM at end of last CSS motion
             }
-            gc_state.spindle.rpm = gc_state.spindle.hal->param->rpm; // Is it correct to restore latest spindle RPM here?
+            sspindle->rpm = sspindle->hal->param->rpm; // Is it correct to restore latest spindle RPM here?
         }
-        gc_state.modal.spindle.rpm_mode = gc_block.modal.spindle.rpm_mode;
-    }
+        sspindle->rpm_mode = gc_block.spindle_modal.rpm_mode;
+    } else if(sspindle)
+        gc_block.spindle_modal.rpm_mode = sspindle->rpm_mode;
 
-    spindle_event = gc_block.words.s;
-
-    if(!gc_block.words.s)
-        gc_block.values.s = gc_state.modal.spindle.rpm_mode == SpindleSpeedMode_RPM ? gc_state.spindle.rpm : gc_state.spindle.hal->param->css.max_rpm;
-    else if(gc_state.modal.spindle.rpm_mode == SpindleSpeedMode_CSS) {
-        // Unsure what to do about S values when in SpindleSpeedMode_CSS - ignore? For now use it to (re)calculate surface speed.
-        // Reinsert commented out code above if this is removed!!
-        gc_block.values.s *= (gc_block.modal.units_imperial ? MM_PER_INCH * 12.0f : 1000.0f); // convert surface speed to mm/min
-        gc_state.spindle.hal->param->css.surface_speed = gc_block.values.s;
-    }
+    if((spindle_event = gc_block.words.s)) {
+        if(sspindle->rpm_mode == SpindleSpeedMode_CSS) {
+            // Unsure what to do about S values when in SpindleSpeedMode_CSS - ignore? For now use it to (re)calculate surface speed.
+            // Reinsert commented out code above if this is removed!!
+            gc_block.values.s *= (gc_block.modal.units_imperial ? MM_PER_INCH * 12.0f : 1000.0f); // convert surface speed to mm/min
+            sspindle->hal->param->css.surface_speed = gc_block.values.s;
+        }
+    } else if(sspindle)
+        gc_block.values.s = sspindle->rpm_mode == SpindleSpeedMode_RPM ? sspindle->rpm : sspindle->hal->param->css.max_rpm;
 
     // bit_false(gc_block.words,bit(Word_S)); // NOTE: Single-meaning value word. Set at end of error-checking.
 
@@ -1950,7 +2001,7 @@ status_code_t gc_execute_block (char *block)
     } else if(!gc_block.words.t)
         gc_block.values.t = gc_state.tool_pending;
 
-    if(command_words.M10 && port_command) {
+    if(command_words.M5 && port_command) {
 
         switch(port_command) {
 
@@ -2025,18 +2076,24 @@ status_code_t gc_execute_block (char *block)
     // [6. Change tool ]: N/A
 
     // [7. Spindle control ]:
-    if(command_words.M7 && gc_block.modal.spindle.state.ccw) {
-        // Check if spindle(s) support reversing direction
-        if(gc_block.spindle == NULL) {
-            uint_fast8_t idx = N_SYS_SPINDLE;
-            do {
-                idx--;
-                if(spindle_is_enabled(idx) && !(spindle_get(idx)->cap.direction || spindle_get(idx)->cap.laser))
-                    FAIL(Status_GcodeUnsupportedCommand);
-            } while(idx);
-        } else if(!(gc_block.spindle->cap.direction || gc_block.spindle->cap.laser))
-            FAIL(Status_GcodeUnsupportedCommand);
-    }
+    if(command_words.M7) {
+        if(gc_block.spindle_modal.state.ccw) {
+            // Check if spindle(s) support reversing direction
+#if N_SYS_SPINDLE > 1
+            if(sspindle == NULL) {
+                uint_fast8_t idx = N_SYS_SPINDLE;
+                do {
+                    idx--;
+                    if(gc_state.modal.spindle[idx].hal && !(gc_state.modal.spindle[idx].hal->cap.direction || gc_state.modal.spindle[idx].hal->cap.laser))
+                        FAIL(Status_GcodeUnsupportedCommand);
+                } while(idx);
+            } else
+#endif
+            if(!(sspindle->hal->cap.direction || sspindle->hal->cap.laser))
+                FAIL(Status_GcodeUnsupportedCommand);
+        }
+    } else if(sspindle)
+        gc_block.spindle_modal.state = sspindle->state;
 
     // [8. Coolant control ]: N/A
 
@@ -2585,13 +2642,13 @@ status_code_t gc_execute_block (char *block)
                 gc_block.modal.retract_mode = CCRetractMode_Previous;
 
             // Initial(?) check for spindle running for moves in G96 mode
-            if(gc_block.modal.spindle.rpm_mode == SpindleSpeedMode_CSS && (!gc_block.modal.spindle.state.on || gc_block.values.s == 0.0f))
+            if(gc_block.spindle_modal.rpm_mode == SpindleSpeedMode_CSS && (!gc_block.spindle_modal.state.on || gc_block.values.s == 0.0f))
                  FAIL(Status_GcodeSpindleNotRunning);
 
             // Check if feed rate is defined for the motion modes that require it.
-            if (gc_block.modal.motion == MotionMode_SpindleSynchronized) {
+            if(gc_block.modal.motion == MotionMode_SpindleSynchronized) {
 
-                if(!gc_state.spindle.hal->get_data)
+                if(!sspindle->hal->get_data)
                     FAIL(Status_GcodeUnsupportedCommand); // [G33, G33.1]
 
                 if(gc_block.values.k == 0.0f)
@@ -2600,11 +2657,11 @@ status_code_t gc_execute_block (char *block)
                 // Ensure spindle speed is at 100% - any override will be disabled on execute.
                 gc_parser_flags.spindle_force_sync = On;
 
-            } else if (gc_block.modal.motion == MotionMode_Threading) {
+            } else if(gc_block.modal.motion == MotionMode_Threading) {
 
                 // Fail if cutter radius comp is active
 
-                if(!gc_state.spindle.hal->get_data)
+                if(!sspindle->hal->get_data)
                     FAIL(Status_GcodeUnsupportedCommand); // [G76 not supported]
 
                 if(gc_block.modal.plane_select != PlaneSelect_ZX)
@@ -2628,7 +2685,7 @@ status_code_t gc_execute_block (char *block)
                       (gc_block.words.l && (gc_taper_type)gc_block.values.l > Taper_Both))
                     FAIL(Status_GcodeValueOutOfRange);
 
-                if(gc_state.spindle.rpm < gc_state.spindle.hal->rpm_min || gc_state.spindle.rpm > gc_state.spindle.hal->rpm_max)
+                if(sspindle->rpm < sspindle->hal->rpm_min || sspindle->rpm > sspindle->hal->rpm_max)
                     FAIL(Status_GcodeRPMOutOfRange);
 
                 if(gc_block.modal.motion != gc_state.modal.motion) {
@@ -3113,30 +3170,35 @@ status_code_t gc_execute_block (char *block)
     // NOTE: G-code parser state is not updated, except the position to ensure sequential jog
     // targets are computed correctly. The final parser position after a jog is updated in
     // protocol_execute_realtime() when jogging completes or is canceled.
-    if (gc_parser_flags.jog_motion) {
+    if(gc_parser_flags.jog_motion) {
 
         // Only distance and unit modal commands and G53 absolute override command are allowed.
         // NOTE: Feed rate word and axis word checks have already been performed in STEP 3.
-        if (command_words.mask & ~jog_groups.mask)
+        if(command_words.mask & ~jog_groups.mask)
             FAIL(Status_InvalidJogCommand);
 
-        if (!(gc_block.non_modal_command == NonModal_AbsoluteOverride || gc_block.non_modal_command == NonModal_NoAction))
+        if(!(gc_block.non_modal_command == NonModal_AbsoluteOverride || gc_block.non_modal_command == NonModal_NoAction))
             FAIL(Status_InvalidJogCommand);
+
+#if N_SYS_SPINDLE > 1
+        spindle_t *spindle = sspindle ? sspindle : gc_state.modal.spindle;
+#else
+        spindle_t *spindle = &gc_block.modal.spindle;
+#endif
 
         // Initialize planner data to current spindle and coolant modal state.
-        memcpy(&plan_data.spindle, &gc_state.spindle, sizeof(spindle_t));
-        plan_data.spindle.state = gc_state.modal.spindle.state;
+        memcpy(&plan_data.spindle, spindle, sizeof(spindle_t));
         plan_data.condition.coolant = gc_state.modal.coolant;
-        plan_data.condition.is_rpm_rate_adjusted = gc_state.is_rpm_rate_adjusted || (gc_state.modal.spindle.state.ccw && gc_state.spindle.hal->cap.laser);
+        plan_data.condition.is_rpm_rate_adjusted = gc_state.is_rpm_rate_adjusted || (spindle->state.ccw && spindle->hal->cap.laser);
 
-        if ((status_code_t)(int_value = (uint_fast16_t)mc_jog_execute(&plan_data, &gc_block, gc_state.position)) == Status_OK)
+        if((status_code_t)(int_value = (uint_fast16_t)mc_jog_execute(&plan_data, &gc_block, gc_state.position)) == Status_OK)
             memcpy(gc_state.position, gc_block.values.xyz, sizeof(gc_state.position));
 
         return (status_code_t)int_value;
     }
 
     // If in laser mode, setup laser power based on current and past parser conditions.
-    if(gc_state.spindle.hal->cap.laser) {
+    if(sspindle && sspindle->hal->cap.laser) {
 
         if(!motion_is_lasercut(gc_block.modal.motion))
             gc_parser_flags.laser_disable = On;
@@ -3146,7 +3208,7 @@ status_code_t gc_execute_block (char *block)
         // TODO: Check sync conditions for M3 enabled motions that don't enter the planner. (zero length).
         if(axis_words.mask && (axis_command == AxisCommand_MotionMode))
             gc_parser_flags.laser_is_motion = On;
-        else if(gc_state.modal.spindle.state.on && !gc_state.modal.spindle.state.ccw) {
+        else if(sspindle->state.on && !sspindle->state.ccw) {
             // M3 constant power laser requires planner syncs to update the laser when changing between
             // a G1/2/3 motion mode state and vice versa when there is no motion in the line.
             if(motion_is_lasercut(gc_state.modal.motion)) {
@@ -3156,7 +3218,7 @@ status_code_t gc_execute_block (char *block)
                 gc_parser_flags.spindle_force_sync = On;
         }
 
-        gc_state.is_rpm_rate_adjusted = gc_state.modal.spindle.state.ccw && !gc_parser_flags.laser_disable;
+        gc_state.is_rpm_rate_adjusted = sspindle->state.ccw && !gc_parser_flags.laser_disable;
     }
 
     // [0. Non-specific/common error-checks and miscellaneous setup]:
@@ -3180,42 +3242,40 @@ status_code_t gc_execute_block (char *block)
     plan_data.feed_rate = gc_state.feed_rate; // Record data for planner use.
 
     // [4. Set spindle speed ]:
-    if(gc_state.modal.spindle.rpm_mode == SpindleSpeedMode_CSS) {
+
+#if N_SYS_SPINDLE > 1
+  if(sspindle) {
+#endif // N_SYS_SPINDLE > 1
+
+    if(sspindle->rpm_mode == SpindleSpeedMode_CSS) {
         if(gc_block.modal.motion != MotionMode_None && gc_block.modal.motion != MotionMode_Seek) {
-            gc_state.spindle.css = &gc_state.spindle.hal->param->css;
-            gc_state.spindle.css->axis = plane.axis_1;
-            gc_state.spindle.css->tool_offset = gc_get_offset(gc_state.spindle.css->axis, false);
-            float pos = gc_state.position[gc_state.spindle.css->axis] - gc_state.spindle.css->tool_offset;
-            gc_block.values.s = pos <= 0.0f ? gc_state.spindle.css->max_rpm : min(gc_state.spindle.css->max_rpm, gc_state.spindle.css->surface_speed / (pos * (float)(2.0f * M_PI)));
+            sspindle->css = &sspindle->hal->param->css;
+            sspindle->css->axis = plane.axis_1;
+            sspindle->css->tool_offset = gc_get_offset(plane.axis_1, false);
+            float pos = gc_state.position[plane.axis_1] - sspindle->css->tool_offset;
+            gc_block.values.s = pos <= 0.0f ? sspindle->css->max_rpm : min(sspindle->css->max_rpm, sspindle->css->surface_speed / (pos * (float)(2.0f * M_PI)));
 //??            gc_parser_flags.spindle_force_sync = On;
         } else {
-            if(gc_state.spindle.css) {
-                gc_state.spindle.css = NULL;
+            if(sspindle->css) {
+                sspindle->css = NULL;
                 protocol_buffer_synchronize(); // Empty planner buffer to ensure we get RPM at end of last CSS motion
             }
-            gc_block.values.s = gc_state.spindle.rpm; //gc_state.spindle.hal->param->rpm; // Keep current RPM
+            gc_block.values.s = sspindle->rpm; //sspindle.hal->param->rpm; // Keep current RPM
         }
     }
 
-    if(gc_state.spindle.rpm != gc_block.values.s || gc_parser_flags.spindle_force_sync) {
-        if(gc_state.modal.spindle.state.on && !gc_parser_flags.laser_is_motion) {
-            if(gc_block.spindle) {
-                gc_block.spindle->param->rpm = gc_block.values.s;
-                spindle_sync(gc_block.spindle, gc_state.modal.spindle.state, gc_parser_flags.laser_disable ? 0.0f : gc_block.values.s);
-            }
-            // else... - setting the same rpm for multiple spindles at once is not allowed!
+    if(sspindle->rpm != gc_block.values.s || gc_parser_flags.spindle_force_sync) {
+        if(sspindle->state.on && !gc_parser_flags.laser_is_motion) {
+            sspindle->hal->param->rpm = gc_block.values.s;
+            spindle_sync(sspindle->hal, sspindle->state, gc_parser_flags.laser_disable ? 0.0f : gc_block.values.s);
         }
-        gc_state.spindle.rpm = gc_block.values.s; // Update spindle speed state.
+        sspindle->rpm = gc_block.values.s; // Update spindle speed state.
     }
+#if N_SYS_SPINDLE > 1
+  }
+#endif
 
-    // NOTE: Pass zero spindle speed for all restricted laser motions.
-    if (!gc_parser_flags.laser_disable)
-        memcpy(&plan_data.spindle, &gc_state.spindle, sizeof(spindle_t)); // Record data for planner use.
-    else {
-        plan_data.spindle.hal = gc_state.spindle.hal;
-    //  plan_data.spindle.speed = 0.0f; // Initialized as zero already.
-    }
-
+    //
     // [5. Select tool ]: Only tracks tool value if ATC or manual tool change is not possible.
     if(gc_state.tool_pending != gc_block.values.t && !check_mode) {
 
@@ -3228,12 +3288,14 @@ status_code_t gc_execute_block (char *block)
 
             if(grbl.on_tool_selected) {
 
-                spindle_state_t state = gc_state.modal.spindle.state;
+                spindle_state_t state = sspindle ? sspindle->state : (spindle_state_t){0};
 
-                grbl.on_tool_selected(gc_state.tool);
+                grbl.on_tool_selected(pending_tool);
 
-                if(state.value != gc_state.modal.spindle.state.value)
-                    gc_block.modal.spindle.state = gc_state.modal.spindle.state;
+                if(sspindle && state.value != sspindle->state.value) {
+                    command_words.M7 = On;
+                    gc_block.spindle_modal.state = sspindle->state;
+                }
             }
 
             if(grbl.on_tool_changed)
@@ -3281,7 +3343,7 @@ status_code_t gc_execute_block (char *block)
     }
 
     // [6. Change tool ]: Delegated to (possible) driver implementation
-    if (command_words.M6 && !set_tool && !check_mode) {
+    if(command_words.M6 && !set_tool && !check_mode) {
 
         tool_data_t *pending_tool = tool_get_pending(gc_state.tool_pending);
 
@@ -3296,12 +3358,14 @@ status_code_t gc_execute_block (char *block)
 
             if(grbl.on_tool_selected) {
 
-                spindle_state_t state = gc_state.modal.spindle.state;
+                spindle_state_t state = sspindle ? sspindle->state : (spindle_state_t){0};
 
                 grbl.on_tool_selected(pending_tool);
 
-                if(state.value != gc_state.modal.spindle.state.value)
-                    gc_block.modal.spindle.state = gc_state.modal.spindle.state;
+                if(sspindle && state.value != sspindle->state.value) {
+                    command_words.M7 = On;
+                    gc_block.spindle_modal.state = sspindle->state;
+                }
             }
 
             if(hal.tool.change) { // ATC
@@ -3334,40 +3398,72 @@ status_code_t gc_execute_block (char *block)
     }
 
     // [7. Spindle control ]:
-    if(gc_state.modal.spindle.state.value != gc_block.modal.spindle.state.value) {
-        // Update spindle control and apply spindle speed when enabling it in this block.
-        // NOTE: All spindle state changes are synced, even in laser mode. Also, plan_data,
-        // rather than gc_state, is used to manage laser state for non-laser motions.
-        bool spindle_ok = false;
-        if(gc_block.spindle) {
-            if(grbl.on_spindle_programmed)
-                grbl.on_spindle_programmed(gc_block.spindle, gc_block.modal.spindle.state, plan_data.spindle.rpm, gc_block.modal.spindle.rpm_mode);
-            if((spindle_ok = spindle_sync(gc_block.spindle, gc_block.modal.spindle.state, plan_data.spindle.rpm)))
-                gc_block.spindle->param->state = gc_block.modal.spindle.state;
-        } else {
+    // Update spindle control and apply spindle speed when enabling it in this block.
+    // NOTE: All spindle state changes are synced, even in laser mode. Also, plan_data,
+    // rather than gc_state, is used to manage laser state for non-laser motions.
+    if(command_words.M7) {
+
+        bool spindle_ok;
+
+#if N_SYS_SPINDLE > 1
+
+        if(sspindle == NULL) {
+
             idx = N_SYS_SPINDLE;
             do {
-                if(spindle_is_enabled(--idx)) {
-                    spindle_ptrs_t *spindle = spindle_get(idx);
-                    if(grbl.on_spindle_programmed)
-                        grbl.on_spindle_programmed(spindle, gc_block.modal.spindle.state, plan_data.spindle.rpm, gc_block.modal.spindle.rpm_mode);
-                    if(spindle_sync(spindle, gc_block.modal.spindle.state, plan_data.spindle.rpm))
-                        spindle->param->state = gc_block.modal.spindle.state;
-                    else
-                        spindle_ok = false;
+                spindle_t *sys_spindle = &gc_state.modal.spindle[--idx];
+                if(sys_spindle->hal) {
+
+                    if((spindle_ok = sys_spindle->state.value != gc_block.spindle_modal.state.value)) {
+
+                        if(grbl.on_spindle_programmed)
+                            grbl.on_spindle_programmed(sys_spindle->hal, gc_block.spindle_modal.state, sys_spindle->rpm, sys_spindle->rpm_mode);
+
+                        if((spindle_ok = spindle_sync(sys_spindle->hal, gc_block.spindle_modal.state, sys_spindle->rpm))) {
+                            if((sys_spindle->state = sys_spindle->hal->param->state = gc_block.spindle_modal.state).on)
+                                sspindle = sys_spindle;
+                        }
+                    }
+
+                    if((spindle_ok ? false : (!spindle_ok || spindle_event)) && grbl.on_spindle_programmed)
+                        grbl.on_spindle_programmed(sys_spindle->hal, sys_spindle->state, sys_spindle->rpm, sys_spindle->rpm_mode);
                 }
             } while(idx);
+
+            spindle_event = false;
+
+        } else
+
+#endif // N_SYS_SPINDLE > 1
+
+        if((spindle_ok = sspindle->state.value != gc_block.spindle_modal.state.value)) {
+
+            if(grbl.on_spindle_programmed)
+                grbl.on_spindle_programmed(sspindle->hal, gc_block.spindle_modal.state, sspindle->rpm, sspindle->rpm_mode);
+
+            if((spindle_ok = spindle_sync(sspindle->hal, gc_block.spindle_modal.state, sspindle->rpm)))
+                sspindle->state = sspindle->hal->param->state = gc_block.spindle_modal.state;
+
+            spindle_event = !spindle_ok;
         }
-        if(!(spindle_event = !spindle_ok))
-            gc_state.modal.spindle.state = gc_block.modal.spindle.state;
+
+        if(spindle_event && grbl.on_spindle_programmed)
+            grbl.on_spindle_programmed(sspindle->hal, sspindle->state, sspindle->rpm, sspindle->rpm_mode);
     }
 
-    if(spindle_event && grbl.on_spindle_programmed)
-        grbl.on_spindle_programmed(gc_state.spindle.hal, gc_state.modal.spindle.state, gc_state.spindle.rpm, gc_state.modal.spindle.rpm_mode);
+    if(sspindle != NULL)
+        gc_state.spindle = sspindle; // for now
 
+    // NOTE: Pass zero spindle speed for all restricted laser motions.
+    if(!gc_parser_flags.laser_disable)
+        memcpy(&plan_data.spindle, gc_state.spindle, sizeof(spindle_t)); // Record data for planner use.
+    else {
+        plan_data.spindle.hal = gc_state.spindle->hal;
+    //  plan_data.spindle.speed = 0.0f; // Initialized as zero already.
+    }
 // TODO: Recheck spindle running in CCS mode (is_rpm_pos_adjusted == On)?
 
-    plan_data.spindle.state = gc_state.modal.spindle.state; // Set condition flag for planner use.
+    plan_data.spindle.state = gc_state.spindle->state; // Set condition flag for planner use.
     plan_data.condition.is_rpm_rate_adjusted = gc_state.is_rpm_rate_adjusted;
     plan_data.condition.is_laser_ppi_mode = gc_state.is_rpm_rate_adjusted && gc_state.is_laser_ppi_mode;
 
@@ -3378,7 +3474,6 @@ status_code_t gc_execute_block (char *block)
 
         case ModalState_Save:
         case ModalState_SaveAutoRestore:
-            gc_state.modal.rpm = gc_state.spindle.rpm;
             gc_state.modal.feed_rate = gc_state.feed_rate;
             if(!ngc_modal_state_save(&gc_state.modal, gc_block.state_action == ModalState_SaveAutoRestore))
                 FAIL(Status_FlowControlOutOfMemory); // [Out of memory] TODO: allocate memory during validation? Static allocation?
@@ -3411,16 +3506,23 @@ status_code_t gc_execute_block (char *block)
     sys.override_delay.flags = 0;
 
     // [9. Override control ]:
-    if (gc_state.modal.override_ctrl.value != gc_block.modal.override_ctrl.value) {
+    if(command_words.M9 && gc_state.modal.override_ctrl.value != gc_block.modal.override_ctrl.value) {
 
         gc_state.modal.override_ctrl = gc_block.modal.override_ctrl;
-        gc_state.modal.spindle.state.override_disable = gc_state.spindle.hal->param->state.override_disable = gc_state.modal.override_ctrl.spindle_rpm_disable;
+
+#if N_SYS_SPINDLE > 1
+        if(sspindle == NULL) {
+            uint_fast8_t idx = N_SYS_SPINDLE;
+            do {
+                set_spindle_override(&gc_state.modal.spindle[--idx], gc_state.modal.override_ctrl.spindle_rpm_disable);
+            } while(idx);
+        } else
+#else
+        set_spindle_override(sspindle, gc_state.modal.override_ctrl.spindle_rpm_disable);
+#endif
 
         if(gc_state.modal.override_ctrl.feed_rate_disable)
             plan_feed_override(0, 0);
-
-        if(gc_state.modal.override_ctrl.spindle_rpm_disable)
-            spindle_set_override(gc_state.spindle.hal, DEFAULT_SPINDLE_RPM_OVERRIDE);
 
         mc_override_ctrl_update(gc_state.modal.override_ctrl); // NOTE: must be called last!
     }
@@ -3841,7 +3943,6 @@ status_code_t gc_execute_block (char *block)
             gc_block.modal.canned_cycle_active = false;
             gc_state.modal.plane_select = PlaneSelect_XY;
 //            gc_state.modal.plane_select = settings.flags.lathe_mode ? PlaneSelect_ZX : PlaneSelect_XY;
-            gc_state.modal.spindle.rpm_mode = SpindleSpeedMode_RPM; // NOTE: not compliant with linuxcnc (?)
             gc_state.modal.distance_incremental = false;
             gc_state.modal.feed_mode = FeedMode_UnitsPerMin;
 // TODO: check           gc_state.distance_per_rev = 0.0f;
@@ -3850,20 +3951,32 @@ status_code_t gc_execute_block (char *block)
                 gc_state.modal.coord_system.id = CoordinateSystem_G54;
                 system_add_rt_report(Report_GWCO);
             }
-            gc_state.modal.spindle.state = (spindle_state_t){0};
             gc_state.modal.coolant = (coolant_state_t){0};
             gc_state.modal.override_ctrl.feed_rate_disable = Off;
             gc_state.modal.override_ctrl.spindle_rpm_disable = Off;
 
+#if N_SYS_SPINDLE > 1
+
             idx = N_SYS_SPINDLE;
-            spindle_ptrs_t *spindle;
+            spindle_t *spindle;
             do {
-                if((spindle = spindle_get(--idx))) {
-                    spindle->param->state.override_disable = Off;
+                if((spindle = &gc_state.modal.spindle[--idx])) {
+                    spindle->css = NULL;
+                    spindle->state = (spindle_state_t){0};
+                    spindle->rpm_mode = SpindleSpeedMode_RPM; // NOTE: not compliant with linuxcnc (?);
+                    spindle->hal->param->state.override_disable = Off;
                     if(settings.flags.restore_overrides)
-                        spindle->param->override_pct = DEFAULT_SPINDLE_RPM_OVERRIDE;
+                        spindle->hal->param->override_pct = DEFAULT_SPINDLE_RPM_OVERRIDE;
                 }
             } while(idx);
+#else
+            gc_state.modal.spindle.css = NULL;
+            gc_state.modal.spindle.state = (spindle_state_t){0};
+            gc_state.modal.spindle.rpm_mode = SpindleSpeedMode_RPM; // NOTE: not compliant with linuxcnc (?)
+            gc_state.modal.spindle.hal->param->state.override_disable = Off;
+            if(settings.flags.restore_overrides)
+                sspindle->hal->param->override_pct = DEFAULT_SPINDLE_RPM_OVERRIDE;
+#endif
 
             if(settings.parking.flags.enabled)
                 gc_state.modal.override_ctrl.parking_disable = settings.parking.flags.enable_override_control &&

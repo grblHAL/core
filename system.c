@@ -167,12 +167,12 @@ static status_code_t read_int (char *s, int32_t *value)
 // Reset spindle encoder data
 static status_code_t spindle_reset_data (sys_state_t state, char *args)
 {
-    spindle_ptrs_t *spindle = gc_spindle_get();
+    spindle_t *spindle = gc_spindle_get(-1);
 
-    if(spindle->reset_data)
-        spindle->reset_data();
+    if(spindle->hal->reset_data)
+        spindle->hal->reset_data();
 
-    return spindle->reset_data ? Status_OK : Status_InvalidStatement;
+    return spindle->hal->reset_data ? Status_OK : Status_InvalidStatement;
 }
 
 static status_code_t jog (sys_state_t state, char *args)
@@ -767,7 +767,7 @@ const char *help_rtc (const char *cmd)
 
 const char *help_spindle (const char *cmd)
 {
-    spindle_ptrs_t *spindle = gc_spindle_get();
+    spindle_ptrs_t *spindle = gc_spindle_get(0)->hal;
 
     if(cmd[1] == 'R' && spindle->reset_data)
         hal.stream.write("$SR - reset spindle encoder data." ASCII_EOL);

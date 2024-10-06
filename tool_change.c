@@ -137,10 +137,12 @@ static bool restore (void)
 
     if(protocol_buffer_synchronize()) {
 
+
         sync_position();
 
         coolant_sync(gc_state.modal.coolant);
-        spindle_restore(plan_data.spindle.hal, gc_state.modal.spindle.state, gc_state.spindle.rpm);
+        spindle_t *spindle = gc_spindle_get(-1);
+        spindle_restore(spindle->hal, spindle->state, spindle->rpm);
 
         if(!settings.flags.no_restore_position_after_M6) {
             previous.values[plane.axis_linear] += gc_get_offset(plane.axis_linear, false);

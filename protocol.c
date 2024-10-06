@@ -566,7 +566,6 @@ bool protocol_exec_rt_system (void)
                 sys.override.control = gc_state.modal.override_ctrl;
 
             gc_state.tool_change = false;
-            gc_state.modal.spindle.rpm_mode = SpindleSpeedMode_RPM;
 
             // Tell driver/plugins about reset.
             hal.driver_reset();
@@ -684,7 +683,7 @@ bool protocol_exec_rt_system (void)
     if(!sys.override_delay.spindle && (rt_exec = get_spindle_override())) {
 
         bool spindle_stop = false;
-        spindle_ptrs_t *spindle = gc_spindle_get();
+        spindle_ptrs_t *spindle = gc_spindle_get(-1)->hal;
         override_t last_s_override = spindle->param->override_pct;
 
         do {
@@ -727,7 +726,7 @@ bool protocol_exec_rt_system (void)
 
         spindle_set_override(spindle, last_s_override);
 
-        if (spindle_stop && state_get() == STATE_HOLD && gc_state.modal.spindle.state.on) {
+        if (spindle_stop && state_get() == STATE_HOLD && gc_spindle_get(-1)->state.on) {
             // Spindle stop override allowed only while in HOLD state.
             // NOTE: Report flag is set in spindle_set_state() when spindle stop is executed.
             if (!sys.override.spindle_stop.value)

@@ -724,8 +724,8 @@ void report_gcode_modes (void)
     hal.stream.write(" G");
     hal.stream.write(uitoa((uint32_t)(93 + (gc_state.modal.feed_mode == FeedMode_UnitsPerRev ? 2 : gc_state.modal.feed_mode ^ 1))));
 
-    if(settings.mode == Mode_Lathe && gc_spindle_get()->cap.variable)
-        hal.stream.write(gc_state.modal.spindle.rpm_mode == SpindleSpeedMode_RPM ? " G97" : " G96");
+    if(settings.mode == Mode_Lathe && gc_spindle_get(0)->hal->cap.variable)
+        hal.stream.write(gc_spindle_get(0)->rpm_mode == SpindleSpeedMode_RPM ? " G97" : " G96");
 
 #if COMPATIBILITY_LEVEL < 10
 
@@ -777,7 +777,7 @@ void report_gcode_modes (void)
         }
     }
 
-    hal.stream.write(gc_state.modal.spindle.state.on ? (gc_state.modal.spindle.state.ccw ? " M4" : " M3") : " M5");
+    hal.stream.write(gc_spindle_get(0)->state.on ? (gc_spindle_get(0)->state.ccw ? " M4" : " M3") : " M5");
 
     if(gc_state.tool_change)
         hal.stream.write(" M6");
@@ -809,8 +809,8 @@ void report_gcode_modes (void)
 
     hal.stream.write(appendbuf(2, " F", get_rate_value(gc_state.feed_rate)));
 
-    if(gc_spindle_get()->cap.variable)
-        hal.stream.write(appendbuf(2, " S", ftoa(gc_state.spindle.rpm, N_DECIMAL_RPMVALUE)));
+    if(gc_spindle_get(0)->hal->cap.variable)
+        hal.stream.write(appendbuf(2, " S", ftoa(gc_spindle_get(0)->rpm, N_DECIMAL_RPMVALUE)));
 
     hal.stream.write("]" ASCII_EOL);
 }
@@ -1450,12 +1450,13 @@ void report_realtime_status (void)
         static gc_modal_t last_state;
         static bool g92_active;
 
-        bool is_changed = feed_rate != gc_state.feed_rate || spindle_rpm != gc_state.spindle.rpm || tool_id != gc_state.tool->tool_id;
+        spindle_t *spindle = gc_spindle_get(0);
+        bool is_changed = feed_rate != gc_state.feed_rate || spindle_rpm != spindle->rpm || tool_id != gc_state.tool->tool_id;
 
         if(is_changed) {
             feed_rate = gc_state.feed_rate;
             tool_id = gc_state.tool->tool_id;
-            spindle_rpm = gc_state.spindle.rpm;
+            spindle_rpm = spindle->rpm;
         } else if ((is_changed = g92_active != is_g92_active()))
             g92_active = !g92_active;
         else if(memcmp(&last_state, &gc_state.modal, sizeof(gc_modal_t))) {
@@ -2199,12 +2200,12 @@ status_code_t report_current_home_signal_state (sys_state_t state, char *args)
 // Prints spindle data (encoder pulse and index count, angular position).
 status_code_t report_spindle_data (sys_state_t state, char *args)
 {
-    spindle_ptrs_t *spindle = gc_spindle_get();
+    spindle_t *spindle = gc_spindle_get(-1);
 
-    if(spindle->get_data) {
+    if(spindle->hal->get_data) {
 
-        float apos = spindle->get_data(SpindleData_AngularPosition)->angular_position;
-        spindle_data_t *data = spindle->get_data(SpindleData_Counters);
+        float apos = spindle->hal->get_data(SpindleData_AngularPosition)->angular_position;
+        spindle_data_t *data = spindle->hal->get_data(SpindleData_Counters);
 
         hal.stream.write("[SPINDLEENCODER:");
         hal.stream.write(uitoa(data->index_count));
@@ -2217,7 +2218,7 @@ status_code_t report_spindle_data (sys_state_t state, char *args)
         hal.stream.write("]" ASCII_EOL);
     }
 
-    return spindle->get_data ? Status_OK : Status_InvalidStatement;
+    return spindle->hal->get_data ? Status_OK : Status_InvalidStatement;
 }
 
 // Prints info about registered pins.
