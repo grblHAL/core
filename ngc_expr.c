@@ -716,7 +716,7 @@ other readers, depending upon the first character.
 \param value pointer to float where result is to be stored.
 \returns #Status_OK enum value if processed without error, appropriate \ref status_code_t enum value if not.
 */
-static status_code_t read_real_value (char *line, uint_fast8_t *pos, float *value)
+status_code_t read_real_value (char *line, uint_fast8_t *pos, float *value)
 {
     char c = line[*pos], c1;
 
