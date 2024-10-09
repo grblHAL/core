@@ -940,8 +940,14 @@ status_code_t gc_execute_block (char *block)
             if(gc_state.skip_blocks)
                 return Status_OK;
             float register_id;
-            if (!read_float(block, &char_counter, &register_id)) {
-                FAIL(Status_BadNumberFormat);   // [Expected register id]
+            if (block[char_counter] == '[') {
+                if (!ngc_eval_expression(block, &char_counter, &register_id)) {
+                    FAIL(Status_ExpressionSyntaxError);   // [Invalid expression syntax]
+                }
+            } else {
+                if (!read_float(block, &char_counter, &register_id)) {
+                    FAIL(Status_BadNumberFormat);   // [Expected register id]
+                }
             }
 
             if (block[char_counter++] != '=') {
