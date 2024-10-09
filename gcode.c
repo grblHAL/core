@@ -595,10 +595,14 @@ static void substitute_parameters (char *comment, char **message)
 {
     size_t len = 0;
     float value;
-    char *s, c, *strValue;
+    char *s, c;
     uint_fast8_t char_counter = 0;
     int8_t parse_format = 0;
     uint8_t decimals = ngc_float_decimals(); // LinuxCNC is 1 (or l?)
+
+#if STRING_REGISTERS_ENABLE
+    char *strValue;
+#endif
 
     // Trim leading spaces
     while(*comment == ' ')
