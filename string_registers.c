@@ -93,6 +93,11 @@ bool string_register_exists (string_register_id_t id) {
 }
 
 bool string_register_set (ngc_param_id_t id, char *value) {
+    if (strlen(value) > NGC_MAX_SR_LENGTH) {
+        report_message("String register values cannot be longer than 40 characters", Message_Warning);
+        return false;
+    }
+
     string_register_t *last_register = NULL;
     string_register_t *string_register = find_string_register_with_last(id, &last_register);
     if (string_register != NULL) {
