@@ -952,8 +952,15 @@ status_code_t gc_execute_block (char *block)
                 FAIL(Status_BadNumberFormat);   // [Expected equal sign]
             }
 
-            if (!string_register_set((string_register_id_t)register_id, &block[char_counter++])) {
+            char *strValue;
+            substitute_parameters(&block[char_counter++], &strValue);
+            report_message(strValue, Message_Debug);
+
+            if (!string_register_set((string_register_id_t)register_id, strValue)) {
+                free(strValue);
                 FAIL(Status_ExpressionInvalidArgument); // [Invalid value after '=']
+            } else {
+                free(strValue);
             }
 
             // setting a string-register consumes the rest of this block
