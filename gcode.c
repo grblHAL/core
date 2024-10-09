@@ -941,7 +941,7 @@ status_code_t gc_execute_block (char *block)
                 return Status_OK;
             float register_id;
             if (block[char_counter] == '[') {
-                if (!ngc_eval_expression(block, &char_counter, &register_id)) {
+                if (ngc_eval_expression(block, &char_counter, &register_id) != Status_OK) {
                     FAIL(Status_ExpressionSyntaxError);   // [Invalid expression syntax]
                 }
             } else {
