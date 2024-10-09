@@ -529,6 +529,14 @@ Set to \ref On or 1 to enable experimental support for parameters.
 #define NGC_PARAMETERS_ENABLE On
 #endif
 
+/*! \def NGC_STRING_REGISTERS_ENABLE
+\brief
+Set to \ref On or 1 to enable experimental support for string registers.
+*/
+#if !defined NGC_STRING_REGISTERS_ENABLE || defined __DOXYGEN__
+#define NGC_STRING_REGISTERS_ENABLE On
+#endif
+
 /*! \def NGC_N_ASSIGN_PARAMETERS_PER_BLOCK
 \brief
 Maximum number of parameters allowed in a block.
