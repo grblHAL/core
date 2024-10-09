@@ -43,6 +43,10 @@
 #endif
 #endif
 
+#if STRING_REGISTERS_ENABLE
+#include "string_registers.h"
+#endif
+
 // NOTE: Max line number is defined by the g-code standard to be 99999. It seems to be an
 // arbitrary value, and some GUIs may require more. So we increased it based on a max safe
 // value when converting a float (7.2 digit precision) to an integer.
@@ -573,6 +577,14 @@ char *gc_normalize_block (char *block, char **message)
     if(*block == '/')
         block++;
 
+#if STRING_REGISTERS_ENABLE
+    // If the block starts with '@' it means it is setting a string register value,
+    // and we should not normalize it
+    if(*block == '@') {
+        return block;
+    }
+#endif
+
     s1 = s2 = block;
 
     while((c = *s1) != '\0') {
@@ -923,8 +935,29 @@ status_code_t gc_execute_block (char *block)
                 FAIL(Status_GcodeUnsupportedCommand); // [For now...]
 #endif
             }
-        }
+#if STRING_REGISTERS_ENABLE
+        } else if (letter == '@') {
+            if(gc_state.skip_blocks)
+                return Status_OK;
+            float register_id;
+            if (!read_float(block, &char_counter, &register_id)) {
+                FAIL(Status_BadNumberFormat);   // [Expected register id]
+            }
 
+            if (block[char_counter++] != '=') {
+                FAIL(Status_BadNumberFormat);   // [Expected equal sign]
+            }
+
+            if (!string_register_set((string_register_id_t)register_id, &block[char_counter++])) {
+                FAIL(Status_ExpressionInvalidArgument); // [Invalid value after '=']
+            }
+
+            // setting a string-register consumes the rest of this block
+            break;
+        }
+#else
+        }
+#endif
         if((gc_block.words.mask & o_label.mask) && (gc_block.words.mask & ~o_label.mask) == 0) {
             char_counter--;
             return ngc_flowctrl(gc_block.values.o, block, &char_counter, &gc_state.skip_blocks);

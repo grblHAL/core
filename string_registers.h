@@ -1,5 +1,5 @@
 /*
-  ngc_string_registers.h - get/set NGC string register value by id
+  string_registers.h - get/set NGC string register value by id
 
   Part of grblHAL
 
@@ -19,18 +19,17 @@
   along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _NGC_STRING_REGISTERS_H_
-#define _NGC_STRING_REGISTERS_H_
+#ifndef _STRING_REGISTERS_H_
+#define _STRING_REGISTERS_H_
 
 #include "gcode.h"
 
 
 
-typedef uint16_t ngc_string_register_id_t;
+typedef uint16_t string_register_id_t;
 
-uint8_t ngc_float_decimals (void);
-bool ngc_string_register_get (ngc_string_register_id_t id, char **value);
-bool ngc_string_register_set (ngc_string_register_id_t id, char *value);
-bool ngc_string_register_exists (ngc_string_register_id_t id);
+bool string_register_get (string_register_id_t id, char **value);
+bool string_register_set (string_register_id_t id, char *value);
+bool string_register_exists (string_register_id_t id);
 
-#endif // _NGC_STRING_REGISTERS_H_
+#endif // _STRING_REGISTERS_H_

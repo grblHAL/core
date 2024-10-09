@@ -26,7 +26,7 @@
 
 #include "hal.h"
 
-#if NGC_STRING_REGISTERS_ENABLE
+#if STRING_REGISTERS_ENABLE
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -37,7 +37,7 @@
 #include "system.h"
 #include "settings.h"
 #include "ngc_params.h"
-#include "ngc_string_registers.h"
+#include "string_registers.h"
 
 
 
@@ -47,71 +47,70 @@ typedef float (*ngc_named_param_get_ptr)(void);
 #ifndef NGC_MAX_SR_LENGTH
 #define NGC_MAX_SR_LENGTH 50
 #endif
-typedef struct ngc_string_register {
-    ngc_string_register_id_t id;
+typedef struct string_register {
+    string_register_id_t id;
     char value[NGC_MAX_SR_LENGTH + 1];
-    struct ngc_string_register *next;
-} ngc_string_register_t;
+    struct string_register *next;
+} string_register_t;
 
 
-static ngc_string_register_t *ngc_string_registers = NULL;
+static string_register_t *string_registers = NULL;
 
-ngc_string_register_t *find_string_register (ngc_string_register_id_t id) {
-    ngc_string_register_t *current_register = ngc_string_registers;
-    while(current_register) {
+string_register_t *find_string_register_with_last (string_register_id_t id, string_register_t **last_register) {
+    string_register_t *current_register = string_registers;
+    int i = 0;
+    while(current_register != NULL) {
         if(current_register->id == id) {
             return current_register;
-        } else {
-            current_register = current_register->next;
-        }
-    }
-
-    return NULL;
-}
-
-ngc_string_register_t *find_string_register_with_last (ngc_string_register_id_t id, ngc_string_register_t **last_register) {
-    ngc_string_register_t *current_register = ngc_string_registers;
-    while(current_register) {
-        if(current_register->id == id) {
-            return current_register;
-        } else {
+        } else if (i++ < 1000) {
             *last_register = current_register;
             current_register = current_register->next;
+        } else {
+            report_message("index out of bounds", Message_Warning);
+            return NULL;
         }
     }
 
     return NULL;
 }
 
-bool ngc_string_register_get (ngc_string_register_id_t id, char **value) {
-    ngc_string_register_t *string_register = find_string_register(id);
+string_register_t *find_string_register (string_register_id_t id) {
+    string_register_t *last = NULL;
+    return find_string_register_with_last(id, &last);
+}
+
+bool string_register_get (string_register_id_t id, char **value) {
+    string_register_t *string_register = find_string_register(id);
     if (string_register != NULL) {
         *value = &string_register->value[0];
         return true;
     }
-
     return false;
 }
 
-bool ngc_string_register_exists (ngc_string_register_id_t id) {
+bool string_register_exists (string_register_id_t id) {
     return find_string_register(id) != NULL;
 }
 
-bool ngc_string_register_set (ngc_param_id_t id, char *value) {
-    ngc_string_register_t *last_register = NULL;
-    ngc_string_register_t *string_register = find_string_register_with_last(id, &last_register);
+bool string_register_set (ngc_param_id_t id, char *value) {
+    string_register_t *last_register = NULL;
+    string_register_t *string_register = find_string_register_with_last(id, &last_register);
     if (string_register != NULL) {
         strcpy(string_register->value, value);
         return true;
-    } else if ((string_register = malloc(sizeof(ngc_string_register_t)))) {
+    } else if ((string_register = malloc(sizeof(string_register_t)))) {
         string_register->id = id;
         strcpy(string_register->value, value);
         string_register->next = NULL;
-        last_register->next = string_register;
+        if (last_register != NULL) {
+            last_register->next = string_register;
+        } else {
+            string_registers = string_register;
+        }
         return true;
     }
 
     return false;
 }
 
-#endif // NGC_STRING_REGISTERS_ENABLE
+#endif // STRING_REGISTERS_ENABLE
