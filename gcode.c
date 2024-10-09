@@ -621,14 +621,11 @@ static void substitute_parameters (char *comment, char **message)
                 len += 3; // "N/A"
 #if STRING_REGISTERS_ENABLE
         } else if (c == '@') {
-            report_message("finding string register value length", Message_Debug);
             if(read_parameter(comment, &char_counter, &value) == Status_OK) {
                 if (string_register_get((string_register_id_t)value, &strValue)) {
                     len += strlen(strValue);
-                    report_message("found string register value length", Message_Debug);
                 } else {
                     len += 3; // "N/A"
-                    report_message("did not find string register value length", Message_Debug);
                 }
             } else {
                 len += 3; // "N/A"
@@ -670,14 +667,11 @@ static void substitute_parameters (char *comment, char **message)
                 s = strchr(s, '\0');
 #if STRING_REGISTERS_ENABLE
             } else if (c == '@') {
-                report_message("finding string register value", Message_Debug);
                 if(read_parameter(comment, &char_counter, &value) == Status_OK) {
                     if (string_register_get((string_register_id_t)value, &strValue)) {
                         strcat(s, strValue);
-                        report_message("found string register value", Message_Debug);
                     } else {
                         strcat(s, "N/A");
-                        report_message("did not find string register value", Message_Debug);
                     }
                 } else {
                     strcat(s, "N/A");
