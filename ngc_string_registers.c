@@ -86,7 +86,7 @@ ngc_string_register_t *find_string_register_with_last (ngc_string_register_id_t 
 bool ngc_string_register_get (ngc_string_register_id_t id, char **value) {
     ngc_string_register_t *string_register = find_string_register(id);
     if (string_register != NULL) {
-        *value = &string_register->value;
+        *value = &string_register->value[0];
         return true;
     }
 
@@ -103,7 +103,7 @@ bool ngc_string_register_set (ngc_param_id_t id, char *value) {
     if (string_register != NULL) {
         strcpy(string_register->value, value);
         return true;
-    } else if (string_register = malloc(sizeof(ngc_string_register_t))) {
+    } else if ((string_register = malloc(sizeof(ngc_string_register_t)))) {
         string_register->id = id;
         strcpy(string_register->value, value);
         string_register->next = NULL;
