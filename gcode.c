@@ -944,10 +944,8 @@ status_code_t gc_execute_block (char *block)
                 if (ngc_eval_expression(block, &char_counter, &register_id) != Status_OK) {
                     FAIL(Status_ExpressionSyntaxError);   // [Invalid expression syntax]
                 }
-            } else {
-                if (!read_float(block, &char_counter, &register_id)) {
-                    FAIL(Status_BadNumberFormat);   // [Expected register id]
-                }
+            } else if (!read_float(block, &char_counter, &register_id)) {
+                FAIL(Status_BadNumberFormat);   // [Expected register id]
             }
 
             if (block[char_counter++] != '=') {
