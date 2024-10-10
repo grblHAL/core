@@ -979,7 +979,7 @@ char *ngc_substitute_parameters (char *comment, char **message)
             else
                 len += 3; // "N/A"
 #if STRING_REGISTERS_ENABLE
-        } else if (c == '@') {
+        } else if (c == '&') {
             if(read_parameter(comment, &char_counter, &value) == Status_OK) {
                 if (string_register_get((string_register_id_t)value, &strValue)) {
                     len += strlen(strValue);
@@ -1024,7 +1024,7 @@ char *ngc_substitute_parameters (char *comment, char **message)
                     strcat(s, "N/A");
                 s = strchr(s, '\0');
 #if STRING_REGISTERS_ENABLE
-            } else if (c == '@') {
+            } else if (c == '&') {
                 if(read_parameter(comment, &char_counter, &value) == Status_OK) {
                     if (string_register_get((string_register_id_t)value, &strValue)) {
                         strcat(s, strValue);

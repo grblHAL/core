@@ -578,9 +578,9 @@ char *gc_normalize_block (char *block, char **message)
         block++;
 
 #if STRING_REGISTERS_ENABLE
-    // If the block starts with '@' it means it is setting a string register value,
+    // If the block starts with '&' it means it is setting a string register value,
     // and we should not normalize it
-    if(*block == '@') {
+    if(*block == '&') {
         return block;
     }
 #endif
@@ -936,7 +936,7 @@ status_code_t gc_execute_block (char *block)
 #endif
             }
 #if STRING_REGISTERS_ENABLE
-        } else if (letter == '@') {
+        } else if (letter == '&') {
             if(gc_state.skip_blocks)
                 return Status_OK;
             float register_id;
