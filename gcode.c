@@ -36,6 +36,10 @@
 #include "ngc_flowctrl.h"
 #endif
 
+#if STRING_REGISTERS_ENABLE
+#include "string_registers.h"
+#endif
+
 // NOTE: Max line number is defined by the g-code standard to be 99999. It seems to be an
 // arbitrary value, and some GUIs may require more. So we increased it based on a max safe
 // value when converting a float (7.2 digit precision) to an integer.
@@ -596,6 +600,10 @@ static void substitute_parameters (char *comment, char **message)
     int8_t parse_format = 0;
     uint8_t decimals = ngc_float_decimals(); // LinuxCNC is 1 (or l?)
 
+#if STRING_REGISTERS_ENABLE
+    char *strValue;
+#endif
+
     // Trim leading spaces
     while(*comment == ' ')
         comment++;
@@ -615,8 +623,22 @@ static void substitute_parameters (char *comment, char **message)
                 len += strlen(decimals ? ftoa(value, decimals) : trim_float(ftoa(value, decimals)));
             else
                 len += 3; // "N/A"
-        } else
+#if STRING_REGISTERS_ENABLE
+        } else if (c == '&') {
+            if(read_parameter(comment, &char_counter, &value) == Status_OK) {
+                if (string_register_get((string_register_id_t)value, &strValue)) {
+                    len += strlen(strValue);
+                } else {
+                    len += 3; // "N/A"
+                }
+            } else {
+                len += 3; // "N/A"
+                report_message("unable to parse string register id", Message_Warning);
+            }
+#endif
+        } else {
             len++;
+        }
     }
 
     // Perform substitution
@@ -647,6 +669,20 @@ static void substitute_parameters (char *comment, char **message)
                 else
                     strcat(s, "N/A");
                 s = strchr(s, '\0');
+#if STRING_REGISTERS_ENABLE
+            } else if (c == '&') {
+                if(read_parameter(comment, &char_counter, &value) == Status_OK) {
+                    if (string_register_get((string_register_id_t)value, &strValue)) {
+                        strcat(s, strValue);
+                    } else {
+                        strcat(s, "N/A");
+                    }
+                } else {
+                    strcat(s, "N/A");
+                    report_message("unable to parse string register id", Message_Warning);
+                }
+                s = strchr(s, '\0');
+#endif
             } else {
                 *s++ = c;
                 *s = '\0';
@@ -725,6 +761,14 @@ char *gc_normalize_block (char *block, char **message)
 
     if(*block == '/')
         block++;
+
+#if STRING_REGISTERS_ENABLE
+    // If the block starts with '&' it means it is setting a string register value,
+    // and we should not normalize it
+    if(*block == '&') {
+        return block;
+    }
+#endif
 
     s1 = s2 = block;
 
@@ -1060,8 +1104,40 @@ status_code_t gc_execute_block (char *block)
             }
 
             continue;
-        }
+#if STRING_REGISTERS_ENABLE
+        } else if (letter == '&') {
+            if(gc_state.skip_blocks)
+                return Status_OK;
+            float register_id;
+            if (block[char_counter] == '[') {
+                if (ngc_eval_expression(block, &char_counter, &register_id) != Status_OK) {
+                    FAIL(Status_ExpressionSyntaxError);   // [Invalid expression syntax]
+                }
+            } else if (!read_float(block, &char_counter, &register_id)) {
+                FAIL(Status_BadNumberFormat);   // [Expected register id]
+            }
 
+            if (block[char_counter++] != '=') {
+                FAIL(Status_BadNumberFormat);   // [Expected equal sign]
+            }
+
+            char *strValue;
+            substitute_parameters(&block[char_counter++], &strValue);
+            report_message(strValue, Message_Debug);
+
+            if (!string_register_set((string_register_id_t)register_id, strValue)) {
+                free(strValue);
+                FAIL(Status_ExpressionInvalidArgument); // [Invalid value after '=']
+            } else {
+                free(strValue);
+            }
+
+            // setting a string-register consumes the rest of this block
+            break;
+        }
+#else
+        }
+#endif
         if((gc_block.words.mask & o_label.mask) && (gc_block.words.mask & ~o_label.mask) == 0) {
             char_counter--;
             return ngc_flowctrl(gc_block.values.o, block, &char_counter, &gc_state.skip_blocks);
