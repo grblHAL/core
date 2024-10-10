@@ -1328,6 +1328,15 @@ status_code_t gc_execute_block (char *block)
                         gc_block.modal.scaling_active = int_value == 51;
                         break;
 
+#if ENABLE_ACCELERATION_PROFILES
+                    case 187:
+                        word_bit.modal_group.G0 = On;
+                        gc_block.non_modal_command = (non_modal_t)int_value;
+                        if(mantissa != 0)
+                            FAIL(Status_GcodeUnsupportedCommand);
+                        break;
+#endif
+
                     default: FAIL(Status_GcodeUnsupportedCommand); // [Unsupported G command]
                 } // end G-value switch
 
@@ -2493,7 +2502,18 @@ status_code_t gc_execute_block (char *block)
                     gc_block.values.xyz[idx] = gc_state.g92_coord_offset[idx];
             } while(idx);
             break;
-
+            
+#if ENABLE_ACCELERATION_PROFILES
+        case NonModal_SetAccelerationProfile:
+            if (!gc_block.values.p){
+                gc_block.values.p = 1.0f;}
+            else if (gc_block.values.p < 1.0f){
+                FAIL(Status_NegativeValue);}
+            else if (gc_block.values.p > 5.0f){
+                FAIL(Status_GcodeValueOutOfRange);}
+            ActiveAccelProfile = gc_block.values.p;
+            break;
+#endif
         default:
 
             // At this point, the rest of the explicit axis commands treat the axis values as the traditional
