@@ -151,6 +151,7 @@ static const char *st2_set_axis_setting_unit (setting_id_t setting_id, uint_fast
             break;
 
         case Setting_AxisMaxTravel:
+        case Setting_AxisLimitPos:
         case Setting_AxisBacklash:
             unit = "--";
             break;
@@ -192,6 +193,7 @@ static const char *st2_setting_get_description (setting_id_t id)
             break;
 
         case Setting_AxisBacklash:
+        case Setting_AxisLimitPos:
         case Setting_AxisMaxTravel:
             if(bit_istrue(spindle_motors, bit(axis_idx)))
                 descr = "This setting is ignored for stepper spindles.";

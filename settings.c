@@ -210,6 +210,7 @@ PROGMEM const settings_t defaults = {
     .axis[X_AXIS].acceleration = (DEFAULT_X_ACCELERATION * 60.0f * 60.0f),
     .axis[X_AXIS].max_travel = (-DEFAULT_X_MAX_TRAVEL),
     .axis[X_AXIS].dual_axis_offset = 0.0f,
+    .axis[X_AXIS].limit_pos = 0.0f,
 #if ENABLE_BACKLASH_COMPENSATION
     .axis[X_AXIS].backlash = 0.0f,
 #endif
@@ -219,6 +220,7 @@ PROGMEM const settings_t defaults = {
     .axis[Y_AXIS].max_travel = (-DEFAULT_Y_MAX_TRAVEL),
     .axis[Y_AXIS].acceleration = (DEFAULT_Y_ACCELERATION * 60.0f * 60.0f),
     .axis[Y_AXIS].dual_axis_offset = 0.0f,
+    .axis[Y_AXIS].limit_pos = 0.0f,
 #if ENABLE_BACKLASH_COMPENSATION
     .axis[Y_AXIS].backlash = 0.0f,
 #endif
@@ -228,6 +230,7 @@ PROGMEM const settings_t defaults = {
     .axis[Z_AXIS].acceleration = (DEFAULT_Z_ACCELERATION * 60.0f * 60.0f),
     .axis[Z_AXIS].max_travel = (-DEFAULT_Z_MAX_TRAVEL),
     .axis[Z_AXIS].dual_axis_offset = 0.0f,
+    .axis[Z_AXIS].limit_pos = 0.0f,
 #if ENABLE_BACKLASH_COMPENSATION
     .axis[Z_AXIS].backlash = 0.0f,
 #endif
@@ -238,6 +241,7 @@ PROGMEM const settings_t defaults = {
     .axis[A_AXIS].acceleration =(DEFAULT_A_ACCELERATION * 60.0f * 60.0f),
     .axis[A_AXIS].max_travel = (-DEFAULT_A_MAX_TRAVEL),
     .axis[A_AXIS].dual_axis_offset = 0.0f,
+    .axis[A_AXIS].limit_pos = 0.0f,
 #if ENABLE_BACKLASH_COMPENSATION
     .axis[A_AXIS].backlash = 0.0f,
 #endif
@@ -250,6 +254,7 @@ PROGMEM const settings_t defaults = {
     .axis[B_AXIS].acceleration = (DEFAULT_B_ACCELERATION * 60.0f * 60.0f),
     .axis[B_AXIS].max_travel = (-DEFAULT_B_MAX_TRAVEL),
     .axis[B_AXIS].dual_axis_offset = 0.0f,
+    .axis[B_AXIS].limit_pos = 0.0f,
 #if ENABLE_BACKLASH_COMPENSATION
     .axis[B_AXIS].backlash = 0.0f,
 #endif
@@ -262,6 +267,7 @@ PROGMEM const settings_t defaults = {
     .axis[C_AXIS].max_rate = DEFAULT_C_MAX_RATE,
     .axis[C_AXIS].max_travel = (-DEFAULT_C_MAX_TRAVEL),
     .axis[C_AXIS].dual_axis_offset = 0.0f,
+    .axis[C_AXIS].limit_pos = 0.0f,
 #if ENABLE_BACKLASH_COMPENSATION
     .axis[C_AXIS].backlash = 0.0f,
 #endif
@@ -274,6 +280,7 @@ PROGMEM const settings_t defaults = {
     .axis[U_AXIS].max_rate = DEFAULT_U_MAX_RATE,
     .axis[U_AXIS].max_travel = (-DEFAULT_U_MAX_TRAVEL),
     .axis[U_AXIS].dual_axis_offset = 0.0f,
+    .axis[U_AXIS].limit_pos = 0.0f,
 #if ENABLE_BACKLASH_COMPENSATION
     .axis[U_AXIS].backlash = 0.0f,
 #endif
@@ -285,6 +292,7 @@ PROGMEM const settings_t defaults = {
     .axis[V_AXIS].max_rate = DEFAULT_V_MAX_RATE,
     .axis[V_AXIS].max_travel = (-DEFAULT_V_MAX_TRAVEL),
     .axis[V_AXIS].dual_axis_offset = 0.0f,
+    .axis[V_AXIS].limit_pos = 0.0f,
 #if ENABLE_BACKLASH_COMPENSATION
     .axis[V_AXIS].backlash = 0.0f,
 #endif
@@ -596,6 +604,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_AxisMaxRate, Group_Axis0, "-axis maximum rate", axis_rate, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL, AXIS_OPTS },
      { Setting_AxisAcceleration, Group_Axis0, "-axis acceleration", axis_accel, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL, AXIS_OPTS },
      { Setting_AxisMaxTravel, Group_Axis0, "-axis maximum travel", axis_dist, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL, AXIS_OPTS },
+     { Setting_AxisLimitPos, Group_Axis0, "-axis limit pos", axis_dist, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL, AXIS_OPTS },
 #if ENABLE_BACKLASH_COMPENSATION
      { Setting_AxisBacklash, Group_Axis0, "-axis backlash compensation", axis_dist, Format_Decimal, "#####0.000##", NULL, NULL, Setting_IsExtendedFn, set_axis_setting, get_float, NULL, AXIS_OPTS },
 #endif
@@ -773,6 +782,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_AxisMaxRate, "Maximum rate. Used as G0 rapid rate." },
     { Setting_AxisAcceleration, "Acceleration. Used for motion planning to not exceed motor torque and lose steps." },
     { Setting_AxisMaxTravel, "Maximum axis travel distance from homing switch. Determines valid machine space for soft-limits and homing search distances." },
+    { Setting_AxisLimitPos, "Limit Position" },
 #if ENABLE_BACKLASH_COMPENSATION
     { Setting_AxisBacklash, "Backlash distance to compensate for." },
 #endif
@@ -1394,7 +1404,7 @@ static const char *set_axis_setting_unit (setting_id_t setting_id, uint_fast8_t 
             unit = is_rotary ? "step/deg" : "step/mm";
             break;
 
-        case Setting_AxisMaxRate:
+        case Setting_AxisMaxRate:       
             unit = is_rotary ? "deg/min" : "mm/min";
             break;
 
@@ -1403,6 +1413,7 @@ static const char *set_axis_setting_unit (setting_id_t setting_id, uint_fast8_t 
             break;
 
         case Setting_AxisMaxTravel:
+        case Setting_AxisLimitPos:
         case Setting_AxisBacklash:
             unit = is_rotary ? "deg" : "mm";
             break;
@@ -1529,7 +1540,9 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
             }
             tmp_set_soft_limits();
             break;
-
+        case Setting_AxisLimitPos:
+           settings.axis[idx].limit_pos = value;
+        break;
         case Setting_AxisBacklash:
 #if ENABLE_BACKLASH_COMPENSATION
             if(settings.axis[idx].backlash != value) {
@@ -1583,7 +1596,9 @@ static float get_float (setting_id_t setting)
             case Setting_AxisMaxTravel:
                 value = -settings.axis[idx].max_travel; // Store as negative for grbl internal use.
                 break;
-
+            case Setting_AxisLimitPos:
+                value = settings.axis[idx].limit_pos;
+            break;
 #if ENABLE_BACKLASH_COMPENSATION
             case Setting_AxisBacklash:
                 value = settings.axis[idx].backlash;

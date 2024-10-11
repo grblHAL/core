@@ -39,7 +39,7 @@ specific needs, i.e. performance tuning or adjusting to non-typical machines.
 If more than 3 axes are configured a compliant driver and board map file is needed.
  */
 #ifndef N_AXIS
-#define N_AXIS 3 // Number of axes
+#define N_AXIS 4 // Number of axes
 #endif
 
 /*! \def AXIS_REMAP_ABC2UVW
@@ -498,7 +498,7 @@ by a driver or a plugin.
 #endif
 
 #if !defined ENABLE_BACKLASH_COMPENSATION || defined __DOXYGEN__
-#define ENABLE_BACKLASH_COMPENSATION Off
+#define ENABLE_BACKLASH_COMPENSATION On
 #endif
 
 #if COMPATIBILITY_LEVEL == 0 || defined __DOXYGEN__
