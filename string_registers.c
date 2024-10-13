@@ -1,9 +1,9 @@
 /*
-  ngc_params.c - get/set NGC parameter value by id or name
+  string_registers.c - get/set string register value by id or name
 
   Part of grblHAL
 
-  Copyright (c) 2021-2024 Terje Io
+  Copyright (c) 2024-2025 Stig-Rune Skansgård
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -17,11 +17,6 @@
 
   You should have received a copy of the GNU General Public License
   along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
-*/
-
-/*
-  All predefined parameters defined in NIST RS274NGC version 3 (ref section 3.2.1) are implemented.
-  Most additional predefined parameters defined by LinuxCNC (ref section 5.2.3.1) are implemented.
 */
 
 #include "hal.h"
