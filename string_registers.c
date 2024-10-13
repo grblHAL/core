@@ -34,17 +34,12 @@
 #include "ngc_params.h"
 #include "string_registers.h"
 
-
-
-typedef float (*ngc_param_get_ptr)(ngc_param_id_t id);
-typedef float (*ngc_named_param_get_ptr)(void);
-
-#ifndef NGC_MAX_SR_LENGTH
-#define NGC_MAX_SR_LENGTH 50
+#ifndef MAX_SR_LENGTH
+#define MAX_SR_LENGTH 50
 #endif
 typedef struct string_register {
     string_register_id_t id;
-    char value[NGC_MAX_SR_LENGTH + 1];
+    char value[MAX_SR_LENGTH + 1];
     struct string_register *next;
 } string_register_t;
 
@@ -88,7 +83,7 @@ bool string_register_exists (string_register_id_t id) {
 }
 
 bool string_register_set (ngc_param_id_t id, char *value) {
-    if (strlen(value) > NGC_MAX_SR_LENGTH) {
+    if (strlen(value) > MAX_SR_LENGTH) {
         report_message("String register values cannot be longer than 40 characters", Message_Warning);
         return false;
     }
