@@ -43,15 +43,17 @@ typedef struct string_register {
     struct string_register *next;
 } string_register_t;
 
-
 static string_register_t *string_registers = NULL;
 
 string_register_t *find_string_register_with_last (string_register_id_t id, string_register_t **last_register) {
     string_register_t *current_register = string_registers;
     int i = 0;
+
     while(current_register != NULL) {
+
         if(current_register->id == id) {
             return current_register;
+
         } else if (i++ < 1000) {
             *last_register = current_register;
             current_register = current_register->next;
@@ -71,10 +73,12 @@ string_register_t *find_string_register (string_register_id_t id) {
 
 bool string_register_get (string_register_id_t id, char **value) {
     string_register_t *string_register = find_string_register(id);
+
     if (string_register != NULL) {
         *value = &string_register->value[0];
         return true;
     }
+
     return false;
 }
 
@@ -90,18 +94,22 @@ bool string_register_set (ngc_param_id_t id, char *value) {
 
     string_register_t *last_register = NULL;
     string_register_t *string_register = find_string_register_with_last(id, &last_register);
+
     if (string_register != NULL) {
         strcpy(string_register->value, value);
         return true;
+
     } else if ((string_register = malloc(sizeof(string_register_t)))) {
         string_register->id = id;
         strcpy(string_register->value, value);
         string_register->next = NULL;
+
         if (last_register != NULL) {
             last_register->next = string_register;
         } else {
             string_registers = string_register;
         }
+
         return true;
     }
 
