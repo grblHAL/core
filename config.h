@@ -534,7 +534,7 @@ Set to \ref On or 1 to enable experimental support for parameters.
 Set to \ref On or 1 to enable experimental support for string registers.
 */
 #if !defined STRING_REGISTERS_ENABLE || defined __DOXYGEN__
-#define STRING_REGISTERS_ENABLE On
+#define STRING_REGISTERS_ENABLE Off
 #endif
 
 /*! \def NGC_N_ASSIGN_PARAMETERS_PER_BLOCK
