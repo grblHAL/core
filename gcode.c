@@ -353,8 +353,6 @@ void gc_init (void)
         grbl.on_parser_init(&gc_state);
 }
 
-#if N_SYS_SPINDLE > 1
-
 inline static bool is_single_spindle_block (parser_block_t *gc_block, modal_groups_t command_words)
 {
     return gc_block->words.s ||
@@ -365,8 +363,6 @@ inline static bool is_single_spindle_block (parser_block_t *gc_block, modal_grou
                command_words.G14 ||
                (command_words.M9 && gc_block->override_command == Override_SpindleSpeed);
 }
-
-#endif
 
 // Set dynamic laser power mode to PPI (Pulses Per Inch)
 // Returns true if driver uses hardware implementation.
