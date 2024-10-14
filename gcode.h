@@ -231,7 +231,6 @@ typedef enum {
 __NOTE:__ Not used by the core, may be used by private user code, drivers or plugins.
 */
 typedef enum {
-    UserMCode_Ignore = 0,               //!< 0  - Default, must be zero
     OpenPNP_SetPinState = 42,           //!< 42 - M42
     UserMCode_Generic1 = 101,           //!< 101 - For private use only
     UserMCode_Generic2 = 102,           //!< 102 - For private use only
@@ -637,7 +636,7 @@ It will also be passed to mc_jog_execute() and any user M-code validation and ex
 typedef struct {
     non_modal_t non_modal_command;      //!< Non modal command
     override_mode_t override_command;   //!< Override command TODO: add to non_modal above?
-    user_mcode_t user_mcode;            //!< Set > #UserMCode_Ignore if a user M-code is found.
+    user_mcode_t user_mcode;            //!< Set > 0 if a user M-code is found.
     bool user_mcode_sync;               //!< Set to \a true by M-code validation handler if M-code is to be executed after synchronization.
     gc_modal_t modal;                   //!< The current modal state is copied here before parsing starts.
     spindle_modal_t spindle_modal;

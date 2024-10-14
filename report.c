@@ -1028,6 +1028,12 @@ void report_build_info (char *line, bool extended)
         hal.stream.write(buf);
         hal.stream.write("]" ASCII_EOL);
 
+#if N_SYS_SPINDLE > 1
+        hal.stream.write("[SPINDLES:");
+        hal.stream.write(uitoa(N_SYS_SPINDLE));
+        hal.stream.write("]" ASCII_EOL);
+#endif
+
         if(!(nvs->type == NVS_None || nvs->type == NVS_Emulated)) {
             hal.stream.write("[NVS STORAGE:");
             *buf = '\0';

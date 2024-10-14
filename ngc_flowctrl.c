@@ -510,8 +510,14 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
 
         case NGCFlowCtrl_EndSub:
             if(hal.stream.file) {
-                if(!skip_sub)
+                if(!skip_sub) {
                     stack_unwind_sub(o_label);
+                    if(ngc_eval_expression(line, pos, &value) == Status_OK) {
+                        ngc_named_param_set("_value", value);
+                        ngc_named_param_set("_value_returned", 1.0f);
+                    } else
+                        ngc_named_param_set("_value_returned", 0.0f);
+                }
                 skip_sub = false;
             } else
                 status = Status_FlowControlNotExecutingMacro;
@@ -557,8 +563,11 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
                                 }
                             }
 
-                            if(status == Status_OK)
+                            if(status == Status_OK) {
+                                ngc_named_param_set("_value", 0.0f);
+                                ngc_named_param_set("_value_returned", 0.0f);
                                 vfs_seek(sub->file, sub->file_pos);
+                            }
                         }
                     }
                 }

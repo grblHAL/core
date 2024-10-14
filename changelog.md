@@ -1,6 +1,31 @@
 ## grblHAL changelog
 
-<a name="2024106">Build 2024106
+<a name="20241014">Build 20241014
+
+Core:
+
+* Improved expression and parameter handling, simplified gcode parser related to this. Fixed typo in `OR` statement decode. 
+
+* Added clear of return value on `CALL` statement and added optional return value expression support to `ENDSUB`.
+
+* For developers: moved user M-code entry point hooks from the HAL structure to the core handlers and
+changed signature of the _check()_ function to better support valueless words \(letters\) when parameter support is enabled.
+Removed deprecated parameter from the _validate()_ call signature.
+
+* Improved handling of multiple simultaneous spindles. Still work in progress.
+
+Drivers: 
+
+* STM32F4xx and STM32F7xx: fixed some typos in new timer API. Ref. [issue #192](https://github.com/grblHAL/STM32F4xx/issues/192)
+and [issue #18](https://github.com/grblHAL/STM32F7xx/issues/18).
+
+Plugins and templates:
+
+* Some updated for move of core M-code entry points.
+
+---
+
+<a name="20241006">Build 20241006
 
 Core:
 

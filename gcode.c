@@ -144,6 +144,11 @@ inline static bool motion_is_lasercut (motion_mode_t motion)
     return motion == MotionMode_Linear || motion == MotionMode_CwArc || motion == MotionMode_CcwArc || motion == MotionMode_CubicSpline || motion == MotionMode_QuadraticSpline;
 }
 
+inline static bool no_word_value (char letter)
+{
+    return letter == '\0' || (letter >= 'A' && letter <= 'Z') || letter == '$';
+}
+
 parser_state_t *gc_get_state (void)
 {
     return &gc_state;
@@ -348,6 +353,21 @@ void gc_init (void)
         grbl.on_parser_init(&gc_state);
 }
 
+#if N_SYS_SPINDLE > 1
+
+inline static bool is_single_spindle_block (parser_block_t *gc_block, modal_groups_t command_words)
+{
+    return gc_block->words.s ||
+            (command_words.G1 && (gc_block->modal.motion == MotionMode_SpindleSynchronized ||
+                                   gc_block->modal.motion == MotionMode_RigidTapping ||
+                                    gc_block->modal.motion == MotionMode_Threading)) ||
+             (command_words.G5 && gc_block->modal.feed_mode == FeedMode_UnitsPerRev) ||
+               command_words.G14 ||
+               (command_words.M9 && gc_block->override_command == Override_SpindleSpeed);
+}
+
+#endif
+
 // Set dynamic laser power mode to PPI (Pulses Per Inch)
 // Returns true if driver uses hardware implementation.
 // Driver support for pulsing the laser on signal is required for this to work.
@@ -487,54 +507,6 @@ void gc_output_message (char *message)
 
 static ngc_param_t ngc_params[NGC_N_ASSIGN_PARAMETERS_PER_BLOCK];
 
-static status_code_t read_parameter (char *line, uint_fast8_t *char_counter, float *value)
-{
-    char c = *(line + *char_counter);
-    status_code_t status = Status_OK;
-
-    if(c == '#') {
-
-        (*char_counter)++;
-
-        if(*(line + *char_counter) == '<') {
-
-            (*char_counter)++;
-            char *pos = line = line + *char_counter;
-
-            while(*line && *line != '>') {
-                if(*line == ' ') {
-                    char *s1 = line, *s2 = line + 1;
-                    while(*s2)
-                        *s1++ = *s2++;
-                    *(--s2) = '\0';
-                } else
-                    line++;
-            }
-
-            *char_counter += line - pos + 1;
-
-            if(*line == '>') {
-                *line = '\0';
-                if(!ngc_named_param_get(pos, value))
-                    status = Status_BadNumberFormat;
-                *line = '>';
-            } else
-                status = Status_BadNumberFormat;
-
-        } else if(read_float(line, char_counter, value)) {
-            if(!ngc_param_get((ngc_param_id_t)*value, value))
-                status = Status_BadNumberFormat;
-        } else
-            status = Status_BadNumberFormat;
-
-    } else if(c == '[')
-        status = ngc_eval_expression(line, char_counter, value);
-    else if(!read_float(line, char_counter, value))
-        *value = NAN;
-
-    return status;
-}
-
 static int8_t get_format (char c, int8_t pos, uint8_t *decimals)
 {
     static uint8_t d;
@@ -611,7 +583,7 @@ static void substitute_parameters (char *comment, char **message)
             parse_format = 1;
         else if(c == '#') {
             char_counter--;
-            if(read_parameter(comment, &char_counter, &value) == Status_OK)
+            if(ngc_read_parameter(comment, &char_counter, &value, true) == Status_OK)
                 len += strlen(decimals ? ftoa(value, decimals) : trim_float(ftoa(value, decimals)));
             else
                 len += 3; // "N/A"
@@ -642,7 +614,7 @@ static void substitute_parameters (char *comment, char **message)
                 fmt[0] = c;
             } else if(c == '#') {
                 char_counter--;
-                if(read_parameter(comment, &char_counter, &value) == Status_OK)
+                if(ngc_read_parameter(comment, &char_counter, &value, true) == Status_OK)
                     strcat(s, decimals ? ftoa(value, decimals) : trim_float(ftoa(value, decimals)));
                 else
                     strcat(s, "N/A");
@@ -1006,7 +978,7 @@ status_code_t gc_execute_block (char *block)
     float value;
     uint32_t int_value = 0;
     uint_fast16_t mantissa = 0;
-    bool is_user_mcode = false;
+    user_mcode_type_t user_mcode = UserMCode_Unsupported;
     word_bit_t word_bit = { .parameter = {0}, .modal_group = {0} }; // Bit-value for assigning tracking variables
 
     while ((letter = block[char_counter++]) != '\0') { // Loop until no more g-code words in block.
@@ -1034,7 +1006,7 @@ status_code_t gc_execute_block (char *block)
                     *s++ = '\0';
                     s++;
                     char_counter += s - name;
-                    if((status = read_parameter(block, &char_counter, &value)) != Status_OK)
+                    if((status = ngc_read_real_value(block, &char_counter, &value)) != Status_OK)
                         FAIL(status);   // [Expected parameter value]
                     if(!ngc_named_param_set(name, value))
                         FAIL(Status_BadNumberFormat);   // [Expected equal sign]
@@ -1043,13 +1015,16 @@ status_code_t gc_execute_block (char *block)
             } else {
 
                 float param;
-                if (!read_float(block, &char_counter, &param))
-                    FAIL(Status_BadNumberFormat);   // [Expected parameter number]
 
-                if (block[char_counter++] != '=')
+                if((status = ngc_read_real_value(block, &char_counter, &param)) != Status_OK) {
+                    FAIL(status);   // [Expected parameter number]
+                } else if(!ngc_param_is_rw((ngc_param_id_t)param))
+                    FAIL(Status_GcodeValueOutOfRange);   // [Parameter does not exist or is read only]
+
+                if(block[char_counter++] != '=')
                     FAIL(Status_BadNumberFormat);   // [Expected equal sign]
 
-                if((status = read_parameter(block, &char_counter, &value)) != Status_OK)
+                if((status = ngc_read_real_value(block, &char_counter, &value)) != Status_OK)
                     FAIL(status);   // [Expected parameter value]
 
                 if(ngc_param_count < NGC_N_ASSIGN_PARAMETERS_PER_BLOCK && ngc_param_is_rw((ngc_param_id_t)param)) {
@@ -1070,13 +1045,15 @@ status_code_t gc_execute_block (char *block)
         if((letter < 'A' && letter != '$') || letter > 'Z')
             FAIL(Status_ExpectedCommandLetter); // [Expected word letter]
 
-        if((status = read_parameter(block, &char_counter, &value)) != Status_OK)
+        if(user_mcode == UserMCode_NoValueWords && no_word_value(block[char_counter]))
+            value = NAN;
+        else if((status = ngc_read_real_value(block, &char_counter, &value)) != Status_OK)
             return status;
 
         if(gc_state.skip_blocks && letter != 'O')
             return Status_OK;
 
-        if(!is_user_mcode && isnanf(value))
+        if(user_mcode != UserMCode_NoValueWords && isnanf(value))
             FAIL(Status_BadNumberFormat);   // [Expected word value]
 
         g65_words.value = 0;
@@ -1085,11 +1062,11 @@ status_code_t gc_execute_block (char *block)
         if((letter < 'A' && letter != '$') || letter > 'Z')
             FAIL(Status_ExpectedCommandLetter); // [Expected word letter]
 
-        if (!read_float(block, &char_counter, &value)) {
-            if(is_user_mcode)                   // Valueless parameters allowed for user defined M-codes.
-                value = NAN;                    // Parameter validation deferred to implementation.
+        if(!read_float(block, &char_counter, &value)) {
+            if(user_mcode == UserMCode_NoValueWords)    // Valueless parameters allowed for user defined M-codes.
+                value = NAN;                            // Parameter validation deferred to implementation.
             else
-                FAIL(Status_BadNumberFormat);   // [Expected word value]
+                FAIL(Status_BadNumberFormat);           // [Expected word value]
         }
 
 #endif
@@ -1118,7 +1095,7 @@ status_code_t gc_execute_block (char *block)
 
             case 'G': // Determine 'G' command and its modal group
 
-                is_user_mcode = false;
+                user_mcode = UserMCode_Unsupported;
                 word_bit.modal_group.mask = 0;
 
                 switch(int_value) {
@@ -1358,7 +1335,7 @@ status_code_t gc_execute_block (char *block)
                 if(mantissa > 0)
                     FAIL(Status_GcodeCommandValueNotInteger); // [No Mxx.x commands]
 
-                is_user_mcode = false;
+                user_mcode = UserMCode_Unsupported;
                 word_bit.modal_group.mask = 0;
 
                 switch(int_value) {
@@ -1474,8 +1451,8 @@ status_code_t gc_execute_block (char *block)
                         break;
 
                     default:
-                        if(hal.user_mcode.check && (gc_block.user_mcode = hal.user_mcode.check((user_mcode_t)int_value))) {
-                            is_user_mcode = true;
+                        if(grbl.user_mcode.check && (user_mcode = grbl.user_mcode.check((user_mcode_t)int_value))) {
+                            gc_block.user_mcode = (user_mcode_t)int_value;
                             word_bit.modal_group.M10 = On;
                         } else
                             FAIL(Status_GcodeUnsupportedCommand); // [Unsupported M command]
@@ -1824,7 +1801,7 @@ status_code_t gc_execute_block (char *block)
     if(command_words.M10 && gc_block.user_mcode) {
 
         user_words.mask = gc_block.words.mask;
-        if((int_value = (uint_fast16_t)hal.user_mcode.validate(&gc_block, &gc_block.words)))
+        if((int_value = (uint_fast16_t)grbl.user_mcode.validate(&gc_block)))
             FAIL((status_code_t)int_value);
         user_words.mask ^= gc_block.words.mask; // Flag "taken" words for execution
 
@@ -1909,13 +1886,7 @@ status_code_t gc_execute_block (char *block)
 
     // [4. Set spindle speed and address spindle ]: S or D is negative (done.)
     if(gc_block.words.$) {
-        bool single_spindle_only = gc_block.words.s ||
-                                    (command_words.G0 && (gc_block.modal.motion == MotionMode_SpindleSynchronized ||
-                                                           gc_block.modal.motion == MotionMode_RigidTapping ||
-                                                            gc_block.modal.motion == MotionMode_Threading)) ||
-                                     (command_words.G5 && gc_block.modal.feed_mode == FeedMode_UnitsPerRev) ||
-                                       command_words.G14 ||
-                                        (command_words.M9 && gc_block.override_command == Override_SpindleSpeed);
+        bool single_spindle_only = is_single_spindle_block(&gc_block, command_words);
         if(command_words.M7 || single_spindle_only) {
             if(gc_block.values.$ < (single_spindle_only ? 0 : -1))
                 FAIL(single_spindle_only ? Status_NegativeValue : Status_GcodeValueOutOfRange);
@@ -1936,6 +1907,11 @@ status_code_t gc_execute_block (char *block)
             gc_block.words.$ = Off;
         }
     }
+#if N_SYS_SPINDLE > 1
+    // For now, remove when downstream code can handle multiple spindles?
+    else if(command_words.M7 || is_single_spindle_block(&gc_block, command_words))
+        sspindle = &gc_state.modal.spindle[0];
+#endif
 
     if(gc_block.modal.feed_mode == FeedMode_UnitsPerRev && (sspindle == NULL || !sspindle->hal->get_data))
         FAIL(Status_GcodeUnsupportedCommand); // [G95 not supported]
@@ -3538,7 +3514,7 @@ status_code_t gc_execute_block (char *block)
         gc_block.values.o = single_meaning_value.o;
         gc_block.values.s = single_meaning_value.s;
         gc_block.values.t = single_meaning_value.t;
-        hal.user_mcode.execute(state_get(), &gc_block);
+        grbl.user_mcode.execute(state_get(), &gc_block);
         gc_block.words.mask = 0;
     }
 
@@ -3960,7 +3936,7 @@ status_code_t gc_execute_block (char *block)
             idx = N_SYS_SPINDLE;
             spindle_t *spindle;
             do {
-                if((spindle = &gc_state.modal.spindle[--idx])) {
+                if((spindle = &gc_state.modal.spindle[--idx])->hal) {
                     spindle->css = NULL;
                     spindle->state = (spindle_state_t){0};
                     spindle->rpm_mode = SpindleSpeedMode_RPM; // NOTE: not compliant with linuxcnc (?);
