@@ -992,45 +992,60 @@ status_code_t gc_execute_block (char *block)
 
             if(block[char_counter] == '<') {
 
-                char *s = &block[++char_counter];
+                char name[NGC_MAX_PARAM_LENGTH + 1];
 
-                while(*s && *s != '>')
-                    s++;
-
-                if(*s && *(s + 1) == '=') {
-                    char *name = &block[char_counter];
-                    *s++ = '\0';
-                    s++;
-                    char_counter += s - name;
-                    if((status = ngc_read_real_value(block, &char_counter, &value)) != Status_OK)
-                        FAIL(status);   // [Expected parameter value]
-                    if(!ngc_named_param_set(name, value))
-                        FAIL(Status_BadNumberFormat);   // [Expected equal sign]
-                }
-
+                if((status = ngc_read_name(block, &char_counter, name)) == Status_OK) {
+                    if(block[char_counter++] != '=')
+                        status = Status_BadNumberFormat;    // [Expected equal sign]
+                    else if((status = ngc_read_real_value(block, &char_counter, &value)) == Status_OK) {
+                        if(!ngc_named_param_set(name, value))
+                            status = Status_BadNumberFormat;    // [Out of memory or attempt to write RO parameter]
+                    } // else: [Expected value]
+                } // else: [Expected parameter name]
             } else {
 
                 float param;
 
-                if((status = ngc_read_real_value(block, &char_counter, &param)) != Status_OK) {
-                    FAIL(status);   // [Expected parameter number]
-                } else if(!ngc_param_is_rw((ngc_param_id_t)param))
-                    FAIL(Status_GcodeValueOutOfRange);   // [Parameter does not exist or is read only]
-
-                if(block[char_counter++] != '=')
-                    FAIL(Status_BadNumberFormat);   // [Expected equal sign]
-
-                if((status = ngc_read_real_value(block, &char_counter, &value)) != Status_OK)
-                    FAIL(status);   // [Expected parameter value]
-
-                if(ngc_param_count < NGC_N_ASSIGN_PARAMETERS_PER_BLOCK && ngc_param_is_rw((ngc_param_id_t)param)) {
-                    ngc_params[ngc_param_count].id = (ngc_param_id_t)param;
-                    ngc_params[ngc_param_count++].value = value;
-                } else
-                    FAIL(Status_BadNumberFormat);   // [Expected parameter value]
+                if((status = ngc_read_real_value(block, &char_counter, &param)) == Status_OK) {
+                    if(!ngc_param_is_rw((ngc_param_id_t)param))
+                        status = Status_GcodeValueOutOfRange;   // [Parameter does not exist or is read only]
+                    else if(block[char_counter++] != '=')
+                        status = Status_BadNumberFormat;   // [Expected equal sign]
+                    else if((status = ngc_read_real_value(block, &char_counter, &value)) == Status_OK) {
+                        if(ngc_param_count < NGC_N_ASSIGN_PARAMETERS_PER_BLOCK) {
+                            ngc_params[ngc_param_count].id = (ngc_param_id_t)param;
+                            ngc_params[ngc_param_count++].value = value;
+                        } else
+                            FAIL(Status_BadNumberFormat);   // [Too many parameters in block]
+                    } // else: [Expected parameter value]
+                } // else: [Expected parameter number]
             }
 
+            if(status != Status_OK)
+                FAIL(status);
+
             continue;
+        } else if(letter == 'O') {
+
+            gc_block.words.n = Off; // Hack to allow line number with O word
+
+            if(block[char_counter] == '[') {
+                int32_t value;
+                if((status = ngc_read_integer_value(block, &char_counter, &value)) == Status_OK) {
+                    gc_block.words.o = On;
+                    gc_block.values.o = (uint32_t)value;
+                    char_counter++;
+                } else
+                    FAIL(status);
+            } else if(block[char_counter] == '<') {
+    /*            char o_label[NGC_MAX_PARAM_LENGTH + 1];
+                if((status = ngc_read_name(block, &char_counter, o_label)) != Status_OK)
+                    FAIL(status);
+                gc_block.words.o = On;
+                gc_block.values.o = 0xFFFFFFFE;
+                continue;*/
+                FAIL(Status_GcodeUnsupportedCommand); // [For now...]
+            }
         }
 
         if((gc_block.words.mask & o_label.mask) && (gc_block.words.mask & ~o_label.mask) == 0) {

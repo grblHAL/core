@@ -571,6 +571,39 @@ static status_code_t read_operation_unary (char *line, uint_fast8_t *pos, ngc_un
     return status;
 }
 
+/*! \brief Reads the name of a parameter out of the line
+starting at the index given by the pos offset.
+
+\param line pointer to RS274/NGC code (block).
+\param pos offset into line where expression starts.
+\param buffer pointer to a character buffer for the name.
+\returns #Status_OK enum value if processed without error, appropriate \ref status_code_t enum value if not.
+*/
+status_code_t ngc_read_name (char *line, uint_fast8_t *pos, char *buffer)
+{
+    char *s;
+    uint_fast8_t len = 0;
+    status_code_t status = Status_BadNumberFormat;
+
+    if(*(s = line + (*pos)++) == '<') {
+
+        s++;
+
+        while(*s && *s != '>' && len <= NGC_MAX_PARAM_LENGTH) {
+            *buffer++ = *s++;
+            (*pos)++;
+            len++;
+        }
+
+        if((status = *s == '>' ? Status_OK : Status_FlowControlSyntaxError) == Status_OK) {
+            *buffer = '\0';
+            (*pos)++;
+        }
+    }
+
+    return status;
+}
+
 /*! \brief Reads the value out of a parameter of the line, starting at the
 index given by the pos offset.
 
@@ -593,6 +626,7 @@ sequentially, the value of #2 would be 10 after the line was executed.
 */
 status_code_t ngc_read_parameter (char *line, uint_fast8_t *pos, float *value, bool check)
 {
+    int32_t param;
     status_code_t status = Status_BadNumberFormat;
 
     if(*(line + *pos) == '#') {
@@ -601,34 +635,18 @@ status_code_t ngc_read_parameter (char *line, uint_fast8_t *pos, float *value, b
 
         if(*(line + *pos) == '<') {
 
-            (*pos)++;
-            char *param = line + *pos, *arg = line + *pos;
+            char name[NGC_MAX_PARAM_LENGTH + 1];
 
-            while(*arg && *arg != '>')
-                arg++;
-
-            *pos += arg - param + 1;
-
-            if(*arg == '>') {
-                *arg = '\0';
-                if(ngc_named_param_get(param, value))
-                    status = Status_OK;
-                *arg = '>';
+            if((status = ngc_read_name(line, pos, name)) == Status_OK) {
+                if(!ngc_named_param_get(name, value))
+                    status = Status_BadNumberFormat;
             }
+        } else if((status = ngc_read_integer_value(line, pos, &param)) == Status_OK) {
 
-        } else if((status = ngc_read_real_value(line, pos, value)) == Status_OK) {
-
-            uint32_t param = (uint32_t)floorf(*value);
-
-            if((*value - (float)param) > 0.9999f) {
-                param = (uint32_t)ceilf(*value);
-            } else if((*value - (float)param) > 0.0001f)
-                status = Status_BadNumberFormat; // not integer
-
-            if(check && !ngc_param_exists((ngc_param_id_t)param))
+            if(param < 0 || (check && !ngc_param_exists((ngc_param_id_t)param)))
                 status = Status_GcodeValueOutOfRange;
-            else if(ngc_param_get((ngc_param_id_t)param, value))
-                status = Status_OK;
+            else if(!ngc_param_get((ngc_param_id_t)param, value))
+                status = Status_GcodeValueOutOfRange;
         }
     }
 
@@ -759,6 +777,52 @@ status_code_t ngc_read_real_value (char *line, uint_fast8_t *pos, float *value)
         status = Status_ExpressionInvalidResult; // Calculation resulted in 'not a number'
 
     return status;
+}
+
+/*! \brief Reads explicit unsigned (positive) integer out of the line,
+starting at the index given by the pos offset. It expects to find one
+or more digits. Any character other than a digit terminates reading
+the integer. Note that if the first character is a sign (+ or -),
+an error will be reported (since a sign is not a digit).
+
+\param line pointer to RS274/NGC code (block).
+\param pos offset into line where expression starts.
+\param value pointer to integer where result is to be stored.
+\returns #Status_OK enum value if processed without error, appropriate \ref status_code_t enum value if not.
+*/
+status_code_t ngc_read_integer_unsigned (char *line, uint_fast8_t *pos, uint32_t *value)
+{
+    return line[*pos] == '+' ? Status_GcodeCommandValueNotInteger : read_uint(line, pos, value);
+}
+
+/*! \brief Reads an integer (positive, negative or zero) out of the line,
+starting at the index given by the pos offset. The value being
+read may be written with a decimal point or it may be an expression
+involving non-integers, as long as the result comes out within 0.0001
+of an integer.
+
+This proceeds by calling read_real_value and checking that it is
+close to an integer, then returning the integer it is close to.
+
+\param line pointer to RS274/NGC code (block).
+\param pos offset into line where expression starts.
+\param value pointer to integer where result is to be stored.
+\returns #Status_OK enum value if processed without error, appropriate \ref status_code_t enum value if not.
+*/
+status_code_t ngc_read_integer_value (char *line, uint_fast8_t *pos, int32_t *value)
+{
+  float fvalue;
+  status_code_t status;
+
+  if((status = ngc_read_real_value(line, pos, &fvalue)) == Status_OK) {
+      *value = (int32_t)floorf(fvalue);
+      if((fvalue - (float)*value) > 0.9999f) {
+          *value = (uint32_t)ceilf(fvalue);
+      } else if((fvalue - (float)*value) > 0.0001f)
+          status = Status_GcodeCommandValueNotInteger; // not integer
+  }
+
+  return status;
 }
 
 /*! \brief Evaluate expression and set result if successful.

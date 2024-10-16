@@ -193,7 +193,6 @@ static bool limits_pull_off (axes_signals_t axis, float distance)
 
     plan_data.feed_rate = settings.homing.seek_rate * sqrtf(n_axis); // Adjust so individual axes all move at pull-off rate.
     plan_data.condition.coolant = gc_state.modal.coolant;
-    memcpy(&plan_data.spindle, &gc_state.spindle, sizeof(spindle_t));
 
 #ifdef KINEMATICS_API
     coord_data_t k_target;
@@ -275,13 +274,12 @@ static bool homing_cycle (axes_signals_t cycle, axes_signals_t auto_square)
     plan_line_data_t plan_data;
     rt_exec_t rt_exec, rt_exec_states = EXEC_SAFETY_DOOR|EXEC_RESET|EXEC_CYCLE_COMPLETE;
 
+    // Initialize plan data struct for homing motion.
+
     plan_data_init(&plan_data);
     plan_data.condition.system_motion = On;
     plan_data.condition.no_feed_override = On;
     plan_data.line_number = DEFAULT_HOMING_CYCLE_LINE_NUMBER;
-
-    // Initialize plan data struct for homing motion.
-    memcpy(&plan_data.spindle, &gc_state.spindle, sizeof(spindle_t));
     plan_data.condition.coolant = gc_state.modal.coolant;
 
     uint_fast8_t idx = N_AXIS;

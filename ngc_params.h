@@ -30,6 +30,10 @@
 
 #include "gcode.h"
 
+#ifndef NGC_MAX_PARAM_LENGTH
+#define NGC_MAX_PARAM_LENGTH 20
+#endif
+
 typedef uint16_t ngc_param_id_t;
 
 typedef struct {

@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+<a name="20241016">Build 20241016
+
+Core:
+
+* Improved parameter handling some more, now allows indirected O-calls and line numbers with O-word.
+
+* Fix for [issue #609](https://github.com/grblHAL/core/issues/609), homing may cause a controller crash.
+
+Plugins:
+
+* Spindle: Fixed compiler warning. Ref. [issue #33](https://github.com/grblHAL/Plugins_spindle/issues/33)
+
+---
+
 <a name="20241014">Build 20241014
 
 Core:

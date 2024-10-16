@@ -41,9 +41,6 @@
 #ifndef NGC_MAX_CALL_LEVEL
 #define NGC_MAX_CALL_LEVEL 10
 #endif
-#ifndef NGC_MAX_PARAM_LENGTH
-#define NGC_MAX_PARAM_LENGTH 20
-#endif
 
 typedef float (*ngc_param_get_ptr)(ngc_param_id_t id);
 typedef float (*ngc_named_param_get_ptr)(void);
@@ -622,7 +619,7 @@ static char *ngc_name_tolower (char *s)
     uint_fast8_t len = 0;
 	char c, *s1 = s, *s2 = name;
 
-    while((c = *s1++) && len < NGC_MAX_PARAM_LENGTH) {
+    while((c = *s1++) && len <= NGC_MAX_PARAM_LENGTH) {
         if(c > ' ') {
             *s2++ = LCAPS(c);
             len++;
@@ -679,7 +676,7 @@ bool ngc_named_param_exists (char *name)
     } while(idx && !ok);
 
     // If not predefined attempt to find it.
-    if(!ok && rw_global_params && strlen(name) < NGC_MAX_PARAM_LENGTH) {
+    if(!ok && rw_global_params && strlen(name) <= NGC_MAX_PARAM_LENGTH) {
 
         void *context = *name == '_' ? NULL : call_context;
         ngc_named_rw_param_t *rw_param = rw_global_params;
@@ -712,7 +709,7 @@ bool ngc_named_param_set (char *name, float value)
     } while(idx && !ok);
 
     // If not predefined attempt to set it.
-    if(!ok && (ok = strlen(name) < NGC_MAX_PARAM_LENGTH)) {
+    if(!ok && (ok = strlen(name) <= NGC_MAX_PARAM_LENGTH)) {
 
         void *context = *name == '_' ? NULL : call_context;
         ngc_named_rw_param_t *rw_param = rw_global_params, *rw_param_last = rw_global_params;
