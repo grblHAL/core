@@ -129,8 +129,10 @@ void limits_set_work_envelope (void)
                     sys.work_envelope.max.values[idx] = - (settings.axis[idx].max_travel + pulloff);
                 }
             } else {
-                sys.work_envelope.min.values[idx] = settings.axis[idx].max_travel + pulloff;
-                sys.work_envelope.max.values[idx] = - pulloff;
+                  sys.work_envelope.min.values[idx] = 0.0f;
+                  sys.work_envelope.max.values[idx] = settings.axis[idx].limit_pos - pulloff;;
+                //sys.work_envelope.min.values[idx] = settings.axis[idx].max_travel + pulloff;
+                //sys.work_envelope.max.values[idx] = - pulloff;
             }
         } else
             sys.work_envelope.min.values[idx] = sys.work_envelope.max.values[idx] = 0.0f;
@@ -155,9 +157,12 @@ void limits_set_machine_positions (axes_signals_t cycle, bool add_pulloff)
         } while(idx);
     } else do {
         if (cycle.mask & bit(--idx)) {
-            sys.home_position[idx] = bit_istrue(settings.homing.dir_mask.value, bit(idx))
-                                      ? settings.axis[idx].max_travel + pulloff
-                                      : - pulloff;
+            
+           // sys.position[idx] = settings.axis[idx].limit_pos - pulloff;
+            sys.home_position[idx] = settings.axis[idx].limit_pos - pulloff;
+            //sys.home_position[idx] = bit_istrue(settings.homing.dir_mask.value, bit(idx))
+            //                          ? settings.axis[idx].max_travel + pulloff
+            //                          : - pulloff;
             sys.position[idx] = lroundf(sys.home_position[idx] * settings.axis[idx].steps_per_mm);
         }
     } while(idx);
