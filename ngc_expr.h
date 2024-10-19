@@ -9,5 +9,7 @@ status_code_t ngc_read_integer_value(char *line, uint_fast8_t *pos, int32_t *val
 status_code_t ngc_read_integer_unsigned (char *line, uint_fast8_t *pos, uint32_t *value);
 status_code_t ngc_read_parameter (char *line, uint_fast8_t *pos, float *value, bool check);
 status_code_t ngc_eval_expression (char *line, uint_fast8_t *pos, float *value);
+/**/
+char *ngc_substitute_parameters (char *comment, char **message);
 
 #endif

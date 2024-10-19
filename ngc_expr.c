@@ -881,4 +881,135 @@ status_code_t ngc_eval_expression (char *line, uint_fast8_t *pos, float *value)
     return Status_OK;
 }
 
+/**/
+
+static int8_t get_format (char c, int8_t pos, uint8_t *decimals)
+{
+    static uint8_t d;
+
+    // lcaps c?
+
+    switch(pos) {
+
+        case 1:
+
+            switch(c) {
+
+                case 'd':
+                    *decimals = 0;
+                    pos = -2;
+                    break;
+
+                case 'f':
+                    *decimals = ngc_float_decimals();
+                    pos = -2;
+                    break;
+
+                case '.':
+                    pos = 2;
+                    break;
+
+                default:
+                    pos = 0;
+                    break;
+            }
+            break;
+
+        case 2:
+            if(c >= '0' && c <= '9') {
+                d = c - '0';
+                pos = 3;
+            } else
+                pos = 0;
+            break;
+
+        default:
+            if(c == 'f') {
+                *decimals = d;
+                pos = -4;
+            } else
+                pos = 0;
+            break;
+    }
+
+    return pos;
+}
+
+/*! \brief Substitute references to parameters and expressions in a string with their values.
+
+_NOTE:_ The returned string must be freed by the caller.
+
+\param comment pointer to the original comment string.
+\param message pointer to a char pointer to receive the resulting string.
+*/
+char *ngc_substitute_parameters (char *comment, char **message)
+{
+    size_t len = 0;
+    float value;
+    char *s, c;
+    uint_fast8_t char_counter = 0;
+    int8_t parse_format = 0;
+    uint8_t decimals = ngc_float_decimals(); // LinuxCNC is 1 (or l?)
+
+    // Trim leading spaces
+    while(*comment == ' ')
+        comment++;
+
+    // Calculate length of substituted string
+    while((c = comment[char_counter++])) {
+        if(parse_format) {
+            if((parse_format = get_format(c, parse_format, &decimals)) < 0) {
+                len -= parse_format;
+                parse_format = 0;
+            }
+        } else if(c == '%')
+            parse_format = 1;
+        else if(c == '#') {
+            char_counter--;
+            if(ngc_read_parameter(comment, &char_counter, &value, true) == Status_OK)
+                len += strlen(decimals ? ftoa(value, decimals) : trim_float(ftoa(value, decimals)));
+            else
+                len += 3; // "N/A"
+        } else
+            len++;
+    }
+
+    // Perform substitution
+    if((s = *message = malloc(len + 1))) {
+
+        char fmt[5] = {0};
+
+        *s = '\0';
+        char_counter = 0;
+
+        while((c = comment[char_counter++])) {
+            if(parse_format) {
+                fmt[parse_format] = c;
+                if((parse_format = get_format(c, parse_format, &decimals)) < 0)
+                    parse_format = 0;
+                else if(parse_format == 0) {
+                    strcat(s, fmt);
+                    s = strchr(s, '\0');
+                    continue;
+                }
+            } else if(c == '%') {
+                parse_format = 1;
+                fmt[0] = c;
+            } else if(c == '#') {
+                char_counter--;
+                if(ngc_read_parameter(comment, &char_counter, &value, true) == Status_OK)
+                    strcat(s, decimals ? ftoa(value, decimals) : trim_float(ftoa(value, decimals)));
+                else
+                    strcat(s, "N/A");
+                s = strchr(s, '\0');
+            } else {
+                *s++ = c;
+                *s = '\0';
+            }
+        }
+    }
+
+    return *message;
+}
+
 #endif

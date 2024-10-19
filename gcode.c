@@ -30,10 +30,16 @@
 #include "protocol.h"
 #include "state_machine.h"
 
+#if NGC_PARAMETERS_ENABLE
+#include "ngc_params.h"
+#endif
+
 #if NGC_EXPRESSIONS_ENABLE
 #include "ngc_expr.h"
-#include "ngc_params.h"
 #include "ngc_flowctrl.h"
+#ifndef NGC_N_ASSIGN_PARAMETERS_PER_BLOCK
+#define NGC_N_ASSIGN_PARAMETERS_PER_BLOCK 10
+#endif
 #endif
 
 // NOTE: Max line number is defined by the g-code standard to be 99999. It seems to be an
@@ -497,134 +503,6 @@ void gc_output_message (char *message)
     }
 }
 
-#if NGC_EXPRESSIONS_ENABLE
-
-#define NGC_N_ASSIGN_PARAMETERS_PER_BLOCK 10
-
-static ngc_param_t ngc_params[NGC_N_ASSIGN_PARAMETERS_PER_BLOCK];
-
-static int8_t get_format (char c, int8_t pos, uint8_t *decimals)
-{
-    static uint8_t d;
-
-    // lcaps c?
-
-    switch(pos) {
-
-        case 1:
-
-            switch(c) {
-
-                case 'd':
-                    *decimals = 0;
-                    pos = -2;
-                    break;
-
-                case 'f':
-                    *decimals = ngc_float_decimals();
-                    pos = -2;
-                    break;
-
-                case '.':
-                    pos = 2;
-                    break;
-
-                default:
-                    pos = 0;
-                    break;
-            }
-            break;
-
-        case 2:
-            if(c >= '0' && c <= '9') {
-                d = c - '0';
-                pos = 3;
-            } else
-                pos = 0;
-            break;
-
-        default:
-            if(c == 'f') {
-                *decimals = d;
-                pos = -4;
-            } else
-                pos = 0;
-            break;
-    }
-
-    return pos;
-}
-
-static void substitute_parameters (char *comment, char **message)
-{
-    size_t len = 0;
-    float value;
-    char *s, c;
-    uint_fast8_t char_counter = 0;
-    int8_t parse_format = 0;
-    uint8_t decimals = ngc_float_decimals(); // LinuxCNC is 1 (or l?)
-
-    // Trim leading spaces
-    while(*comment == ' ')
-        comment++;
-
-    // Calculate length of substituted string
-    while((c = comment[char_counter++])) {
-        if(parse_format) {
-            if((parse_format = get_format(c, parse_format, &decimals)) < 0) {
-                len -= parse_format;
-                parse_format = 0;
-            }
-        } else if(c == '%')
-            parse_format = 1;
-        else if(c == '#') {
-            char_counter--;
-            if(ngc_read_parameter(comment, &char_counter, &value, true) == Status_OK)
-                len += strlen(decimals ? ftoa(value, decimals) : trim_float(ftoa(value, decimals)));
-            else
-                len += 3; // "N/A"
-        } else
-            len++;
-    }
-
-    // Perform substitution
-    if((s = *message = malloc(len + 1))) {
-
-        char fmt[5] = {0};
-
-        *s = '\0';
-        char_counter = 0;
-
-        while((c = comment[char_counter++])) {
-            if(parse_format) {
-                fmt[parse_format] = c;
-                if((parse_format = get_format(c, parse_format, &decimals)) < 0)
-                    parse_format = 0;
-                else if(parse_format == 0) {
-                    strcat(s, fmt);
-                    s = strchr(s, '\0');
-                    continue;
-                }
-            } else if(c == '%') {
-                parse_format = 1;
-                fmt[0] = c;
-            } else if(c == '#') {
-                char_counter--;
-                if(ngc_read_parameter(comment, &char_counter, &value, true) == Status_OK)
-                    strcat(s, decimals ? ftoa(value, decimals) : trim_float(ftoa(value, decimals)));
-                else
-                    strcat(s, "N/A");
-                s = strchr(s, '\0');
-            } else {
-                *s++ = c;
-                *s = '\0';
-            }
-        }
-    }
-}
-
-#endif // NGC_EXPRESSIONS_ENABLE
-
 #if NGC_PARAMETERS_ENABLE
 
 static parameter_words_t g65_words = {0};
@@ -722,16 +600,16 @@ char *gc_normalize_block (char *block, char **message)
                             if(!strncmp(comment, "(DEBUG,", 7)) { // Debug message string substitution
                                 if(settings.flags.ngc_debug_out) {
                                     comment += 7;
-                                    substitute_parameters(comment, message);
+                                    ngc_substitute_parameters(comment, message);
                                 }
                                 *comment = '\0'; // Do not generate grbl.on_gcode_comment event!
                             } else if(!strncmp(comment, "(PRINT,", 7)) { // Print message string substitution
                                 comment += 7;
-                                substitute_parameters(comment, message);
+                                ngc_substitute_parameters(comment, message);
                                 *comment = '\0'; // Do not generate grbl.on_gcode_comment event!
                             } else if(!strncmp(comment, "(MSG,", 5)) {
                                     comment += 5;
-                                    substitute_parameters(comment, message);
+                                    ngc_substitute_parameters(comment, message);
                                 }
                             }
 #else
@@ -843,6 +721,8 @@ status_code_t gc_execute_block (char *block)
     static const parameter_words_t o_label = {
         .o = On
     };
+
+    static ngc_param_t ngc_params[NGC_N_ASSIGN_PARAMETERS_PER_BLOCK];
 
     uint_fast8_t ngc_param_count = 0;
 
@@ -1038,13 +918,17 @@ status_code_t gc_execute_block (char *block)
                 } else
                     FAIL(status);
             } else if(block[char_counter] == '<') {
-    /*            char o_label[NGC_MAX_PARAM_LENGTH + 1];
-                if((status = ngc_read_name(block, &char_counter, o_label)) != Status_OK)
+#if 0
+                char o_slabel[NGC_MAX_PARAM_LENGTH + 1];
+                if((status = ngc_read_name(block, &char_counter, o_slabel)) != Status_OK)
                     FAIL(status);
                 gc_block.words.o = On;
-                gc_block.values.o = 0xFFFFFFFE;
-                continue;*/
+                if(gc_block.values.o = string_register_set_name(o_slabel) == 0)
+                    FAIL(Status_FlowControlOutOfMemory);
+                continue;
+#else
                 FAIL(Status_GcodeUnsupportedCommand); // [For now...]
+#endif
             }
         }
 

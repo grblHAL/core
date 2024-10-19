@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+<a name="20241019">Build 20241019
+
+Core:
+
+* Moved message substitution code from _gcode.c_ to _ngc_expr.c_.
+
+Drivers:
+
+* ESP32: fixed tests for ESP32-S3 conditional code, added overridable symbols for UART0 RX/TX pins.
+
+* STM32F4xx: fixed regression in spindle sync code. Ref. [discussion #612](https://github.com/grblHAL/core/discussions/612).
+
+Plugins:
+
+* Spindle: fixed name typo. Ref. [issue #34](https://github.com/grblHAL/Plugins_spindle/issues/34).
+
+---
+
 <a name="20241016">Build 20241016
 
 Core:
@@ -10,7 +28,7 @@ Core:
 
 Plugins:
 
-* Spindle: Fixed compiler warning. Ref. [issue #33](https://github.com/grblHAL/Plugins_spindle/issues/33)
+* Spindle: fixed compiler warning. Ref. [issue #33](https://github.com/grblHAL/Plugins_spindle/issues/33).
 
 ---
 
