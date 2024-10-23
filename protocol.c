@@ -240,6 +240,9 @@ bool protocol_main_loop (void)
                 if (state_get() == STATE_JOG) // Block all other states from invoking motion cancel.
                     system_set_exec_state_flag(EXEC_MOTION_CANCEL);
 
+            } else if(c == ASCII_EOF) {
+                if(grbl.on_file_end)
+                    grbl.on_file_end(hal.stream.file, gc_state.last_error);
             } else if ((c == '\n') || (c == '\r')) { // End of line reached
 
                 // Check for possible secondary end of line character, do not process as empty line
@@ -279,7 +282,8 @@ bool protocol_main_loop (void)
                 else { // Parse and execute g-code block.
 
 #endif
-                    gc_state.last_error = gc_execute_block(line);
+                    if((gc_state.last_error = gc_execute_block(line)) != Status_OK)
+                        eol = '\0';
                 }
 
                 // Add a short delay for each block processed in Check Mode to

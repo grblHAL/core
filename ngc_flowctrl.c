@@ -25,11 +25,15 @@
 
 #if NGC_EXPRESSIONS_ENABLE
 
+#include <math.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "errors.h"
 #include "ngc_expr.h"
 #include "ngc_params.h"
+#include "stream_file.h"
+//#include "string_registers.h"
 
 #ifndef NGC_STACK_DEPTH
 #define NGC_STACK_DEPTH 20
@@ -193,6 +197,28 @@ static status_code_t read_command (char *line, uint_fast8_t *pos, ngc_cmd_t *ope
     return status;
 }
 
+static ngc_sub_t *add_sub (uint32_t o_label, vfs_file_t *file)
+{
+    ngc_sub_t *sub;
+
+    if((sub = malloc(sizeof(ngc_sub_t))) != NULL) {
+        sub->o_label = o_label;
+        sub->file = file;
+        sub->file_pos = vfs_tell(file);
+        sub->next = NULL;
+        if(subs == NULL)
+            subs = sub;
+        else {
+            ngc_sub_t *last = subs;
+            while(last->next)
+                last = last->next;
+            last->next = sub;
+        }
+    }
+
+    return sub;
+}
+
 static void clear_subs (vfs_file_t *file)
 {
     ngc_sub_t *current = subs, *prev = NULL, *next;
@@ -249,7 +275,10 @@ static void stack_unwind_sub (uint32_t o_label)
         stack_pull();
 
     if(stack_idx >= 0) {
-        vfs_seek(stack[stack_idx].file, stack[stack_idx].file_pos);
+        if(o_label > NGC_MAX_PARAM_ID)
+            stream_redirect_close(stack[stack_idx].file);
+        else
+            vfs_seek(stack[stack_idx].file, stack[stack_idx].file_pos);
         stack_pull();
     }
 
@@ -272,6 +301,56 @@ void ngc_flowctrl_init (void)
         stack_pull();
 }
 
+/*
+
+static status_code_t onError (status_code_t status)
+{
+    static bool closing = false;
+
+    if(stack_idx >= 0) {
+
+        uint32_t o_label = 0;
+        ngc_sub_t *sub;
+
+        if((sub = subs)) do {
+            if(sub->o_label > NGC_MAX_PARAM_ID)
+                o_label = sub->o_label;
+        } while((sub = sub->next));
+
+        if((sub = subs)) do {
+            if(sub->o_label == o_label)
+                break;
+        } while((sub = sub->next));
+
+        if(sub) {
+            if(!closing) {
+                char msg[100];
+                closing = true;
+                char *name = string_register_get_by_id((string_register_id_t)sub->o_label);
+                sprintf(msg, "error %d in named sub %s.macro", (uint8_t)status, name);
+                report_message(msg, Message_Warning);
+            }
+
+            sub->o_label = 1;
+
+            stream_redirect_close(sub->file);
+            status = grbl.report.status_message(status);
+        }
+        closing = false;
+        ngc_flowctrl_init();
+    }
+
+    return status;
+}
+
+static status_code_t onFileEnd (vfs_file_t *file, status_code_t status)
+{
+    if(stack_idx >= 0 && stack[stack_idx].file == file)
+        ngc_flowctrl_unwind_stack(file);
+
+    return status;
+}
+*/
 status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, bool *skip)
 {
     float value;
@@ -346,13 +425,11 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
                     if(last_op == NGCFlowCtrl_Do && o_label == stack[stack_idx].o_label)
                         stack_pull();
                 } else if(!skipping && (status = ngc_eval_expression(line, pos, &value)) == Status_OK) {
-                    if(last_op == NGCFlowCtrl_Do) {
-                        if(o_label == stack[stack_idx].o_label) {
-                            if(value != 0.0f)
-                                vfs_seek(stack[stack_idx].file, stack[stack_idx].file_pos);
-                            else
-                                stack_pull();
-                        }
+                    if(last_op == NGCFlowCtrl_Do && o_label == stack[stack_idx].o_label) {
+                        if(value != 0.0f)
+                            vfs_seek(stack[stack_idx].file, stack[stack_idx].file_pos);
+                        else
+                            stack_pull();
                     } else if((status = stack_push(o_label, operation)) == Status_OK) {
                         if(!(stack[stack_idx].skip = value == 0.0f)) {
                             if((stack[stack_idx].expr = malloc(strlen(expr) + 1))) {
@@ -371,11 +448,13 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
         case NGCFlowCtrl_EndWhile:
             if(hal.stream.file) {
                 if(last_op == NGCFlowCtrl_While) {
-                    if(!skipping && o_label == stack[stack_idx].o_label) {
-                        uint_fast8_t pos = 0;
-                        if(!stack[stack_idx].skip && (status = ngc_eval_expression(stack[stack_idx].expr, &pos, &value)) == Status_OK) {
-                            if(!(stack[stack_idx].skip = value == 0))
-                                vfs_seek(stack[stack_idx].file, stack[stack_idx].file_pos);
+                    if(o_label == stack[stack_idx].o_label) {
+                        if(!skipping) {
+                            uint_fast8_t pos = 0;
+                            if(!stack[stack_idx].skip && (status = ngc_eval_expression(stack[stack_idx].expr, &pos, &value)) == Status_OK) {
+                                if(!(stack[stack_idx].skip = value == 0.0f))
+                                    vfs_seek(stack[stack_idx].file, stack[stack_idx].file_pos);
+                            }
                         }
                         if(stack[stack_idx].skip)
                             stack_pull();
@@ -390,7 +469,8 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
             if(hal.stream.file) {
                 if(!skipping && (status = ngc_eval_expression(line, pos, &value)) == Status_OK) {
                     if((status = stack_push(o_label, operation)) == Status_OK) {
-                        if(!(stack[stack_idx].skip = value == 0.0f)) {
+                        value = nearbyintf(value);
+                        if(!(stack[stack_idx].skip = value <= 0.0f)) {
                             stack[stack_idx].file = hal.stream.file;
                             stack[stack_idx].file_pos = vfs_tell(hal.stream.file);
                             stack[stack_idx].repeats = (uint32_t)value;
@@ -490,20 +570,17 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
         case NGCFlowCtrl_Sub:
             if(hal.stream.file) {
                 ngc_sub_t *sub;
-                if((skip_sub = (sub = malloc(sizeof(ngc_sub_t))) != NULL)) {
-                    sub->o_label = o_label;
-                    sub->file = hal.stream.file;
-                    sub->file_pos = vfs_tell(hal.stream.file);
-                    sub->next = NULL;
-                    if(subs == NULL)
-                        subs = sub;
-                    else {
-                        ngc_sub_t *last = subs;
-                        while(last->next)
-                            last = last->next;
-                        last->next = sub;
-                    }
-                } // else out of memory
+                if(o_label > NGC_MAX_PARAM_ID) {
+
+                    if((sub = subs)) do {
+//                        if(sub->o_label == o_label && sub->file == hal.stream.file)
+//                            break;
+                    } while(sub->next && (sub = sub->next));
+
+                    if(sub == NULL || sub->o_label != o_label)
+                        status = Status_FlowControlSyntaxError;
+                } else if(!(skip_sub = (sub = add_sub(o_label, hal.stream.file)) != NULL))
+                    status = Status_FlowControlOutOfMemory;
             } else
                 status = Status_FlowControlNotExecutingMacro;
             break;
@@ -524,11 +601,37 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
             break;
 
         case NGCFlowCtrl_Call:
-            if(hal.stream.file) {
+
+            if(hal.stream.file || o_label > NGC_MAX_PARAM_ID) {
+
                 if(!skipping) {
 
                     ngc_sub_t *sub = subs;
-                    do {
+
+                    if(o_label > NGC_MAX_PARAM_ID) {
+#if 0
+                        char *subname;
+                        if((subname = string_register_get_by_id((string_register_id_t)o_label))) {
+                            char filename[60];
+                            vfs_file_t *file;
+
+                            strcpy(filename, "/");
+                            strcat(filename, subname);
+                            strcat(filename, ".macro");
+
+#if LITTLEFS_ENABLE
+                            sprintf(filename, "/littlefs/P%d.macro", macro_id);
+
+                            if((file = vfs_open(filename, "r")) == NULL)
+#endif
+                            if((file = stream_redirect_read(filename, onError, onFileEnd))) {
+                                if((sub = add_sub(o_label, file)) == NULL)
+                                    status = Status_FlowControlOutOfMemory;
+                            } else
+                                status = Status_FlowControlOutOfMemory; // file not found...
+                       }
+#endif
+                    } else do {
                         if(sub->o_label == o_label && sub->file == hal.stream.file)
                             break;
                     } while((sub = sub->next));

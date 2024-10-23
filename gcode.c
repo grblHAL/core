@@ -37,6 +37,7 @@
 #if NGC_EXPRESSIONS_ENABLE
 #include "ngc_expr.h"
 #include "ngc_flowctrl.h"
+//#include "string_registers.h"
 #ifndef NGC_N_ASSIGN_PARAMETERS_PER_BLOCK
 #define NGC_N_ASSIGN_PARAMETERS_PER_BLOCK 10
 #endif
@@ -587,7 +588,7 @@ char *gc_normalize_block (char *block, char **message)
 
             case '(':
                 // TODO: generate error if a left parenthesis is found inside a comment...
-                comment = s1;
+                comment = s1 + 1;
                 break;
 
             case ')':
@@ -597,27 +598,27 @@ char *gc_normalize_block (char *block, char **message)
 
                         if(message && *message == NULL) {
 #if NGC_EXPRESSIONS_ENABLE
-                            if(!strncmp(comment, "(DEBUG,", 7)) { // Debug message string substitution
+                            if(!strncasecmp(comment, "DEBUG,", 6)) { // Debug message string substitution
                                 if(settings.flags.ngc_debug_out) {
-                                    comment += 7;
+                                    comment += 6;
                                     ngc_substitute_parameters(comment, message);
                                 }
                                 *comment = '\0'; // Do not generate grbl.on_gcode_comment event!
-                            } else if(!strncmp(comment, "(PRINT,", 7)) { // Print message string substitution
-                                comment += 7;
+                            } else if(!strncasecmp(comment, "PRINT,", 6)) { // Print message string substitution
+                                comment += 6;
                                 ngc_substitute_parameters(comment, message);
                                 *comment = '\0'; // Do not generate grbl.on_gcode_comment event!
-                            } else if(!strncmp(comment, "(MSG,", 5)) {
-                                    comment += 5;
+                            } else if(!strncasecmp(comment, "MSG,", 4)) {
+                                    comment += 4;
                                     ngc_substitute_parameters(comment, message);
                                 }
                             }
 #else
-                            size_t len = s1 - comment - 4;
+                            size_t len = s1 - comment - 3;
 
-                            if(!strncmp(comment, "(MSG,", 5) && (*message = malloc(len))) {
+                            if(!strncasecmp(comment, "MSG,", 4) && (*message = malloc(len))) {
 
-                                comment += 5;
+                                comment += 4;
                                 while(*comment == ' ') {
                                     comment++;
                                     len--;
@@ -639,14 +640,6 @@ char *gc_normalize_block (char *block, char **message)
                     *s2++ = CAPS(c);
                 break;
         }
-
-#if NGC_EXPRESSIONS_ENABLE
-        if(comment && s1 - comment < (strncmp(comment, "(DEBU", 5) && strncmp(comment, "(PRIN", 5) ? 5 : 7))
-            *s1 = CAPS(c);
-#else
-        if(comment && s1 - comment < 5)
-            *s1 = CAPS(c);
-#endif
         s1++;
     }
 
@@ -923,7 +916,7 @@ status_code_t gc_execute_block (char *block)
                 if((status = ngc_read_name(block, &char_counter, o_slabel)) != Status_OK)
                     FAIL(status);
                 gc_block.words.o = On;
-                if(gc_block.values.o = string_register_set_name(o_slabel) == 0)
+                if((gc_block.values.o = string_register_set_name(o_slabel)) == 0)
                     FAIL(Status_FlowControlOutOfMemory);
                 continue;
 #else

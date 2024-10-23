@@ -122,6 +122,7 @@ typedef void (*on_gcode_message_ptr)(char *msg);
 typedef void (*on_rt_reports_added_ptr)(report_tracking_flags_t report);
 typedef const char *(*on_set_axis_setting_unit_ptr)(setting_id_t setting_id, uint_fast8_t axis_idx);
 typedef status_code_t (*on_file_open_ptr)(const char *fname, vfs_file_t *handle, bool stream);
+typedef status_code_t (*on_file_end_ptr)(vfs_file_t *handle, status_code_t status);
 typedef status_code_t (*on_unknown_sys_command_ptr)(sys_state_t state, char *line); // return Status_Unhandled.
 typedef status_code_t (*on_user_command_ptr)(char *line);
 typedef sys_commands_t *(*on_get_commands_ptr)(void);
@@ -252,6 +253,7 @@ typedef struct {
     on_spindle_selected_ptr on_spindle_selected;        //!< Called when spindle is selected, do not change HAL pointers here!
     on_reset_ptr on_reset;                              //!< Called from interrupt context.
     on_file_open_ptr on_file_open;                      //!< Called when a file is opened for streaming.
+    on_file_end_ptr on_file_end;                        //!< Called when a file opened for streaming reaches the end.
     user_mcode_ptrs_t user_mcode;                       //!< Optional handlers for user defined M-codes.
     // core entry points - set up by core before driver_init() is called.
     home_machine_ptr home_machine;

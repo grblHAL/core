@@ -34,6 +34,8 @@
 #define NGC_MAX_PARAM_LENGTH 20
 #endif
 
+#define NGC_MAX_PARAM_ID 65535
+
 typedef uint16_t ngc_param_id_t;
 
 typedef struct {
