@@ -39,8 +39,8 @@
 #endif
 typedef struct string_register {
     string_register_id_t id;
-    char value[MAX_SR_LENGTH + 1];
     struct string_register *next;
+    char value[1];
 } string_register_t;
 
 static string_register_t *string_registers = NULL;
@@ -50,16 +50,11 @@ string_register_t *find_string_register_with_last (string_register_id_t id, stri
     int i = 0;
 
     while(current_register != NULL) {
-
         if(current_register->id == id) {
             return current_register;
-
-        } else if (i++ < 1000) {
+        } else {
             *last_register = current_register;
             current_register = current_register->next;
-        } else {
-            report_message("index out of bounds", Message_Warning);
-            return NULL;
         }
     }
 
@@ -87,7 +82,8 @@ bool string_register_exists (string_register_id_t id) {
 }
 
 bool string_register_set (ngc_param_id_t id, char *value) {
-    if (strlen(value) > MAX_SR_LENGTH) {
+    size_t length = strlen(value);
+    if (length > MAX_SR_LENGTH) {
         report_message("String register values cannot be longer than 40 characters", Message_Warning);
         return false;
     }
@@ -95,15 +91,22 @@ bool string_register_set (ngc_param_id_t id, char *value) {
     string_register_t *last_register = NULL;
     string_register_t *string_register = find_string_register_with_last(id, &last_register);
 
-    if (string_register != NULL) {
-        strcpy(string_register->value, value);
-        return true;
+    bool isNew = string_register == NULL;
 
-    } else if ((string_register = malloc(sizeof(string_register_t)))) {
-        string_register->id = id;
-        strcpy(string_register->value, value);
-        string_register->next = NULL;
+    // if a string register is found, we realloc it to fit the new value. If not,
+    // calling realloc with a null pointer should result in allocating new memory.
+    if ((string_register = realloc(string_register, sizeof(string_register_t) + length))) {
+        // Since realloc copies (or preserves) the old object,
+        // we only need to write id and next if this is actually a new register
+        if (isNew) {
+            string_register->id = id;
+            string_register->next = NULL;
+        }
 
+        strcpy(string_register->value, value);
+
+        // Update the next-pointer of the last register before this one.
+        // If none exists, update the string_registers-pointer.
         if (last_register != NULL) {
             last_register->next = string_register;
         } else {
