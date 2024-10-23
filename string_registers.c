@@ -35,7 +35,8 @@
 #include "string_registers.h"
 
 #ifndef MAX_SR_LENGTH
-#define MAX_SR_LENGTH 50
+// 256 is max block-length in gcode, so probably reasonable
+#define MAX_SR_LENGTH 256
 #endif
 typedef struct string_register {
     string_register_id_t id;
