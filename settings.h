@@ -515,9 +515,9 @@ typedef enum {
     Setting_AxisMicroSteps       = Setting_AxisSettingsBase + 5 * AXIS_SETTINGS_INCREMENT,
     Setting_AxisBacklash         = Setting_AxisSettingsBase + 6 * AXIS_SETTINGS_INCREMENT,
     Setting_AxisAutoSquareOffset = Setting_AxisSettingsBase + 7 * AXIS_SETTINGS_INCREMENT,
-    Setting_AxisHomingFeedRate   = Setting_AxisSettingsBase + 8 * AXIS_SETTINGS_INCREMENT,
-    Setting_AxisHomingSeekRate   = Setting_AxisSettingsBase + 9 * AXIS_SETTINGS_INCREMENT,
-
+   // Setting_AxisHomingFeedRate   = Setting_AxisSettingsBase + 8 * AXIS_SETTINGS_INCREMENT,
+   // Setting_AxisHomingSeekRate   = Setting_AxisSettingsBase + 9 * AXIS_SETTINGS_INCREMENT,
+    Setting_AxisLimitPos         = Setting_AxisSettingsBase + 8 * AXIS_SETTINGS_INCREMENT,
     // Calculated base values for driver/plugin stepper settings
     Setting_AxisExtended0        = Setting_AxisSettingsBase2,
     Setting_AxisExtended1        = Setting_AxisSettingsBase2 + AXIS_SETTINGS_INCREMENT,
@@ -716,6 +716,7 @@ typedef struct {
     float acceleration;
     float max_travel;
     float dual_axis_offset;
+    float limit_pos;
 #if ENABLE_BACKLASH_COMPENSATION
     float backlash;
 #endif
