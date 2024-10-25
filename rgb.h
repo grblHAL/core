@@ -131,11 +131,11 @@ static inline void  rgb_3bpp_pack (uint8_t *led, rgb_color_t color, rgb_color_ma
 
     do {
         R <<= 3;
-        R |= color.R & bitmask ? 0b110 : 0b100;
+        R |= color.R & bitmask ? 0b011 : 0b010;
         G <<= 3;
-        G |= color.G & bitmask ? 0b110 : 0b100;
+        G |= color.G & bitmask ? 0b011 : 0b010;
         B <<= 3;
-        B |= color.B & bitmask ? 0b110 : 0b100;
+        B |= color.B & bitmask ? 0b011 : 0b010;
     } while(bitmask >>= 1);
 
     if(mask.G) {
@@ -179,13 +179,13 @@ static inline rgb_color_t rgb_3bpp_unpack (uint8_t *led, uint8_t intensity)
         B |= *led;
 
         do {
-            if((R & 0b110) == 0b110)
+            if((R & 0b011) == 0b011)
                color.R |= bitmask;
             R >>= 3;
-            if((G & 0b110) == 0b110)
+            if((G & 0b011) == 0b011)
                color.G |= bitmask;
             G >>= 3;
-            if((B & 0b110) == 0b110)
+            if((B & 0b011) == 0b011)
                color.B |= bitmask;
             B >>= 3;
         } while(bitmask <<= 1);
