@@ -683,12 +683,14 @@ static status_code_t set_startup_line (sys_state_t state, char *args, uint_fast8
 
     status_code_t retval = Status_OK;
 
-    args = gc_normalize_block(args, NULL);
+    args = gc_normalize_block(args, &retval, NULL);
 
-    if(strlen(args) >= (sizeof(stored_line_t) - 1))
-        retval = Status_Overflow;
-    else if ((retval = gc_execute_block(args)) == Status_OK) // Execute gcode block to ensure block is valid.
-        settings_write_startup_line(lnr, args);
+    if(retval == Status_OK) {
+        if(strlen(args) >= (sizeof(stored_line_t) - 1))
+            retval = Status_Overflow;
+        else if ((retval = gc_execute_block(args)) == Status_OK) // Execute gcode block to ensure block is valid.
+            settings_write_startup_line(lnr, args);
+    }
 
     return retval;
 }

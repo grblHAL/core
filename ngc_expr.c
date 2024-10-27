@@ -28,6 +28,7 @@
 #include <string.h>
 
 #include "errors.h"
+#include "settings.h"
 #include "ngc_expr.h"
 #include "ngc_params.h"
 
@@ -70,7 +71,8 @@ typedef enum {
     NGCUnaryOp_SIN,
     NGCUnaryOp_SQRT,
     NGCUnaryOp_TAN,
-    NGCUnaryOp_Exists
+    NGCUnaryOp_Exists,
+    NGCUnaryOp_Parameter // read setting/setting bit
 } ngc_unary_op_t;
 
 /*! \brief Executes the operations: /, MOD, ** (POW), *.
@@ -564,6 +566,14 @@ static status_code_t read_operation_unary (char *line, uint_fast8_t *pos, ngc_un
                 status = Status_ExpressionUknownOp;
             break;
 
+        case 'P':
+            if(!strncmp(line + *pos, "RM", 2)) {
+                *operation = NGCUnaryOp_Parameter;
+                *pos += 2;
+            } else
+                status = Status_ExpressionUknownOp;
+            break;
+
         default:
             status = Status_ExpressionUknownOp;
     }
@@ -722,6 +732,45 @@ static status_code_t read_unary (char *line, uint_fast8_t *pos, float *value)
                 } else
                     status = Status_ExpressionSyntaxError;
 
+            } else if(operation == NGCUnaryOp_Parameter) {
+
+                // get setting value or bit in value
+
+                bool get_bit;
+                int32_t setting_id, bitnum;
+                const setting_detail_t *setting;
+
+                (*pos)++;
+                if((status = ngc_read_integer_value(line, pos, &setting_id)) == Status_OK) {
+
+                    if((get_bit = line[*pos] == ',')) {
+                       (*pos)++;
+                       if((status = ngc_read_integer_value(line, pos, &bitnum)) != Status_OK)
+                           return status;
+                       if(bitnum < 0 || bitnum > 31)
+                           return Status_ExpressionArgumentOutOfRange;
+                   }
+
+                   if(line[*pos] != ']')
+                       return Status_ExpressionSyntaxError; // Left bracket missing after slash with ATAN;
+
+                   (*pos)++;
+
+                   if((setting = setting_get_details((setting_id_t)setting_id, NULL))) {
+
+                       uint_fast8_t offset = setting_id - setting->id;
+
+                       if(setting->datatype == Format_Decimal)
+                           *value = setting_get_float_value(setting, offset);
+                       else if(setting_is_integer(setting) || setting_is_list(setting)) {
+                           *value = (float)setting_get_int_value(setting, offset);
+                           if(get_bit)
+                               *value = (((uint32_t)*value >> bitnum) & 0x1) ? 1.0f : 0.0f;
+                       } else
+                           status = Status_ExpressionArgumentOutOfRange;
+                   } else
+                       status = Status_ExpressionArgumentOutOfRange;
+                }
             } else if((status = ngc_eval_expression(line, pos, value)) == Status_OK) {
                 if(operation == NGCUnaryOp_ATAN)
                     status = read_atan(line, pos, value);

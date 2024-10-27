@@ -414,7 +414,7 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             break;
 
         case NGCParam_vminor:
-            value = 0.0f; // TODO: derive from version letter?
+            value = (float)(GRBL_BUILD - 20000000);
             break;
 
         case NGCParam_line:

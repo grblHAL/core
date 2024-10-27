@@ -270,6 +270,10 @@ void report_message (const char *msg, message_type_t type)
                 hal.stream.write("Warning: ");
                 break;
 
+            case Message_Error:
+                hal.stream.write("Error: ");
+                break;
+
             case Message_Debug:
                 hal.stream.write("Debug: ");
                 break;
