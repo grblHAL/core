@@ -3,22 +3,22 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2023 Terje Io
+  Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <stdint.h>
@@ -102,8 +102,9 @@ PROGMEM static const status_detail_t status_detail[] = {
     { Status_FlowControlNotExecutingMacro, "Flow statement only allowed in filesystem macro." },
     { Status_FlowControlSyntaxError, "Unknown flow statement." },
     { Status_FlowControlStackOverflow, "Stack overflow while executing flow statement." },
-    { Status_FlowControlOutOfMemory, "Out of memory while executing flow statement." }
+    { Status_FlowControlOutOfMemory, "Out of memory while executing flow statement." },
 #endif
+    { Status_UserException, "User defined error occured." }
 #endif // NO_SETTINGS_DESCRIPTIONS
 };
 

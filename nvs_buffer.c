@@ -39,7 +39,7 @@
 static uint8_t *nvsbuffer = NULL;
 static nvs_io_t physical_nvs;
 static bool dirty;
-
+uint32_t nvs_size_max = NVS_SIZE;
 settings_dirty_t settings_dirty;
 
 typedef struct {
@@ -53,7 +53,6 @@ typedef struct {
 #define NVS_GROUP_PARAMETERS 2
 #define NVS_GROUP_STARTUP 3
 #define NVS_GROUP_BUILD 4
-
 
 #define PARAMETER_ADDR(n) (NVS_ADDR_PARAMETERS + n * (sizeof(coord_data_t) + NVS_CRC_BYTES))
 #define STARTLINE_ADDR(n) (NVS_ADDR_STARTUP_BLOCK + n * (sizeof(stored_line_t) + NVS_CRC_BYTES))
@@ -215,10 +214,20 @@ static nvs_transfer_result_t memcpy_from_ram (uint8_t *destination, uint32_t sou
 // Try to allocate RAM from heap for buffer/emulation.
 bool nvs_buffer_alloc (void)
 {
-    assert(NVS_SIZE >= GRBL_NVS_SIZE);
+	static uint32_t nvs_size = NVS_SIZE;
 
-    if((nvsbuffer = malloc(NVS_SIZE)))
-        memset(nvsbuffer, 0xFF, NVS_SIZE);
+	if(hal.nvs.size_max > nvs_size) {
+		nvs_size_max = min(4096, hal.nvs.size_max); // Limit to 4K for now
+		if(nvsbuffer)
+			free(nvsbuffer);
+	}
+
+	assert(nvs_size_max >= GRBL_NVS_SIZE);
+
+    if((nvsbuffer = malloc(nvs_size_max))) {
+    	nvs_size = nvs_size_max;
+        memset(nvsbuffer, 0xFF, nvs_size_max);
+    }
 
     return nvsbuffer != NULL;
 }
@@ -294,7 +303,7 @@ nvs_address_t nvs_alloc (size_t size)
     }
 
     size += NVS_CRC_BYTES; // add room for checksum.
-    if(hal.nvs.driver_area.size + size < (NVS_SIZE - GRBL_NVS_SIZE)) {
+    if(hal.nvs.driver_area.size + size < (nvs_size_max - GRBL_NVS_SIZE)) {
         mem_address = (uint8_t *)((uint32_t)(mem_address - 1) | 0x03) + 1; // Align to word boundary
         addr = mem_address - nvsbuffer;
         mem_address += size;
