@@ -73,6 +73,11 @@
     bluetooth_init();
 #endif
 
+#if ESP_AT_ENABLE
+    extern void esp_at_init (void);
+    esp_at_init();
+#endif
+
 #if KEYPAD_ENABLE
     extern bool keypad_init (void);
     keypad_init();
