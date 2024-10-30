@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+<a name="20241030">20241030
+
+Core:
+
+* Added init call for new ESP-AT plugin.
+
+Plugins:
+
+* Motors: fixed incorrect settings reference. Ref. [discussion #107](https://github.com/grblHAL/ESP32/discussions/107).
+
+* Misc. plugins, esp_at: added experimental support for Telnet over WiFi via an ESP32 running [ESP-AT](https://docs.espressif.com/projects/esp-at/en/latest/esp32/Get_Started/index.html).
+
+---
+
 <a name="20241025">Build 20241025
 
 Core:
@@ -17,13 +31,15 @@ Terminates gcode program, outputs message and returns error 253.
 
 Drivers:
 
+* ESP32, RP2040: changed NVS storage for settings in flash from 2 to 4KB.
+
 * STM32F4xx: fixed typos.
 
 * Some: added note to _platformio.ino_ file.
 
 Plugins:
 
-* SD Card, macros: fixed G65P1 settings read macro when reading some indexed settings.
+* SD Card, macros: fixed G65P1 settings read macro, failed when reading some indexed settings.
 
 ---
 
