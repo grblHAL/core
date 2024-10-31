@@ -805,7 +805,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
 #if ENABLE_JERK_ACCELERATION   
     { Setting_AxisJerk, "Maximum rate of acceleration change - smoothes out acceleration profile up to max axis acceleration.\\n\\n"
                         "Minimum value of x10 Acceleration setting to ensure decent acceleration times.\\n"
-                        "Maximum is calcualted by current acceleration and stepper segment time.\\n"
+                        "Maximum is calculated by current acceleration and stepper segment time.\\n"
                         "At Maximum value motion is effectively trapezoidal instead of constant jerk.\\n\\n"
                         "Can be increased by adjusting ACCELERATION_TICKS_PER_SECOND to a larger value before compiling."},
 #endif
@@ -932,10 +932,8 @@ bool settings_override_acceleration (uint8_t axis, float acceleration)
 }
 
 #if ENABLE_ACCELERATION_PROFILES
-ActiveAccelProfile = 1; // Initialize machine with 100% Profile
-
 //Acceleration Profiles for G187 P[x] in percent of maximum machine acceleration.
-float LookupProfile(uint8_t Profile) {
+float lookupprofile(uint8_t profile) {
     static const float lookup[5] = { 
         1.0f,   // 100% - Roughing - Max Acceleration Default
         0.8f,   // 80% - Semi Roughing
@@ -943,8 +941,7 @@ float LookupProfile(uint8_t Profile) {
         0.4f,   // 40% - Finish
         0.2f,   // 20% - Slow AF Mode
     };
-    Profile = lookup[Profile];
-    return Profile;
+    return lookup[profile];
 }
 #endif
 

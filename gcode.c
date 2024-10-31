@@ -325,6 +325,9 @@ void gc_init (void)
 #if NGC_PARAMETERS_ENABLE
     ngc_modal_state_invalidate();
 #endif
+#if ENABLE_ACCELERATION_PROFILES
+    gc_state.modal.activeaccelprofile = 1.0f; // Initialize machine with 100% Profile
+#endif
 
 //    if(settings.flags.lathe_mode)
 //        gc_state.modal.plane_select = PlaneSelect_ZX;
@@ -2448,13 +2451,16 @@ status_code_t gc_execute_block (char *block)
             
 #if ENABLE_ACCELERATION_PROFILES
         case NonModal_SetAccelerationProfile:
-            if (!gc_block.values.p){
+            if (gc_block.words.e){
+                FAIL(Status_GcodeUnsupportedCommand);
+                break;}
+            else if (!gc_block.word.p){
                 gc_block.values.p = 1.0f;}
             else if (gc_block.values.p < 1.0f){
                 FAIL(Status_NegativeValue);}
             else if (gc_block.values.p > 5.0f){
                 FAIL(Status_GcodeValueOutOfRange);}
-            ActiveAccelProfile = gc_block.values.p;
+            gc_state.modal.activeaccelprofile = gc_block.values.p;
             break;
 #endif
         default:
@@ -3874,6 +3880,9 @@ status_code_t gc_execute_block (char *block)
             gc_state.modal.coolant = (coolant_state_t){0};
             gc_state.modal.override_ctrl.feed_rate_disable = Off;
             gc_state.modal.override_ctrl.spindle_rpm_disable = Off;
+            #if ENABLE_ACCELERATION_PROFILES
+            gc_state.modal.activeaccelprofile = 1.0f;
+            #endif
 
             idx = N_SYS_SPINDLE;
             spindle_ptrs_t *spindle;
