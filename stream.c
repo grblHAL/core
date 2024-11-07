@@ -63,7 +63,6 @@ static const io_stream_properties_t null_stream = {
     .instance = 0,
     .flags.claimable = On,
     .flags.claimed = Off,
-    .flags.connected = On,
     .flags.can_set_baud = On,
     .claim = stream_null_init
 };
