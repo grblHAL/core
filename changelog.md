@@ -1,5 +1,25 @@
 ## grblHAL changelog
 
+<a name="20241107">20241107
+
+Core:
+
+* Removed deprecated stream flags, added stream event for line state \(RTS, DTR\) changes - initially for USB streams.
+
+Drivers:
+
+* Many: updated for removal of deprecated stream flags in the core.
+
+* STM32 drivers: added support for line state changed event.
+
+Plugins:
+
+* Trinamic: fix for incorrect min/max stepper current validation for TMC2130 and TMC2209. Ref. STM32F4xx [issue #197](https://github.com/grblHAL/STM32F4xx/issues/197).
+
+* Networking: updated WebSocket daemon for removal of deprecated stream flags in the core.
+
+---
+
 <a name="20241030">20241030
 
 Core:
