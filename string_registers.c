@@ -86,7 +86,7 @@ bool string_register_exists (string_register_id_t id) {
     return find_string_register(id) != NULL;
 }
 
-string_register_result_t string_register_set (ngc_param_id_t id, char *value) {
+string_register_result_t string_register_set (string_register_id_t id, char *value) {
     size_t length = strlen(value);
     if (length > MAX_SR_LENGTH) {
         return SR_VALUE_TOO_LONG;
@@ -108,7 +108,6 @@ string_register_result_t string_register_set (ngc_param_id_t id, char *value) {
         }
 
         strcpy(string_register->value, value);
-
         // Update the next-pointer of the last register before this one.
         // If none exists, update the string_registers-pointer.
         if (last_register != NULL) {
@@ -162,7 +161,6 @@ char *sr_substitute_parameters (char *comment, char **message)
                 char *strValue;
                 if (string_register_get(registerId, &strValue) == SR_OK) {
                     len += strlen(strValue);
-                    free(strValue);
                 } else {
                     len += 3; // "N/A"
                 }
@@ -185,7 +183,6 @@ char *sr_substitute_parameters (char *comment, char **message)
                     char *strValue;
                     if (string_register_get(registerId, &strValue) == SR_OK) {
                         strcat(s, strValue);
-                        free(strValue);
                     } else {
                         strcat(s, "N/A");
                     }
@@ -212,7 +209,7 @@ status_code_t superOnGcodeComment(char* comment) {
     }
 }
 
-static status_code_t onGcodeComment (char *comment)
+static status_code_t onStringRegisterGcodeComment (char *comment)
 {
     uint_fast8_t char_counter = 0;
     if (comment[char_counter++] == '&') {
@@ -225,7 +222,7 @@ static status_code_t onGcodeComment (char *comment)
             return Status_ExpressionSyntaxError;   // [Expected equal sign]
         }
 
-        if (comment[char_counter] != '=') {
+        if (comment[char_counter++] != '=') {
             return Status_ExpressionSyntaxError;   // [Expected equal sign]
         }
 
@@ -234,10 +231,10 @@ static status_code_t onGcodeComment (char *comment)
         string_register_result_t srResult;
         if (grbl.on_string_substitution) {
             shouldFree = true;
-            grbl.on_string_substitution(&comment[char_counter++], &strValue);
+            grbl.on_string_substitution(comment + char_counter, &strValue);
             srResult = string_register_set(registerId, strValue);
         } else {
-            strValue = &comment[char_counter++];
+            strValue = comment + char_counter;
             srResult = string_register_set(registerId, strValue);
         }
 
@@ -270,7 +267,7 @@ static status_code_t onGcodeComment (char *comment)
     return superOnGcodeComment(comment);
 }
 
-char* onStringSubstitution(char *input, char **output) {
+char* onStringRegisterSubstitution(char *input, char **output) {
     char* result;
     if (on_string_substitution) {
         char *intermediate;
@@ -291,9 +288,9 @@ void string_registers_init (void)
     if(!init_ok) {
         init_ok = true;
         on_gcode_comment = grbl.on_gcode_comment;
-        grbl.on_gcode_comment = onGcodeComment;
+        grbl.on_gcode_comment = onStringRegisterGcodeComment;
         on_string_substitution = grbl.on_string_substitution;
-        grbl.on_string_substitution = onStringSubstitution;
+        grbl.on_string_substitution = onStringRegisterSubstitution;
     }
 }
 

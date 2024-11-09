@@ -1064,7 +1064,7 @@ char *ngc_substitute_parameters (char *comment, char **message)
     return *message;
 }
 
-char* onStringSubstitution(char *input, char **output) {
+char* onNgcParameterSubstitution(char *input, char **output) {
     char* result;
     if (on_string_substitution) {
         char *intermediate;
@@ -1084,7 +1084,7 @@ void ngc_expr_init(void) {
     if(!init_ok) {
         init_ok = true;
         on_string_substitution = grbl.on_string_substitution;
-        grbl.on_string_substitution = onStringSubstitution;
+        grbl.on_string_substitution = onNgcParameterSubstitution;
     }
 }
 
