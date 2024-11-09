@@ -352,6 +352,10 @@ void gc_init (void)
 
 #if NGC_EXPRESSIONS_ENABLE
     ngc_flowctrl_init();
+    #if STRING_REGISTERS_ENABLE
+    string_registers_init();
+    #endif
+    ngc_expr_init();
 #endif
 #if NGC_PARAMETERS_ENABLE
     ngc_modal_state_invalidate();
@@ -577,14 +581,6 @@ char *gc_normalize_block (char *block, status_code_t *status, char **message)
     if(*block == '/')
         block++;
 
-#if STRING_REGISTERS_ENABLE
-    // If the block starts with '&' it means it is setting a string register value,
-    // and we should not normalize it
-    if(*block == '&') {
-        return block;
-    }
-#endif
-
     s1 = s2 = block;
 
     while((c = *s1) != '\0') {
@@ -611,14 +607,16 @@ char *gc_normalize_block (char *block, status_code_t *status, char **message)
                         if(message && *message == NULL) {
 #if NGC_EXPRESSIONS_ENABLE
                             if(!strncasecmp(comment, "DEBUG,", 6)) { // Debug message string substitution
-                                if(settings.flags.ngc_debug_out) {
+                                if(settings.flags.ngc_debug_out && grbl.on_string_substitution) {
                                     comment += 6;
-                                    ngc_substitute_parameters(comment, message);
+                                    grbl.on_string_substitution(comment, message);
                                 }
                                 *comment = '\0'; // Do not generate grbl.on_gcode_comment event!
                             } else if(!strncasecmp(comment, "PRINT,", 6)) { // Print message string substitution
-                                comment += 6;
-                                ngc_substitute_parameters(comment, message);
+                                if(grbl.on_string_substitution) {
+                                    comment += 6;
+                                    grbl.on_string_substitution(comment, message);
+                                }
                                 *comment = '\0'; // Do not generate grbl.on_gcode_comment event!
                             } else {
 #endif
@@ -936,40 +934,8 @@ status_code_t gc_execute_block (char *block)
                 FAIL(Status_GcodeUnsupportedCommand); // [For now...]
 #endif
             }
-#if STRING_REGISTERS_ENABLE
-        } else if (letter == '&') {
-            if(gc_state.skip_blocks)
-                return Status_OK;
-            float register_id;
-            if (block[char_counter] == '[') {
-                if (ngc_eval_expression(block, &char_counter, &register_id) != Status_OK) {
-                    FAIL(Status_ExpressionSyntaxError);   // [Invalid expression syntax]
-                }
-            } else if (!read_float(block, &char_counter, &register_id)) {
-                FAIL(Status_BadNumberFormat);   // [Expected register id]
-            }
-
-            if (block[char_counter++] != '=') {
-                FAIL(Status_BadNumberFormat);   // [Expected equal sign]
-            }
-
-            char *strValue;
-            substitute_parameters(&block[char_counter++], &strValue);
-            report_message(strValue, Message_Debug);
-
-            if (!string_register_set((string_register_id_t)register_id, strValue)) {
-                free(strValue);
-                FAIL(Status_ExpressionInvalidArgument); // [Invalid value after '=']
-            } else {
-                free(strValue);
-            }
-
-            // setting a string-register consumes the rest of this block
-            break;
         }
-#else
-        }
-#endif
+
         if((gc_block.words.mask & o_label.mask) && (gc_block.words.mask & ~o_label.mask) == 0) {
             char_counter--;
             return ngc_flowctrl(gc_block.values.o, block, &char_counter, &gc_state.skip_blocks);

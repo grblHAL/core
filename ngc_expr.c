@@ -31,11 +31,7 @@
 #include "settings.h"
 #include "ngc_expr.h"
 #include "ngc_params.h"
-
-#if STRING_REGISTERS_ENABLE
-#include "string_registers.h"
-#include "messages.h"
-#endif
+#include "core_handlers.h"
 
 #define MAX_STACK 7
 
@@ -79,6 +75,32 @@ typedef enum {
     NGCUnaryOp_Exists,
     NGCUnaryOp_Parameter // read setting/setting bit
 } ngc_unary_op_t;
+
+static on_string_substitution_ptr on_string_substitution;
+
+char* onStringSubstitution(char *input, char **output) {
+    char* result;
+    if (on_string_substitution) {
+        char *intermediate;
+        on_string_substitution(input, &intermediate);
+        result = ngc_substitute_parameters(intermediate, output);
+        free(intermediate);
+    } else {
+        result = ngc_substitute_parameters(input, output);
+    }
+
+    return result;
+}
+
+void ngc_expr_init(void) {
+    static bool init_ok = false;
+
+    if(!init_ok) {
+        init_ok = true;
+        on_string_substitution = grbl.on_string_substitution;
+        grbl.on_string_substitution = onStringSubstitution;
+    }
+}
 
 /*! \brief Executes the operations: /, MOD, ** (POW), *.
 
@@ -1001,9 +1023,6 @@ char *ngc_substitute_parameters (char *comment, char **message)
     size_t len = 0;
     float value;
     char *s, c;
-#if STRING_REGISTERS_ENABLE
-    char *strValue;
-#endif
     uint_fast8_t char_counter = 0;
     int8_t parse_format = 0;
     uint8_t decimals = ngc_float_decimals(); // LinuxCNC is 1 (or l?)
@@ -1027,19 +1046,6 @@ char *ngc_substitute_parameters (char *comment, char **message)
                 len += strlen(decimals ? ftoa(value, decimals) : trim_float(ftoa(value, decimals)));
             else
                 len += 3; // "N/A"
-#if STRING_REGISTERS_ENABLE
-        } else if (c == '&') {
-            if(read_parameter(comment, &char_counter, &value) == Status_OK) {
-                if (string_register_get((string_register_id_t)value, &strValue)) {
-                    len += strlen(strValue);
-                } else {
-                    len += 3; // "N/A"
-                }
-            } else {
-                len += 3; // "N/A"
-                report_message("unable to parse string register id", Message_Warning);
-            }
-#endif
         } else
             len++;
     }
@@ -1072,20 +1078,6 @@ char *ngc_substitute_parameters (char *comment, char **message)
                 else
                     strcat(s, "N/A");
                 s = strchr(s, '\0');
-#if STRING_REGISTERS_ENABLE
-            } else if (c == '&') {
-                if(read_parameter(comment, &char_counter, &value) == Status_OK) {
-                    if (string_register_get((string_register_id_t)value, &strValue)) {
-                        strcat(s, strValue);
-                    } else {
-                        strcat(s, "N/A");
-                    }
-                } else {
-                    strcat(s, "N/A");
-                    report_message("unable to parse string register id", Message_Warning);
-                }
-                s = strchr(s, '\0');
-#endif
             } else {
                 *s++ = c;
                 *s = '\0';

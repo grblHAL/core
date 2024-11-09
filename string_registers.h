@@ -25,11 +25,18 @@
 #include "gcode.h"
 
 
+typedef enum {
+  SR_OK,
+  SR_VALUE_TOO_LONG,
+  SR_NOT_FOUND,
+  SR_FAILED
+} string_register_result_t;
 
 typedef uint16_t string_register_id_t;
 
-bool string_register_get (string_register_id_t id, char **value);
-bool string_register_set (string_register_id_t id, char *value);
+string_register_result_t string_register_get (string_register_id_t id, char **value);
+string_register_result_t string_register_set (string_register_id_t id, char *value);
 bool string_register_exists (string_register_id_t id);
+void string_registers_init(void);
 
 #endif // _STRING_REGISTERS_H_

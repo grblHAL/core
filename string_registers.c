@@ -32,12 +32,17 @@
 #include "system.h"
 #include "settings.h"
 #include "ngc_params.h"
+#include "ngc_expr.h"
 #include "string_registers.h"
 
 #ifndef MAX_SR_LENGTH
 // 256 is max block-length in gcode, so probably reasonable
 #define MAX_SR_LENGTH 256
 #endif
+
+static on_gcode_message_ptr on_gcode_comment;
+static on_string_substitution_ptr on_string_substitution;
+
 typedef struct string_register {
     string_register_id_t id;
     struct string_register *next;
@@ -48,7 +53,6 @@ static string_register_t *string_registers = NULL;
 
 string_register_t *find_string_register_with_last (string_register_id_t id, string_register_t **last_register) {
     string_register_t *current_register = string_registers;
-    int i = 0;
 
     while(current_register != NULL) {
         if(current_register->id == id) {
@@ -67,26 +71,25 @@ string_register_t *find_string_register (string_register_id_t id) {
     return find_string_register_with_last(id, &last);
 }
 
-bool string_register_get (string_register_id_t id, char **value) {
+string_register_result_t string_register_get (string_register_id_t id, char **value) {
     string_register_t *string_register = find_string_register(id);
 
     if (string_register != NULL) {
         *value = &string_register->value[0];
-        return true;
+        return SR_OK;
     }
 
-    return false;
+    return SR_NOT_FOUND;
 }
 
 bool string_register_exists (string_register_id_t id) {
     return find_string_register(id) != NULL;
 }
 
-bool string_register_set (ngc_param_id_t id, char *value) {
+string_register_result_t string_register_set (ngc_param_id_t id, char *value) {
     size_t length = strlen(value);
     if (length > MAX_SR_LENGTH) {
-        report_message("String register values cannot be longer than 40 characters", Message_Warning);
-        return false;
+        return SR_VALUE_TOO_LONG;
     }
 
     string_register_t *last_register = NULL;
@@ -114,10 +117,184 @@ bool string_register_set (ngc_param_id_t id, char *value) {
             string_registers = string_register;
         }
 
-        return true;
+        return SR_OK;
     }
 
-    return false;
+    return SR_FAILED;
+}
+
+status_code_t read_register_id(char* comment, uint_fast8_t* char_counter, string_register_id_t* value) {
+    float register_id;
+    if (comment[*char_counter] == '[') {
+        if (ngc_eval_expression(comment, char_counter, &register_id) != Status_OK) {
+            return Status_ExpressionSyntaxError;   // [Invalid expression syntax]
+        }
+    } else if (!read_float(comment, char_counter, &register_id)) {
+        return Status_BadNumberFormat;   // [Expected register id]
+    }
+
+    *value = (string_register_id_t)register_id;
+    return Status_OK;
+}
+
+/*! \brief Substitute references to string-registers in a string with their values.
+
+_NOTE:_ The returned string must be freed by the caller.
+
+\param comment pointer to the original comment string.
+\param message pointer to a char pointer to receive the resulting string.
+*/
+char *sr_substitute_parameters (char *comment, char **message)
+{
+    size_t len = 0;
+    string_register_id_t registerId;
+    char *s, c;
+    uint_fast8_t char_counter = 0;
+
+    // Trim leading spaces
+    while(*comment == ' ')
+        comment++;
+
+    // Calculate length of substituted string
+    while((c = comment[char_counter++])) {
+        if (c == '&') {
+            if(read_register_id(comment, &char_counter, &registerId) == Status_OK) {
+                char *strValue;
+                if (string_register_get(registerId, &strValue) == SR_OK) {
+                    len += strlen(strValue);
+                    free(strValue);
+                } else {
+                    len += 3; // "N/A"
+                }
+            } else {
+                len += 3; // "N/A"
+                report_message("unable to parse string register id", Message_Warning);
+            }
+        } else
+            len++;
+    }
+
+    // Perform substitution
+    if((s = *message = malloc(len + 1))) {
+        *s = '\0';
+        char_counter = 0;
+
+        while((c = comment[char_counter++])) {
+            if (c == '&') {
+                if(read_register_id(comment, &char_counter, &registerId) == Status_OK) {
+                    char *strValue;
+                    if (string_register_get(registerId, &strValue) == SR_OK) {
+                        strcat(s, strValue);
+                        free(strValue);
+                    } else {
+                        strcat(s, "N/A");
+                    }
+                } else {
+                    strcat(s, "N/A");
+                    report_message("unable to parse string register id", Message_Warning);
+                }
+                s = strchr(s, '\0');
+            } else {
+                *s++ = c;
+                *s = '\0';
+            }
+        }
+    }
+
+    return *message;
+}
+
+status_code_t superOnGcodeComment(char* comment) {
+    if(on_gcode_comment) {
+        return on_gcode_comment(comment);
+    } else {
+        return Status_OK;
+    }
+}
+
+static status_code_t onGcodeComment (char *comment)
+{
+    uint_fast8_t char_counter = 0;
+    if (comment[char_counter++] == '&') {
+        if(gc_state.skip_blocks)
+            return Status_OK;
+
+        string_register_id_t registerId;
+        if (read_register_id(comment, &char_counter, &registerId) != Status_OK)
+        {
+            return Status_ExpressionSyntaxError;   // [Expected equal sign]
+        }
+
+        if (comment[char_counter] != '=') {
+            return Status_ExpressionSyntaxError;   // [Expected equal sign]
+        }
+
+        bool shouldFree = false;
+        char *strValue;
+        string_register_result_t srResult;
+        if (grbl.on_string_substitution) {
+            shouldFree = true;
+            grbl.on_string_substitution(&comment[char_counter++], &strValue);
+            srResult = string_register_set(registerId, strValue);
+        } else {
+            strValue = &comment[char_counter++];
+            srResult = string_register_set(registerId, strValue);
+        }
+
+        switch (srResult)
+        {
+            case SR_FAILED:
+                report_message(strValue, Message_Debug);
+                report_message("Unable to set string register", Message_Error);
+                if (shouldFree) {
+                    free(strValue);
+                }
+                return Status_Unhandled; // [Some error setting new value]
+            case SR_VALUE_TOO_LONG:
+                report_message(strValue, Message_Debug);
+                report_message("Unable to set string register: New value too long", Message_Error);
+                if (shouldFree) {
+                    free(strValue);
+                }
+                return Status_ExpressionInvalidArgument; // [Invalid value after '=']
+            default:
+                if (shouldFree) {
+                    free(strValue);
+                }
+                break;
+        }
+
+        return Status_OK;
+    }
+
+    return superOnGcodeComment(comment);
+}
+
+char* onStringSubstitution(char *input, char **output) {
+    char* result;
+    if (on_string_substitution) {
+        char *intermediate;
+        on_string_substitution(input, &intermediate);
+        result = sr_substitute_parameters(intermediate, output);
+        free(intermediate);
+    } else {
+        result = sr_substitute_parameters(input, output);
+    }
+
+    return result;
+}
+
+void string_registers_init (void)
+{
+    static bool init_ok = false;
+
+    if(!init_ok) {
+        init_ok = true;
+        on_gcode_comment = grbl.on_gcode_comment;
+        grbl.on_gcode_comment = onGcodeComment;
+        on_string_substitution = grbl.on_string_substitution;
+        grbl.on_string_substitution = onStringSubstitution;
+    }
 }
 
 #endif // STRING_REGISTERS_ENABLE
