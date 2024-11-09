@@ -78,30 +78,6 @@ typedef enum {
 
 static on_string_substitution_ptr on_string_substitution;
 
-char* onStringSubstitution(char *input, char **output) {
-    char* result;
-    if (on_string_substitution) {
-        char *intermediate;
-        on_string_substitution(input, &intermediate);
-        result = ngc_substitute_parameters(intermediate, output);
-        free(intermediate);
-    } else {
-        result = ngc_substitute_parameters(input, output);
-    }
-
-    return result;
-}
-
-void ngc_expr_init(void) {
-    static bool init_ok = false;
-
-    if(!init_ok) {
-        init_ok = true;
-        on_string_substitution = grbl.on_string_substitution;
-        grbl.on_string_substitution = onStringSubstitution;
-    }
-}
-
 /*! \brief Executes the operations: /, MOD, ** (POW), *.
 
 \param lhs pointer to the left hand side operand and result.
@@ -1086,6 +1062,30 @@ char *ngc_substitute_parameters (char *comment, char **message)
     }
 
     return *message;
+}
+
+char* onStringSubstitution(char *input, char **output) {
+    char* result;
+    if (on_string_substitution) {
+        char *intermediate;
+        on_string_substitution(input, &intermediate);
+        result = ngc_substitute_parameters(intermediate, output);
+        free(intermediate);
+    } else {
+        result = ngc_substitute_parameters(input, output);
+    }
+
+    return result;
+}
+
+void ngc_expr_init(void) {
+    static bool init_ok = false;
+
+    if(!init_ok) {
+        init_ok = true;
+        on_string_substitution = grbl.on_string_substitution;
+        grbl.on_string_substitution = onStringSubstitution;
+    }
 }
 
 #endif
