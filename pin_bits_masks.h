@@ -397,23 +397,29 @@ static inline control_signals_t aux_ctrl_scan_status (control_signals_t signals)
 // The following pins are bound explicitly to aux output pins
 static aux_ctrl_out_t aux_ctrl_out[] = {
 #if DRIVER_SPINDLE_ENABLE
-    { .function = Output_SpindleOn,   .aux_port = 0xFF, .pin = SPINDLE_ENABLE_PIN,     .port = SPINDLE_ENABLE_PORT },
+    { .function = Output_SpindleOn,    .aux_port = 0xFF, .pin = SPINDLE_ENABLE_PIN,     .port = SPINDLE_ENABLE_PORT },
 #if DRIVER_SPINDLE_PWM_ENABLE
-    { .function = Output_SpindlePWM,  .aux_port = 0xFF, .pin = SPINDLE_PWM_PIN,        .port = SPINDLE_PWM_PORT },
+    { .function = Output_SpindlePWM,   .aux_port = 0xFF, .pin = SPINDLE_PWM_PIN,        .port = SPINDLE_PWM_PORT },
 #endif
 #if DRIVER_SPINDLE_DIR_ENABLE
-    { .function = Output_SpindleDir,  .aux_port = 0xFF, .pin = SPINDLE_DIRECTION_PIN,  .port = SPINDLE_DIRECTION_PORT },
+    { .function = Output_SpindleDir,   .aux_port = 0xFF, .pin = SPINDLE_DIRECTION_PIN,  .port = SPINDLE_DIRECTION_PORT },
 #endif
 #endif // DRIVER_SPINDLE_ENABLE
 #if DRIVER_SPINDLE1_ENABLE
-    { .function = Output_Spindle1On,  .aux_port = 0xFF, .pin = SPINDLE1_ENABLE_PIN,    .port = SPINDLE1_ENABLE_PORT },
+    { .function = Output_Spindle1On,   .aux_port = 0xFF, .pin = SPINDLE1_ENABLE_PIN,    .port = SPINDLE1_ENABLE_PORT },
 #if DRIVER_SPINDLE1_PWM_ENABLE
-    { .function = Output_Spindle1PWM, .aux_port = 0xFF, .pin = SPINDLE1_PWM_PIN,       .port = SPINDLE1_PWM_PORT },
+    { .function = Output_Spindle1PWM,  .aux_port = 0xFF, .pin = SPINDLE1_PWM_PIN,       .port = SPINDLE1_PWM_PORT },
 #endif
 #if DRIVER_SPINDLE1_DIR_ENABLE
-    { .function = Output_Spindle1Dir, .aux_port = 0xFF, .pin = SPINDLE1_DIRECTION_PIN, .port = SPINDLE1_DIRECTION_PORT },
+    { .function = Output_Spindle1Dir,  .aux_port = 0xFF, .pin = SPINDLE1_DIRECTION_PIN, .port = SPINDLE1_DIRECTION_PORT },
 #endif
 #endif // DRIVER_SPINDLE1_DIR_ENABLE
+#ifdef COPROC_RESET_PIN
+    { .function = Output_CoProc_Reset, .aux_port = 0xFF, .pin = COPROC_RESET_PIN,       .port = COPROC_RESET_PORT },
+#endif
+#ifdef COPROC_BOOT0_PIN
+    { .function = Output_CoProc_Boot0, .aux_port = 0xFF, .pin = COPROC_BOOT0_PIN,       .port = COPROC_BOOT0_PORT },
+#endif
 /*
 #ifdef COOLANT_FLOOD_PIN
     { .function = Output_CoolantFlood, .aux_port = 0xFF, .pin = COOLANT_FLOOD_PIN, .port = COOLANT_FLOOD_PORT },

@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+<a name="20241110">Build 20241110
+
+Core:
+
+* Added generic passthru support for programming external MCU via USB > UART bridge. Requires driver support if to be used. Adds `$PTRGH` system command when available.
+
+Plugins:
+
+* Misc, ESP-AT: general improvements.
+
+---
+
 <a name="20241107">Build 20241107
 
 Core:

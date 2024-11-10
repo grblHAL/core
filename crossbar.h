@@ -181,6 +181,8 @@ typedef enum {
     Output_LED_Adressable,
     Output_LED0_Adressable = Output_LED_Adressable,
     Output_LED1_Adressable,
+    Output_CoProc_Reset,
+    Output_CoProc_Boot0,
 // Multipin peripherals
     Input_MISO,
     Multipin = Input_MISO,
@@ -382,6 +384,8 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Output_LED_W,              .name = "LED W" },
     { .function = Output_LED_Adressable,     .name = "LED adressable" },
     { .function = Output_LED1_Adressable,    .name = "LED adressable 1" },
+    { .function = Output_CoProc_Reset,       .name = "CoProc Reset" },
+    { .function = Output_CoProc_Boot0,       .name = "CoProc Boot0" },
     { .function = Input_MISO,                .name = "MISO" },
     { .function = Output_MOSI,               .name = "MOSI" },
     { .function = Output_SPICLK,             .name = "SPI CLK" },
