@@ -3,21 +3,21 @@
 
   Part of grblHAL
 
-  Copyright (c) 2019-2023 Terje Io
+  Copyright (c) 2019-2024 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "../grbl.h"
@@ -153,11 +153,14 @@ static void corexy_limits_set_machine_positions (axes_signals_t cycle)
             }
         } while (idx);
     } else do {
+
+         coord_data_t *pulloff = limits_homing_pulloff(NULL);
+
          if (cycle.mask & bit(--idx)) {
              int32_t off_axis_position;
              int32_t set_axis_position = bit_istrue(settings.homing.dir_mask.value, bit(idx))
-                                          ? lroundf((settings.axis[idx].max_travel + settings.homing.pulloff) * settings.axis[idx].steps_per_mm)
-                                          : lroundf(-settings.homing.pulloff * settings.axis[idx].steps_per_mm);
+                                          ? lroundf((settings.axis[idx].max_travel + pulloff->values[idx]) * settings.axis[idx].steps_per_mm)
+                                          : lroundf(-pulloff->values[idx] * settings.axis[idx].steps_per_mm);
              switch(idx) {
                  case X_AXIS:
                      off_axis_position = corexy_convert_to_b_motor_steps(sys.position);

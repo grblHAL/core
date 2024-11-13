@@ -43,7 +43,8 @@
 
 #define HAL_VERSION 10
 
-/// Bitmap flags for driver capabilities, to be set by driver in driver_init(), flags may be cleared after to switch off option.
+// Bitmap flags for driver capabilities, to be set by driver in driver_init() or plugins,
+// flags may be cleared by plugins or the core to switch off capabilities.
 typedef union {
     uint32_t value; //!< All bitmap flags.
     struct {
@@ -68,7 +69,8 @@ typedef union {
                  odometers                 :1,
                  pwm_spindle               :1,
                  probe_latch               :1,
-                 unassigned                :10;
+                 toolsetter                :1, //!< Toolsetter (2nd probe) input is supported.
+                 unassigned                :9;
     };
 } driver_cap_t;
 
@@ -652,11 +654,12 @@ typedef struct {
     */
     bool (*stream_blocking_callback)(void);
 
-    driver_cap_t driver_cap;                //!< Basic driver capabilities flags.
-    control_signals_t signals_cap;          //!< Control input signals supported by the driver.
-    limit_signals_t limits_cap;             //!< Limit input signals supported by the driver.
-    home_signals_t home_cap;                //!< Home input signals supported by the driver.
-    coolant_state_t coolant_cap;            //!< Coolant outputs supported by the driver.
+    driver_cap_t driver_cap;                        //!< Basic driver capabilities flags.
+    control_signals_t signals_cap;                  //!< Control input signals supported by the driver.
+    control_signals_t signals_pullup_disable_cap;   //!< Control input signals pullup disable supported by the driver.
+    limit_signals_t limits_cap;                     //!< Limit input signals supported by the driver.
+    home_signals_t home_cap;                        //!< Home input signals supported by the driver.
+    coolant_state_t coolant_cap;                    //!< Coolant outputs supported by the driver.
 
 } grbl_hal_t;
 

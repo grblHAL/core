@@ -669,7 +669,15 @@ void plan_feed_override (override_t feed_override, override_t rapid_override)
     if(sys.override.control.feed_rate_disable)
         return;
 
-    feed_override = constrain(feed_override, MIN_FEED_RATE_OVERRIDE, MAX_FEED_RATE_OVERRIDE);
+    if(feed_override == 0)
+        feed_override = sys.override.feed_rate;
+    else
+        feed_override = constrain(feed_override, MIN_FEED_RATE_OVERRIDE, MAX_FEED_RATE_OVERRIDE);
+
+    if(rapid_override == 0)
+        rapid_override = sys.override.rapid_rate;
+    else
+        rapid_override = constrain(rapid_override, 5, 100);
 
     if((feedrate_changed = feed_override != sys.override.feed_rate) ||
          (rapidrate_changed = rapid_override != sys.override.rapid_rate)) {

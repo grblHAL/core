@@ -1,5 +1,25 @@
 ## grblHAL changelog
 
+<a name="20241113">Build 20241113
+
+Core:
+
+* Added basic core support for toolsetter probe, changes $6 \(probe input inversion\) and $19 \(probe input pullup disable\) settings from boolean to bitfield when driver support is available.
+
+* Added a few new default values for $-settings in _config.h_, overridable from the compiler command line.
+
+* Added core support for per axis pulloff distance, needs plugin for configuring them.
+
+* Added HAL flags for disabling settings for MCU input pins pullup disable, may be set by drivers/boards that has buffered \(optocoupled\) inputs that is not possible to change.
+
+Plugins:
+
+* Spindle: fixed some naming inconsistencies.
+
+* Misc: added plugin for feed rate overrides via Marlin style M-code and plugin for configuring per axis homing pulloff distance.
+
+---
+
 <a name="20241110">Build 20241110
 
 Core:

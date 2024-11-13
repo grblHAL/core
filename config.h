@@ -1020,6 +1020,9 @@ Useful for some pre-built electronic boards.
 #if !defined DEFAULT_SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED || defined __DOXYGEN__
 #define DEFAULT_SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED Off
 #endif
+#if !defined DEFAULT_PWM_SPINDLE_DISABLE_LASER_MODE || defined __DOXYGEN__
+#define DEFAULT_PWM_SPINDLE_DISABLE_LASER_MODE Off
+#endif
 ///@}
 
 /*! @name $16 - Setting_SpindleInvertMask
@@ -1512,6 +1515,9 @@ are used the logic of the input signals should be be inverted with the \ref axis
 #if !defined DEFAULT_PROBE_SIGNAL_INVERT || defined __DOXYGEN__
 #define DEFAULT_PROBE_SIGNAL_INVERT Off
 #endif
+#if !defined DEFAULT_TOOLSETTER_SIGNAL_INVERT || defined __DOXYGEN__
+#define DEFAULT_TOOLSETTER_SIGNAL_INVERT Off
+#endif
 ///@}
 
 /*! @name $19 - Setting_ProbePullUpDisable
@@ -1519,6 +1525,9 @@ are used the logic of the input signals should be be inverted with the \ref axis
 ///@{
 #if !defined DEFAULT_PROBE_SIGNAL_DISABLE_PULLUP || defined __DOXYGEN__
 #define DEFAULT_PROBE_SIGNAL_DISABLE_PULLUP Off
+#endif
+#if !defined DEFAULT_TOOLSETTER_SIGNAL_DISABLE_PULLUP || defined __DOXYGEN__
+#define DEFAULT_TOOLSETTER_SIGNAL_DISABLE_PULLUP Off
 #endif
 ///@}
 
@@ -1784,7 +1793,7 @@ For the controller the distance is unitless and and can be in degrees, radians, 
 ///@}
 
 /*! @name $481 - Setting_AutoReportInterval
-// Auto status report interval, allowed range is 100 - 1000. Set to 0 to disable.
+Auto status report interval, allowed range is 100 - 1000. Set to 0 to disable.
 */
 ///@{
 #if !defined DEFAULT_AUTOREPORT_INTERVAL || defined __DOXYGEN__
@@ -1798,6 +1807,16 @@ Timezone offset from UTC in hours, allowed range is -12.0 - 12.0.
 ///@{
 #if !defined DEFAULT_TIMEZONE_OFFSET || defined __DOXYGEN__
 #define DEFAULT_TIMEZONE_OFFSET 0.0f
+#endif
+///@}
+
+/*! @name $484 - Setting_UnlockAfterEStop
+Specifices whether unlock ($X) is needed to clear an E-Stop alarm.
+NOTE: The logic is inverted in the stored setting.
+*/
+///@{
+#if !defined DEFAULT_NO_UNLOCK_AFTER_ESTOP || defined __DOXYGEN__
+#define DEFAULT_NO_UNLOCK_AFTER_ESTOP Off
 #endif
 ///@}
 

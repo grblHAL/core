@@ -342,24 +342,26 @@ typedef enum {
     Setting_MacroPort8    = 508,
     Setting_MacroPort9    = 509,
 
-    Setting_SpindleEnable0 = 510,
-    Setting_SpindleEnable1 = 511,
-    Setting_SpindleEnable2 = 512,
-    Setting_SpindleEnable3 = 513,
-    Setting_SpindleEnable4 = 514,
-    Setting_SpindleEnable5 = 515,
-    Setting_SpindleEnable6 = 516,
-    Setting_SpindleEnable7 = 517,
-    Setting_EncoderSpindle = 519,
+    Setting_SpindleEnable0    = 510,
+    Setting_SpindleEnableBase = Setting_SpindleEnable0,
+    Setting_SpindleEnable1    = 511,
+    Setting_SpindleEnable2    = 512,
+    Setting_SpindleEnable3    = 513,
+    Setting_SpindleEnable4    = 514,
+    Setting_SpindleEnable5    = 515,
+    Setting_SpindleEnable6    = 516,
+    Setting_SpindleEnable7    = 517,
+    Setting_EncoderSpindle    = 519,
 
-    Setting_SpindleToolStart0 = 520,
-    Setting_SpindleToolStart1 = 521,
-    Setting_SpindleToolStart2 = 522,
-    Setting_SpindleToolStart3 = 523,
-    Setting_SpindleToolStart4 = 524,
-    Setting_SpindleToolStart5 = 525,
-    Setting_SpindleToolStart6 = 526,
-    Setting_SpindleToolStart7 = 527,
+    Setting_SpindleToolStart0    = 520,
+    Setting_SpindleToolStartBase = Setting_SpindleToolStart0,
+    Setting_SpindleToolStart1    = 521,
+    Setting_SpindleToolStart2    = 522,
+    Setting_SpindleToolStart3    = 523,
+    Setting_SpindleToolStart4    = 524,
+    Setting_SpindleToolStart5    = 525,
+    Setting_SpindleToolStart6    = 526,
+    Setting_SpindleToolStart7    = 527,
 
     Setting_MQTTBrokerIpAddress = 530,
     Setting_MQTTBrokerPort      = 531,
@@ -576,15 +578,16 @@ typedef union {
 typedef union {
     uint8_t value;
     struct {
-        uint8_t invert_probe_pin         :1,
-                disable_probe_pullup     :1,
-                invert_connected_pin     :1,
-                disable_connected_pullup :1,
-                allow_feed_override      :1,
-                enable_protection        :1,
-                unassigned               :2;
+        uint8_t invert_probe_pin          :1,
+                disable_probe_pullup      :1,
+                invert_connected_pin      :1,
+                disable_connected_pullup  :1,
+                allow_feed_override       :1,
+                enable_protection         :1,
+                invert_toolsetter_input   :1,
+                disable_toolsetter_pullup :1;
     };
-} probeflags_t;
+} probeflags_t; // TODO: change to uint16_t for more toolsetter flags?
 
 typedef union {
     uint16_t mask;
@@ -951,7 +954,7 @@ typedef union {
                 allow_null      :1,
                 subgroups       :1,
                 increment       :4,
-                unused          :1;
+                hidden          :1; //!< Hide from reporting, allow setting
     };
 } setting_detail_flags_t;
 

@@ -197,6 +197,7 @@ int grbl_enter (void)
     hal.stepper.interrupt_callback = stepper_driver_interrupt_handler;
     hal.stream_blocking_callback = stream_tx_blocking;
     hal.signals_cap.reset = hal.signals_cap.feed_hold = hal.signals_cap.cycle_start = On;
+    hal.signals_pullup_disable_cap.value = (uint16_t)-1;
 
     sys.cold_start = true;
 

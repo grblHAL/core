@@ -3,18 +3,18 @@
 
   Part of grblHAL
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 
   The basis for this code has been pulled from MaslowDue created by Larry D O'Cull.
   <https://github.com/ldocull/MaslowDue>
@@ -433,11 +433,14 @@ static void maslow_limits_set_machine_positions (axes_signals_t cycle)
             }
         } while (idx);
     } else do {
+
+         coord_data_t *pulloff = limits_homing_pulloff(NULL);
+
          if (cycle.mask & bit(--idx)) {
              int32_t off_axis_position;
              int32_t set_axis_position = bit_istrue(settings.homing.dir_mask.value, bit(idx))
-                                          ? lroundf((settings.max_travel[idx] + settings.homing.pulloff) * settings.steps_per_mm[idx])
-                                          : lroundf(-settings.homing.pulloff * settings.steps_per_mm[idx]);
+                                          ? lroundf((settings.max_travel[idx] + pulloff->values[idx]) * settings.steps_per_mm[idx])
+                                          : lroundf(-pulloff->values[idx] * settings.steps_per_mm[idx]);
              switch(idx) {
                  case X_AXIS:
                      off_axis_position = system_convert_maslow_to_y_axis_steps(sys.position);

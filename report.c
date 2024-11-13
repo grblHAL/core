@@ -454,7 +454,7 @@ status_code_t report_grbl_setting (setting_id_t id, void *data)
 
     const setting_detail_t *setting = setting_get_details(id, NULL);
 
-    if(setting)
+    if(setting /*?? hide? && !setting->flags.hidden*/)
         grbl.report.setting(setting, id - setting->id, data);
     else
         status = Status_SettingDisabled;
@@ -495,7 +495,7 @@ void report_grbl_settings (bool all, void *data)
         // Report core settings
         for(idx = 0; idx < details->n_settings; idx++) {
             setting = &details->settings[idx];
-            if((all || setting->type == Setting_IsLegacy || setting->type == Setting_IsLegacyFn) &&
+            if(!setting->flags.hidden && (all || setting->type == Setting_IsLegacy || setting->type == Setting_IsLegacyFn) &&
                   (setting->is_available == NULL ||setting->is_available(setting))) {
                 *psetting++ = (setting_detail_t *)setting;
                 n_settings++;
@@ -506,7 +506,7 @@ void report_grbl_settings (bool all, void *data)
         if(all && (details = details->next)) do {
             for(idx = 0; idx < details->n_settings; idx++) {
                 setting = &details->settings[idx];
-                if(setting->is_available == NULL || setting->is_available(setting)) {
+                if(!setting->flags.hidden && (setting->is_available == NULL || setting->is_available(setting))) {
                     *psetting++ = (setting_detail_t *)setting;
                     n_settings++;
                 }
@@ -1871,7 +1871,7 @@ static status_code_t print_settings_details (settings_format_t format, setting_g
         do {
             for(idx = 0; idx < details->n_settings; idx++) {
                 setting = &details->settings[idx];
-                if((group == Group_All || setting->group == args.group) && (setting->is_available == NULL || setting->is_available(setting))) {
+                if(!setting->flags.hidden && (group == Group_All || setting->group == args.group) && (setting->is_available == NULL || setting->is_available(setting))) {
                     *psetting++ = (setting_detail_t *)setting;
                     n_settings++;
                 }
@@ -1892,7 +1892,7 @@ static status_code_t print_settings_details (settings_format_t format, setting_g
 
             setting = &details->settings[idx];
 
-            if(group == Group_All || setting->group == args.group) {
+            if(!setting->flags.hidden && (group == Group_All || setting->group == args.group)) {
                 if(settings_iterator(setting, print_unsorted, &args))
                     reported = true;
             }
@@ -1909,7 +1909,7 @@ status_code_t report_settings_details (settings_format_t format, setting_id_t id
 
         const setting_detail_t *setting = setting_get_details(id, NULL);
 
-        if(setting)
+        if(setting && !setting->flags.hidden)
             report_settings_detail(format, setting, id - setting->id);
         else
             status = Status_SettingDisabled;
@@ -1924,21 +1924,25 @@ status_code_t report_settings_details (settings_format_t format, setting_id_t id
 
 status_code_t report_setting_description (settings_format_t format, setting_id_t id)
 {
-    const setting_detail_t *setting = setting_get_details(id, NULL);
-    const char *description = setting_get_description(id);
+    const setting_detail_t *setting;
 
-    if(format == SettingsFormat_MachineReadable) {
-        hal.stream.write("[SETTINGDESCR:");
-        hal.stream.write(uitoa(id));
-        hal.stream.write(vbar);
+    if((setting = setting_get_details(id, NULL)) && !setting->flags.hidden) {
+
+        const char *description = setting_get_description(id);
+
+        if(format == SettingsFormat_MachineReadable) {
+            hal.stream.write("[SETTINGDESCR:");
+            hal.stream.write(uitoa(id));
+            hal.stream.write(vbar);
+        }
+    //    hal.stream.write(description == NULL ? (is_setting_available(setting_get_details(id, NULL)) ? "" : "N/A") : description); // TODO?
+        hal.stream.write(description ? description : (setting ? "" : "N/A"));
+        if(setting && setting->flags.reboot_required)
+            hal.stream.write(SETTINGS_HARD_RESET_REQUIRED + (description && *description != '\0' ? 0 : 4));
+
+        if(format == SettingsFormat_MachineReadable)
+            hal.stream.write("]" ASCII_EOL);
     }
-//    hal.stream.write(description == NULL ? (is_setting_available(setting_get_details(id, NULL)) ? "" : "N/A") : description); // TODO?
-    hal.stream.write(description ? description : (setting ? "" : "N/A"));
-    if(setting && setting->flags.reboot_required)
-        hal.stream.write(SETTINGS_HARD_RESET_REQUIRED + (description && *description != '\0' ? 0 : 4));
-
-    if(format == SettingsFormat_MachineReadable)
-        hal.stream.write("]" ASCII_EOL);
 
     return Status_OK;
 }

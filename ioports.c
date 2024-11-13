@@ -772,6 +772,18 @@ void ioport_setting_changed (setting_id_t id)
                                 settings.ioport.invert_in.mask &= ~(1 << xbar->id);
 
                             xbar->config(xbar, &in_config, false);
+                        } else if(xbar->config && xbar->function == Input_Toolsetter) {
+
+                            in_config.debounce  = Off;
+                            in_config.inverted  = settings.probe.invert_toolsetter_input;
+                            in_config.pull_mode = settings.probe.disable_toolsetter_pullup ? PullMode_None : PullMode_Up;
+
+                            if(in_config.inverted)
+                                settings.ioport.invert_in.mask |= (1 << xbar->id);
+                            else
+                                settings.ioport.invert_in.mask &= ~(1 << xbar->id);
+
+                            xbar->config(xbar, &in_config, false);
                         }
                     }
                 } while(port);

@@ -128,6 +128,16 @@
     rgb_led_init();
 #endif
 
+#if FEED_OVERRIDE_ENABLE
+    extern void feed_override_init (void);
+    feed_override_init();
+#endif
+
+#if HOMING_PULLOFF_ENABLE
+    extern void homing_pulloff_init (void);
+    homing_pulloff_init();
+#endif
+
     extern void my_plugin_init (void);
     my_plugin_init();
 
