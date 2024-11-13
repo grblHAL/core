@@ -226,42 +226,15 @@ static status_code_t onStringRegisterGcodeComment (char *comment)
             return Status_ExpressionSyntaxError;   // [Expected equal sign]
         }
 
-        bool shouldFree = false;
-        char *strValue;
-        status_code_t srResult;
         if (grbl.on_string_substitution) {
-            shouldFree = true;
+            char *strValue;
             grbl.on_string_substitution(comment + char_counter, &strValue);
-            srResult = string_register_set(registerId, strValue);
+            status_code_t srResult = string_register_set(registerId, strValue);
+            free(strValue);
+            return srResult;
         } else {
-            strValue = comment + char_counter;
-            srResult = string_register_set(registerId, strValue);
+            return string_register_set(registerId, comment + char_counter);
         }
-
-        switch (srResult)
-        {
-            case Status_FlowControlOutOfMemory:
-                report_message(strValue, Message_Debug);
-                report_message("Unable to set string register", Message_Error);
-                if (shouldFree) {
-                    free(strValue);
-                }
-                return Status_Unhandled; // [Some error setting new value]
-            case Status_ExpressionArgumentOutOfRange:
-                report_message(strValue, Message_Debug);
-                report_message("Unable to set string register: New value too long", Message_Error);
-                if (shouldFree) {
-                    free(strValue);
-                }
-                return Status_ExpressionInvalidArgument; // [Invalid value after '=']
-            default:
-                if (shouldFree) {
-                    free(strValue);
-                }
-                break;
-        }
-
-        return Status_OK;
     }
 
     return superOnGcodeComment(comment);
