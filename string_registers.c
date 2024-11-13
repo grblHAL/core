@@ -71,25 +71,25 @@ string_register_t *find_string_register (string_register_id_t id) {
     return find_string_register_with_last(id, &last);
 }
 
-string_register_result_t string_register_get (string_register_id_t id, char **value) {
+bool string_register_get (string_register_id_t id, char **value) {
     string_register_t *string_register = find_string_register(id);
 
     if (string_register != NULL) {
         *value = &string_register->value[0];
-        return SR_OK;
+        return true;
     }
 
-    return SR_NOT_FOUND;
+    return false;
 }
 
 bool string_register_exists (string_register_id_t id) {
     return find_string_register(id) != NULL;
 }
 
-string_register_result_t string_register_set (string_register_id_t id, char *value) {
+status_code_t string_register_set (string_register_id_t id, char *value) {
     size_t length = strlen(value);
     if (length > MAX_SR_LENGTH) {
-        return SR_VALUE_TOO_LONG;
+        return Status_ExpressionArgumentOutOfRange;
     }
 
     string_register_t *last_register = NULL;
@@ -116,10 +116,10 @@ string_register_result_t string_register_set (string_register_id_t id, char *val
             string_registers = string_register;
         }
 
-        return SR_OK;
+        return Status_OK;
     }
 
-    return SR_FAILED;
+    return Status_FlowControlOutOfMemory;
 }
 
 status_code_t read_register_id(char* comment, uint_fast8_t* char_counter, string_register_id_t* value) {
@@ -159,7 +159,7 @@ char *sr_substitute_parameters (char *comment, char **message)
         if (c == '&') {
             if(read_register_id(comment, &char_counter, &registerId) == Status_OK) {
                 char *strValue;
-                if (string_register_get(registerId, &strValue) == SR_OK) {
+                if (string_register_get(registerId, &strValue)) {
                     len += strlen(strValue);
                 } else {
                     len += 3; // "N/A"
@@ -181,7 +181,7 @@ char *sr_substitute_parameters (char *comment, char **message)
             if (c == '&') {
                 if(read_register_id(comment, &char_counter, &registerId) == Status_OK) {
                     char *strValue;
-                    if (string_register_get(registerId, &strValue) == SR_OK) {
+                    if (string_register_get(registerId, &strValue)) {
                         strcat(s, strValue);
                     } else {
                         strcat(s, "N/A");
@@ -228,7 +228,7 @@ static status_code_t onStringRegisterGcodeComment (char *comment)
 
         bool shouldFree = false;
         char *strValue;
-        string_register_result_t srResult;
+        status_code_t srResult;
         if (grbl.on_string_substitution) {
             shouldFree = true;
             grbl.on_string_substitution(comment + char_counter, &strValue);
@@ -240,14 +240,14 @@ static status_code_t onStringRegisterGcodeComment (char *comment)
 
         switch (srResult)
         {
-            case SR_FAILED:
+            case Status_FlowControlOutOfMemory:
                 report_message(strValue, Message_Debug);
                 report_message("Unable to set string register", Message_Error);
                 if (shouldFree) {
                     free(strValue);
                 }
                 return Status_Unhandled; // [Some error setting new value]
-            case SR_VALUE_TOO_LONG:
+            case Status_ExpressionArgumentOutOfRange:
                 report_message(strValue, Message_Debug);
                 report_message("Unable to set string register: New value too long", Message_Error);
                 if (shouldFree) {
