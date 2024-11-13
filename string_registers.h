@@ -24,7 +24,7 @@
 
 #include "gcode.h"
 
-typedef uint16_t string_register_id_t;
+typedef ngc_param_id_t string_register_id_t;
 
 bool string_register_get (string_register_id_t id, char **value);
 status_code_t string_register_set (string_register_id_t id, char *value);
