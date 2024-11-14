@@ -45,17 +45,17 @@ static on_string_substitution_ptr on_string_substitution;
 
 typedef struct string_register {
     string_register_id_t id;
-    struct string_register *next;
+    struct string_register* next;
     char value[1];
 } string_register_t;
 
-static string_register_t *string_registers = NULL;
+static string_register_t* string_registers = NULL;
 
-string_register_t *find_string_register_with_last (string_register_id_t id, string_register_t **last_register) {
-    string_register_t *current_register = string_registers;
+string_register_t* find_string_register_with_last(string_register_id_t id, string_register_t** last_register) {
+    string_register_t* current_register = string_registers;
 
-    while(current_register != NULL) {
-        if(current_register->id == id) {
+    while (current_register != NULL) {
+        if (current_register->id == id) {
             return current_register;
         } else {
             *last_register = current_register;
@@ -66,13 +66,13 @@ string_register_t *find_string_register_with_last (string_register_id_t id, stri
     return NULL;
 }
 
-string_register_t *find_string_register (string_register_id_t id) {
-    string_register_t *last = NULL;
+string_register_t* find_string_register(string_register_id_t id) {
+    string_register_t* last = NULL;
     return find_string_register_with_last(id, &last);
 }
 
-bool string_register_get (string_register_id_t id, char **value) {
-    string_register_t *string_register = find_string_register(id);
+bool string_register_get(string_register_id_t id, char** value) {
+    string_register_t* string_register = find_string_register(id);
 
     if (string_register != NULL) {
         *value = &string_register->value[0];
@@ -82,18 +82,18 @@ bool string_register_get (string_register_id_t id, char **value) {
     return false;
 }
 
-bool string_register_exists (string_register_id_t id) {
+bool string_register_exists(string_register_id_t id) {
     return find_string_register(id) != NULL;
 }
 
-status_code_t string_register_set (string_register_id_t id, char *value) {
+status_code_t string_register_set(string_register_id_t id, char* value) {
     size_t length = strlen(value);
     if (length > MAX_SR_LENGTH) {
         return Status_ExpressionArgumentOutOfRange;
     }
 
-    string_register_t *last_register = NULL;
-    string_register_t *string_register = find_string_register_with_last(id, &last_register);
+    string_register_t* last_register = NULL;
+    string_register_t* string_register = find_string_register_with_last(id, &last_register);
 
     bool isNew = string_register == NULL;
 
@@ -126,10 +126,10 @@ status_code_t read_register_id(char* comment, uint_fast8_t* char_counter, string
     float register_id;
     if (comment[*char_counter] == '[') {
         if (ngc_eval_expression(comment, char_counter, &register_id) != Status_OK) {
-            return Status_ExpressionSyntaxError;   // [Invalid expression syntax]
+            return Status_ExpressionSyntaxError; // [Invalid expression syntax]
         }
     } else if (!read_float(comment, char_counter, &register_id)) {
-        return Status_BadNumberFormat;   // [Expected register id]
+        return Status_BadNumberFormat; // [Expected register id]
     }
 
     *value = (string_register_id_t)register_id;
@@ -143,22 +143,21 @@ _NOTE:_ The returned string must be freed by the caller.
 \param comment pointer to the original comment string.
 \param message pointer to a char pointer to receive the resulting string.
 */
-char *sr_substitute_parameters (char *comment, char **message)
-{
+char* sr_substitute_parameters(char* comment, char** message) {
     size_t len = 0;
     string_register_id_t registerId;
-    char *s, c;
+    char* s, c;
     uint_fast8_t char_counter = 0;
 
     // Trim leading spaces
-    while(*comment == ' ')
+    while (*comment == ' ')
         comment++;
 
     // Calculate length of substituted string
-    while((c = comment[char_counter++])) {
+    while ((c = comment[char_counter++])) {
         if (c == '&') {
-            if(read_register_id(comment, &char_counter, &registerId) == Status_OK) {
-                char *strValue;
+            if (read_register_id(comment, &char_counter, &registerId) == Status_OK) {
+                char* strValue;
                 if (string_register_get(registerId, &strValue)) {
                     len += strlen(strValue);
                 } else {
@@ -173,14 +172,14 @@ char *sr_substitute_parameters (char *comment, char **message)
     }
 
     // Perform substitution
-    if((s = *message = malloc(len + 1))) {
+    if ((s = *message = malloc(len + 1))) {
         *s = '\0';
         char_counter = 0;
 
-        while((c = comment[char_counter++])) {
+        while ((c = comment[char_counter++])) {
             if (c == '&') {
-                if(read_register_id(comment, &char_counter, &registerId) == Status_OK) {
-                    char *strValue;
+                if (read_register_id(comment, &char_counter, &registerId) == Status_OK) {
+                    char* strValue;
                     if (string_register_get(registerId, &strValue)) {
                         strcat(s, strValue);
                     } else {
@@ -202,31 +201,30 @@ char *sr_substitute_parameters (char *comment, char **message)
 }
 
 status_code_t superOnGcodeComment(char* comment) {
-    if(on_gcode_comment) {
+    if (on_gcode_comment) {
         return on_gcode_comment(comment);
     } else {
         return Status_OK;
     }
 }
 
-static status_code_t onStringRegisterGcodeComment (char *comment)
-{
+static status_code_t onStringRegisterGcodeComment(char* comment) {
     uint_fast8_t char_counter = 0;
     if (comment[char_counter++] == '&') {
-        if(gc_state.skip_blocks)
+        if (gc_state.skip_blocks)
             return Status_OK;
 
         string_register_id_t registerId;
         if (read_register_id(comment, &char_counter, &registerId) != Status_OK) {
-            return Status_ExpressionSyntaxError;   // [Expected equal sign]
+            return Status_ExpressionSyntaxError; // [Expected equal sign]
         }
 
         if (comment[char_counter++] != '=') {
-            return Status_ExpressionSyntaxError;   // [Expected equal sign]
+            return Status_ExpressionSyntaxError; // [Expected equal sign]
         }
 
         if (grbl.on_string_substitution) {
-            char *strValue;
+            char* strValue;
             grbl.on_string_substitution(comment + char_counter, &strValue);
             status_code_t srResult = string_register_set(registerId, strValue);
             free(strValue);
@@ -239,10 +237,10 @@ static status_code_t onStringRegisterGcodeComment (char *comment)
     return superOnGcodeComment(comment);
 }
 
-char* onStringRegisterSubstitution(char *input, char **output) {
+char* onStringRegisterSubstitution(char* input, char** output) {
     char* result;
     if (on_string_substitution) {
-        char *intermediate;
+        char* intermediate;
         on_string_substitution(input, &intermediate);
         result = sr_substitute_parameters(intermediate, output);
         free(intermediate);
@@ -253,11 +251,10 @@ char* onStringRegisterSubstitution(char *input, char **output) {
     return result;
 }
 
-void string_registers_init (void)
-{
+void string_registers_init(void) {
     static bool init_ok = false;
 
-    if(!init_ok) {
+    if (!init_ok) {
         init_ok = true;
         on_gcode_comment = grbl.on_gcode_comment;
         grbl.on_gcode_comment = onStringRegisterGcodeComment;
