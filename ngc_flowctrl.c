@@ -297,20 +297,23 @@ void ngc_flowctrl_unwind_stack (vfs_file_t *file)
 
 static status_code_t onGcodeComment (char *comment)
 {
-    uint_fast8_t pos = 6;
-    status_code_t status = Status_OK;
-
     if(!strncasecmp(comment, "ABORT,", 6)) {
-        char *buf = NULL;
-        if(ngc_substitute_parameters(comment + pos, &buf)) {
-            report_message(buf, Message_Error);
-            free(buf);
+        uint_fast8_t pos = 6;
+        if (grbl.on_string_substitution) {
+            char *buf = NULL;
+            if (grbl.on_string_substitution(comment + pos, &buf)) {
+                report_message(buf, Message_Error);
+                free(buf);
+            }
+        } else {
+            report_message(comment + pos, Message_Error);
         }
-        status = Status_UserException;
-    } else if(on_gcode_comment)
-        status = on_gcode_comment(comment);
+        return Status_UserException;
+    } else if(on_gcode_comment) {
+        return on_gcode_comment(comment);
+    }
 
-    return status;
+    return Status_OK;
 }
 
 void ngc_flowctrl_init (void)

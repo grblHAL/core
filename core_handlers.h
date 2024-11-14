@@ -133,6 +133,8 @@ typedef bool (*write_tool_data_ptr)(tool_data_t *tool_data);
 typedef bool (*read_tool_data_ptr)(tool_id_t tool_id, tool_data_t *tool_data);
 typedef bool (*clear_tool_data_ptr)(void);
 
+typedef char* (*on_string_substitution_ptr)(char* input, char** output);
+
 typedef struct {
     uint32_t n_tools;
     tool_data_t *tool;          //!< Array of tool data, size _must_ be n_tools + 1
@@ -244,6 +246,7 @@ typedef struct {
     on_set_axis_setting_unit_ptr on_set_axis_setting_unit;
     on_gcode_message_ptr on_gcode_message;              //!< Called on output of message parsed from gcode. NOTE: string pointed to is freed after this call.
     on_gcode_message_ptr on_gcode_comment;              //!< Called when a plain gcode comment has been parsed.
+    on_string_substitution_ptr on_string_substitution;  //!< Called when something wants to process a string for param substitution or similar.
     on_tool_selected_ptr on_tool_selected;              //!< Called prior to executing M6 or after executing M61.
     on_tool_changed_ptr on_tool_changed;                //!< Called after executing M6 or M61.
     on_toolchange_ack_ptr on_toolchange_ack;            //!< Called from interrupt context.

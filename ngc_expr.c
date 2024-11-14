@@ -31,6 +31,7 @@
 #include "settings.h"
 #include "ngc_expr.h"
 #include "ngc_params.h"
+#include "core_handlers.h"
 
 #define MAX_STACK 7
 
@@ -74,6 +75,8 @@ typedef enum {
     NGCUnaryOp_Exists,
     NGCUnaryOp_Parameter // read setting/setting bit
 } ngc_unary_op_t;
+
+static on_string_substitution_ptr on_string_substitution;
 
 /*! \brief Executes the operations: /, MOD, ** (POW), *.
 
@@ -1059,6 +1062,30 @@ char *ngc_substitute_parameters (char *comment, char **message)
     }
 
     return *message;
+}
+
+char* onNgcParameterSubstitution(char *input, char **output) {
+    char* result;
+    if (on_string_substitution) {
+        char *intermediate;
+        on_string_substitution(input, &intermediate);
+        result = ngc_substitute_parameters(intermediate, output);
+        free(intermediate);
+    } else {
+        result = ngc_substitute_parameters(input, output);
+    }
+
+    return result;
+}
+
+void ngc_expr_init(void) {
+    static bool init_ok = false;
+
+    if(!init_ok) {
+        init_ok = true;
+        on_string_substitution = grbl.on_string_substitution;
+        grbl.on_string_substitution = onNgcParameterSubstitution;
+    }
 }
 
 #endif

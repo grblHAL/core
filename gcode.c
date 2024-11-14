@@ -43,6 +43,10 @@
 #endif
 #endif
 
+#if STRING_REGISTERS_ENABLE
+#include "string_registers.h"
+#endif
+
 // NOTE: Max line number is defined by the g-code standard to be 99999. It seems to be an
 // arbitrary value, and some GUIs may require more. So we increased it based on a max safe
 // value when converting a float (7.2 digit precision) to an integer.
@@ -348,6 +352,10 @@ void gc_init (void)
 
 #if NGC_EXPRESSIONS_ENABLE
     ngc_flowctrl_init();
+    #if STRING_REGISTERS_ENABLE
+    string_registers_init();
+    #endif
+    ngc_expr_init();
 #endif
 #if NGC_PARAMETERS_ENABLE
     ngc_modal_state_invalidate();
@@ -599,14 +607,16 @@ char *gc_normalize_block (char *block, status_code_t *status, char **message)
                         if(message && *message == NULL) {
 #if NGC_EXPRESSIONS_ENABLE
                             if(!strncasecmp(comment, "DEBUG,", 6)) { // Debug message string substitution
-                                if(settings.flags.ngc_debug_out) {
+                                if(settings.flags.ngc_debug_out && grbl.on_string_substitution) {
                                     comment += 6;
-                                    ngc_substitute_parameters(comment, message);
+                                    grbl.on_string_substitution(comment, message);
                                 }
                                 *comment = '\0'; // Do not generate grbl.on_gcode_comment event!
                             } else if(!strncasecmp(comment, "PRINT,", 6)) { // Print message string substitution
-                                comment += 6;
-                                ngc_substitute_parameters(comment, message);
+                                if(grbl.on_string_substitution) {
+                                    comment += 6;
+                                    grbl.on_string_substitution(comment, message);
+                                }
                                 *comment = '\0'; // Do not generate grbl.on_gcode_comment event!
                             } else {
 #endif
