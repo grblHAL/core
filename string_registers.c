@@ -217,8 +217,7 @@ static status_code_t onStringRegisterGcodeComment (char *comment)
             return Status_OK;
 
         string_register_id_t registerId;
-        if (read_register_id(comment, &char_counter, &registerId) != Status_OK)
-        {
+        if (read_register_id(comment, &char_counter, &registerId) != Status_OK) {
             return Status_ExpressionSyntaxError;   // [Expected equal sign]
         }
 
