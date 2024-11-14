@@ -26,9 +26,9 @@
 
 typedef ngc_param_id_t string_register_id_t;
 
-bool string_register_get (string_register_id_t id, char **value);
-status_code_t string_register_set (string_register_id_t id, char *value);
-bool string_register_exists (string_register_id_t id);
+bool string_register_get(string_register_id_t id, char** value);
+status_code_t string_register_set(string_register_id_t id, char* value);
+bool string_register_exists(string_register_id_t id);
 void string_registers_init(void);
 
 #endif // _STRING_REGISTERS_H_
