@@ -198,6 +198,27 @@ static status_code_t read_command (char *line, uint_fast8_t *pos, ngc_cmd_t *ope
     return status;
 }
 
+// Returns the last called named sub with reference count
+static ngc_sub_t *get_refcount (uint32_t *refcount)
+{
+    ngc_sub_t *sub, *last = NULL;
+    uint32_t o_label = 0;
+
+    if((sub = subs)) do {
+        if(sub->o_label > NGC_MAX_PARAM_ID)
+            o_label = sub->o_label;
+    } while((sub = sub->next));
+
+    if((sub = subs)) do {
+        if(sub->o_label == o_label) {
+            last = sub;
+            (*refcount)++;
+        }
+    } while((sub = sub->next));
+
+    return last;
+}
+
 static ngc_sub_t *add_sub (uint32_t o_label, vfs_file_t *file)
 {
     ngc_sub_t *sub;
@@ -276,10 +297,15 @@ static void stack_unwind_sub (uint32_t o_label)
         stack_pull();
 
     if(stack_idx >= 0) {
-        if(o_label > NGC_MAX_PARAM_ID)
+        if(o_label > NGC_MAX_PARAM_ID) {
+            uint32_t count = 0;
+            if(stack[stack_idx].sub == get_refcount(&count) && count == 1)
+                ngc_string_param_delete((ngc_string_id_t)o_label);
+            clear_subs(stack[stack_idx].file);
             stream_redirect_close(stack[stack_idx].file);
-        else
+        } else
             vfs_seek(stack[stack_idx].file, stack[stack_idx].file_pos);
+
         stack_pull();
     }
 
@@ -301,10 +327,14 @@ static status_code_t onGcodeComment (char *comment)
     status_code_t status = Status_OK;
 
     if(!strncasecmp(comment, "ABORT,", 6)) {
-        char *buf = NULL;
-        if(ngc_substitute_parameters(comment + pos, &buf)) {
-            report_message(buf, Message_Error);
-            free(buf);
+        char *msg = NULL;
+        *comment = '!';
+        msg = grbl.on_process_gcode_comment(comment);
+        if(msg == NULL)
+            msg = ngc_substitute_parameters(comment + pos);
+        if(msg) {
+            report_message(msg, Message_Error);
+            free(msg);
         }
         status = Status_UserException;
     } else if(on_gcode_comment)
@@ -328,41 +358,37 @@ void ngc_flowctrl_init (void)
         stack_pull();
 }
 
-/*
-
-static status_code_t onError (status_code_t status)
+// NOTE: onNamedSubError will be called recursively for each
+// redirected file by the grbl.report.status_message() call.
+static status_code_t onNamedSubError (status_code_t status)
 {
     static bool closing = false;
 
     if(stack_idx >= 0) {
 
-        uint32_t o_label = 0;
         ngc_sub_t *sub;
+        uint32_t o_label = 0;
 
         if((sub = subs)) do {
-            if(sub->o_label > NGC_MAX_PARAM_ID)
+            if(sub->file == hal.stream.file && sub->o_label > NGC_MAX_PARAM_ID)
                 o_label = sub->o_label;
-        } while((sub = sub->next));
-
-        if((sub = subs)) do {
-            if(sub->o_label == o_label)
-                break;
-        } while((sub = sub->next));
+        } while(o_label == 0 && (sub = sub->next));
 
         if(sub) {
+
             if(!closing) {
-                char msg[100];
+                char *name, msg[100];
                 closing = true;
-                char *name = string_register_get_by_id((string_register_id_t)sub->o_label);
-                sprintf(msg, "error %d in named sub %s.macro", (uint8_t)status, name);
-                report_message(msg, Message_Warning);
+                if((name = ngc_string_param_get((ngc_string_id_t)o_label))) {
+                    sprintf(msg, "error %d in named sub %s.macro", (uint8_t)status, name);
+                    report_message(msg, Message_Warning);
+                }
             }
 
-            sub->o_label = 1;
-
-            stream_redirect_close(sub->file);
+            stack_unwind_sub(o_label);
             status = grbl.report.status_message(status);
         }
+
         closing = false;
         ngc_flowctrl_init();
     }
@@ -370,14 +396,16 @@ static status_code_t onError (status_code_t status)
     return status;
 }
 
-static status_code_t onFileEnd (vfs_file_t *file, status_code_t status)
+static status_code_t onNamedSubEOF (vfs_file_t *file, status_code_t status)
 {
-    if(stack_idx >= 0 && stack[stack_idx].file == file)
-        ngc_flowctrl_unwind_stack(file);
+    if(stack_idx >= 0 && stack[stack_idx].file == file) {
+        stream_redirect_close(stack[stack_idx].file);
+        ngc_flowctrl_unwind_stack(stack[stack_idx].file);
+    }
 
     return status;
 }
-*/
+
 status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, bool *skip)
 {
     float value;
@@ -600,8 +628,8 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
                 if(o_label > NGC_MAX_PARAM_ID) {
 
                     if((sub = subs)) do {
-//                        if(sub->o_label == o_label && sub->file == hal.stream.file)
-//                            break;
+                        if(sub->o_label == o_label && sub->file == hal.stream.file)
+                            break;
                     } while(sub->next && (sub = sub->next));
 
                     if(sub == NULL || sub->o_label != o_label)
@@ -636,28 +664,28 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
                     ngc_sub_t *sub;
 
                     if(o_label > NGC_MAX_PARAM_ID) {
-#if 0
+
                         char *subname;
-                        if((subname = string_register_get_by_id((string_register_id_t)o_label))) {
+                        if((subname = ngc_string_param_get((ngc_string_id_t)o_label))) {
                             char filename[60];
                             vfs_file_t *file;
-
-                            strcpy(filename, "/");
-                            strcat(filename, subname);
-                            strcat(filename, ".macro");
-
 #if LITTLEFS_ENABLE
-                            sprintf(filename, "/littlefs/P%d.macro", macro_id);
+                            sprintf(filename, "/littlefs/%s.macro", subname);
 
-                            if((file = vfs_open(filename, "r")) == NULL)
+                            if((file = stream_redirect_read(filename, onNamedSubError, onNamedSubEOF)) == NULL) {
+                                sprintf(filename, "/%s.macro", subname);
+                                file = stream_redirect_read(filename, onNamedSubError, onNamedSubEOF);
+                            }
+#else
+                            sprintf(filename, "/%s.macro", subname);
+                            file = stream_redirect_read(filename, onNamedSubError, onNamedSubEOF);
 #endif
-                            if((file = stream_redirect_read(filename, onError, onFileEnd))) {
+                            if(file) {
                                 if((sub = add_sub(o_label, file)) == NULL)
                                     status = Status_FlowControlOutOfMemory;
                             } else
                                 status = Status_FlowControlOutOfMemory; // file not found...
                        }
-#endif
                     } else if((sub = subs)) do {
                         if(sub->o_label == o_label && sub->file == hal.stream.file)
                             break;

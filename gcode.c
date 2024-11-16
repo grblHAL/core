@@ -593,40 +593,32 @@ char *gc_normalize_block (char *block, status_code_t *status, char **message)
 
             case ')':
                 if(comment && !gc_state.skip_blocks) {
+
                     *s1 = '\0';
                     if(!hal.driver_cap.no_gcode_message_handling) {
 
                         if(message && *message == NULL) {
-#if NGC_EXPRESSIONS_ENABLE
-                            if(!strncasecmp(comment, "DEBUG,", 6)) { // Debug message string substitution
-                                if(settings.flags.ngc_debug_out) {
-                                    comment += 6;
-                                    ngc_substitute_parameters(comment, message);
-                                }
-                                *comment = '\0'; // Do not generate grbl.on_gcode_comment event!
-                            } else if(!strncasecmp(comment, "PRINT,", 6)) { // Print message string substitution
-                                comment += 6;
-                                ngc_substitute_parameters(comment, message);
-                                *comment = '\0'; // Do not generate grbl.on_gcode_comment event!
-                            } else {
-#endif
-                            size_t len = s1 - comment - 3;
 
-                            if(!strncasecmp(comment, "MSG,", 4) && (*message = malloc(len))) {
+                            if(grbl.on_process_gcode_comment)
+                                *message = grbl.on_process_gcode_comment(comment);
 
-                                comment += 4;
-                                while(*comment == ' ') {
-                                    comment++;
-                                    len--;
+                            if(*message == NULL) {
+
+                                size_t len = s1 - comment - 3;
+                                if(!strncasecmp(comment, "MSG,", 4) && (*message = malloc(len))) {
+
+                                    comment += 4;
+                                    while(*comment == ' ') {
+                                        comment++;
+                                        len--;
+                                    }
+                                    memcpy(*message, comment, len);
                                 }
-                                memcpy(*message, comment, len);
                             }
-#if NGC_EXPRESSIONS_ENABLE
-                            }
-#endif
                         }
                     }
-                    if(*comment && *message == NULL && grbl.on_gcode_comment)
+
+                    if(*comment && (message == NULL || *message == NULL) && grbl.on_gcode_comment)
                         *status = grbl.on_gcode_comment(comment);
                 }
                 comment = NULL;
@@ -912,17 +904,14 @@ status_code_t gc_execute_block (char *block)
                 } else
                     FAIL(status);
             } else if(block[char_counter] == '<') {
-#if 0
+
                 char o_slabel[NGC_MAX_PARAM_LENGTH + 1];
                 if((status = ngc_read_name(block, &char_counter, o_slabel)) != Status_OK)
                     FAIL(status);
                 gc_block.words.o = On;
-                if((gc_block.values.o = string_register_set_name(o_slabel)) == 0)
+                if((gc_block.values.o = ngc_string_param_set_name(o_slabel)) == 0)
                     FAIL(Status_FlowControlOutOfMemory);
                 continue;
-#else
-                FAIL(Status_GcodeUnsupportedCommand); // [For now...]
-#endif
             }
         }
 

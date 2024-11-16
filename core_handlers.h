@@ -118,6 +118,7 @@ typedef void (*on_reset_ptr)(void);
 typedef void (*on_jog_cancel_ptr)(sys_state_t state);
 typedef bool (*on_spindle_select_ptr)(spindle_ptrs_t *spindle);
 typedef void (*on_spindle_selected_ptr)(spindle_ptrs_t *spindle);
+typedef char *(*on_process_gcode_comment_ptr)(char *msg);
 typedef status_code_t (*on_gcode_message_ptr)(char *msg);
 typedef void (*on_rt_reports_added_ptr)(report_tracking_flags_t report);
 typedef const char *(*on_set_axis_setting_unit_ptr)(setting_id_t setting_id, uint_fast8_t axis_idx);
@@ -242,19 +243,20 @@ typedef struct {
     on_probe_start_ptr on_probe_start;
     on_probe_completed_ptr on_probe_completed;
     on_set_axis_setting_unit_ptr on_set_axis_setting_unit;
-    on_gcode_message_ptr on_gcode_message;              //!< Called on output of message parsed from gcode. NOTE: string pointed to is freed after this call.
-    on_gcode_message_ptr on_gcode_comment;              //!< Called when a plain gcode comment has been parsed.
-    on_tool_selected_ptr on_tool_selected;              //!< Called prior to executing M6 or after executing M61.
-    on_tool_changed_ptr on_tool_changed;                //!< Called after executing M6 or M61.
-    on_toolchange_ack_ptr on_toolchange_ack;            //!< Called from interrupt context.
-    on_jog_cancel_ptr on_jog_cancel;                    //!< Called from interrupt context.
+    on_process_gcode_comment_ptr on_process_gcode_comment;
+    on_gcode_message_ptr on_gcode_message;                  //!< Called on output of message parsed from gcode. NOTE: string pointed to is freed after this call.
+    on_gcode_message_ptr on_gcode_comment;                  //!< Called when a plain gcode comment has been parsed.
+    on_tool_selected_ptr on_tool_selected;                  //!< Called prior to executing M6 or after executing M61.
+    on_tool_changed_ptr on_tool_changed;                    //!< Called after executing M6 or M61.
+    on_toolchange_ack_ptr on_toolchange_ack;                //!< Called from interrupt context.
+    on_jog_cancel_ptr on_jog_cancel;                        //!< Called from interrupt context.
     on_laser_ppi_enable_ptr on_laser_ppi_enable;
-    on_spindle_select_ptr on_spindle_select;            //!< Called before spindle is selected, hook in HAL overrides here
-    on_spindle_selected_ptr on_spindle_selected;        //!< Called when spindle is selected, do not change HAL pointers here!
-    on_reset_ptr on_reset;                              //!< Called from interrupt context.
-    on_file_open_ptr on_file_open;                      //!< Called when a file is opened for streaming.
-    on_file_end_ptr on_file_end;                        //!< Called when a file opened for streaming reaches the end.
-    user_mcode_ptrs_t user_mcode;                       //!< Optional handlers for user defined M-codes.
+    on_spindle_select_ptr on_spindle_select;                //!< Called before spindle is selected, hook in HAL overrides here
+    on_spindle_selected_ptr on_spindle_selected;            //!< Called when spindle is selected, do not change HAL pointers here!
+    on_reset_ptr on_reset;                                  //!< Called from interrupt context.
+    on_file_open_ptr on_file_open;                          //!< Called when a file is opened for streaming.
+    on_file_end_ptr on_file_end;                            //!< Called when a file opened for streaming reaches the end.
+    user_mcode_ptrs_t user_mcode;                           //!< Optional handlers for user defined M-codes.
     // core entry points - set up by core before driver_init() is called.
     home_machine_ptr home_machine;
     travel_limits_ptr check_travel_limits;

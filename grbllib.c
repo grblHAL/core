@@ -35,6 +35,9 @@
 #include "state_machine.h"
 #include "nvs_buffer.h"
 #include "stream.h"
+#if NGC_EXPRESSIONS_ENABLE
+#include "ngc_expr.h"
+#endif
 #if ENABLE_BACKLASH_COMPENSATION
 #include "motion_control.h"
 #endif
@@ -182,6 +185,9 @@ int grbl_enter (void)
     grbl.on_get_alarms = alarms_get_details;
     grbl.on_get_errors = errors_get_details;
     grbl.on_get_settings = settings_get_details;
+#if NGC_EXPRESSIONS_ENABLE
+    grbl.on_process_gcode_comment = ngc_process_comment;
+#endif
 
     // Clear all and set some HAL function pointers
     memset(&hal, 0, sizeof(grbl_hal_t));

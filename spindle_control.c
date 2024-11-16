@@ -1032,17 +1032,18 @@ static void spindle1_settings_save (void)
 static void spindle1_settings_restore (void)
 {
     static const spindle_settings_t defaults = {
-        .rpm_max = DEFAULT_SPINDLE_RPM_MAX,
-        .rpm_min = DEFAULT_SPINDLE_RPM_MIN,
+        .rpm_max = DEFAULT_SPINDLE1_RPM_MAX,
+        .rpm_min = DEFAULT_SPINDLE1_RPM_MIN,
         .flags.pwm_disable = false,
-        .flags.enable_rpm_controlled = DEFAULT_SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED,
-        .invert.on = DEFAULT_INVERT_SPINDLE_ENABLE_PIN,
-        .invert.ccw = DEFAULT_INVERT_SPINDLE_CCW_PIN,
-        .invert.pwm = DEFAULT_INVERT_SPINDLE_PWM_PIN,
-        .pwm_freq = DEFAULT_SPINDLE_PWM_FREQ,
-        .pwm_off_value = DEFAULT_SPINDLE_PWM_OFF_VALUE,
-        .pwm_min_value = DEFAULT_SPINDLE_PWM_MIN_VALUE,
-        .pwm_max_value = DEFAULT_SPINDLE_PWM_MAX_VALUE,
+        .flags.enable_rpm_controlled = 0, //DEFAULT_SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED, TODO: add setting?
+        .flags.laser_mode_disable = 0, // TODO: add setting? Not possible?
+        .invert.on = DEFAULT_INVERT_SPINDLE1_ENABLE_PIN,
+        .invert.ccw = DEFAULT_INVERT_SPINDLE1_CCW_PIN,
+        .invert.pwm = DEFAULT_INVERT_SPINDLE1_PWM_PIN,
+        .pwm_freq = DEFAULT_SPINDLE1_PWM_FREQ,
+        .pwm_off_value = DEFAULT_SPINDLE1_PWM_OFF_VALUE,
+        .pwm_min_value = DEFAULT_SPINDLE1_PWM_MIN_VALUE,
+        .pwm_max_value = DEFAULT_SPINDLE1_PWM_MAX_VALUE,
         .at_speed_tolerance = DEFAULT_SPINDLE_AT_SPEED_TOLERANCE,
         .ppr = DEFAULT_SPINDLE_PPR,
         .pid.p_gain = DEFAULT_SPINDLE_P_GAIN,

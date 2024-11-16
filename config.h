@@ -1212,6 +1212,81 @@ Defines the parameters for the fourth entry in the spindle RPM linearization tab
 
 #endif // ENABLE_SPINDLE_LINEARIZATION
 
+// Settings for second PWM spindle
+
+/*! @name $716 - Setting_SpindleInvertMask1
+Inverts the selected spindle output signals from active high to active low. Useful for some pre-built electronic boards.
+*/
+///@{
+#if !defined DEFAULT_INVERT_SPINDLE1_ENABLE_PIN || defined __DOXYGEN__
+#define DEFAULT_INVERT_SPINDLE1_ENABLE_PIN Off
+#endif
+#if !defined DEFAULT_INVERT_SPINDLE1_CCW_PIN || defined __DOXYGEN__
+#define DEFAULT_INVERT_SPINDLE1_CCW_PIN Off // NOTE: not supported by all drivers.
+#endif
+#if !defined DEFAULT_INVERT_SPINDLE1_PWM_PIN || defined __DOXYGEN__
+#define DEFAULT_INVERT_SPINDLE1_PWM_PIN Off // NOTE: not supported by all drivers.
+#endif
+///@}
+
+/*! @name $730 - Setting_RpmMax1
+*/
+///@{
+#if !defined DEFAULT_SPINDLE1_RPM_MAX || defined __DOXYGEN__
+#define DEFAULT_SPINDLE1_RPM_MAX 1000.0f // rpm
+#endif
+///@}
+
+/*! @name $731 - Setting_RpmMin1
+*/
+///@{
+#if !defined DEFAULT_SPINDLE1_RPM_MIN || defined __DOXYGEN__
+#define DEFAULT_SPINDLE1_RPM_MIN 0.0f // rpm
+#endif
+///@}
+
+/*! @name $733 - Setting_PWMFreq1
+*/
+///@{
+#if !defined DEFAULT_SPINDLE1_PWM_FREQ || defined __DOXYGEN__
+#define DEFAULT_SPINDLE1_PWM_FREQ 5000 // Hz
+#endif
+///@}
+
+/*! @name $734 - Setting_PWMOffValue1
+*/
+///@{
+#if !defined DEFAULT_SPINDLE1_PWM_OFF_VALUE || defined __DOXYGEN__
+#define DEFAULT_SPINDLE1_PWM_OFF_VALUE 0.0f // Percent
+#endif
+///@}
+
+/*! @name $735 - Setting_PWMMinValue1
+Used by variable spindle output only. This forces the PWM output to a minimum duty cycle when enabled.
+The PWM pin will still read 0V when the spindle is disabled. Most users will not need this option, but
+it may be useful in certain scenarios. This minimum PWM settings coincides with the spindle rpm minimum
+setting, like rpm max to max PWM. This is handy if you need a larger voltage difference between 0V disabled
+and the voltage set by the minimum PWM for minimum rpm. This difference is 0.02V per PWM value. So, when
+minimum PWM is at 1, only 0.02 volts separate enabled and disabled. At PWM 5, this would be 0.1V. Keep
+in mind that you will begin to lose PWM resolution with increased minimum PWM values, since you have less
+and less range over the total 255 PWM levels to signal different spindle speeds.
+<br>__!! NOTE:__ Compute duty cycle at the minimum PWM by this equation: (% duty cycle)=(SPINDLE1_PWM_MIN_VALUE/255)*100
+*/
+///@{
+#if !defined DEFAULT_SPINDLE1_PWM_MIN_VALUE || defined __DOXYGEN__
+#define DEFAULT_SPINDLE1_PWM_MIN_VALUE 0.0f // Must be greater than zero. Integer (+-255).
+#endif
+///@}
+
+/*! @name $736 - Setting_PWMMaxValue
+*/
+///@{
+#if !defined DEFAULT_SPINDLE1_PWM_MAX_VALUE || defined __DOXYGEN__
+#define DEFAULT_SPINDLE1_PWM_MAX_VALUE 100.0f // Percent
+#endif
+///@}
+
+
 // Tool change settings (Group_Toolchange)
 
 /*! @name $341 - Setting_ToolChangeMode

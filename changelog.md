@@ -1,5 +1,25 @@
 ## grblHAL changelog
 
+<a name="20241116">Build 20241116
+
+Core:
+
+* Added support for named o-sub/o-call to flow control, for calling gcode subroutines stored on SD card or in littlefs. Sub name matches filename with extension _.macro_.
+
+* Added core event for handling special gcode comments used by expressions: `DEBUG`, `PRINT` and `ABORT`. These can now be extended by or new added to by plugins.
+
+* Added overrideable default $-setting values for second PWM spindle to _grbl/config.c_.
+
+Plugins:
+
+* Trinamic: changed some default parameter values, fix bug in previously unused TMC2660 code.
+
+* Motors: fixed bugs in handling and visibility of extended settings.
+
+* Misc, eventout: added info to `$pins` command for pins mapped to event actions.
+
+---
+
 <a name="20241113">Build 20241113
 
 Core:
@@ -17,6 +37,8 @@ Plugins:
 * Spindle: fixed some naming inconsistencies.
 
 * Misc: added plugin for feed rate overrides via Marlin style M-code and plugin for configuring per axis homing pulloff distance.
+
+* Keypad, macros: added some overridable defaults.
 
 ---
 

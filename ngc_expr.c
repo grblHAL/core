@@ -984,28 +984,31 @@ static int8_t get_format (char c, int8_t pos, uint8_t *decimals)
     return pos;
 }
 
-/*! \brief Substitute references to parameters and expressions in a string with their values.
+/*! \brief Substitute references to parameters in a string with their values.
 
 _NOTE:_ The returned string must be freed by the caller.
 
-\param comment pointer to the original comment string.
-\param message pointer to a char pointer to receive the resulting string.
+\param line pointer to the original string.
+\returns pointer to the resulting string on success, NULL on failure.
 */
-char *ngc_substitute_parameters (char *comment, char **message)
+char *ngc_substitute_parameters (char *line)
 {
+    if(line == NULL)
+        return NULL;
+
     size_t len = 0;
     float value;
-    char *s, c;
+    char *message = NULL, *s, c;
     uint_fast8_t char_counter = 0;
     int8_t parse_format = 0;
     uint8_t decimals = ngc_float_decimals(); // LinuxCNC is 1 (or l?)
 
     // Trim leading spaces
-    while(*comment == ' ')
-        comment++;
+    while(*line == ' ')
+        line++;
 
     // Calculate length of substituted string
-    while((c = comment[char_counter++])) {
+    while((c = line[char_counter++])) {
         if(parse_format) {
             if((parse_format = get_format(c, parse_format, &decimals)) < 0) {
                 len -= parse_format;
@@ -1015,7 +1018,7 @@ char *ngc_substitute_parameters (char *comment, char **message)
             parse_format = 1;
         else if(c == '#') {
             char_counter--;
-            if(ngc_read_parameter(comment, &char_counter, &value, true) == Status_OK)
+            if(ngc_read_parameter(line, &char_counter, &value, true) == Status_OK)
                 len += strlen(decimals ? ftoa(value, decimals) : trim_float(ftoa(value, decimals)));
             else
                 len += 3; // "N/A"
@@ -1024,14 +1027,14 @@ char *ngc_substitute_parameters (char *comment, char **message)
     }
 
     // Perform substitution
-    if((s = *message = malloc(len + 1))) {
+    if((s = message = malloc(len + 1))) {
 
         char fmt[5] = {0};
 
         *s = '\0';
         char_counter = 0;
 
-        while((c = comment[char_counter++])) {
+        while((c = line[char_counter++])) {
             if(parse_format) {
                 fmt[parse_format] = c;
                 if((parse_format = get_format(c, parse_format, &decimals)) < 0)
@@ -1046,7 +1049,7 @@ char *ngc_substitute_parameters (char *comment, char **message)
                 fmt[0] = c;
             } else if(c == '#') {
                 char_counter--;
-                if(ngc_read_parameter(comment, &char_counter, &value, true) == Status_OK)
+                if(ngc_read_parameter(line, &char_counter, &value, true) == Status_OK)
                     strcat(s, decimals ? ftoa(value, decimals) : trim_float(ftoa(value, decimals)));
                 else
                     strcat(s, "N/A");
@@ -1058,7 +1061,37 @@ char *ngc_substitute_parameters (char *comment, char **message)
         }
     }
 
-    return *message;
+    return message;
+}
+
+/*! \brief Process gcode comment string.
+Returns string with substituted parameter references if starts with DEBUG, or PRINT, NULL if not.
+
+_NOTE:_ The returned string must be freed by the caller.
+
+\param comment pointer to the comment string.
+\returns pointer to the resulting string on success, NULL on failure.
+*/
+char *ngc_process_comment (char *comment)
+{
+    if(comment == NULL)
+        return NULL;
+
+    char *message = NULL;
+
+    if(!strncasecmp(comment, "DEBUG,", 6)) { // DEBUG message string substitution
+        if(settings.flags.ngc_debug_out) {
+            comment += 6;
+            message = ngc_substitute_parameters(comment);
+        }
+        *comment = '\0'; // Do not generate grbl.on_gcode_comment event!
+    } else if(!strncasecmp(comment, "PRINT,", 6)) { // PRINT message string substitution
+        comment += 6;
+        message = ngc_substitute_parameters(comment);
+        *comment = '\0'; // Do not generate grbl.on_gcode_comment event!
+    }
+
+    return message;
 }
 
 #endif
