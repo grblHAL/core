@@ -137,7 +137,7 @@
 #endif
 #endif
 
-// Optional control signals, assigned to auxillary input pins
+// Optional control signals, assigned to auxiliary input pins
 
 #ifndef MOTOR_FAULT_BIT
 #if defined(MOTOR_FAULT_PIN) && !MOTOR_FAULT_ENABLE

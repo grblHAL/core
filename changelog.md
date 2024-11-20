@@ -1,14 +1,41 @@
 ## grblHAL changelog
 
+<a name="20241120">Build 20241120
+
+Core:
+
+* A bit of refactoring related to spindles as a first step for a coming settings structure revision, "hardened" some code.
+
+Drivers:
+
+* Some: added support for ["assorted small plugins"](https://github.com/grblHAL/Plugins_misc/), mainly for drivers available in the Web Builder.
+
+* STM32F1xx: moved board specific code to _biard_ directory.
+
+* STM32F4xx: simplified configuration of Trinamic low-level interfaces, fixed typos in second RGB LED channel code
+and added workaround for RGB LEDs connected to debug pin beeing turned on at boot.
+
+Plugins:
+
+* Motors: refactored M-code handling and added support for Marlin style `M569` and `M919` commands. Some minor bug fixes.
+
+* Trinamic: fixed "bug" in TMC2660 current handling, extended API.
+
+* Spindle: changed settings handling when multiple spindles are configured. Fixed bug in `M104P<n>` M-code.
+__NOTE:__ an automatic update of settings `$511`-`$513` will be attempted, this may fail so please check them after upgrading.
+
+---
+
+
 <a name="20241116">Build 20241116
 
 Core:
 
 * Added support for named o-sub/o-call to flow control, for calling gcode subroutines stored on SD card or in littlefs. Sub name matches filename with extension _.macro_.
 
-* Added core event for handling special gcode comments used by expressions: `DEBUG`, `PRINT` and `ABORT`. These can now be extended by or new added to by plugins.
+* Added core event for handling special gcode comments used by expressions: `DEBUG`, `PRINT` and `ABORT`. These can now be extended or new added to by plugins.
 
-* Added overrideable default $-setting values for second PWM spindle to _grbl/config.c_.
+* Added overridable default $-setting values for second PWM spindle to _grbl/config.c_.
 
 Plugins:
 

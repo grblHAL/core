@@ -302,7 +302,7 @@ static spindle_num_t spindle_get_num (spindle_id_t spindle_id)
         do {
             idx--;
             if((setting = setting_get_details(idx == 0 ? Setting_SpindleType : (setting_id_t)(Setting_SpindleEnable0 + idx), NULL))) {
-                if(setting_get_int_value(setting, 0) == spindle_id)
+                if(setting_get_int_value(setting, 0) - (idx == 0 ? 0 : 1) == spindle_id)
                     spindle_num = idx;
             }
         } while(idx && spindle_num == -1);
@@ -377,10 +377,11 @@ bool spindle_enumerate_spindles (spindle_enumerate_callback_ptr callback, void *
         spindle.hal = spindle.enabled && sys_spindle[spindle.num].hal.id == spindle.id ? &sys_spindle[spindle.num].hal : &spindles[idx].hal;
         spindle.is_current = spindle.enabled && sys_spindle[0].hal.id == idx;
 
-        callback(&spindle, data);
+        if(callback(&spindle, data))
+            return true;
     }
 
-    return true;
+    return false;
 }
 
 // The following calls uses logical spindle numbers pointing into the sys_spindle array

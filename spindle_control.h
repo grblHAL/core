@@ -334,7 +334,7 @@ typedef struct  {
 /*! \brief Pointer to callback function called by spindle_enumerate_spindles().
 \param spindle prointer to a \a spindle_info_t struct.
 */
-typedef void (*spindle_enumerate_callback_ptr)(spindle_info_t *spindle, void *data);
+typedef bool (*spindle_enumerate_callback_ptr)(spindle_info_t *spindle, void *data);
 
 void spindle_set_override (spindle_ptrs_t *spindle, override_t speed_override);
 

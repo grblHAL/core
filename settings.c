@@ -379,7 +379,7 @@ static status_code_t set_control_invert (setting_id_t id, uint_fast16_t int_valu
 static status_code_t set_spindle_invert (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_pwm_mode (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_pwm_options (setting_id_t id, uint_fast16_t int_value);
-static status_code_t set_spindle_type (setting_id_t id, uint_fast16_t int_value);
+static status_code_t set_default_spindle (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_encoder_spindle (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_control_disable_pullup (setting_id_t id, uint_fast16_t int_value);
 static status_code_t set_probe_disable_pullup (setting_id_t id, uint_fast16_t int_value);
@@ -630,7 +630,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_DoorCoolantOnDelay, Group_SafetyDoor, "Coolant on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.coolant_on_delay, NULL, is_setting_available },
 #endif
      { Setting_SpindleOnDelay, Group_Spindle, "Spindle on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.spindle_on_delay, NULL, is_setting_available },
-     { Setting_SpindleType, Group_Spindle, "Default spindle", NULL, Format_RadioButtons, spindle_types, NULL, NULL, Setting_IsExtendedFn, set_spindle_type, get_int, is_setting_available },
+     { Setting_SpindleType, Group_Spindle, "Default spindle", NULL, Format_RadioButtons, spindle_types, NULL, NULL, Setting_IsExtendedFn, set_default_spindle, get_int, is_setting_available },
      { Setting_PlannerBlocks, Group_General, "Planner buffer blocks", NULL, Format_Int16, "####0", "30", "1000", Setting_IsExtended, &settings.planner_buffer_blocks, NULL, NULL, { .reboot_required = On } },
      { Setting_AutoReportInterval, Group_General, "Autoreport interval", "ms", Format_Int16, "###0", "100", "1000", Setting_IsExtendedFn, set_report_interval, get_int, NULL, { .reboot_required = On, .allow_null = On } },
 //     { Setting_TimeZoneOffset, Group_General, "Timezone offset", NULL, Format_Decimal, "-#0.00", "0", "12", Setting_IsExtended, &settings.timezone, NULL, NULL },
@@ -678,7 +678,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
                                 "If Run substatus is enabled it may be used for simple probe protection.\\n\\n"
                                 "NOTE: Parser state will be sent separately after the status report and only on changes."
     },
-    { Setting_JunctionDeviation, "Sets how fast Grbl travels through consecutive motions. Lower value slows it down." },
+    { Setting_JunctionDeviation, "Sets how fast grblHAL travels through consecutive motions. Lower value slows it down." },
     { Setting_ArcTolerance, "Sets the G2 and G3 arc tracing accuracy based on radial error. Beware: A very small value may effect performance." },
     { Setting_ReportInches, "Enables inch units when returning any position and rate value that is not a settings value." },
     { Setting_ControlInvertMask, "Inverts the control signals (active low).\\n"
@@ -754,7 +754,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
 #endif
     { Setting_SleepEnable, "Enable sleep mode." },
     { Setting_HoldActions, "Actions taken during feed hold and on resume from feed hold." },
-    { Setting_ForceInitAlarm, "Starts Grbl in alarm mode after a cold reset." },
+    { Setting_ForceInitAlarm, "Start in alarm mode after a cold reset." },
     { Setting_ProbingFeedOverride, "Allow feed override during probing." },
 #if ENABLE_SPINDLE_LINEARIZATION
      { Setting_LinearSpindlePiece1, "Comma separated list of values: RPM_MIN, RPM_LINE_A1, RPM_LINE_B1, set to blank to disable." },
@@ -1064,30 +1064,45 @@ static status_code_t set_pwm_options (setting_id_t id, uint_fast16_t int_value)
     return Status_OK;
 }
 
-static status_code_t set_spindle_type (setting_id_t id, uint_fast16_t int_value)
+typedef struct {
+    uint8_t ref_id;
+    spindle_id_t spindle_id;
+} spindle_map_t;
+
+static bool get_spindle_ref_id (spindle_info_t *spindle, void *map)
 {
-    if(spindle_get_count() < 2)
-        return Status_SettingDisabled;
-    else if(int_value >= spindle_get_count())
-        return Status_SettingValueOutOfRange;
+    bool ok;
 
-    settings.spindle.flags.type = int_value;
+    if((ok = spindle->id == ((spindle_map_t *)map)->spindle_id))
+        ((spindle_map_t *)map)->ref_id = spindle->ref_id;
 
-    spindle_select(settings.spindle.flags.type);
+    return ok;
+}
 
-    return Status_OK;
+static status_code_t set_default_spindle (setting_id_t id, uint_fast16_t int_value)
+{
+    status_code_t status;
+    spindle_map_t spindle = { .spindle_id = int_value };
+
+    if((status = spindle_enumerate_spindles(get_spindle_ref_id, &spindle) ? Status_OK : Status_SettingValueOutOfRange) == Status_OK) {
+
+        settings.spindle.flags.type = spindle.spindle_id; // TODO: change to ref_id in next settings revision
+
+        spindle_select(spindle.spindle_id);
+    }
+
+    return status;
 }
 
 static status_code_t set_encoder_spindle (setting_id_t id, uint_fast16_t int_value)
 {
-    if(spindle_get_count() < 2)
-        return Status_SettingDisabled;
-    else if(int_value >= spindle_get_count())
-        return Status_SettingValueOutOfRange;
+    status_code_t status;
+    spindle_map_t spindle = { .spindle_id = int_value };
 
-    settings.offset_lock.encoder_spindle = int_value;
+    if((status = spindle_enumerate_spindles(get_spindle_ref_id, &spindle) ? Status_OK : Status_SettingValueOutOfRange) == Status_OK)
+        settings.offset_lock.encoder_spindle = spindle.spindle_id; // TODO: change to ref_id in next settings revision
 
-    return Status_OK;
+    return status;
 }
 
 static status_code_t set_spindle_invert (setting_id_t id, uint_fast16_t int_value)
@@ -1801,7 +1816,7 @@ static uint32_t get_int (setting_id_t id)
             break;
 
         case Setting_SpindleType:
-            value = settings.spindle.flags.type;
+            value = settings.spindle.flags.type; // TODO: change to ref_id in next settings revision
             break;
 
         case Setting_AutoReportInterval:
@@ -2370,10 +2385,14 @@ void settings_write_global (void)
 
 #if N_SPINDLE > 1
 
-static void get_default_spindle (spindle_info_t *spindle, void *data)
+static bool get_default_spindle (spindle_info_t *spindle, void *data)
 {
-    if(spindle->ref_id == (uint8_t)((uint32_t)data))
+    bool ok;
+
+    if((ok = spindle->ref_id == (uint8_t)((uint32_t)data)))
         settings.spindle.flags.type = spindle->id;
+
+    return ok;
 }
 
 #endif
@@ -3158,10 +3177,4 @@ void settings_init (void)
     } while((details = details->next));
 
     setting_details.on_changed = hal.settings_changed;
-
-    // Sanity checks for spindle configuration
-    if(settings.spindle.flags.type >= spindle_get_count())
-        settings.spindle.flags.type = 0;
-    if(settings.offset_lock.encoder_spindle >= spindle_get_count())
-        settings.offset_lock.encoder_spindle = 0;
 }

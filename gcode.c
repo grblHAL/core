@@ -940,7 +940,11 @@ status_code_t gc_execute_block (char *block)
         if((letter < 'A' && letter != '$') || letter > 'Z')
             FAIL(Status_ExpectedCommandLetter); // [Expected word letter]
 
-        if(!read_float(block, &char_counter, &value)) {
+        if(letter == 'O') {
+            value = NAN;
+            if((status = read_uint(block, &char_counter, &int_value)) != Status_OK)
+                FAIL(status);
+        } else if(!read_float(block, &char_counter, &value)) {
             if(user_mcode == UserMCode_NoValueWords)    // Valueless parameters allowed for user defined M-codes.
                 value = NAN;                            // Parameter validation deferred to implementation.
             else
@@ -956,9 +960,7 @@ status_code_t gc_execute_block (char *block)
         // a good enough compromise and catch most all non-integer errors. To make it compliant,
         // we would simply need to change the mantissa to int16, but this add compiled flash space.
         // Maybe update this later.
-        if(isnan(value))
-            mantissa = 0;
-        else {
+        if(!isnanf(value)) {
             int_value = (uint32_t)truncf(value);
             mantissa = (uint_fast16_t)roundf(100.0f * (value - int_value));
         }
@@ -1462,7 +1464,7 @@ status_code_t gc_execute_block (char *block)
                         if (mantissa > 0)
                             FAIL(Status_GcodeCommandValueNotInteger);
                         word_bit.parameter.o = On;
-                        gc_block.values.o = isnan(value) ? 0xFFFFFFFF : int_value;
+                        gc_block.values.o = int_value;
                         break;
 
                     case 'P': // NOTE: For certain commands, P value must be an integer, but none of these commands are supported.

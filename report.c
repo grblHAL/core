@@ -1120,12 +1120,16 @@ void report_echo_line_received (char *line)
     hal.stream.write("]" ASCII_EOL);
 }
 
-#if N_SYS_SPINDLE == 1 &&  N_SPINDLE > 1
+#if N_SYS_SPINDLE == 1 && N_SPINDLE > 1
 
-static void report_spindle_num (spindle_info_t *spindle, void *data)
+static bool report_spindle_num (spindle_info_t *spindle, void *data)
 {
-    if(spindle->id == *((spindle_id_t *)data))
+    bool ok;
+
+    if((ok = spindle->id == *((spindle_id_t *)data)))
         hal.stream.write_all(appendbuf(2, "|S:", uitoa((uint32_t)spindle->num)));
+
+    return ok;
 }
 
 #endif
@@ -2488,7 +2492,7 @@ status_code_t report_time (void)
     return ok ? Status_OK : Status_InvalidStatement;
 }
 
-static void report_spindle (spindle_info_t *spindle, void *data)
+static bool report_spindle (spindle_info_t *spindle, void *data)
 {
     if(data) {
         char *caps = buf;
@@ -2550,6 +2554,8 @@ static void report_spindle (spindle_info_t *spindle, void *data)
         }
         hal.stream.write(ASCII_EOL);
     }
+
+    return false;
 }
 
 #if N_SPINDLE > 1
@@ -2560,9 +2566,11 @@ typedef struct {
     spindle_info_t *spindles;
 } spindle_rdata_t;
 
-static void get_spindles (spindle_info_t *spindle, void *data)
+static bool get_spindles (spindle_info_t *spindle, void *data)
 {
     memcpy(&((spindle_rdata_t *)data)->spindles[((spindle_rdata_t *)data)->idx++], spindle, sizeof(spindle_info_t));
+
+    return false;
 }
 
 static int cmp_spindles (const void *a, const void *b)

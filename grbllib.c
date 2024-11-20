@@ -279,7 +279,27 @@ int grbl_enter (void)
     if(driver.ok == 0xFF)
         driver.setup = hal.driver_setup(&settings);
 
-    if((driver.spindle = spindle_select(settings.spindle.flags.type))) {
+    uint8_t n_spindle = spindle_get_count();
+#if N_SPINDLE < 2
+    spindle_id_t spindle_id = 0;
+#else
+    spindle_id_t spindle_id = setting_get_int_value(setting_get_details(Setting_SpindleType, NULL), 0);
+#endif
+
+// Sanity checks
+    if(spindle_id >= n_spindle) {
+
+        spindle_ptrs_t *spindle = spindle_get_hal(0, SpindleHAL_Raw);
+
+        spindle_id = 0;
+        settings.spindle.flags.type = spindle ? spindle->id : 0; // TODO: change to ref_id in next settings revision
+    }
+
+    if(settings.offset_lock.encoder_spindle >= n_spindle)
+        settings.offset_lock.encoder_spindle = settings.spindle.flags.type;
+//
+
+    if((driver.spindle = spindle_select(spindle_id))) {
         spindle_ptrs_t *spindle = spindle_get(0);
         driver.spindle = spindle->get_pwm == NULL || spindle->update_pwm != NULL;
     } else
@@ -318,7 +338,7 @@ int grbl_enter (void)
         setting_remove_elements(Setting_FSOptions, fs_options.mask);
     }
 
-    // Grbl initialization loop upon power-up or a system abort. For the latter, all processes
+    // Initialization loop upon power-up or a system abort. For the latter, all processes
     // will return to this loop to be cleanly re-initialized.
     while(looping) {
 
@@ -346,7 +366,7 @@ int grbl_enter (void)
 
         flush_override_buffers();
 
-        // Reset Grbl primary systems.
+        // Reset primary systems.
         hal.stream.reset_read_buffer(); // Clear input stream buffer
         gc_init();                      // Set g-code parser to default state
         hal.limits.enable(settings.limits.flags.hard_enabled, (axes_signals_t){0});
@@ -373,7 +393,7 @@ int grbl_enter (void)
         if(hal.driver_cap.mpg_mode)
             protocol_enqueue_realtime_command(sys.mpg_mode ? CMD_STATUS_REPORT_ALL : CMD_STATUS_REPORT);
 
-        // Start Grbl main loop. Processes program inputs and executes them.
+        // Start main loop. Processes program inputs and executes them.
         if(!(looping = protocol_main_loop()))
             looping = hal.driver_release == NULL || hal.driver_release();
 

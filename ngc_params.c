@@ -827,7 +827,7 @@ char *ngc_string_param_get (ngc_string_id_t id)
             break;
     } while((sp = sp->next));
 
-    return sp->value;
+    return sp ? sp->value : NULL;
 }
 
 bool ngc_string_param_exists (ngc_string_id_t id)
