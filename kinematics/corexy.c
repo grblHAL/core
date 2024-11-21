@@ -137,8 +137,8 @@ static void corexy_limits_set_machine_positions (axes_signals_t cycle)
     uint_fast8_t idx = N_AXIS;
 
     if(settings.homing.flags.force_set_origin) {
-        if (cycle.mask & bit(--idx)) do {
-            switch(--idx) {
+        do {
+            if(cycle.mask & bit(--idx)) switch(idx) {
                 case X_AXIS:
                     sys.position[A_MOTOR] = corexy_convert_to_b_motor_steps(sys.position);
                     sys.position[B_MOTOR] = - sys.position[A_MOTOR];
@@ -156,7 +156,7 @@ static void corexy_limits_set_machine_positions (axes_signals_t cycle)
 
          coord_data_t *pulloff = limits_homing_pulloff(NULL);
 
-         if (cycle.mask & bit(--idx)) {
+         if(cycle.mask & bit(--idx)) {
              int32_t off_axis_position;
              int32_t set_axis_position = bit_istrue(settings.homing.dir_mask.value, bit(idx))
                                           ? lroundf((settings.axis[idx].max_travel + pulloff->values[idx]) * settings.axis[idx].steps_per_mm)
@@ -237,7 +237,7 @@ static void report_options (bool newopt)
     on_report_options(newopt);
 
     if(!newopt)
-        hal.stream.write("[KINEMATICS:CoreXY v2.01]" ASCII_EOL);
+        hal.stream.write("[KINEMATICS:CoreXY v2.02]" ASCII_EOL);
 }
 
 // Initialize API pointers for CoreXY kinematics

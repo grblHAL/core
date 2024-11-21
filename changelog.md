@@ -1,5 +1,13 @@
 ## grblHAL changelog
 
+<a name="20241121">20241121
+
+Core:
+
+* Fixed bug in setting home position to 0 when CoreXY kinematics is enabled. Ref. [ESP32 issue #77](https://github.com/grblHAL/ESP32/issues/77).
+
+---
+
 <a name="20241120">Build 20241120
 
 Core:
@@ -10,7 +18,7 @@ Drivers:
 
 * Some: added support for ["assorted small plugins"](https://github.com/grblHAL/Plugins_misc/), mainly for drivers available in the Web Builder.
 
-* STM32F1xx: moved board specific code to _biard_ directory.
+* STM32F1xx: moved board specific code to _board_ directory.
 
 * STM32F4xx: simplified configuration of Trinamic low-level interfaces, fixed typos in second RGB LED channel code
 and added workaround for RGB LEDs connected to debug pin beeing turned on at boot.
@@ -21,7 +29,7 @@ Plugins:
 
 * Trinamic: fixed "bug" in TMC2660 current handling, extended API.
 
-* Spindle: changed settings handling when multiple spindles are configured. Fixed bug in `M104P<n>` M-code.
+* Spindle: changed settings handling when multiple spindles are configured. Fixed bug in `M104P<n>` M-code.  
 __NOTE:__ an automatic update of settings `$511`-`$513` will be attempted, this may fail so please check them after upgrading.
 
 ---
