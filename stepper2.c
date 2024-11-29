@@ -218,7 +218,7 @@ Binds motor 0 as a spindle.
 */
 bool st2_motor_bind_spindle (uint_fast8_t axis_idx)
 {
-    if(motors && axis_idx > Z_AXIS) {
+    if(motors && N_AXIS > 3 && axis_idx > Z_AXIS) {
 
         motors->idx = axis_idx;
         motors->axis.mask = 1 << axis_idx;

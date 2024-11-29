@@ -654,7 +654,7 @@ typedef struct {
 } parser_block_t;
 
 // Initialize the parser
-void gc_init (void);
+void gc_init (bool stop);
 
 char *gc_normalize_block (char *block, status_code_t *status, char **message);
 

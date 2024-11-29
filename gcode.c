@@ -288,7 +288,7 @@ plane_t *gc_get_plane_data (plane_t *plane, plane_select_t select)
     return plane;
 }
 
-void gc_init (void)
+void gc_init (bool stop)
 {
 #if COMPATIBILITY_LEVEL > 1
     memset(&gc_state, 0, sizeof(parser_state_t));
@@ -302,11 +302,20 @@ void gc_init (void)
         if(grbl.tool_table.n_tools == 0)
             memset(grbl.tool_table.tool, 0, sizeof(tool_data_t));
     } else {
+
+        coord_system_id_t coord_system_id = gc_state.modal.coord_system.id;
+        tool_offset_mode_t tool_offset_mode = gc_state.modal.tool_offset_mode;
+
         memset(&gc_state, 0, offsetof(parser_state_t, g92_coord_offset));
         gc_state.tool_pending = gc_state.tool->tool_id;
         if(hal.tool.select)
             hal.tool.select(gc_state.tool, false);
-        // TODO: restore offsets, tool offset mode?
+
+        if(stop) {
+            // Restore offsets, tool offset mode
+            gc_state.modal.coord_system.id = coord_system_id;
+            gc_state.modal.tool_offset_mode = tool_offset_mode;
+        }
     }
 #endif
 

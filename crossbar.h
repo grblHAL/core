@@ -263,6 +263,7 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Input_LimitZ_Max,           .name = "Z limit max" },
     { .function = Input_HomeZ,                .name = "Z home" },
     { .function = Input_HomeZ_2,              .name = "Z home 2" },
+#ifndef NO_SETTINGS_DESCRIPTIONS
     { .function = Input_SpindleIndex,         .name = "Spindle index" },
     { .function = Input_SpindlePulse,         .name = "Spindle pulse" },
     { .function = Input_Aux0,                 .name = "Aux in 0" },
@@ -285,6 +286,7 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Input_Analog_Aux5,          .name = "Aux analog in 5" },
     { .function = Input_Analog_Aux6,          .name = "Aux analog in 6" },
     { .function = Input_Analog_Aux7,          .name = "Aux analog in 7" },
+#endif
     { .function = Output_StepX,               .name = "X step" },
     { .function = Output_StepX_2,             .name = "X2 step" },
     { .function = Output_StepY,               .name = "Y step" },
@@ -344,6 +346,7 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Input_LimitV_Max,           .name = "V limit max" },
     { .function = Input_HomeV,                .name = "V home" },
 #endif
+#ifndef NO_SETTINGS_DESCRIPTIONS
     { .function = Output_MotorChipSelect,     .name = "Motor CS" },
     { .function = Output_MotorChipSelectX,    .name = "Motor CSX" },
     { .function = Output_MotorChipSelectY,    .name = "Motor CSY" },
@@ -418,6 +421,7 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Bidirectional_MotorUARTM5,  .name = "UART M5" },
     { .function = Bidirectional_MotorUARTM6,  .name = "UART M6" },
     { .function = Bidirectional_MotorUARTM7,  .name = "UART M7" }
+#endif
 };
 
 typedef enum {

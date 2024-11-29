@@ -54,7 +54,8 @@ const settings_restore_t settings_all = {
 
 PROGMEM const settings_t defaults = {
 
-    .version = SETTINGS_VERSION,
+    .version.id = SETTINGS_VERSION,
+//    .version.build = (GRBL_BUILD - 20000000UL),
 
 #if DEFAULT_LASER_MODE
     .mode = Mode_Laser,
@@ -2367,7 +2368,7 @@ bool read_global_settings ()
     settings.control_invert.mask |= limits_override.mask;
     settings.control_disable_pullup.mask &= ~limits_override.mask;
 
-    return ok && settings.version == SETTINGS_VERSION;
+    return ok && settings.version.id == SETTINGS_VERSION;
 }
 
 
@@ -3176,5 +3177,11 @@ void settings_init (void)
             details->on_changed(&settings, changed);
     } while((details = details->next));
 
+/*
+    if(!settings.fs_options.downgrading && settings.version.build != (GRBL_BUILD - 20000000UL)) {
+        settings.version.build = (GRBL_BUILD - 20000000UL);
+        settings_write_global();
+    }
+*/
     setting_details.on_changed = hal.settings_changed;
 }

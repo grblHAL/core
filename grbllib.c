@@ -368,7 +368,7 @@ int grbl_enter (void)
 
         // Reset primary systems.
         hal.stream.reset_read_buffer(); // Clear input stream buffer
-        gc_init();                      // Set g-code parser to default state
+        gc_init(false);                 // Set g-code parser to default state
         hal.limits.enable(settings.limits.flags.hard_enabled, (axes_signals_t){0});
         plan_reset();                   // Clear block buffer and planner variables
         st_reset();                     // Clear stepper subsystem variables.

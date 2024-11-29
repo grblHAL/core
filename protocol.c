@@ -579,7 +579,7 @@ bool protocol_exec_rt_system (void)
 
             sys.flags.keep_input = Off;
 
-            gc_init();
+            gc_init(true);
             plan_reset();
             if(sys.alarm_pending == Alarm_ProbeProtect) {
                 st_go_idle();

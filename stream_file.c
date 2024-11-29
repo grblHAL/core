@@ -171,7 +171,7 @@ vfs_file_t *stream_redirect_read (char *filename, status_message_ptr status_hand
 
 void stream_redirect_close (vfs_file_t *file)
 {
-    rd_stream_t *stream = rd_streams, *prev_stream;
+    rd_stream_t *stream = rd_streams, *prev_stream = NULL;
 
     if(stream) do {
         if(stream->file_new == file) {

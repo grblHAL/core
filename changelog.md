@@ -1,5 +1,43 @@
 ## grblHAL changelog
 
+<a name="20241128">Build 20241128
+
+Core:
+
+* Added (or rather repurposed) field for build date to settings structure in preparation for coming changes.
+
+* Added code guards in order to free some memory for STM32F103 variants with 128K flash. Ref. [STM32F1xx driver issue #59](https://github.com/grblHAL/STM32F1xx/issues/59).
+
+* Changed Stop (`0x19`) real-time command behaviour, active tool offset and coordinate system will now be kept. Ref. [issue #610](https://github.com/grblHAL/core/issues/610).  
+
+Drivers:
+
+* All: updated for core change (settings structure).
+
+* SAM3X8E: fixed missing probe input for Protoneer v3 board. Ref. [issue #31](https://github.com/grblHAL/SAM3X8E/issues/31)
+
+* RP2040: switched to SDK v2.0.0 and added initial support for RP2350 (Pico 2). The Web Builder will be updated a little later for this change.
+
+Plugins:
+
+* Trinamic: removed superfluous semicolon.Ref. [issue #15](https://github.com/grblHAL/Plugins_motor/issues/15).
+
+* Networking: added some files to _CMakeLists.txt_, used by RP2350 driver.
+
+---
+
+<a name="20241121">Build 20241121
+
+Core:
+
+* downgrading settings reset backup
+
+Plugins:
+
+* Trinamic: removed superfluous semicolon. https://github.com/grblHAL/Plugins_motor/issues/15
+
+---
+
 <a name="20241121">20241121
 
 Core:

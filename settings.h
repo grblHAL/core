@@ -573,7 +573,7 @@ typedef union {
                  no_restore_position_after_M6    :1,
                  no_unlock_after_estop           :1;
     };
-} settingflags_t;
+} settingflags_t; // TODO: -> 16 bit
 
 typedef union {
     uint8_t value;
@@ -750,7 +750,8 @@ typedef union {
     struct {
         uint8_t sd_mount_on_boot  :1,
                 lfs_hidden        :1,
-                unused            :6;
+                unused            :5,
+                downgrading       :1; // TODO: move to system flags
     };
 } fs_options_t;
 
@@ -803,11 +804,18 @@ typedef struct {
     toolchange_mode_t mode;
 } tool_change_settings_t;
 
+typedef union {
+    uint32_t value;
+    struct {
+        uint32_t id    :8;  // = SETTINGS_VERSION, incremented on structure changes.
+        uint32_t build :24; // Build date, format YYMMDD.
+    };
+} settings_version_t;
+
 // Global persistent settings (Stored from byte NVS_ADDR_GLOBAL onwards)
 typedef struct {
     // Settings struct version
-    uint32_t version;
-//    uint32_t build_date;  // TODO: add in next settings version?, set to GRBL_BUILD
+    settings_version_t version;
     float junction_deviation;
     float arc_tolerance;
     float g73_retract;
