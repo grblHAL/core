@@ -940,7 +940,7 @@ status_code_t gc_execute_block (char *block)
         if(gc_state.skip_blocks && letter != 'O')
             return Status_OK;
 
-        if(user_mcode != UserMCode_NoValueWords && isnanf(value))
+        if(user_mcode != UserMCode_NoValueWords && isnan(value))
             FAIL(Status_BadNumberFormat);   // [Expected word value]
 
         g65_words.value = 0;
@@ -969,7 +969,7 @@ status_code_t gc_execute_block (char *block)
         // a good enough compromise and catch most all non-integer errors. To make it compliant,
         // we would simply need to change the mantissa to int16, but this add compiled flash space.
         // Maybe update this later.
-        if(!isnanf(value)) {
+        if(!isnan(value)) {
             int_value = (uint32_t)truncf(value);
             mantissa = (uint_fast16_t)roundf(100.0f * (value - int_value));
         }
@@ -2600,7 +2600,7 @@ status_code_t gc_execute_block (char *block)
                     // TODO: fail?
                 }
 
-                if(thread.end_taper_type != Taper_None && thread.end_taper_length > abs(thread.z_final - gc_state.position[Z_AXIS]) / 2.0f)
+                if(thread.end_taper_type != Taper_None && thread.end_taper_length > fabsf(thread.z_final - gc_state.position[Z_AXIS]) / 2.0f)
                     FAIL(Status_GcodeValueOutOfRange);
 
                 if(gc_block.words.r)

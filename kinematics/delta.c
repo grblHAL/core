@@ -322,7 +322,7 @@ static void get_cuboid_envelope (void)
     for(z = 0; z < settings.axis[X_AXIS].steps_per_mm * 2.0f * M_PI ; ++z) {
         pos[0] = pos[1] = pos[2] = sr * (float)z;
         transform_to_cartesian(mpos.values, pos);
-        if(!isnanf(mpos.x)) {
+        if(!isnan(mpos.x)) {
             if(minz > mpos.z)
                 minz = mpos.z;
             if(maxz < mpos.z)
@@ -589,7 +589,7 @@ static bool delta_check_travel_limits (float *target, axes_signals_t axes, bool 
 #endif
 
     if(!is_cartesian) {
-        if(isnanf(transform_to_cartesian(pos.values, target)[A_MOTOR]))
+        if(isnan(transform_to_cartesian(pos.values, target)[A_MOTOR]))
             return false;
     }
 

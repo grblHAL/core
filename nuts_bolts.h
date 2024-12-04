@@ -64,11 +64,6 @@
 #endif
 #endif
 
-#if defined(__MSP430F5529__) || defined(__MSP432P401R__) || defined(__MSP432E401Y__) || defined(PART_TM4C123GH6PM) ||  defined(PART_TM4C1294NCPDT)
-#define isnanf(x) __isnanf(x)
-#define isinff(x) __isinff(x)
-#endif
-
 // Axis array index values. Must start with 0 and be continuous.
 #define X_AXIS 0 // Axis indexing value.
 #define Y_AXIS 1

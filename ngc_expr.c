@@ -820,9 +820,9 @@ status_code_t ngc_read_real_value (char *line, uint_fast8_t *pos, float *value)
     else
         status = (read_float(line, pos, value) ? Status_OK : Status_BadNumberFormat);
 
-    if(isnanf(*value))
+    if(isnan(*value))
         status = Status_ExpressionInvalidResult; // Calculation resulted in 'not a number'
-    else if(isinff(*value))
+    else if(isinf(*value))
         status = Status_ExpressionInvalidResult; // Calculation resulted in 'not a number'
 
     return status;

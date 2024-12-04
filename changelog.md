@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+<a name="20241204"> 20241204
+
+Core:
+
+* Changed deprecated calls to `isinff()` and `isnanf()` to new \(C99\) versions.
+
+Drivers:
+
+* RP2040: CMakeLists.txt fixes for RP2350 builds.
+
+* STM32F4xx: disabled broken support for sensorless homing for LongBoard32 \(SLB\). Support for this board is still WIP.
+
+Plugins:
+
+* Motors , spindle and misc: Changed deprecated calls to `isinff()` and `isnanf()` to new \(C99\) versions.
+
+---
+
 <a name="20241128">Build 20241128
 
 Core:
@@ -20,7 +38,7 @@ Drivers:
 
 Plugins:
 
-* Trinamic: removed superfluous semicolon.Ref. [issue #15](https://github.com/grblHAL/Plugins_motor/issues/15).
+* Trinamic: removed superfluous semicolon. Ref. [issue #15](https://github.com/grblHAL/Plugins_motor/issues/15).
 
 * Networking: added some files to _CMakeLists.txt_, used by RP2350 driver.
 

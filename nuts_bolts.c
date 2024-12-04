@@ -306,7 +306,7 @@ bool read_float (char *line, uint_fast8_t *char_counter, float *float_ptr)
 // Returns true if float value is a whole number (integer)
 bool isintf (float value)
 {
-    return !isnanf(value) && fabsf(value - truncf(value)) < 0.001f;
+    return !isnan(value) && fabsf(value - truncf(value)) < 0.001f;
 }
 
 // Non-blocking delay function used for general operation and suspend features.
