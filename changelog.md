@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+<a name="20241205"> 20241205
+
+Drivers:
+
+* RP2040: initial support for RP2350 \(Pico 2\) added.
+
+Plugins:
+
+* Trinamic: fixed min/max current calculations for TMC5160 driver. Ref. [issue #16](https://github.com/grblHAL/Plugins_motor/issues/16);
+
+---
+
 <a name="20241204"> 20241204
 
 Core:
@@ -14,7 +26,7 @@ Drivers:
 
 Plugins:
 
-* Motors , spindle and misc: Changed deprecated calls to `isinff()` and `isnanf()` to new \(C99\) versions.
+* Motors , spindle and misc: changed deprecated calls to `isinff()` and `isnanf()` to new \(C99\) versions.
 
 ---
 
