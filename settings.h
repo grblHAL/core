@@ -523,7 +523,11 @@ typedef enum {
     // Calculated base values for driver/plugin stepper settings
     Setting_AxisExtended0        = Setting_AxisSettingsBase2,
     Setting_AxisExtended1        = Setting_AxisSettingsBase2 + AXIS_SETTINGS_INCREMENT,
+#if ENABLE_JERK_ACCELERATION
+    Setting_AxisJerk             = Setting_AxisSettingsBase2 + 2 * AXIS_SETTINGS_INCREMENT,
+#else
     Setting_AxisExtended2        = Setting_AxisSettingsBase2 + 2 * AXIS_SETTINGS_INCREMENT,
+#endif
     Setting_AxisExtended3        = Setting_AxisSettingsBase2 + 3 * AXIS_SETTINGS_INCREMENT,
     Setting_AxisExtended4        = Setting_AxisSettingsBase2 + 4 * AXIS_SETTINGS_INCREMENT,
     Setting_AxisExtended5        = Setting_AxisSettingsBase2 + 5 * AXIS_SETTINGS_INCREMENT,
@@ -717,6 +721,9 @@ typedef struct {
     float steps_per_mm;
     float max_rate;
     float acceleration;
+#if ENABLE_JERK_ACCELERATION   
+    float jerk;
+#endif
     float max_travel;
     float dual_axis_offset;
 #if ENABLE_BACKLASH_COMPENSATION
@@ -1074,6 +1081,10 @@ bool settings_read_coord_data(coord_system_id_t id, float (*coord_data)[N_AXIS])
 
 // Temporarily override acceleration, if 0 restore to configured setting value
 bool settings_override_acceleration (uint8_t axis, float acceleration);
+
+#if ENABLE_ACCELERATION_PROFILES
+float lookupprofile (uint8_t profile);
+#endif
 
 void settings_register (setting_details_t *details);
 setting_details_t *settings_get_details (void);
