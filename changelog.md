@@ -1,10 +1,38 @@
 ## grblHAL changelog
 
+<a name="20241208"> Build 20241208
+
+Core:
+
+* Revised core setting structures, changed from 8-bit to 16-bit CRC checksums for improved detection of corruption/version mismatches.  
+__NOTE:__ Backup and restore settings over an update since _all_ settings will be reset to default. Any odometer data will also be lost.
+
+* Added option to homing enable setting (`$22`) for per axis homing feedrates.  
+When this option is selected setting `$24` and $`25` will be disabled and new axis settings made available;
+`$18<n>` replaces `$24` and `$19<n>` replaces `$25`. `<n>` is the axis number; `0` for X, `1` for Y, ...  
+__NOTE:__ if axes are set up for simultaneous homing and they do not have the same feedrates they will be homed separately.  
+__NOTE:__ `$18<n>` and `$19<n>` were previousely implemented by the Trinamic motor plugin, the implementation is now in the core.  
+__NOTE:__ core settings will now overflow the legacy 1024 byte boundary when > 5 axes are configured, in the previous version when > 6 axes were configured..
+
+Drivers:
+
+* All: updated for the revised settings structures.
+
+* iMXRT1062, RP2040 and SAM3X8E: improved step injection option used by the Plasma plugin and stepper spindle option.
+
+* RP2040: tuning for the new RP2350 MCU, fixes step timings.
+
+Plugins:
+
+* Some updated for the revised settings structures.
+
+---
+
 <a name="20241205"> 20241205
 
 Drivers:
 
-* RP2040: initial support for RP2350 \(Pico 2\) added.
+* RP2040: initial support for RP2350 \(Pico 2\) added to Web Builder.
 
 Plugins:
 

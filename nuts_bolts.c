@@ -411,19 +411,6 @@ struct tm *get_datetime (const char *s)
     return (dt.tm_year | dt.tm_mon | dt.tm_mday | dt.tm_hour | dt.tm_min | dt.tm_sec) > 0 ? &dt : NULL;
 }
 
-// calculate checksum byte for data
-uint8_t calc_checksum (uint8_t *data, uint32_t size) {
-
-    uint8_t checksum = 0;
-
-    while(size--) {
-        checksum = (checksum << 1) | (checksum >> 7);
-        checksum += *(data++);
-    }
-
-    return checksum;
-}
-
 // Remove spaces from and convert string to uppercase (in situ)
 char *strcaps (char *s)
 {
@@ -439,6 +426,18 @@ char *strcaps (char *s)
         *s2 = '\0';
 
     return s;
+}
+
+uint_fast8_t bit_count (uint32_t bits)
+{
+    uint_fast8_t count = 0;
+
+    while(bits) {
+        bits &= (bits - 1);
+        count++;
+    }
+
+    return count;
 }
 
 void dummy_handler (void)

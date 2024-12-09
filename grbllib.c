@@ -279,24 +279,19 @@ int grbl_enter (void)
     if(driver.ok == 0xFF)
         driver.setup = hal.driver_setup(&settings);
 
-    uint8_t n_spindle = spindle_get_count();
-#if N_SPINDLE < 2
-    spindle_id_t spindle_id = 0;
-#else
-    spindle_id_t spindle_id = setting_get_int_value(setting_get_details(Setting_SpindleType, NULL), 0);
-#endif
+    spindle_id_t spindle_id, encoder_spindle;
 
 // Sanity checks
-    if(spindle_id >= n_spindle) {
+    if(!spindle_get_id(settings.spindle.ref_id, &spindle_id)) {
 
-        spindle_ptrs_t *spindle = spindle_get_hal(0, SpindleHAL_Raw);
+        spindle_ptrs_t *spindle = spindle_get_hal(spindle_get_default(), SpindleHAL_Raw);
 
-        spindle_id = 0;
-        settings.spindle.flags.type = spindle ? spindle->id : 0; // TODO: change to ref_id in next settings revision
+        spindle_id = spindle ? spindle->id : spindle->ref_id;
+        settings.spindle.ref_id = spindle ? spindle->ref_id : DEFAULT_SPINDLE;
     }
 
-    if(settings.offset_lock.encoder_spindle >= n_spindle)
-        settings.offset_lock.encoder_spindle = settings.spindle.flags.type;
+    if(!spindle_get_id(settings.spindle.encoder_spindle, &encoder_spindle))
+        settings.spindle.encoder_spindle = settings.spindle.ref_id;
 //
 
     if((driver.spindle = spindle_select(spindle_id))) {

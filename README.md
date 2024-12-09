@@ -1,29 +1,28 @@
 ## grblHAL ##
 
-__New:__ A web app for [building for some drivers](http://svn.io-engineering.com:8080/) is now available, feedback will be appreciated.
+Latest build date is 20241208, see the [changelog](changelog.md) for details.  
 
-grblHAL has [many extensions](https://github.com/grblHAL/core/wiki) that may cause issues with some senders. As a workaround for these a [compile time option](https://github.com/grblHAL/core/wiki/Changes-from-grbl-1.1#workaround) has been added that disables extensions selectively. 
+> [!NOTE]
+>  A settings reset will be performed on an update of builds prior to 20241208. Backup and restore of settings is recommended.  
 
-__IMPORTANT!__ grblHAL defaults to normally closed \(NC\) switches for inputs, if none are connected when testing it is likely that the controller will start in alarm mode.  
-Temporarily short the Reset, E-Stop and Safety Door<sup>4</sup> inputs to ground or invert the corresponding inputs by setting `$14=73` to avoid that.  
-Please check out [this Wiki page](https://github.com/grblHAL/core/wiki/Changes-from-grbl-1.1) for additional important information.
+> [!NOTE]
+>  Build 20240222 has moved the probe input to the ioPorts pool of inputs and will be allocated from it when configured.
+The change is major and _potentially dangerous_, it may damage your probe, so please _verify correct operation_ after installing this, or later, builds.
+
+---
+
+A web app for [building for some drivers](http://svn.io-engineering.com:8080/) is now available, feedback will be appreciated.
+
+grblHAL has [many extensions](https://github.com/grblHAL/core/wiki) that may cause issues with some senders.
+As a workaround for these a [compile time option](https://github.com/grblHAL/core/wiki/Changes-from-grbl-1.1#workaround) has been added that disables extensions selectively. 
+
+> [!NOTE]
+> grblHAL defaults to normally closed \(NC\) switches for inputs, if none are connected when testing it is likely that the controller will start in alarm mode.  
+> Temporarily short the Reset, E-Stop and Safety Door<sup>4</sup> inputs to ground or invert the corresponding inputs by setting `$14=73` to avoid that.  
+> Please check out [this Wiki page](https://github.com/grblHAL/core/wiki/Changes-from-grbl-1.1) for additional important information.
 
 Windows users may try [ioSender](https://github.com/terjeio/Grbl-GCode-Sender), binary releases can be found [here](https://github.com/terjeio/Grbl-GCode-Sender/releases).
 It has been written to complement grblHAL and has features such as proper keyboard jogging, advanced probing, automatic reconfiguration of DRO display for up to 6 axes, lathe mode including conversational G-Code generation, 3D rendering, macro support etc. etc.
-
----
-
-Latest build date is 20241120, see the [changelog](changelog.md) for details.  
-
-__NOTE:__ Build 20240222 has moved the probe input to the ioPorts pool of inputs and will be allocated from it when configured.
-The change is major and _potentially dangerous_, it may damage your probe, so please _verify correct operation_ after installing this, or later, builds.
-
-__NOTE:__ A settings reset will be performed on an update of builds earlier than 20230125. Backup and restore of settings is recommended.  
-
----
-
-Updated for latest core changes.
-__NOTE:__ Arduino drivers has now been converted to Arduino libraries, [installation and compilation procedure](https://github.com/grblHAL/core/wiki/Compiling-GrblHAL) has been changed!
 
 ---
 
@@ -94,4 +93,4 @@ G/M-codes not supported by [legacy Grbl](https://github.com/gnea/grbl/wiki) are 
 Some [plugins](https://github.com/grblHAL/plugins) implements additional M-codes.
 
 ---
-20241120
+20241209

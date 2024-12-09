@@ -475,8 +475,14 @@ static bool print_setting (const setting_detail_t *setting, uint_fast16_t offset
     return true;
 }
 
+static inline bool is_hidden (const setting_detail_t *setting)
+{
+    return (setting->id == Setting_HomingFeedRate || setting->id == Setting_HomingSeekRate) ? settings.homing.flags.per_axis_feedrates : setting->flags.hidden;
+}
+
 void report_grbl_settings (bool all, void *data)
 {
+
     uint_fast16_t idx, n_settings = 0;
     const setting_detail_t *setting;
     setting_detail_t **all_settings, **psetting;
@@ -495,7 +501,7 @@ void report_grbl_settings (bool all, void *data)
         // Report core settings
         for(idx = 0; idx < details->n_settings; idx++) {
             setting = &details->settings[idx];
-            if(!setting->flags.hidden && (all || setting->type == Setting_IsLegacy || setting->type == Setting_IsLegacyFn) &&
+            if(!is_hidden(setting) && (all || setting->type == Setting_IsLegacy || setting->type == Setting_IsLegacyFn) &&
                   (setting->is_available == NULL ||setting->is_available(setting))) {
                 *psetting++ = (setting_detail_t *)setting;
                 n_settings++;
@@ -887,7 +893,7 @@ void report_build_info (char *line, bool extended)
     if(spindle && !spindle->cap.direction) // NOTE: Shown when disabled.
         *append++ = 'D';
 
-    if(settings.spindle.flags.enable_rpm_controlled)
+    if(settings.pwm_spindle.flags.enable_rpm_controlled)
         *append++ = '0';
 
     if(hal.driver_cap.software_debounce)
@@ -1875,7 +1881,7 @@ static status_code_t print_settings_details (settings_format_t format, setting_g
         do {
             for(idx = 0; idx < details->n_settings; idx++) {
                 setting = &details->settings[idx];
-                if(!setting->flags.hidden && (group == Group_All || setting->group == args.group) && (setting->is_available == NULL || setting->is_available(setting))) {
+                if(!is_hidden(setting) && (group == Group_All || setting->group == args.group) && (setting->is_available == NULL || setting->is_available(setting))) {
                     *psetting++ = (setting_detail_t *)setting;
                     n_settings++;
                 }
@@ -1896,7 +1902,7 @@ static status_code_t print_settings_details (settings_format_t format, setting_g
 
             setting = &details->settings[idx];
 
-            if(!setting->flags.hidden && (group == Group_All || setting->group == args.group)) {
+            if(!is_hidden(setting) && (group == Group_All || setting->group == args.group)) {
                 if(settings_iterator(setting, print_unsorted, &args))
                     reported = true;
             }
@@ -1913,7 +1919,7 @@ status_code_t report_settings_details (settings_format_t format, setting_id_t id
 
         const setting_detail_t *setting = setting_get_details(id, NULL);
 
-        if(setting && !setting->flags.hidden)
+        if(setting && !is_hidden(setting))
             report_settings_detail(format, setting, id - setting->id);
         else
             status = Status_SettingDisabled;
@@ -1930,7 +1936,7 @@ status_code_t report_setting_description (settings_format_t format, setting_id_t
 {
     const setting_detail_t *setting;
 
-    if((setting = setting_get_details(id, NULL)) && !setting->flags.hidden) {
+    if((setting = setting_get_details(id, NULL)) && !is_hidden(setting)) {
 
         const char *description = setting_get_description(id);
 
@@ -2585,15 +2591,13 @@ static int cmp_spindles (const void *a, const void *b)
 
 status_code_t report_spindles (bool machine_readable)
 {
-    bool has_spindles;
-
 #if N_SPINDLE > 1
 
     spindle_rdata_t spindle_data = {0};
 
     if((spindle_data.spindles = malloc(N_SPINDLE * sizeof(spindle_info_t)))) {
 
-        has_spindles = spindle_enumerate_spindles(get_spindles, &spindle_data);
+        spindle_enumerate_spindles(get_spindles, &spindle_data);
 
         spindle_data.n_spindles = spindle_data.idx;
 
@@ -2607,9 +2611,9 @@ status_code_t report_spindles (bool machine_readable)
 
 #endif
 
-    has_spindles = spindle_enumerate_spindles(report_spindle, (void *)machine_readable);
+    spindle_enumerate_spindles(report_spindle, (void *)machine_readable);
 
-    if(!has_spindles && !machine_readable)
+    if(!machine_readable && spindle_get_count() == 0)
         hal.stream.write("No spindles registered." ASCII_EOL);
 
     return Status_OK;

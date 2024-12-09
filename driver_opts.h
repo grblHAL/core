@@ -30,6 +30,12 @@
 #include "hal.h"
 #include "nuts_bolts.h"
 
+#ifdef OPTS_POSTPROCESSING
+#define NO_OPTS_POST 0
+#else
+#define NO_OPTS_POST 1
+#endif
+
 #ifndef X_GANGED
 #define X_GANGED            0
 #endif
@@ -107,7 +113,7 @@
 #undef I2C_STROBE_ENABLE
 #endif
 #define I2C_STROBE_ENABLE 1
-#elif KEYPAD_ENABLE == 2 && !defined(KEYPAD_STREAM)
+#elif NO_OPTS_POST && KEYPAD_ENABLE == 2 && !defined(KEYPAD_STREAM)
 #if USB_SERIAL_CDC
 #define KEYPAD_STREAM     0
 #else
@@ -123,7 +129,7 @@
 #define MPG_ENABLE          0
 #endif
 
-#if MPG_ENABLE && !defined(MPG_STREAM)
+#if NO_OPTS_POST && MPG_ENABLE && !defined(MPG_STREAM)
 #if USB_SERIAL_CDC
 #define MPG_STREAM          0
 #else
@@ -172,7 +178,7 @@
   #ifndef TRINAMIC_UART_ENABLE
     #define TRINAMIC_UART_ENABLE 1
   #endif
-  #if !defined(TRINAMIC_STREAM) && TRINAMIC_UART_ENABLE == 1
+  #if NO_OPTS_POST &&  !defined(TRINAMIC_STREAM) && TRINAMIC_UART_ENABLE == 1
     #define TRINAMIC_STREAM 1
   #endif
 #else
@@ -226,7 +232,7 @@
 #endif
 
 #ifndef SPINDLE0_ENABLE
-#define SPINDLE0_ENABLE SPINDLE_PWM0
+#define SPINDLE0_ENABLE DEFAULT_SPINDLE
 #endif
 
 #ifndef SPINDLE1_ENABLE

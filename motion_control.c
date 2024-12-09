@@ -838,7 +838,7 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
 #endif
     } else {
 
-        if(settings.homing.seek_rate <= 0.0f)
+        if(settings.axis[0].homing_seek_rate <= 0.0f)
             return Status_HomingDisabled;
 
         // Check and abort homing cycle, if hard limits are already enabled. Helps prevent problems

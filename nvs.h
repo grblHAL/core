@@ -6,18 +6,18 @@
   Copyright (c) 2017-2023 Terje Io
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef _NVS_H_
@@ -25,22 +25,34 @@
 
 #ifndef NVS_SIZE
 /*! \brief Total size in bytes of the NVS.
-Minimum 1024 bytes required, more if space for driver and/or plugin data and settings is required.
+Minimum 1024 bytes required, more if > 5 axes enabled, space for driver and/or plugin data and settings is required.
 */
 #define NVS_SIZE 2048
 #endif
 
+//! Number of bytes used for storing CRC values. Do not change this!
+#ifndef NVS_CRC_BYTES
+#define NVS_CRC_BYTES 2
+#endif
+
+#define NVS_SIZE_PARAMETERS     ((sizeof(coord_data_t) + NVS_CRC_BYTES) * N_CoordinateSystems)
+#define NVS_SIZE_BUILD_INFO     (sizeof(stored_line_t) + NVS_CRC_BYTES)
+#define NVS_SIZE_STARTUP_BLOCK  (N_STARTUP_LINE * (sizeof(stored_line_t) + NVS_CRC_BYTES))
+
 /*! \brief Number of bytes at the start of the NVS area reserved for core settings and parameters.
-Minimum 1024 bytes required.
+Minimum 1024 bytes required, more if > 5 axes enabled.
 */
-#if N_AXIS > 6
-#define GRBL_NVS_END 1151
+#if N_AXIS > 5
+#define GRBL_NVS_END (NVS_ADDR_GLOBAL + ((sizeof(settings_t) + NVS_CRC_BYTES + 4) & 0xFFFC) + NVS_SIZE_PARAMETERS + NVS_SIZE_BUILD_INFO + NVS_SIZE_STARTUP_BLOCK + 1)
 #else
 #define GRBL_NVS_END 1023
 #endif
 
-//! Number of bytes used for storing CRC values. Do not change this!
-#define NVS_CRC_BYTES 1
+#if NVS_CRC_BYTES > 1
+#define calc_checksum(data, length) modbus_crc16x(data, length)
+#else
+#define calc_checksum(data, length) grbl_crc8(data, length)
+#endif
 
 /*! @name Define persistent storage memory address location values for core settings and parameters.
 The upper half is reserved for parameters and the startup script.
@@ -50,12 +62,16 @@ __NOTE:__ 1024 bytes of persistent storage is the minimum required.
 */
 ///@{
 #define NVS_ADDR_GLOBAL         1U
+#if N_AXIS > 5
+#define NVS_ADDR_PARAMETERS     ((sizeof(settings_t) + NVS_CRC_BYTES + 4) & 0xFFFC) // align to word boundary
+#else
 #define NVS_ADDR_PARAMETERS     512U
-#define NVS_ADDR_BUILD_INFO     (GRBL_NVS_END - 81U)
-#define NVS_ADDR_STARTUP_BLOCK  (NVS_ADDR_BUILD_INFO - 1 - N_STARTUP_LINE * (sizeof(stored_line_t) + NVS_CRC_BYTES))
+#endif
+#define NVS_ADDR_BUILD_INFO     (GRBL_NVS_END - NVS_SIZE_BUILD_INFO)
+#define NVS_ADDR_STARTUP_BLOCK  (NVS_ADDR_BUILD_INFO - NVS_SIZE_STARTUP_BLOCK - 1)
 #if N_TOOLS
 #define NVS_ADDR_TOOL_TABLE     (GRBL_NVS_END + 1)
-#define GRBL_NVS_SIZE (GRBL_NVS_END + 1 + N_TOOLS * (sizeof(tool_data_t) + NVS_CRC_BYTES))
+#define GRBL_NVS_SIZE           (GRBL_NVS_END + 1 + N_TOOLS * (sizeof(tool_data_t) + NVS_CRC_BYTES))
 #else
 #define GRBL_NVS_SIZE (GRBL_NVS_END + 1)
 #endif

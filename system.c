@@ -4,7 +4,7 @@
   Part of grblHAL
 
   Copyright (c) 2017-2024 Terje Io
-  Copyright (c) 2014-2016 Sungeun K. Jeon for Gnea mResearch LLC
+  Copyright (c) 2014-2016 Sungeun K. Jeon for Gnea Research LLC
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -604,6 +604,19 @@ static status_code_t output_all_build_info (sys_state_t state, char *args)
     return Status_OK;
 }
 
+static status_code_t settings_downgrade (sys_state_t state, char *args)
+{
+    settings.version.build = settings.version.build == 0 ? (GRBL_BUILD - 20000000UL) : 0;
+
+    if((settings.flags.settings_downgrade = settings.version.build == 0)) {
+
+    }
+
+    settings_write_global();
+
+    return Status_OK;
+}
+
 static status_code_t settings_reset (sys_state_t state, char *args)
 {
     settings_restore_t restore = {0};
@@ -926,6 +939,7 @@ PROGMEM static const sys_command_t sys_commands[] = {
     { "SD", report_spindle_data, { .help_fn = On }, { .fn = help_spindle } },
     { "SR", spindle_reset_data, { .help_fn = On }, { .fn = help_spindle } },
     { "RTC", rtc_action, { .allow_blocking = On, .help_fn = On }, { .fn = help_rtc } },
+    { "DWNGRD", settings_downgrade, { .noargs = On, .allow_blocking = On }, { .str = "toggle setting flags for downgrade" } },
 #ifdef DEBUGOUT
     { "Q", output_memmap, { .noargs = On }, { .str = "output NVS memory allocation" } },
 #endif

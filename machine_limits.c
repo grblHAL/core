@@ -201,7 +201,7 @@ static bool limits_pull_off (axes_signals_t axis, coord_data_t *distance, float 
         }
     } while(idx);
 
-    plan_data.feed_rate = settings.homing.seek_rate * sqrtf(n_axis); // Adjust so individual axes all move at pull-off rate.
+    plan_data.feed_rate = settings.axis[0].homing_seek_rate * sqrtf(n_axis); // Adjust so individual axes all move at pull-off rate.
     plan_data.condition.coolant = gc_state.modal.coolant;
 
 #ifdef KINEMATICS_API
@@ -536,6 +536,45 @@ status_code_t limits_go_home (axes_signals_t cycle)
 {
     axes_signals_t auto_square = {0}, auto_squared = {0};
 
+    if(settings.homing.flags.per_axis_feedrates && bit_count(cycle.mask) > 1) {
+
+        uint_fast8_t idx = 0, axis0 = 255;
+        axes_signals_t _cycle = cycle;
+
+        while(_cycle.mask) {
+            if(_cycle.mask & 1) {
+                if(axis0 == 255)
+                    axis0 = idx;
+                else if(settings.axis[axis0].homing_feed_rate != settings.axis[idx].homing_feed_rate ||
+                         settings.axis[axis0].homing_seek_rate != settings.axis[idx].homing_seek_rate) {
+                    axis0 = 254;
+                    break;
+                }
+            }
+            idx++;
+            _cycle.mask >>= 1;
+        }
+
+        // If axes in cycle has different feed rates home them separately
+        if(axis0 == 254) {
+
+            status_code_t status;
+
+            idx = 0;
+            while(cycle.mask) {
+                if(cycle.mask & 1) {
+                    _cycle.mask = bit(idx);
+                    if((status = limits_go_home(_cycle)) != Status_OK)
+                        break;
+                }
+                idx++;
+                cycle.mask >>= 1;
+            }
+
+            return status;
+        }
+    }
+
     hal.limits.enable(settings.limits.flags.hard_enabled, cycle); // Disable hard limits pin change register for cycle duration
 
     if(hal.stepper.get_ganged)
@@ -612,9 +651,19 @@ bool limits_homing_required (void)
               sys.homing.mask && (sys.homing.mask & sys.homed.mask) != sys.homing.mask;
 }
 
+// Get homing rate from the first axis in the cycle.
 static float get_homing_rate (axes_signals_t cycle, homing_mode_t mode)
 {
-    return mode == HomingMode_Locate ? settings.homing.feed_rate : settings.homing.seek_rate;
+    uint_fast8_t idx = 0;
+
+    while(cycle.mask) {
+        if(cycle.mask & 1)
+            break;
+        idx++;
+        cycle.mask >>= 1;
+    }
+
+    return mode == HomingMode_Locate ? settings.axis[idx].homing_feed_rate : settings.axis[idx].homing_seek_rate;
 }
 
 // Checks and reports if target array exceeds machine travel limits. Returns false if check failed.
