@@ -349,7 +349,7 @@ static inline float limit_acceleration_by_axis_maximum (float *unit_vec)
             limit_value = min(limit_value, fabsf(settings.axis[idx].acceleration / unit_vec[idx]));
     } while(idx);
 #if ENABLE_ACCELERATION_PROFILES
-    limit_value *= lookupprofile(gc_state.modal.activeaccelprofile);
+    limit_value *= block->acceleration_factor;
 #endif
     return limit_value;
 }
@@ -365,7 +365,7 @@ static inline float limit_jerk_by_axis_maximum (float *unit_vec)
             limit_value = min(limit_value, fabsf(settings.axis[idx].jerk / unit_vec[idx]));
     } while(idx);
 #if ENABLE_ACCELERATION_PROFILES
-    limit_value *= lookupprofile(gc_state.modal.activeaccelprofile);
+    limit_value *= block->acceleration_factor;
 #endif
     return limit_value;
 }
@@ -530,6 +530,9 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
     block->rapid_rate = limit_max_rate_by_axis_maximum(unit_vec);
 #ifdef KINEMATICS_API
     block->rate_multiplier = pl_data->rate_multiplier;
+#endif
+#ifdef ENABLE_ACCELERATION_PROFILES
+    block->acceleration_factor = pl_data->acceleration_factor;
 #endif
 
     // Store programmed rate.
@@ -734,5 +737,8 @@ void plan_data_init (plan_line_data_t *plan_data)
     plan_data->condition.target_validated = plan_data->condition.target_valid = sys.soft_limits.mask == 0;
 #ifdef KINEMATICS_API
     plan_data->rate_multiplier = 1.0f;
+#endif
+#ifdef ENABLE_ACCELERATION_PROFILES
+    plan_data->acceleration_factor = lookupfactor(gc_state.modal.acceleration_profile);
 #endif
 }

@@ -362,7 +362,7 @@ void gc_init (bool stop)
     ngc_modal_state_invalidate();
 #endif
 #if ENABLE_ACCELERATION_PROFILES
-    gc_state.modal.activeaccelprofile = 1.0f; // Initialize machine with 100% Profile
+    gc_state.modal.acceleration_profile = 1.0f; // Initialize machine with 100% Profile
 #endif
 
 //    if(settings.flags.lathe_mode)

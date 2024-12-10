@@ -507,7 +507,7 @@ bool settings_override_acceleration (uint8_t axis, float acceleration)
 
 #if ENABLE_ACCELERATION_PROFILES
 //Acceleration Profiles for G187 P[x] in percent of maximum machine acceleration.
-float lookupprofile(uint8_t profile) {
+float lookupfactor(uint8_t profile) {
     static const float lookup[5] = { 
         1.0f,   // 100% - Roughing - Max Acceleration Default
         0.8f,   // 80% - Semi Roughing

@@ -535,11 +535,7 @@ typedef enum {
     Setting_AxisExtended5        = Setting_AxisSettingsBase2 + 5 * AXIS_SETTINGS_INCREMENT,
     Setting_AxisExtended6        = Setting_AxisSettingsBase2 + 6 * AXIS_SETTINGS_INCREMENT,
     Setting_AxisExtended7        = Setting_AxisSettingsBase2 + 7 * AXIS_SETTINGS_INCREMENT,
-#if ENABLE_JERK_ACCELERATION
-    Setting_AxisJerk             = Setting_AxisSettingsBase2 + 8 * AXIS_SETTINGS_INCREMENT,
-#else
-    Setting_AxisExtended8        = Setting_AxisSettingsBase2 + 8 * AXIS_SETTINGS_INCREMENT,
-#endif
+    Setting_AxisExtended8        = Setting_AxisSettingsBase2 + 8 * AXIS_SETTINGS_INCREMENT,s
     Setting_AxisExtended9        = Setting_AxisSettingsBase2 + 9 * AXIS_SETTINGS_INCREMENT,
 
     // Calculated base values for encoder settings
@@ -1089,7 +1085,7 @@ bool settings_read_coord_data(coord_system_id_t id, float (*coord_data)[N_AXIS])
 bool settings_override_acceleration (uint8_t axis, float acceleration);
 
 #if ENABLE_ACCELERATION_PROFILES
-float lookupprofile (uint8_t profile);
+float lookupfactor (uint8_t profile);
 #endif
 
 void settings_register (setting_details_t *details);
