@@ -2382,7 +2382,7 @@ status_code_t gc_execute_block (char *block)
                 FAIL(Status_NegativeValue);}
             else if (gc_block.values.p > 5.0f){
                 FAIL(Status_GcodeValueOutOfRange);}
-            gc_state.modal.activeaccelprofile = gc_block.values.p;
+            gc_state.modal.acceleration_profile = gc_block.values.p;
             break;
 #endif
         default:
@@ -3846,7 +3846,7 @@ status_code_t gc_execute_block (char *block)
             gc_state.modal.override_ctrl.feed_rate_disable = Off;
             gc_state.modal.override_ctrl.spindle_rpm_disable = Off;
             #if ENABLE_ACCELERATION_PROFILES
-            gc_state.modal.activeaccelprofile = 1.0f;
+            gc_state.modal.acceleration_profile = 1.0f;
             #endif
 
 #if N_SYS_SPINDLE > 1
