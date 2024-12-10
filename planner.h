@@ -79,7 +79,7 @@ typedef struct plan_block {
     float rate_multiplier;          // Rate multiplier of this block.
 #endif
 #ifdef ENABLE_ACCELERATION_PROFILES
-    float current_accel_profile;        // Stores the currently used acceleration profile .
+    float acceleration_factor;        // Stores the currently used acceleration factor.
 #endif
     // Stored spindle speed data used by spindle overrides and resuming methods.
     spindle_t spindle;              // Block spindle parameters. Copied from pl_line_data.
@@ -97,7 +97,7 @@ typedef struct {
     float rate_multiplier;          // Feed rate multiplier.
 #endif
 #ifdef ENABLE_ACCELERATION_PROFILES
-    float current_accel_profile;        // Stores the currently used acceleration profile .
+    float acceleration_factor;        // Stores the currently used acceleration factor.
 #endif
 #if ENABLE_PATH_BLENDING
     float path_tolerance;           //!< Path blending tolerance.

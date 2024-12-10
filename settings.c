@@ -153,14 +153,14 @@ PROGMEM const settings_t defaults = {
     .limits.flags.hard_disabled_rotary = DEFAULT_HARD_LIMITS_DISABLE_FOR_ROTARY,
     .limits.flags.two_switches = DEFAULT_LIMITS_TWO_SWITCHES_ON_AXES,
     .limits.invert.mask = DEFAULT_LIMIT_SIGNALS_INVERT_MASK,
-    .limits.disable_pullup.mask = DEFAULT_LIMIT_SIGNALS_PULLUP_DISABLE_MASK,    
+    .limits.disable_pullup.mask = DEFAULT_LIMIT_SIGNALS_PULLUP_DISABLE_MASK,
     .limits.soft_enabled.mask = (DEFAULT_SOFT_LIMIT_ENABLE ? AXES_BITMASK : 0),
 
     .control_invert.mask = DEFAULT_CONTROL_SIGNALS_INVERT_MASK,
     .control_disable_pullup.mask = DEFAULT_DISABLE_CONTROL_PINS_PULL_UP_MASK,
 
     .spindle.ref_id = DEFAULT_SPINDLE,
-    .spindle.encoder_spindle = DEFAULT_SPINDLE,    
+    .spindle.encoder_spindle = DEFAULT_SPINDLE,
     .spindle.ppr = DEFAULT_SPINDLE_PPR,
 
     .pwm_spindle.rpm_max = DEFAULT_SPINDLE_RPM_MAX,
@@ -231,7 +231,7 @@ PROGMEM const settings_t defaults = {
     .axis[Y_AXIS].dual_axis_offset = 0.0f,
     .axis[Y_AXIS].homing_feed_rate = DEFAULT_HOMING_FEED_RATE,
     .axis[Y_AXIS].homing_seek_rate = DEFAULT_HOMING_SEEK_RATE,
-    #if ENABLE_BACKLASH_COMPENSATION
+#if ENABLE_BACKLASH_COMPENSATION
     .axis[Y_AXIS].backlash = 0.0f,
 #endif
 
@@ -1307,7 +1307,7 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
                 settings.axis[idx].homing_seek_rate = value;
             else
                 status = Status_SettingDisabled;
-            break;        
+            break;
 
         default:
             status = Status_SettingDisabled;
