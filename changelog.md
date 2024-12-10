@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+<a name="20241210"> Build 20241210
+
+Core:
+
+* Increased preprocessor support for up to 16 auxiliary input pins, used by STM32* drivers.
+
+Drivers:
+
+* STM32F4xx: fix for Superlongboard \(SLB\) not enabling stepper drivers after E-Stop.
+
+Plugins:
+
+* Motors: added API call for reinitializing stepper drivers.
+
+---
+
 <a name="20241208"> Build 20241208
 
 Core:
@@ -12,7 +28,7 @@ When this option is selected setting `$24` and $`25` will be disabled and new ax
 `$18<n>` replaces `$24` and `$19<n>` replaces `$25`. `<n>` is the axis number; `0` for X, `1` for Y, ...  
 __NOTE:__ if axes are set up for simultaneous homing and they do not have the same feedrates they will be homed separately.  
 __NOTE:__ `$18<n>` and `$19<n>` were previousely implemented by the Trinamic motor plugin, the implementation is now in the core.  
-__NOTE:__ core settings will now overflow the legacy 1024 byte boundary when > 5 axes are configured, in the previous version when > 6 axes were configured..
+__NOTE:__ core settings will now overflow the legacy 1024 byte boundary when > 5 axes are configured, in the previous version when > 6 axes were configured.
 
 Drivers:
 
