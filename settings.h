@@ -29,7 +29,7 @@
 #include "plugins.h"
 
 // Version of the persistent storage data. Always stored in byte 0 of non-volatile storage.
-#define SETTINGS_VERSION 22  // NOTE: Check settings_reset() when moving to next version.
+#define SETTINGS_VERSION 23  // NOTE: Check settings_reset() when moving to next version.
 
 // Define axis settings numbering scheme. Starts at Setting_AxisSettingsBase, every INCREMENT, over N_SETTINGS.
 #define AXIS_SETTINGS_INCREMENT  10 // Must be greater than the number of axis settings.
@@ -342,24 +342,26 @@ typedef enum {
     Setting_MacroPort8    = 508,
     Setting_MacroPort9    = 509,
 
-    Setting_SpindleEnable0 = 510,
-    Setting_SpindleEnable1 = 511,
-    Setting_SpindleEnable2 = 512,
-    Setting_SpindleEnable3 = 513,
-    Setting_SpindleEnable4 = 514,
-    Setting_SpindleEnable5 = 515,
-    Setting_SpindleEnable6 = 516,
-    Setting_SpindleEnable7 = 517,
-    Setting_EncoderSpindle = 519,
+    Setting_SpindleEnable0    = 510,
+    Setting_SpindleEnableBase = Setting_SpindleEnable0,
+    Setting_SpindleEnable1    = 511,
+    Setting_SpindleEnable2    = 512,
+    Setting_SpindleEnable3    = 513,
+    Setting_SpindleEnable4    = 514,
+    Setting_SpindleEnable5    = 515,
+    Setting_SpindleEnable6    = 516,
+    Setting_SpindleEnable7    = 517,
+    Setting_EncoderSpindle    = 519,
 
-    Setting_SpindleToolStart0 = 520,
-    Setting_SpindleToolStart1 = 521,
-    Setting_SpindleToolStart2 = 522,
-    Setting_SpindleToolStart3 = 523,
-    Setting_SpindleToolStart4 = 524,
-    Setting_SpindleToolStart5 = 525,
-    Setting_SpindleToolStart6 = 526,
-    Setting_SpindleToolStart7 = 527,
+    Setting_SpindleToolStart0    = 520,
+    Setting_SpindleToolStartBase = Setting_SpindleToolStart0,
+    Setting_SpindleToolStart1    = 521,
+    Setting_SpindleToolStart2    = 522,
+    Setting_SpindleToolStart3    = 523,
+    Setting_SpindleToolStart4    = 524,
+    Setting_SpindleToolStart5    = 525,
+    Setting_SpindleToolStart6    = 526,
+    Setting_SpindleToolStart7    = 527,
 
     Setting_MQTTBrokerIpAddress = 530,
     Setting_MQTTBrokerPort      = 531,
@@ -496,6 +498,11 @@ typedef enum {
 // 772-779 - reserved for spindle offset settings
 //
 
+// Reserving settings in the range 800 - 899 for axis settings.
+    Setting_AxisSettingsBase1 = 800,    // Reserved for driver/plugin settings
+    Setting_AxisSettingsMax1 = Setting_AxisSettingsBase1 + AXIS_SETTINGS_INCREMENT * 9 + N_AXIS,
+//
+
 //
 // 900-999 - reserved for automatic tool changers (ATC)
 //
@@ -503,7 +510,6 @@ typedef enum {
 // ---
     Setting_SettingsMax,
     Setting_SettingsAll = Setting_SettingsMax,
-
 // ---
 
     // Calculated base values for core stepper settings
@@ -511,12 +517,14 @@ typedef enum {
     Setting_AxisMaxRate          = Setting_AxisSettingsBase + AXIS_SETTINGS_INCREMENT,
     Setting_AxisAcceleration     = Setting_AxisSettingsBase + 2 * AXIS_SETTINGS_INCREMENT,
     Setting_AxisMaxTravel        = Setting_AxisSettingsBase + 3 * AXIS_SETTINGS_INCREMENT,
-    Setting_AxisStepperCurrent   = Setting_AxisSettingsBase + 4 * AXIS_SETTINGS_INCREMENT,
-    Setting_AxisMicroSteps       = Setting_AxisSettingsBase + 5 * AXIS_SETTINGS_INCREMENT,
+    Setting_AxisStepperCurrent   = Setting_AxisSettingsBase + 4 * AXIS_SETTINGS_INCREMENT, // Not used by the core
+    Setting_AxisMicroSteps       = Setting_AxisSettingsBase + 5 * AXIS_SETTINGS_INCREMENT, // Not used by the core
     Setting_AxisBacklash         = Setting_AxisSettingsBase + 6 * AXIS_SETTINGS_INCREMENT,
     Setting_AxisAutoSquareOffset = Setting_AxisSettingsBase + 7 * AXIS_SETTINGS_INCREMENT,
     Setting_AxisHomingFeedRate   = Setting_AxisSettingsBase + 8 * AXIS_SETTINGS_INCREMENT,
     Setting_AxisHomingSeekRate   = Setting_AxisSettingsBase + 9 * AXIS_SETTINGS_INCREMENT,
+
+    Setting_AxisJerk             = Setting_AxisSettingsBase1,
 
     // Calculated base values for driver/plugin stepper settings
     Setting_AxisExtended0        = Setting_AxisSettingsBase2,
@@ -559,9 +567,9 @@ extern const settings_restore_t settings_all;
 typedef char stored_line_t[MAX_STORED_LINE_LENGTH];
 
 typedef union {
-    uint16_t value;
+    uint32_t value;
     struct {
-        uint16_t report_inches                   :1,
+        uint32_t report_inches                   :1,
                  restore_overrides               :1,
                  dst_active                      :1, // Daylight savings time
                  sleep_enable                    :1,
@@ -573,20 +581,24 @@ typedef union {
                  g92_is_volatile                 :1,
                  compatibility_level             :4,
                  no_restore_position_after_M6    :1,
-                 no_unlock_after_estop           :1;
+                 no_unlock_after_estop           :1,
+                 settings_downgrade              :1,
+         		 unassigned                      :15;
     };
 } settingflags_t;
 
 typedef union {
-    uint8_t value;
+    uint16_t value;
     struct {
-        uint8_t invert_probe_pin         :1,
-                disable_probe_pullup     :1,
-                invert_connected_pin     :1,
-                disable_connected_pullup :1,
-                allow_feed_override      :1,
-                enable_protection        :1,
-                unassigned               :2;
+        uint16_t invert_probe_pin          :1,
+                 disable_probe_pullup      :1,
+                 invert_connected_pin      :1,
+                 disable_connected_pullup  :1,
+                 allow_feed_override       :1,
+                 enable_protection         :1,
+                 invert_toolsetter_input   :1,
+                 disable_toolsetter_pullup :1,
+                 unassigned                :8;
     };
 } probeflags_t;
 
@@ -631,8 +643,7 @@ typedef union {
         uint8_t enabled                 :1,
                 deactivate_upon_init    :1,
                 enable_override_control :1,
-                unassigned              :2,
-                offset_lock             :3;
+                unassigned              :5;
     };
 } parking_setting_flags_t;
 
@@ -650,36 +661,21 @@ typedef struct {
 } position_pid_t; // Used for synchronized motion
 
 typedef union {
-    uint8_t value;
-    struct {
-        uint8_t enabled              :1,
-                single_axis_commands :1,
-                init_lock            :1,
-                force_set_origin     :1,
-                manual               :1,
-                override_locks       :1,
-                keep_on_reset        :1,
-                use_limit_switches   :1;
-    };
-} homing_settings_flags_t;
-
-// Used internally in settings.c only.
-// TODO: replace homing_settings_flags_t with this on a settings struct revision?
-typedef union {
     uint16_t value;
     struct {
         uint16_t enabled              :1,
                  single_axis_commands :1,
                  init_lock            :1,
                  force_set_origin     :1,
-                 two_switches         :1, // is a limits setting
+                 two_switches         :1, // -> limits.flags.two_switches, never set
                  manual               :1,
                  override_locks       :1,
                  keep_on_reset        :1,
                  use_limit_switches   :1,
-                 unused               :7;
+                 per_axis_feedrates   :1,
+                 unused               :6;
     };
-} homing_flags_t;
+} homing_settings_flags_t;
 
 typedef struct {
     float fail_length_percent; // DEFAULT_DUAL_AXIS_HOMING_FAIL_AXIS_LENGTH_PERCENT
@@ -688,15 +684,13 @@ typedef struct {
 } homing_dual_axis_t;
 
 typedef struct {
-    float feed_rate;
-    float seek_rate;
     float pulloff;
-    axes_signals_t dir_mask;
-    uint8_t locate_cycles;
+    homing_dual_axis_t dual_axis;
     uint16_t debounce_delay;
     homing_settings_flags_t flags;
+    axes_signals_t dir_mask;
+    uint8_t locate_cycles;
     axes_signals_t cycle[N_AXIS];
-    homing_dual_axis_t dual_axis;
 } homing_settings_t;
 
 typedef struct {
@@ -706,7 +700,7 @@ typedef struct {
     axes_signals_t enable_invert;
     axes_signals_t energize;
 #if N_AXIS > 3
-    axes_signals_t is_rotary;   // rotary axes distances are not scaled in imperial mode
+    axes_signals_t is_rotary;       // rotary axes distances are not scaled in imperial mode
     axes_signals_t rotary_wrap;     // rotary axes that allows G28 wrap for faster move to home position
 #endif
     float pulse_microseconds;
@@ -723,6 +717,9 @@ typedef struct {
 #endif
     float max_travel;
     float dual_axis_offset;
+    float homing_seek_rate;
+    float homing_feed_rate;
+    float jerk;
 #if ENABLE_BACKLASH_COMPENSATION
     float backlash;
 #endif
@@ -732,12 +729,11 @@ typedef union {
     uint8_t value;
     struct {
         uint8_t hard_enabled         :1,
-                soft_enabled         :1,
                 check_at_init        :1,
                 jog_soft_limited     :1,
                 two_switches         :1,
                 hard_disabled_rotary :1,
-                unassigned           :2;
+                unassigned           :3;
     };
 } limit_settings_flags_t;
 
@@ -745,7 +741,7 @@ typedef struct {
     limit_settings_flags_t flags;
     axes_signals_t invert;
     axes_signals_t disable_pullup;
-//    axes_signals_t soft_enabled; // TODO: add per axis soft limits, replace soft_enabled flag
+    axes_signals_t soft_enabled;
 } limit_settings_t;
 
 typedef union {
@@ -765,22 +761,30 @@ typedef union {
         uint8_t g59_1  :1,
                 g59_2  :1,
                 g59_3  :1,
-                encoder_spindle :5; // TODO: move to spindle settings
+                unused :5;
     };
 } offset_lock_t;
 
 typedef union {
-    uint8_t value;
-    uint8_t mask;
+    uint32_t value;
+    uint32_t mask;
     struct {
-        uint8_t bit0 :1,
-                bit1 :1,
-                bit2 :1,
-                bit3 :1,
-                bit4 :1,
-                bit5 :1,
-                bit6 :1,
-                bit7 :1;
+        uint32_t bit0  :1,
+                 bit1  :1,
+                 bit2  :1,
+                 bit3  :1,
+                 bit4  :1,
+                 bit5  :1,
+                 bit6  :1,
+                 bit7  :1,
+                 bit8  :1,
+                 bit9  :1,
+                 bit10 :1,
+                 bit11 :1,
+                 bit12 :1,
+                 bit13 :1,
+                 bit14 :1,
+                 bit15 :1;
     };
 } ioport_bus_t;
 
@@ -800,18 +804,30 @@ typedef enum {
 } toolchange_mode_t;
 
 typedef struct {
+    uint8_t length0;
+    uint8_t length1;
+} rgb_strip_settings_t;
+
+typedef struct {
+    toolchange_mode_t mode;
     float feed_rate;
     float seek_rate;
     float pulloff_rate;
     float probing_distance;
-    toolchange_mode_t mode;
 } tool_change_settings_t;
+
+typedef union {
+    uint32_t value;
+    struct {
+        uint32_t id    :8;  // = SETTINGS_VERSION, incremented on structure changes.
+        uint32_t build :24; // Build date, format YYMMDD.
+    };
+} settings_version_t;
 
 // Global persistent settings (Stored from byte NVS_ADDR_GLOBAL onwards)
 typedef struct {
     // Settings struct version
-    uint32_t version;
-//    uint32_t build_date;  // TODO: add in next settings version?, set to GRBL_BUILD
+    settings_version_t version;
     float junction_deviation;
     float arc_tolerance;
     float g73_retract;
@@ -823,25 +839,26 @@ typedef struct {
     axis_settings_t axis[N_AXIS];
     control_signals_t control_invert;
     control_signals_t control_disable_pullup;
-    coolant_state_t coolant_invert;
     axes_signals_t home_invert;
+    coolant_settings_t coolant;
     uint8_t modbus_baud;
     uint8_t canbus_baud;
     spindle_settings_t spindle;
+    spindle_pwm_settings_t pwm_spindle;
     stepper_settings_t steppers;
     reportmask_t status_report; // Mask to indicate desired report data.
     settingflags_t flags;       // Contains default boolean settings
     probeflags_t probe;
-    uint8_t rgb_strip0_length;
+    rgb_strip_settings_t rgb_strip;
     offset_lock_t offset_lock;
     fs_options_t fs_options;
-    homing_settings_t homing;
     limit_settings_t limits;
-    uint8_t rgb_strip1_length;
     parking_settings_t parking;
     safety_door_settings_t safety_door;
     position_pid_t position;    // Used for synchronized motion
     ioport_signals_t ioport;
+    homing_settings_t homing;
+    char reserved[24];          // Reserved For future expansion
 } settings_t;
 
 typedef enum {
@@ -958,7 +975,7 @@ typedef union {
                 allow_null      :1,
                 subgroups       :1,
                 increment       :4,
-                unused          :1;
+                hidden          :1; //!< Hide from reporting, allow setting
     };
 } setting_detail_flags_t;
 

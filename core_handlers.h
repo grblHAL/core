@@ -118,10 +118,12 @@ typedef void (*on_reset_ptr)(void);
 typedef void (*on_jog_cancel_ptr)(sys_state_t state);
 typedef bool (*on_spindle_select_ptr)(spindle_ptrs_t *spindle);
 typedef void (*on_spindle_selected_ptr)(spindle_ptrs_t *spindle);
-typedef void (*on_gcode_message_ptr)(char *msg);
+typedef char *(*on_process_gcode_comment_ptr)(char *msg);
+typedef status_code_t (*on_gcode_message_ptr)(char *msg);
 typedef void (*on_rt_reports_added_ptr)(report_tracking_flags_t report);
 typedef const char *(*on_set_axis_setting_unit_ptr)(setting_id_t setting_id, uint_fast8_t axis_idx);
 typedef status_code_t (*on_file_open_ptr)(const char *fname, vfs_file_t *handle, bool stream);
+typedef status_code_t (*on_file_end_ptr)(vfs_file_t *handle, status_code_t status);
 typedef status_code_t (*on_unknown_sys_command_ptr)(sys_state_t state, char *line); // return Status_Unhandled.
 typedef status_code_t (*on_user_command_ptr)(char *line);
 typedef sys_commands_t *(*on_get_commands_ptr)(void);
@@ -139,6 +141,69 @@ typedef struct {
     write_tool_data_ptr write;
     clear_tool_data_ptr clear;
 } tool_table_t;
+
+/*****************
+ *  User M-code  *
+ *****************/
+
+typedef enum {
+    UserMCode_Unsupported = 0,  //!< 0 - M-code is not supported.
+    UserMCode_Normal,           //!< 1 - M-code is supported.
+    UserMCode_NoValueWords      //!< 2 - M-code supports valueless parameter words.
+} user_mcode_type_t;
+
+/*! \brief Pointer to function for checking if user defined M-code is supported.
+\param mcode as a #user_mcode_t enum.
+\returns #UserMCode_Normal or #UserMCode_NoValueWords if M-code is handled, #UserMCode_Unsupported if not.
+*/
+typedef user_mcode_type_t (*user_mcode_check_ptr)(user_mcode_t mcode);
+
+/*! \brief Pointer to function for validating parameters for a user defined M-code.
+
+The M-code to validate is found in \a gc_block->user_mcode, parameter values in \a gc_block->values
+ and corresponding parameter letters in the \a gc_block->words bitfield union.
+
+Parameter values claimed by the M-code must be flagged in the \a gc_block->words bitfield union by setting the
+ respective parameter letters to \a false or the parser will raise the #Status_GcodeUnusedWords error.
+
+The validation function may set \a gc_block->user_mcode_sync to \a true if it is to be executed
+after all buffered motions are completed, otherwise it will be executed immediately.
+
+__NOTE:__ Valueless parameter letters are allowed for floats if the check function returns
+#UserMCode_NoValueWords for the M-code. The corresponding values are set to NAN (not a number)
+if no value is given.
+The validation function should always test all parameter values by using the isnan() function in addition
+to any range checks when the check function returns #UserMCode_NoValueWords for the M-code.
+
+\param gc_block pointer to a parser_block_t structure.
+\returns #Status_OK enum value if validated ok, appropriate \ref status_code_t enum value if not or #Status_Unhandled if the M-code is not recognized.
+*/
+typedef status_code_t (*user_mcode_validate_ptr)(parser_block_t *gc_block);
+
+/*! \brief Pointer to function for executing a user defined M-code.
+
+The M-code to execute is found in \a gc_block->user_mcode, parameter values in \a gc_block->values
+ and claimed/validated parameter letters in the \a gc_block->words bitfield union.
+
+\param state as a #sys_state_t variable.
+\param gc_block pointer to a parser_block_t structure.
+\returns #Status_OK enum value if validated ok, appropriate \ref status_code_t enum value if not or #Status_Unhandled if M-code is not recognized.
+*/
+typedef void (*user_mcode_execute_ptr)(sys_state_t state, parser_block_t *gc_block);
+
+/*! \brief Optional handlers for user defined M-codes.
+
+Handlers may be chained so that several plugins can add M-codes.
+Chaining is achieved by saving a copy of the current user_mcode_ptrs_t struct
+ when the plugin is initialized and calling the same handler via the copy when a
+ M-code is not recognized.
+ */
+typedef struct {
+    user_mcode_check_ptr check;         //!< Handler for checking if a user defined M-code is supported.
+    user_mcode_validate_ptr validate;   //!< Handler for validating parameters for a user defined M-code.
+    user_mcode_execute_ptr execute;     //!< Handler for executing a user defined M-code.
+} user_mcode_ptrs_t;
+
 
 typedef struct {
     // report entry points set by core at reset.
@@ -178,17 +243,20 @@ typedef struct {
     on_probe_start_ptr on_probe_start;
     on_probe_completed_ptr on_probe_completed;
     on_set_axis_setting_unit_ptr on_set_axis_setting_unit;
-    on_gcode_message_ptr on_gcode_message;              //!< Called on output of message parsed from gcode. NOTE: string pointed to is freed after this call.
-    on_gcode_message_ptr on_gcode_comment;              //!< Called when a plain gcode comment has been parsed.
-    on_tool_selected_ptr on_tool_selected;              //!< Called prior to executing M6 or after executing M61.
-    on_tool_changed_ptr on_tool_changed;                //!< Called after executing M6 or M61.
-    on_toolchange_ack_ptr on_toolchange_ack;            //!< Called from interrupt context.
-    on_jog_cancel_ptr on_jog_cancel;                    //!< Called from interrupt context.
+    on_process_gcode_comment_ptr on_process_gcode_comment;
+    on_gcode_message_ptr on_gcode_message;                  //!< Called on output of message parsed from gcode. NOTE: string pointed to is freed after this call.
+    on_gcode_message_ptr on_gcode_comment;                  //!< Called when a plain gcode comment has been parsed.
+    on_tool_selected_ptr on_tool_selected;                  //!< Called prior to executing M6 or after executing M61.
+    on_tool_changed_ptr on_tool_changed;                    //!< Called after executing M6 or M61.
+    on_toolchange_ack_ptr on_toolchange_ack;                //!< Called from interrupt context.
+    on_jog_cancel_ptr on_jog_cancel;                        //!< Called from interrupt context.
     on_laser_ppi_enable_ptr on_laser_ppi_enable;
-    on_spindle_select_ptr on_spindle_select;            //!< Called before spindle is selected, hook in HAL overrides here
-    on_spindle_selected_ptr on_spindle_selected;        //!< Called when spindle is selected, do not change HAL pointers here!
-    on_reset_ptr on_reset;                              //!< Called from interrupt context.
-    on_file_open_ptr on_file_open;                      //!< Called when a file is opened for streaming.
+    on_spindle_select_ptr on_spindle_select;                //!< Called before spindle is selected, hook in HAL overrides here
+    on_spindle_selected_ptr on_spindle_selected;            //!< Called when spindle is selected, do not change HAL pointers here!
+    on_reset_ptr on_reset;                                  //!< Called from interrupt context.
+    on_file_open_ptr on_file_open;                          //!< Called when a file is opened for streaming.
+    on_file_end_ptr on_file_end;                            //!< Called when a file opened for streaming reaches the end.
+    user_mcode_ptrs_t user_mcode;                           //!< Optional handlers for user defined M-codes.
     // core entry points - set up by core before driver_init() is called.
     home_machine_ptr home_machine;
     travel_limits_ptr check_travel_limits;

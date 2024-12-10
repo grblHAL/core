@@ -75,7 +75,7 @@ void sleep_check (void)
     // has any powered components enabled.
     // NOTE: With overrides or in laser mode, modal spindle and coolant state are not guaranteed. Need
     // to directly monitor and record running state during parking to ensure proper function.
-    if (!(slumber || sys.steppers_deenergize || sys.flags.auto_reporting) && (gc_state.modal.spindle.state.value || gc_state.modal.coolant.value)) {
+    if (!(slumber || sys.steppers_deenergize || sys.flags.auto_reporting) && (gc_spindle_get(0)->state.value || gc_state.modal.coolant.value)) {
         switch(state_get()) {
 
             case STATE_IDLE:

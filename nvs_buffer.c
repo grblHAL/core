@@ -7,18 +7,18 @@
   Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License.
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 //
@@ -34,12 +34,13 @@
 #include "protocol.h"
 #include "settings.h"
 #include "gcode.h"
+#include "crc.h"
 #include "nvs.h"
 
 static uint8_t *nvsbuffer = NULL;
 static nvs_io_t physical_nvs;
 static bool dirty;
-
+uint32_t nvs_size_max = NVS_SIZE;
 settings_dirty_t settings_dirty;
 
 typedef struct {
@@ -53,7 +54,6 @@ typedef struct {
 #define NVS_GROUP_PARAMETERS 2
 #define NVS_GROUP_STARTUP 3
 #define NVS_GROUP_BUILD 4
-
 
 #define PARAMETER_ADDR(n) (NVS_ADDR_PARAMETERS + n * (sizeof(coord_data_t) + NVS_CRC_BYTES))
 #define STARTLINE_ADDR(n) (NVS_ADDR_STARTUP_BLOCK + n * (sizeof(stored_line_t) + NVS_CRC_BYTES))
@@ -142,15 +142,19 @@ static nvs_transfer_result_t memcpy_to_ram (uint32_t destination, uint8_t *sourc
         return physical_nvs.memcpy_to_nvs(destination, source, size, with_checksum);
 
     uint32_t dest = destination;
-    uint8_t checksum = with_checksum ? calc_checksum(source, size) : 0;
+    uint16_t checksum = with_checksum ? calc_checksum(source, size) : 0;
 
     dirty = false;
 
     for(; size > 0; size--)
         ram_put_byte(dest++, *(source++));
 
-    if(with_checksum)
-        ram_put_byte(dest, checksum);
+    if(with_checksum) {
+        ram_put_byte(dest, checksum & 0xFF);
+#if NVS_CRC_BYTES > 1
+        ram_put_byte(++dest, checksum >> 8);
+#endif
+    }
 
     if(settings_dirty.version || source == hal.nvs.driver_area.mem_address)
         dirty = true;
@@ -204,21 +208,35 @@ static nvs_transfer_result_t memcpy_from_ram (uint8_t *destination, uint32_t sou
     if(hal.nvs.driver_area.address && source > hal.nvs.driver_area.address + hal.nvs.driver_area.size)
         return physical_nvs.memcpy_from_nvs(destination, source, size, with_checksum);
 
-    uint8_t checksum = with_checksum ? calc_checksum(&nvsbuffer[source], size) : 0;
+    uint16_t checksum = with_checksum ? calc_checksum(&nvsbuffer[source], size) : 0;
 
     for(; size > 0; size--)
         *(destination++) = ram_get_byte(source++);
 
+#if NVS_CRC_BYTES == 1
     return with_checksum ? (checksum == ram_get_byte(source) ? NVS_TransferResult_OK : NVS_TransferResult_Failed) : NVS_TransferResult_OK;
+#else
+    return with_checksum ? (checksum == (ram_get_byte(source) | (ram_get_byte(source + 1) << 8)) ? NVS_TransferResult_OK : NVS_TransferResult_Failed) : NVS_TransferResult_OK;
+#endif
 }
 
 // Try to allocate RAM from heap for buffer/emulation.
 bool nvs_buffer_alloc (void)
 {
-    assert(NVS_SIZE >= GRBL_NVS_SIZE);
+	static uint32_t nvs_size = NVS_SIZE;
 
-    if((nvsbuffer = malloc(NVS_SIZE)))
-        memset(nvsbuffer, 0xFF, NVS_SIZE);
+	if(hal.nvs.size_max > nvs_size) {
+		nvs_size_max = min(4096, hal.nvs.size_max); // Limit to 4K for now
+		if(nvsbuffer)
+			free(nvsbuffer);
+	}
+
+	assert(nvs_size_max >= GRBL_NVS_SIZE);
+
+    if((nvsbuffer = malloc(nvs_size_max))) {
+    	nvs_size = nvs_size_max;
+        memset(nvsbuffer, 0xFF, nvs_size_max);
+    }
 
     return nvsbuffer != NULL;
 }
@@ -294,7 +312,7 @@ nvs_address_t nvs_alloc (size_t size)
     }
 
     size += NVS_CRC_BYTES; // add room for checksum.
-    if(hal.nvs.driver_area.size + size < (NVS_SIZE - GRBL_NVS_SIZE)) {
+    if(hal.nvs.driver_area.size + size < (nvs_size_max - GRBL_NVS_SIZE)) {
         mem_address = (uint8_t *)((uint32_t)(mem_address - 1) | 0x03) + 1; // Align to word boundary
         addr = mem_address - nvsbuffer;
         mem_address += size;
@@ -394,30 +412,38 @@ void nvs_memmap (void)
 {
     char buf[30];
 
-    report_message("NVS Area: addr size", Message_Plain);
+    report_message("NVS Area: addr size end", Message_Plain);
 
     strcpy(buf, "Global: ");
     strcat(buf, uitoa(NVS_ADDR_GLOBAL));
     strcat(buf, " ");
     strcat(buf, uitoa(sizeof(settings_t) + NVS_CRC_BYTES));
+    strcat(buf, " ");
+    strcat(buf, uitoa(NVS_ADDR_GLOBAL + sizeof(settings_t) + NVS_CRC_BYTES));
     report_message(buf, Message_Plain);
 
     strcpy(buf, "Parameters: ");
     strcat(buf, uitoa(NVS_ADDR_PARAMETERS));
     strcat(buf, " ");
     strcat(buf, uitoa(N_CoordinateSystems * (sizeof(coord_data_t) + NVS_CRC_BYTES)));
+    strcat(buf, " ");
+    strcat(buf, uitoa(NVS_ADDR_PARAMETERS + N_CoordinateSystems * (sizeof(coord_data_t) + NVS_CRC_BYTES)));
     report_message(buf, Message_Plain);
 
     strcpy(buf, "Startup block: ");
     strcat(buf, uitoa(NVS_ADDR_STARTUP_BLOCK));
     strcat(buf, " ");
     strcat(buf, uitoa(N_STARTUP_LINE * (sizeof(stored_line_t) + NVS_CRC_BYTES)));
+    strcat(buf, " ");
+    strcat(buf, uitoa(NVS_ADDR_STARTUP_BLOCK + N_STARTUP_LINE * (sizeof(stored_line_t) + NVS_CRC_BYTES)));
     report_message(buf, Message_Plain);
 
     strcpy(buf, "Build info: ");
     strcat(buf, uitoa(NVS_ADDR_BUILD_INFO));
     strcat(buf, " ");
     strcat(buf, uitoa(sizeof(stored_line_t) + NVS_CRC_BYTES));
+    strcat(buf, " ");
+    strcat(buf, uitoa(NVS_ADDR_BUILD_INFO + sizeof(stored_line_t) + NVS_CRC_BYTES));
     report_message(buf, Message_Plain);
 
 #if N_TOOLS
@@ -425,6 +451,8 @@ void nvs_memmap (void)
     strcat(buf, uitoa(NVS_ADDR_TOOL_TABLE));
     strcat(buf, " ");
     strcat(buf, uitoa(N_TOOLS * (sizeof(tool_data_t) + NVS_CRC_BYTES)));
+    strcat(buf, " ");
+    strcat(buf, uitoa(NVS_ADDR_TOOL_TABLE + N_TOOLS * (sizeof(tool_data_t) + NVS_CRC_BYTES)));
     report_message(buf, Message_Plain);
 #endif
 
@@ -432,6 +460,8 @@ void nvs_memmap (void)
     strcat(buf, uitoa(hal.nvs.driver_area.address));
     strcat(buf, " ");
     strcat(buf, uitoa(hal.nvs.driver_area.size));
+    strcat(buf, " ");
+    strcat(buf, uitoa(hal.nvs.driver_area.address + hal.nvs.driver_area.size));
     report_message(buf, Message_Plain);
 }
 

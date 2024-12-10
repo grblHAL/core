@@ -41,9 +41,6 @@
 #ifndef NGC_MAX_CALL_LEVEL
 #define NGC_MAX_CALL_LEVEL 10
 #endif
-#ifndef NGC_MAX_PARAM_LENGTH
-#define NGC_MAX_PARAM_LENGTH 20
-#endif
 
 typedef float (*ngc_param_get_ptr)(ngc_param_id_t id);
 typedef float (*ngc_named_param_get_ptr)(void);
@@ -74,6 +71,13 @@ typedef struct ngc_named_rw_param {
     struct ngc_named_rw_param *next;
 } ngc_named_rw_param_t;
 
+typedef struct ngc_string_param {
+    struct ngc_string_param *next;
+    ngc_string_id_t id;
+    uint8_t len;
+    char value[1];
+} ngc_string_param_t;
+
 typedef struct {
     uint32_t level;
     void *context;
@@ -86,6 +90,8 @@ static gc_modal_t *modal_state;
 static ngc_param_context_t call_levels[NGC_MAX_CALL_LEVEL];
 static ngc_rw_param_t *rw_params = NULL;
 static ngc_named_rw_param_t *rw_global_params = NULL;
+static ngc_string_id_t ref_id = (uint32_t)-1;
+static ngc_string_param_t *ngc_string_params = NULL;
 
 static float _absolute_pos (uint_fast8_t axis)
 {
@@ -417,7 +423,7 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             break;
 
         case NGCParam_vminor:
-            value = 0.0f; // TODO: derive from version letter?
+            value = (float)(GRBL_BUILD - 20000000);
             break;
 
         case NGCParam_line:
@@ -488,11 +494,11 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             break;
 
         case NGCParam_spindle_rpm_mode:
-            value = gc_state.modal.spindle.rpm_mode == SpindleSpeedMode_RPM ? 1.0f : 0.0f;
+            value = gc_spindle_get(0)->rpm_mode == SpindleSpeedMode_RPM ? 1.0f : 0.0f;
             break;
 
         case NGCParam_spindle_css_mode:
-            value = gc_state.modal.spindle.rpm_mode == SpindleSpeedMode_CSS ? 1.0f : 0.0f;
+            value = gc_spindle_get(0)->rpm_mode == SpindleSpeedMode_CSS ? 1.0f : 0.0f;
             break;
 
         case NGCParam_ijk_absolute_mode:
@@ -508,11 +514,11 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             break;
 
         case NGCParam_spindle_on:
-            value = gc_state.modal.spindle.state.on ? 1.0f : 0.0f;
+            value = gc_spindle_get(0)->state.on ? 1.0f : 0.0f;
             break;
 
         case NGCParam_spindle_cw:
-            value = gc_state.modal.spindle.state.ccw ? 1.0f : 0.0f;
+            value = gc_spindle_get(0)->state.ccw ? 1.0f : 0.0f;
             break;
 
         case NGCParam_mist:
@@ -544,7 +550,7 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             break;
 
         case NGCParam_rpm:
-            value = gc_state.spindle.rpm;
+            value = gc_spindle_get(0)->rpm;
             break;
 
         case NGCParam_x:
@@ -622,7 +628,7 @@ static char *ngc_name_tolower (char *s)
     uint_fast8_t len = 0;
 	char c, *s1 = s, *s2 = name;
 
-    while((c = *s1++) && len < NGC_MAX_PARAM_LENGTH) {
+    while((c = *s1++) && len <= NGC_MAX_PARAM_LENGTH) {
         if(c > ' ') {
             *s2++ = LCAPS(c);
             len++;
@@ -679,7 +685,7 @@ bool ngc_named_param_exists (char *name)
     } while(idx && !ok);
 
     // If not predefined attempt to find it.
-    if(!ok && rw_global_params && strlen(name) < NGC_MAX_PARAM_LENGTH) {
+    if(!ok && rw_global_params && strlen(name) <= NGC_MAX_PARAM_LENGTH) {
 
         void *context = *name == '_' ? NULL : call_context;
         ngc_named_rw_param_t *rw_param = rw_global_params;
@@ -712,7 +718,7 @@ bool ngc_named_param_set (char *name, float value)
     } while(idx && !ok);
 
     // If not predefined attempt to set it.
-    if(!ok && (ok = strlen(name) < NGC_MAX_PARAM_LENGTH)) {
+    if(!ok && (ok = strlen(name) <= NGC_MAX_PARAM_LENGTH)) {
 
         void *context = *name == '_' ? NULL : call_context;
         ngc_named_rw_param_t *rw_param = rw_global_params, *rw_param_last = rw_global_params;
@@ -741,6 +747,127 @@ bool ngc_named_param_set (char *name, float value)
      }
 
     return ok;
+}
+
+static ngc_string_param_t *sp_get_by_name (char *name)
+{
+    ngc_string_param_t *sr = ngc_string_params;
+
+    if(sr) do {
+       if(sr->id > NGC_MAX_PARAM_ID && !(strcmp(sr->value, name)))
+            break;
+    } while((sr = sr->next));
+
+    return sr;
+}
+
+static ngc_string_param_t *sp_set (ngc_string_id_t id, char *value)
+{
+    size_t len;
+    ngc_string_param_t *last = NULL, *sp;
+
+    if((sp = ngc_string_params)) do {
+        if(sp->id == id)
+            break;
+        last = sp;
+    } while((sp = sp->next));
+
+    if((len = strlen(value)) <= 255) {
+
+        if(sp == NULL || len > sp->len) {
+
+            ngc_string_param_t *sp_org = sp;
+
+            if((sp = realloc(sp, sizeof(ngc_string_param_t) + len))) {
+
+                if(sp_org == NULL) {
+                    sp->id = id;
+                    sp->next = NULL;
+                }
+                sp->len = len;
+
+                if(last == NULL) {
+                    ngc_string_params = sp;
+                } else {
+                    if(sp_org == NULL)
+                        last->next = sp;
+                    else if(sp_org != sp) {
+
+                        ngc_string_param_t *sr = ngc_string_params;
+
+                        do {
+                            if(sr->next == sp_org) {
+                                sr->next = sp;
+                                break;
+                            }
+                        } while((sr = sr->next));
+                    }
+                }
+            } else if(sp_org)
+                ngc_string_param_delete(sp_org->id);
+        }
+
+        if(sp)
+            strcpy(sp->value, value);
+
+    } else if(sp) {
+        ngc_string_param_delete(sp->id);
+        sp = NULL;
+    }
+
+    return sp;
+}
+
+char *ngc_string_param_get (ngc_string_id_t id)
+{
+    ngc_string_param_t *sp;
+
+    if((sp = ngc_string_params)) do {
+        if(sp->id == id)
+            break;
+    } while((sp = sp->next));
+
+    return sp ? sp->value : NULL;
+}
+
+bool ngc_string_param_exists (ngc_string_id_t id)
+{
+    return !!ngc_string_param_get(id);
+}
+
+bool ngc_string_param_set (ngc_param_id_t id, char *value)
+{
+    return id > 0 && !!sp_set((ngc_string_id_t)id, value);
+}
+
+ngc_string_id_t ngc_string_param_set_name (char *name)
+{
+    ngc_string_param_t *sr = *name ? sp_get_by_name(name) : NULL;
+
+    if(*name && sr == NULL)
+        sr = sp_set(--ref_id, name);
+
+    return sr ? sr->id : 0;
+}
+
+void ngc_string_param_delete (ngc_string_id_t id)
+{
+    ngc_string_param_t *sr = ngc_string_params, *rm;
+
+    if(sr) {
+        if(sr->id == id) {
+            rm = sr;
+            ngc_string_params = sr->next;
+            free(rm);
+        } else do {
+            if(sr->next && sr->next->id == id) {
+                rm = sr->next;
+                sr->next = sr->next->next;
+                free(rm);
+                break;
+           }
+        } while((sr = sr->next));
+    }
 }
 
 bool ngc_modal_state_save (gc_modal_t *state, bool auto_restore)

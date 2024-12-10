@@ -270,6 +270,10 @@ void report_message (const char *msg, message_type_t type)
                 hal.stream.write("Warning: ");
                 break;
 
+            case Message_Error:
+                hal.stream.write("Error: ");
+                break;
+
             case Message_Debug:
                 hal.stream.write("Debug: ");
                 break;
@@ -450,7 +454,7 @@ status_code_t report_grbl_setting (setting_id_t id, void *data)
 
     const setting_detail_t *setting = setting_get_details(id, NULL);
 
-    if(setting)
+    if(setting /*?? hide? && !setting->flags.hidden*/)
         grbl.report.setting(setting, id - setting->id, data);
     else
         status = Status_SettingDisabled;
@@ -471,8 +475,14 @@ static bool print_setting (const setting_detail_t *setting, uint_fast16_t offset
     return true;
 }
 
+static inline bool is_hidden (const setting_detail_t *setting)
+{
+    return (setting->id == Setting_HomingFeedRate || setting->id == Setting_HomingSeekRate) ? settings.homing.flags.per_axis_feedrates : setting->flags.hidden;
+}
+
 void report_grbl_settings (bool all, void *data)
 {
+
     uint_fast16_t idx, n_settings = 0;
     const setting_detail_t *setting;
     setting_detail_t **all_settings, **psetting;
@@ -491,7 +501,7 @@ void report_grbl_settings (bool all, void *data)
         // Report core settings
         for(idx = 0; idx < details->n_settings; idx++) {
             setting = &details->settings[idx];
-            if((all || setting->type == Setting_IsLegacy || setting->type == Setting_IsLegacyFn) &&
+            if(!is_hidden(setting) && (all || setting->type == Setting_IsLegacy || setting->type == Setting_IsLegacyFn) &&
                   (setting->is_available == NULL ||setting->is_available(setting))) {
                 *psetting++ = (setting_detail_t *)setting;
                 n_settings++;
@@ -502,7 +512,7 @@ void report_grbl_settings (bool all, void *data)
         if(all && (details = details->next)) do {
             for(idx = 0; idx < details->n_settings; idx++) {
                 setting = &details->settings[idx];
-                if(setting->is_available == NULL || setting->is_available(setting)) {
+                if(!setting->flags.hidden && (setting->is_available == NULL || setting->is_available(setting))) {
                     *psetting++ = (setting_detail_t *)setting;
                     n_settings++;
                 }
@@ -724,8 +734,8 @@ void report_gcode_modes (void)
     hal.stream.write(" G");
     hal.stream.write(uitoa((uint32_t)(93 + (gc_state.modal.feed_mode == FeedMode_UnitsPerRev ? 2 : gc_state.modal.feed_mode ^ 1))));
 
-    if(settings.mode == Mode_Lathe && gc_spindle_get()->cap.variable)
-        hal.stream.write(gc_state.modal.spindle.rpm_mode == SpindleSpeedMode_RPM ? " G97" : " G96");
+    if(settings.mode == Mode_Lathe && gc_spindle_get(0)->hal->cap.variable)
+        hal.stream.write(gc_spindle_get(0)->rpm_mode == SpindleSpeedMode_RPM ? " G97" : " G96");
 
 #if COMPATIBILITY_LEVEL < 10
 
@@ -777,7 +787,7 @@ void report_gcode_modes (void)
         }
     }
 
-    hal.stream.write(gc_state.modal.spindle.state.on ? (gc_state.modal.spindle.state.ccw ? " M4" : " M3") : " M5");
+    hal.stream.write(gc_spindle_get(0)->state.on ? (gc_spindle_get(0)->state.ccw ? " M4" : " M3") : " M5");
 
     if(gc_state.tool_change)
         hal.stream.write(" M6");
@@ -809,8 +819,8 @@ void report_gcode_modes (void)
 
     hal.stream.write(appendbuf(2, " F", get_rate_value(gc_state.feed_rate)));
 
-    if(gc_spindle_get()->cap.variable)
-        hal.stream.write(appendbuf(2, " S", ftoa(gc_state.spindle.rpm, N_DECIMAL_RPMVALUE)));
+    if(gc_spindle_get(0)->hal->cap.variable)
+        hal.stream.write(appendbuf(2, " S", ftoa(gc_spindle_get(0)->rpm, N_DECIMAL_RPMVALUE)));
 
     hal.stream.write("]" ASCII_EOL);
 }
@@ -883,7 +893,7 @@ void report_build_info (char *line, bool extended)
     if(spindle && !spindle->cap.direction) // NOTE: Shown when disabled.
         *append++ = 'D';
 
-    if(settings.spindle.flags.enable_rpm_controlled)
+    if(settings.pwm_spindle.flags.enable_rpm_controlled)
         *append++ = '0';
 
     if(hal.driver_cap.software_debounce)
@@ -1028,6 +1038,12 @@ void report_build_info (char *line, bool extended)
         hal.stream.write(buf);
         hal.stream.write("]" ASCII_EOL);
 
+#if N_SYS_SPINDLE > 1
+        hal.stream.write("[SPINDLES:");
+        hal.stream.write(uitoa(N_SYS_SPINDLE));
+        hal.stream.write("]" ASCII_EOL);
+#endif
+
         if(!(nvs->type == NVS_None || nvs->type == NVS_Emulated)) {
             hal.stream.write("[NVS STORAGE:");
             *buf = '\0';
@@ -1110,12 +1126,16 @@ void report_echo_line_received (char *line)
     hal.stream.write("]" ASCII_EOL);
 }
 
-#if N_SYS_SPINDLE == 1 &&  N_SPINDLE > 1
+#if N_SYS_SPINDLE == 1 && N_SPINDLE > 1
 
-static void report_spindle_num (spindle_info_t *spindle, void *data)
+static bool report_spindle_num (spindle_info_t *spindle, void *data)
 {
-    if(spindle->id == *((spindle_id_t *)data))
+    bool ok;
+
+    if((ok = spindle->id == *((spindle_id_t *)data)))
         hal.stream.write_all(appendbuf(2, "|S:", uitoa((uint32_t)spindle->num)));
+
+    return ok;
 }
 
 #endif
@@ -1450,12 +1470,13 @@ void report_realtime_status (void)
         static gc_modal_t last_state;
         static bool g92_active;
 
-        bool is_changed = feed_rate != gc_state.feed_rate || spindle_rpm != gc_state.spindle.rpm || tool_id != gc_state.tool->tool_id;
+        spindle_t *spindle = gc_spindle_get(0);
+        bool is_changed = feed_rate != gc_state.feed_rate || spindle_rpm != spindle->rpm || tool_id != gc_state.tool->tool_id;
 
         if(is_changed) {
             feed_rate = gc_state.feed_rate;
             tool_id = gc_state.tool->tool_id;
-            spindle_rpm = gc_state.spindle.rpm;
+            spindle_rpm = spindle->rpm;
         } else if ((is_changed = g92_active != is_g92_active()))
             g92_active = !g92_active;
         else if(memcmp(&last_state, &gc_state.modal, sizeof(gc_modal_t))) {
@@ -1860,7 +1881,7 @@ static status_code_t print_settings_details (settings_format_t format, setting_g
         do {
             for(idx = 0; idx < details->n_settings; idx++) {
                 setting = &details->settings[idx];
-                if((group == Group_All || setting->group == args.group) && (setting->is_available == NULL || setting->is_available(setting))) {
+                if(!is_hidden(setting) && (group == Group_All || setting->group == args.group) && (setting->is_available == NULL || setting->is_available(setting))) {
                     *psetting++ = (setting_detail_t *)setting;
                     n_settings++;
                 }
@@ -1881,7 +1902,7 @@ static status_code_t print_settings_details (settings_format_t format, setting_g
 
             setting = &details->settings[idx];
 
-            if(group == Group_All || setting->group == args.group) {
+            if(!is_hidden(setting) && (group == Group_All || setting->group == args.group)) {
                 if(settings_iterator(setting, print_unsorted, &args))
                     reported = true;
             }
@@ -1898,7 +1919,7 @@ status_code_t report_settings_details (settings_format_t format, setting_id_t id
 
         const setting_detail_t *setting = setting_get_details(id, NULL);
 
-        if(setting)
+        if(setting && !is_hidden(setting))
             report_settings_detail(format, setting, id - setting->id);
         else
             status = Status_SettingDisabled;
@@ -1913,21 +1934,25 @@ status_code_t report_settings_details (settings_format_t format, setting_id_t id
 
 status_code_t report_setting_description (settings_format_t format, setting_id_t id)
 {
-    const setting_detail_t *setting = setting_get_details(id, NULL);
-    const char *description = setting_get_description(id);
+    const setting_detail_t *setting;
 
-    if(format == SettingsFormat_MachineReadable) {
-        hal.stream.write("[SETTINGDESCR:");
-        hal.stream.write(uitoa(id));
-        hal.stream.write(vbar);
+    if((setting = setting_get_details(id, NULL)) && !is_hidden(setting)) {
+
+        const char *description = setting_get_description(id);
+
+        if(format == SettingsFormat_MachineReadable) {
+            hal.stream.write("[SETTINGDESCR:");
+            hal.stream.write(uitoa(id));
+            hal.stream.write(vbar);
+        }
+    //    hal.stream.write(description == NULL ? (is_setting_available(setting_get_details(id, NULL)) ? "" : "N/A") : description); // TODO?
+        hal.stream.write(description ? description : (setting ? "" : "N/A"));
+        if(setting && setting->flags.reboot_required)
+            hal.stream.write(SETTINGS_HARD_RESET_REQUIRED + (description && *description != '\0' ? 0 : 4));
+
+        if(format == SettingsFormat_MachineReadable)
+            hal.stream.write("]" ASCII_EOL);
     }
-//    hal.stream.write(description == NULL ? (is_setting_available(setting_get_details(id, NULL)) ? "" : "N/A") : description); // TODO?
-    hal.stream.write(description ? description : (setting ? "" : "N/A"));
-    if(setting && setting->flags.reboot_required)
-        hal.stream.write(SETTINGS_HARD_RESET_REQUIRED + (description && *description != '\0' ? 0 : 4));
-
-    if(format == SettingsFormat_MachineReadable)
-        hal.stream.write("]" ASCII_EOL);
 
     return Status_OK;
 }
@@ -2199,12 +2224,12 @@ status_code_t report_current_home_signal_state (sys_state_t state, char *args)
 // Prints spindle data (encoder pulse and index count, angular position).
 status_code_t report_spindle_data (sys_state_t state, char *args)
 {
-    spindle_ptrs_t *spindle = gc_spindle_get();
+    spindle_t *spindle = gc_spindle_get(-1);
 
-    if(spindle->get_data) {
+    if(spindle->hal->get_data) {
 
-        float apos = spindle->get_data(SpindleData_AngularPosition)->angular_position;
-        spindle_data_t *data = spindle->get_data(SpindleData_Counters);
+        float apos = spindle->hal->get_data(SpindleData_AngularPosition)->angular_position;
+        spindle_data_t *data = spindle->hal->get_data(SpindleData_Counters);
 
         hal.stream.write("[SPINDLEENCODER:");
         hal.stream.write(uitoa(data->index_count));
@@ -2217,7 +2242,7 @@ status_code_t report_spindle_data (sys_state_t state, char *args)
         hal.stream.write("]" ASCII_EOL);
     }
 
-    return spindle->get_data ? Status_OK : Status_InvalidStatement;
+    return spindle->hal->get_data ? Status_OK : Status_InvalidStatement;
 }
 
 // Prints info about registered pins.
@@ -2473,7 +2498,7 @@ status_code_t report_time (void)
     return ok ? Status_OK : Status_InvalidStatement;
 }
 
-static void report_spindle (spindle_info_t *spindle, void *data)
+static bool report_spindle (spindle_info_t *spindle, void *data)
 {
     if(data) {
         char *caps = buf;
@@ -2535,6 +2560,8 @@ static void report_spindle (spindle_info_t *spindle, void *data)
         }
         hal.stream.write(ASCII_EOL);
     }
+
+    return false;
 }
 
 #if N_SPINDLE > 1
@@ -2545,9 +2572,11 @@ typedef struct {
     spindle_info_t *spindles;
 } spindle_rdata_t;
 
-static void get_spindles (spindle_info_t *spindle, void *data)
+static bool get_spindles (spindle_info_t *spindle, void *data)
 {
     memcpy(&((spindle_rdata_t *)data)->spindles[((spindle_rdata_t *)data)->idx++], spindle, sizeof(spindle_info_t));
+
+    return false;
 }
 
 static int cmp_spindles (const void *a, const void *b)
@@ -2562,15 +2591,13 @@ static int cmp_spindles (const void *a, const void *b)
 
 status_code_t report_spindles (bool machine_readable)
 {
-    bool has_spindles;
-
 #if N_SPINDLE > 1
 
     spindle_rdata_t spindle_data = {0};
 
     if((spindle_data.spindles = malloc(N_SPINDLE * sizeof(spindle_info_t)))) {
 
-        has_spindles = spindle_enumerate_spindles(get_spindles, &spindle_data);
+        spindle_enumerate_spindles(get_spindles, &spindle_data);
 
         spindle_data.n_spindles = spindle_data.idx;
 
@@ -2584,9 +2611,9 @@ status_code_t report_spindles (bool machine_readable)
 
 #endif
 
-    has_spindles = spindle_enumerate_spindles(report_spindle, (void *)machine_readable);
+    spindle_enumerate_spindles(report_spindle, (void *)machine_readable);
 
-    if(!has_spindles && !machine_readable)
+    if(!machine_readable && spindle_get_count() == 0)
         hal.stream.write("No spindles registered." ASCII_EOL);
 
     return Status_OK;

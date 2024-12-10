@@ -202,33 +202,38 @@ typedef union {
     struct {
         uint8_t enable_rpm_controlled :1, // PWM spindle only
                 laser_mode_disable    :1, // PWM spindle only
-                type                  :5,
-                pwm_disable           :1; // PWM spindle only
+                pwm_disable           :1, // PWM spindle only
+                unassigned            :5;
     };
 } spindle_settings_flags_t;
 
 typedef struct {
+    spindle_state_t invert;
+    spindle_settings_flags_t flags;
     float rpm_max;
     float rpm_min;
     float pwm_freq;
-    float pwm_period;                           // currently unused
     float pwm_off_value;
     float pwm_min_value;
     float pwm_max_value;
     float at_speed_tolerance;                   //!< Tolerance in percent of programmed speed.
     pwm_piece_t pwm_piece[SPINDLE_NPWM_PIECES];
-    pid_values_t pid;
+} spindle_pwm_settings_t;
+
+typedef struct {
+    uint8_t ref_id;
+    uint8_t encoder_spindle;
     uint16_t ppr;                               //!< Spindle encoder pulses per revolution (PPR).
-    spindle_state_t invert;
-    spindle_settings_flags_t flags;
+    uint16_t on_delay;
+    float at_speed_tolerance;                   //!< Tolerance in percent of programmed speed.
 } spindle_settings_t;
 
 typedef struct {
     uint8_t port_on;
     uint8_t port_dir;
     uint8_t port_pwm;
-    spindle_settings_t cfg;
-} spindle1_settings_t;
+    spindle_pwm_settings_t cfg;
+} spindle1_pwm_settings_t;
 
 typedef union {
     uint8_t value;
@@ -244,16 +249,13 @@ typedef union {
 //!* \brief Precalculated values that may be set/used by HAL driver to speed up RPM to PWM conversions if variable spindle is supported. */
 typedef struct spindle_pwm {
     uint32_t f_clock;
-    spindle_settings_t *settings;
+    spindle_pwm_settings_t *settings;
     uint_fast16_t period;
     uint_fast16_t off_value;    //!< NOTE: this value holds the inverted version if software PWM inversion is enabled by the driver.
     uint_fast16_t min_value;
     uint_fast16_t max_value;
     float rpm_min;              //!< Minimum spindle RPM.
     float pwm_gradient;
-    bool invert_pwm;            //!< deprecated, use bit in flags instead
-    bool always_on;             //!< deprecated, use bit in flags instead
-    bool cloned;                //!< deprecated, use bit in flags instead
     spindle_pwm_flags_t flags;
     int_fast16_t offset;
     uint_fast16_t n_pieces;
@@ -334,7 +336,7 @@ typedef struct  {
 /*! \brief Pointer to callback function called by spindle_enumerate_spindles().
 \param spindle prointer to a \a spindle_info_t struct.
 */
-typedef void (*spindle_enumerate_callback_ptr)(spindle_info_t *spindle, void *data);
+typedef bool (*spindle_enumerate_callback_ptr)(spindle_info_t *spindle, void *data);
 
 void spindle_set_override (spindle_ptrs_t *spindle, override_t speed_override);
 
@@ -365,13 +367,15 @@ __attribute__((always_inline)) static inline void spindle_validate_at_speed (spi
 }
 */
 
-bool spindle_precompute_pwm_values (spindle_ptrs_t *spindle, spindle_pwm_t *pwm_data, spindle_settings_t *settings, uint32_t clock_hz);
+bool spindle_precompute_pwm_values (spindle_ptrs_t *spindle, spindle_pwm_t *pwm_data, spindle_pwm_settings_t *settings, uint32_t clock_hz);
 
 spindle_id_t spindle_register (const spindle_ptrs_t *spindle, const char *name);
 
 spindle_id_t spindle_add_null (void);
 
 uint8_t spindle_get_count (void);
+
+bool spindle_get_id (uint8_t ref_id, spindle_id_t *spindle_id);
 
 bool spindle_select (spindle_id_t spindle_id);
 
@@ -403,9 +407,9 @@ spindle_ptrs_t *spindle_get (spindle_num_t spindle_num);
 
 #if N_SPINDLE > 1
 
-typedef void (*spindle1_settings_changed_ptr)(spindle1_settings_t *settings);
+typedef void (*spindle1_settings_changed_ptr)(spindle1_pwm_settings_t *settings);
 
-spindle1_settings_t *spindle1_settings_add (bool claim_ports);
+spindle1_pwm_settings_t *spindle1_settings_add (bool claim_ports);
 void spindle1_settings_register (spindle_cap_t cap, spindle1_settings_changed_ptr on_changed);
 
 #endif

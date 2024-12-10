@@ -28,6 +28,7 @@
 #include <string.h>
 
 #include "errors.h"
+#include "settings.h"
 #include "ngc_expr.h"
 #include "ngc_params.h"
 
@@ -70,7 +71,8 @@ typedef enum {
     NGCUnaryOp_SIN,
     NGCUnaryOp_SQRT,
     NGCUnaryOp_TAN,
-    NGCUnaryOp_Exists
+    NGCUnaryOp_Exists,
+    NGCUnaryOp_Parameter // read setting/setting bit
 } ngc_unary_op_t;
 
 /*! \brief Executes the operations: /, MOD, ** (POW), *.
@@ -397,7 +399,7 @@ static status_code_t read_operation (char *line, uint_fast8_t *pos, ngc_binary_o
                 status = Status_ExpressionUknownOp; // Unknown operation name starting with M
             break;
 
-        case 'R':
+        case 'O':
             if (line[*pos] == 'R') {
                 *operation = NGCBinaryOp_NotExclusiveOR;
                 (*pos)++;
@@ -564,8 +566,49 @@ static status_code_t read_operation_unary (char *line, uint_fast8_t *pos, ngc_un
                 status = Status_ExpressionUknownOp;
             break;
 
+        case 'P':
+            if(!strncmp(line + *pos, "RM", 2)) {
+                *operation = NGCUnaryOp_Parameter;
+                *pos += 2;
+            } else
+                status = Status_ExpressionUknownOp;
+            break;
+
         default:
             status = Status_ExpressionUknownOp;
+    }
+
+    return status;
+}
+
+/*! \brief Reads the name of a parameter out of the line
+starting at the index given by the pos offset.
+
+\param line pointer to RS274/NGC code (block).
+\param pos offset into line where expression starts.
+\param buffer pointer to a character buffer for the name.
+\returns #Status_OK enum value if processed without error, appropriate \ref status_code_t enum value if not.
+*/
+status_code_t ngc_read_name (char *line, uint_fast8_t *pos, char *buffer)
+{
+    char *s;
+    uint_fast8_t len = 0;
+    status_code_t status = Status_BadNumberFormat;
+
+    if(*(s = line + (*pos)++) == '<') {
+
+        s++;
+
+        while(*s && *s != '>' && len <= NGC_MAX_PARAM_LENGTH) {
+            *buffer++ = *s++;
+            (*pos)++;
+            len++;
+        }
+
+        if((status = *s == '>' ? Status_OK : Status_FlowControlSyntaxError) == Status_OK) {
+            *buffer = '\0';
+            (*pos)++;
+        }
     }
 
     return status;
@@ -591,8 +634,9 @@ sequentially, the value of #2 would be 10 after the line was executed.
 \param value pointer to float where result is to be stored.
 \returns #Status_OK enum value if processed without error, appropriate \ref status_code_t enum value if not.
 */
-static status_code_t read_parameter (char *line, uint_fast8_t *pos, float *value, bool check)
+status_code_t ngc_read_parameter (char *line, uint_fast8_t *pos, float *value, bool check)
 {
+    int32_t param;
     status_code_t status = Status_BadNumberFormat;
 
     if(*(line + *pos) == '#') {
@@ -601,24 +645,18 @@ static status_code_t read_parameter (char *line, uint_fast8_t *pos, float *value
 
         if(*(line + *pos) == '<') {
 
-            (*pos)++;
-            char *param = line + *pos, *arg = line + *pos;
+            char name[NGC_MAX_PARAM_LENGTH + 1];
 
-            while(*arg && *arg != '>')
-                arg++;
-
-            *pos += arg - param + 1;
-
-            if(*arg == '>') {
-                *arg = '\0';
-                if(ngc_named_param_get(param, value))
-                    status = Status_OK;
-                *arg = '>';
+            if((status = ngc_read_name(line, pos, name)) == Status_OK) {
+                if(!ngc_named_param_get(name, value))
+                    status = Status_BadNumberFormat;
             }
+        } else if((status = ngc_read_integer_value(line, pos, &param)) == Status_OK) {
 
-        } else if(read_float(line, pos, value)) {
-            if(ngc_param_get((ngc_param_id_t)*value, value))
-                status = Status_OK;
+            if(param < 0 || (check && !ngc_param_exists((ngc_param_id_t)param)))
+                status = Status_GcodeValueOutOfRange;
+            else if(!ngc_param_get((ngc_param_id_t)param, value))
+                status = Status_GcodeValueOutOfRange;
         }
     }
 
@@ -694,6 +732,45 @@ static status_code_t read_unary (char *line, uint_fast8_t *pos, float *value)
                 } else
                     status = Status_ExpressionSyntaxError;
 
+            } else if(operation == NGCUnaryOp_Parameter) {
+
+                // get setting value or bit in value
+
+                bool get_bit;
+                int32_t setting_id, bitnum;
+                const setting_detail_t *setting;
+
+                (*pos)++;
+                if((status = ngc_read_integer_value(line, pos, &setting_id)) == Status_OK) {
+
+                    if((get_bit = line[*pos] == ',')) {
+                       (*pos)++;
+                       if((status = ngc_read_integer_value(line, pos, &bitnum)) != Status_OK)
+                           return status;
+                       if(bitnum < 0 || bitnum > 31)
+                           return Status_ExpressionArgumentOutOfRange;
+                   }
+
+                   if(line[*pos] != ']')
+                       return Status_ExpressionSyntaxError; // Left bracket missing after slash with ATAN;
+
+                   (*pos)++;
+
+                   if((setting = setting_get_details((setting_id_t)setting_id, NULL))) {
+
+                       uint_fast8_t offset = setting_id - setting->id;
+
+                       if(setting->datatype == Format_Decimal)
+                           *value = setting_get_float_value(setting, offset);
+                       else if(setting_is_integer(setting) || setting_is_list(setting)) {
+                           *value = (float)setting_get_int_value(setting, offset);
+                           if(get_bit)
+                               *value = (((uint32_t)*value >> bitnum) & 0x1) ? 1.0f : 0.0f;
+                       } else
+                           status = Status_ExpressionArgumentOutOfRange;
+                   } else
+                       status = Status_ExpressionArgumentOutOfRange;
+                }
             } else if((status = ngc_eval_expression(line, pos, value)) == Status_OK) {
                 if(operation == NGCUnaryOp_ATAN)
                     status = read_atan(line, pos, value);
@@ -716,7 +793,7 @@ other readers, depending upon the first character.
 \param value pointer to float where result is to be stored.
 \returns #Status_OK enum value if processed without error, appropriate \ref status_code_t enum value if not.
 */
-static status_code_t read_real_value (char *line, uint_fast8_t *pos, float *value)
+status_code_t ngc_read_real_value (char *line, uint_fast8_t *pos, float *value)
 {
     char c = line[*pos], c1;
 
@@ -730,25 +807,71 @@ static status_code_t read_real_value (char *line, uint_fast8_t *pos, float *valu
     if(c == '[')
         status = ngc_eval_expression(line, pos, value);
     else if(c == '#')
-        status = read_parameter(line, pos, value, false);
+        status = ngc_read_parameter(line, pos, value, false);
     else if(c == '+' && c1 && !isdigit(c1) && c1 != '.') {
         (*pos)++;
-        status = read_real_value(line, pos, value);
+        status = ngc_read_real_value(line, pos, value);
     } else if(c == '-' && c1 && !isdigit(c1) && c1 != '.') {
         (*pos)++;
-        status = read_real_value(line, pos, value);
+        status = ngc_read_real_value(line, pos, value);
         *value = -*value;
     } else if ((c >= 'A') && (c <= 'Z'))
         status = read_unary(line, pos, value);
     else
         status = (read_float(line, pos, value) ? Status_OK : Status_BadNumberFormat);
 
-    if(isnanf(*value))
+    if(isnan(*value))
         status = Status_ExpressionInvalidResult; // Calculation resulted in 'not a number'
-    else if(isinff(*value))
+    else if(isinf(*value))
         status = Status_ExpressionInvalidResult; // Calculation resulted in 'not a number'
 
     return status;
+}
+
+/*! \brief Reads explicit unsigned (positive) integer out of the line,
+starting at the index given by the pos offset. It expects to find one
+or more digits. Any character other than a digit terminates reading
+the integer. Note that if the first character is a sign (+ or -),
+an error will be reported (since a sign is not a digit).
+
+\param line pointer to RS274/NGC code (block).
+\param pos offset into line where expression starts.
+\param value pointer to integer where result is to be stored.
+\returns #Status_OK enum value if processed without error, appropriate \ref status_code_t enum value if not.
+*/
+status_code_t ngc_read_integer_unsigned (char *line, uint_fast8_t *pos, uint32_t *value)
+{
+    return line[*pos] == '+' ? Status_GcodeCommandValueNotInteger : read_uint(line, pos, value);
+}
+
+/*! \brief Reads an integer (positive, negative or zero) out of the line,
+starting at the index given by the pos offset. The value being
+read may be written with a decimal point or it may be an expression
+involving non-integers, as long as the result comes out within 0.0001
+of an integer.
+
+This proceeds by calling read_real_value and checking that it is
+close to an integer, then returning the integer it is close to.
+
+\param line pointer to RS274/NGC code (block).
+\param pos offset into line where expression starts.
+\param value pointer to integer where result is to be stored.
+\returns #Status_OK enum value if processed without error, appropriate \ref status_code_t enum value if not.
+*/
+status_code_t ngc_read_integer_value (char *line, uint_fast8_t *pos, int32_t *value)
+{
+  float fvalue;
+  status_code_t status;
+
+  if((status = ngc_read_real_value(line, pos, &fvalue)) == Status_OK) {
+      *value = (int32_t)floorf(fvalue);
+      if((fvalue - (float)*value) > 0.9999f) {
+          *value = (uint32_t)ceilf(fvalue);
+      } else if((fvalue - (float)*value) > 0.0001f)
+          status = Status_GcodeCommandValueNotInteger; // not integer
+  }
+
+  return status;
 }
 
 /*! \brief Evaluate expression and set result if successful.
@@ -771,7 +894,7 @@ status_code_t ngc_eval_expression (char *line, uint_fast8_t *pos, float *value)
 
     status_code_t status;
 
-    if((status = read_real_value(line, pos, values)) != Status_OK)
+    if((status = ngc_read_real_value(line, pos, values)) != Status_OK)
         return status;
 
     if((status = read_operation(line, pos, operators)) != Status_OK)
@@ -779,7 +902,7 @@ status_code_t ngc_eval_expression (char *line, uint_fast8_t *pos, float *value)
 
     for(; operators[0] != NGCBinaryOp_RightBracket;) {
 
-        if((status = read_real_value(line, pos, values + stack_index)) != Status_OK)
+        if((status = ngc_read_real_value(line, pos, values + stack_index)) != Status_OK)
             return status;
 
         if((status = read_operation(line, pos, operators + stack_index)) != Status_OK)
@@ -805,6 +928,170 @@ status_code_t ngc_eval_expression (char *line, uint_fast8_t *pos, float *value)
     *value = values[0];
 
     return Status_OK;
+}
+
+/**/
+
+static int8_t get_format (char c, int8_t pos, uint8_t *decimals)
+{
+    static uint8_t d;
+
+    // lcaps c?
+
+    switch(pos) {
+
+        case 1:
+
+            switch(c) {
+
+                case 'd':
+                    *decimals = 0;
+                    pos = -2;
+                    break;
+
+                case 'f':
+                    *decimals = ngc_float_decimals();
+                    pos = -2;
+                    break;
+
+                case '.':
+                    pos = 2;
+                    break;
+
+                default:
+                    pos = 0;
+                    break;
+            }
+            break;
+
+        case 2:
+            if(c >= '0' && c <= '9') {
+                d = c - '0';
+                pos = 3;
+            } else
+                pos = 0;
+            break;
+
+        default:
+            if(c == 'f') {
+                *decimals = d;
+                pos = -4;
+            } else
+                pos = 0;
+            break;
+    }
+
+    return pos;
+}
+
+/*! \brief Substitute references to parameters in a string with their values.
+
+_NOTE:_ The returned string must be freed by the caller.
+
+\param line pointer to the original string.
+\returns pointer to the resulting string on success, NULL on failure.
+*/
+char *ngc_substitute_parameters (char *line)
+{
+    if(line == NULL)
+        return NULL;
+
+    size_t len = 0;
+    float value;
+    char *message = NULL, *s, c;
+    uint_fast8_t char_counter = 0;
+    int8_t parse_format = 0;
+    uint8_t decimals = ngc_float_decimals(); // LinuxCNC is 1 (or l?)
+
+    // Trim leading spaces
+    while(*line == ' ')
+        line++;
+
+    // Calculate length of substituted string
+    while((c = line[char_counter++])) {
+        if(parse_format) {
+            if((parse_format = get_format(c, parse_format, &decimals)) < 0) {
+                len -= parse_format;
+                parse_format = 0;
+            }
+        } else if(c == '%')
+            parse_format = 1;
+        else if(c == '#') {
+            char_counter--;
+            if(ngc_read_parameter(line, &char_counter, &value, true) == Status_OK)
+                len += strlen(decimals ? ftoa(value, decimals) : trim_float(ftoa(value, decimals)));
+            else
+                len += 3; // "N/A"
+        } else
+            len++;
+    }
+
+    // Perform substitution
+    if((s = message = malloc(len + 1))) {
+
+        char fmt[5] = {0};
+
+        *s = '\0';
+        char_counter = 0;
+
+        while((c = line[char_counter++])) {
+            if(parse_format) {
+                fmt[parse_format] = c;
+                if((parse_format = get_format(c, parse_format, &decimals)) < 0)
+                    parse_format = 0;
+                else if(parse_format == 0) {
+                    strcat(s, fmt);
+                    s = strchr(s, '\0');
+                    continue;
+                }
+            } else if(c == '%') {
+                parse_format = 1;
+                fmt[0] = c;
+            } else if(c == '#') {
+                char_counter--;
+                if(ngc_read_parameter(line, &char_counter, &value, true) == Status_OK)
+                    strcat(s, decimals ? ftoa(value, decimals) : trim_float(ftoa(value, decimals)));
+                else
+                    strcat(s, "N/A");
+                s = strchr(s, '\0');
+            } else {
+                *s++ = c;
+                *s = '\0';
+            }
+        }
+    }
+
+    return message;
+}
+
+/*! \brief Process gcode comment string.
+Returns string with substituted parameter references if starts with DEBUG, or PRINT, NULL if not.
+
+_NOTE:_ The returned string must be freed by the caller.
+
+\param comment pointer to the comment string.
+\returns pointer to the resulting string on success, NULL on failure.
+*/
+char *ngc_process_comment (char *comment)
+{
+    if(comment == NULL)
+        return NULL;
+
+    char *message = NULL;
+
+    if(!strncasecmp(comment, "DEBUG,", 6)) { // DEBUG message string substitution
+        if(settings.flags.ngc_debug_out) {
+            comment += 6;
+            message = ngc_substitute_parameters(comment);
+        }
+        *comment = '\0'; // Do not generate grbl.on_gcode_comment event!
+    } else if(!strncasecmp(comment, "PRINT,", 6)) { // PRINT message string substitution
+        comment += 6;
+        message = ngc_substitute_parameters(comment);
+        *comment = '\0'; // Do not generate grbl.on_gcode_comment event!
+    }
+
+    return message;
 }
 
 #endif

@@ -35,6 +35,9 @@
 #include "state_machine.h"
 #include "nvs_buffer.h"
 #include "stream.h"
+#if NGC_EXPRESSIONS_ENABLE
+#include "ngc_expr.h"
+#endif
 #if ENABLE_BACKLASH_COMPENSATION
 #include "motion_control.h"
 #endif
@@ -182,6 +185,9 @@ int grbl_enter (void)
     grbl.on_get_alarms = alarms_get_details;
     grbl.on_get_errors = errors_get_details;
     grbl.on_get_settings = settings_get_details;
+#if NGC_EXPRESSIONS_ENABLE
+    grbl.on_process_gcode_comment = ngc_process_comment;
+#endif
 
     // Clear all and set some HAL function pointers
     memset(&hal, 0, sizeof(grbl_hal_t));
@@ -197,6 +203,7 @@ int grbl_enter (void)
     hal.stepper.interrupt_callback = stepper_driver_interrupt_handler;
     hal.stream_blocking_callback = stream_tx_blocking;
     hal.signals_cap.reset = hal.signals_cap.feed_hold = hal.signals_cap.cycle_start = On;
+    hal.signals_pullup_disable_cap.value = (uint16_t)-1;
 
     sys.cold_start = true;
 
@@ -272,7 +279,22 @@ int grbl_enter (void)
     if(driver.ok == 0xFF)
         driver.setup = hal.driver_setup(&settings);
 
-    if((driver.spindle = spindle_select(settings.spindle.flags.type))) {
+    spindle_id_t spindle_id, encoder_spindle;
+
+// Sanity checks
+    if(!spindle_get_id(settings.spindle.ref_id, &spindle_id)) {
+
+        spindle_ptrs_t *spindle = spindle_get_hal(spindle_get_default(), SpindleHAL_Raw);
+
+        spindle_id = spindle ? spindle->id : spindle->ref_id;
+        settings.spindle.ref_id = spindle ? spindle->ref_id : DEFAULT_SPINDLE;
+    }
+
+    if(!spindle_get_id(settings.spindle.encoder_spindle, &encoder_spindle))
+        settings.spindle.encoder_spindle = settings.spindle.ref_id;
+//
+
+    if((driver.spindle = spindle_select(spindle_id))) {
         spindle_ptrs_t *spindle = spindle_get(0);
         driver.spindle = spindle->get_pwm == NULL || spindle->update_pwm != NULL;
     } else
@@ -311,7 +333,7 @@ int grbl_enter (void)
         setting_remove_elements(Setting_FSOptions, fs_options.mask);
     }
 
-    // Grbl initialization loop upon power-up or a system abort. For the latter, all processes
+    // Initialization loop upon power-up or a system abort. For the latter, all processes
     // will return to this loop to be cleanly re-initialized.
     while(looping) {
 
@@ -339,9 +361,9 @@ int grbl_enter (void)
 
         flush_override_buffers();
 
-        // Reset Grbl primary systems.
+        // Reset primary systems.
         hal.stream.reset_read_buffer(); // Clear input stream buffer
-        gc_init();                      // Set g-code parser to default state
+        gc_init(false);                 // Set g-code parser to default state
         hal.limits.enable(settings.limits.flags.hard_enabled, (axes_signals_t){0});
         plan_reset();                   // Clear block buffer and planner variables
         st_reset();                     // Clear stepper subsystem variables.
@@ -366,7 +388,7 @@ int grbl_enter (void)
         if(hal.driver_cap.mpg_mode)
             protocol_enqueue_realtime_command(sys.mpg_mode ? CMD_STATUS_REPORT_ALL : CMD_STATUS_REPORT);
 
-        // Start Grbl main loop. Processes program inputs and executes them.
+        // Start main loop. Processes program inputs and executes them.
         if(!(looping = protocol_main_loop()))
             looping = hal.driver_release == NULL || hal.driver_release();
 

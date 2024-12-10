@@ -43,7 +43,8 @@
 
 #define HAL_VERSION 10
 
-/// Bitmap flags for driver capabilities, to be set by driver in driver_init(), flags may be cleared after to switch off option.
+// Bitmap flags for driver capabilities, to be set by driver in driver_init() or plugins,
+// flags may be cleared by plugins or the core to switch off capabilities.
 typedef union {
     uint32_t value; //!< All bitmap flags.
     struct {
@@ -68,7 +69,8 @@ typedef union {
                  odometers                 :1,
                  pwm_spindle               :1,
                  probe_latch               :1,
-                 unassigned                :10;
+                 toolsetter                :1, //!< Toolsetter (2nd probe) input is supported.
+                 unassigned                :9;
     };
 } driver_cap_t;
 
@@ -405,61 +407,6 @@ typedef struct {
 } tool_ptrs_t;
 
 
-/*****************
- *  User M-code  *
- *****************/
-
-/*! \brief Pointer to function for checking if user defined M-code is supported.
-\param mcode as a #user_mcode_t enum.
-\returns the \a mcode argument if M-code is handled, #UserMCode_Ignore if not.
-*/
-typedef user_mcode_t (*user_mcode_check_ptr)(user_mcode_t mcode);
-
-/*! \brief Pointer to function for validating parameters for a user defined M-code.
-
-The M-code to validate is found in \a gc_block->user_mcode, parameter values in \a gc_block->values
- and corresponding parameter letters in the \a gc_block->words bitfield union.
-
-Parameter values claimed by the M-code must be flagged in the \a gc_block->words bitfield union by setting the
- respective parameter letters to \a false or the parser will raise the #Status_GcodeUnusedWords error.
-
-The validation function may set \a gc_block->user_mcode_sync to \a true if it is to be executed
-after all buffered motions are completed, otherwise it will be executed immediately.
-
-__NOTE:__ Valueless parameter letters are allowed for floats, these are set to NAN (not a number) if so.
-The validation function should always test these by using the isnan() function in addition to any range checks.
-
-\param gc_block pointer to a parser_block_t structure.
-\param parameter_words pointer to a parameter_words_t structure. __NOTE:__ this parameter is deprecated and will be removed, use \a gc_block->words instead.
-\returns #Status_OK enum value if validated ok, appropriate \ref status_code_t enum value if not or #Status_Unhandled if the M-code is not recognized.
-*/
-typedef status_code_t (*user_mcode_validate_ptr)(parser_block_t *gc_block, parameter_words_t *parameter_words);
-
-/*! \brief Pointer to function for executing a user defined M-code.
-
-The M-code to execute is found in \a gc_block->user_mcode, parameter values in \a gc_block->values
- and claimed/validated parameter letters in the \a gc_block->words bitfield union.
-
-\param state as a #sys_state_t variable.
-\param gc_block pointer to a parser_block_t structure.
-\returns #Status_OK enum value if validated ok, appropriate \ref status_code_t enum value if not or #Status_Unhandled if M-code is not recognized.
-*/
-typedef void (*user_mcode_execute_ptr)(sys_state_t state, parser_block_t *gc_block);
-
-/*! \brief Optional handlers for user defined M-codes.
-
-Handlers may be chained so that several plugins can add M-codes.
-Chaining is achieved by saving a copy of the current user_mcode_ptrs_t struct
- when the plugin is initialized and calling the same handler via the copy when a
- M-code is not recognized.
- */
-typedef struct {
-    user_mcode_check_ptr check;         //!< Handler for checking if a user defined M-code is supported.
-    user_mcode_validate_ptr validate;   //!< Handler for validating parameters for a user defined M-code.
-    user_mcode_execute_ptr execute;     //!< Handler for executing a user defined M-code.
-} user_mcode_ptrs_t;
-
-
 /*******************
  *  Encoder input  *
  *******************/
@@ -686,7 +633,6 @@ typedef struct {
     pallet_shuttle_ptr pallet_shuttle;      //!< Optional handler for performing a pallet shuttle on program end (M60).
     void (*reboot)(void);                   //!< Optoional handler for rebooting the controller. This will be called when #ASCII_ESC followed by #CMD_REBOOT is received.
 
-    user_mcode_ptrs_t user_mcode;           //!< Optional handlers for user defined M-codes.
     encoder_ptrs_t encoder;                 //!< Optional handlers for encoder support.
 
     /*! \brief Optional handler for getting the current axis positions.
@@ -708,11 +654,12 @@ typedef struct {
     */
     bool (*stream_blocking_callback)(void);
 
-    driver_cap_t driver_cap;                //!< Basic driver capabilities flags.
-    control_signals_t signals_cap;          //!< Control input signals supported by the driver.
-    limit_signals_t limits_cap;             //!< Limit input signals supported by the driver.
-    home_signals_t home_cap;                //!< Home input signals supported by the driver.
-    coolant_state_t coolant_cap;            //!< Coolant outputs supported by the driver.
+    driver_cap_t driver_cap;                        //!< Basic driver capabilities flags.
+    control_signals_t signals_cap;                  //!< Control input signals supported by the driver.
+    control_signals_t signals_pullup_disable_cap;   //!< Control input signals pullup disable supported by the driver.
+    limit_signals_t limits_cap;                     //!< Limit input signals supported by the driver.
+    home_signals_t home_cap;                        //!< Home input signals supported by the driver.
+    coolant_state_t coolant_cap;                    //!< Coolant outputs supported by the driver.
 
 } grbl_hal_t;
 

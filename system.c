@@ -4,7 +4,7 @@
   Part of grblHAL
 
   Copyright (c) 2017-2024 Terje Io
-  Copyright (c) 2014-2016 Sungeun K. Jeon for Gnea mResearch LLC
+  Copyright (c) 2014-2016 Sungeun K. Jeon for Gnea Research LLC
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -167,12 +167,12 @@ static status_code_t read_int (char *s, int32_t *value)
 // Reset spindle encoder data
 static status_code_t spindle_reset_data (sys_state_t state, char *args)
 {
-    spindle_ptrs_t *spindle = gc_spindle_get();
+    spindle_t *spindle = gc_spindle_get(-1);
 
-    if(spindle->reset_data)
-        spindle->reset_data();
+    if(spindle->hal->reset_data)
+        spindle->hal->reset_data();
 
-    return spindle->reset_data ? Status_OK : Status_InvalidStatement;
+    return spindle->hal->reset_data ? Status_OK : Status_InvalidStatement;
 }
 
 static status_code_t jog (sys_state_t state, char *args)
@@ -604,6 +604,19 @@ static status_code_t output_all_build_info (sys_state_t state, char *args)
     return Status_OK;
 }
 
+static status_code_t settings_downgrade (sys_state_t state, char *args)
+{
+    settings.version.build = settings.version.build == 0 ? (GRBL_BUILD - 20000000UL) : 0;
+
+    if((settings.flags.settings_downgrade = settings.version.build == 0)) {
+
+    }
+
+    settings_write_global();
+
+    return Status_OK;
+}
+
 static status_code_t settings_reset (sys_state_t state, char *args)
 {
     settings_restore_t restore = {0};
@@ -683,12 +696,14 @@ static status_code_t set_startup_line (sys_state_t state, char *args, uint_fast8
 
     status_code_t retval = Status_OK;
 
-    args = gc_normalize_block(args, NULL);
+    args = gc_normalize_block(args, &retval, NULL);
 
-    if(strlen(args) >= (sizeof(stored_line_t) - 1))
-        retval = Status_Overflow;
-    else if ((retval = gc_execute_block(args)) == Status_OK) // Execute gcode block to ensure block is valid.
-        settings_write_startup_line(lnr, args);
+    if(retval == Status_OK) {
+        if(strlen(args) >= (sizeof(stored_line_t) - 1))
+            retval = Status_Overflow;
+        else if ((retval = gc_execute_block(args)) == Status_OK) // Execute gcode block to ensure block is valid.
+            settings_write_startup_line(lnr, args);
+    }
 
     return retval;
 }
@@ -767,7 +782,7 @@ const char *help_rtc (const char *cmd)
 
 const char *help_spindle (const char *cmd)
 {
-    spindle_ptrs_t *spindle = gc_spindle_get();
+    spindle_ptrs_t *spindle = gc_spindle_get(0)->hal;
 
     if(cmd[1] == 'R' && spindle->reset_data)
         hal.stream.write("$SR - reset spindle encoder data." ASCII_EOL);
@@ -787,7 +802,7 @@ const char *help_pins (const char *cmd)
 
 const char *help_pin_state (const char *cmd)
 {
-    return hal.port.get_pin_info ? "output auxillary pin states" : NULL;
+    return hal.port.get_pin_info ? "output auxiliary pin states" : NULL;
 }
 
 #endif
@@ -924,6 +939,7 @@ PROGMEM static const sys_command_t sys_commands[] = {
     { "SD", report_spindle_data, { .help_fn = On }, { .fn = help_spindle } },
     { "SR", spindle_reset_data, { .help_fn = On }, { .fn = help_spindle } },
     { "RTC", rtc_action, { .allow_blocking = On, .help_fn = On }, { .fn = help_rtc } },
+    { "DWNGRD", settings_downgrade, { .noargs = On, .allow_blocking = On }, { .str = "toggle setting flags for downgrade" } },
 #ifdef DEBUGOUT
     { "Q", output_memmap, { .noargs = On }, { .str = "output NVS memory allocation" } },
 #endif

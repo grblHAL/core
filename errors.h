@@ -3,22 +3,22 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2023 Terje Io
+  Copyright (c) 2017-2024 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef _ERRORS_H_
@@ -26,7 +26,7 @@
 
 #include <stddef.h>
 
-// Define Grbl status codes. Valid values (0-255)
+// Define grblHAL status codes. Valid values (0-255)
 typedef enum {
     Status_OK = 0,
     Status_ExpectedCommandLetter = 1,
@@ -112,10 +112,10 @@ typedef enum {
     Status_FlowControlSyntaxError = 81,
     Status_FlowControlStackOverflow = 82,
     Status_FlowControlOutOfMemory = 83,
-
+    Status_StatusMax = Status_FlowControlOutOfMemory,
+    Status_UserException = 253,
     Status_Handled,   // For internal use only
-    Status_Unhandled, // For internal use only
-    Status_StatusMax = Status_Unhandled
+    Status_Unhandled  // For internal use only
 } __attribute__ ((__packed__)) status_code_t;
 
 typedef struct {

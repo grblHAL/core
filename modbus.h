@@ -61,7 +61,7 @@ typedef struct {
     bool crc_check;
     uint8_t tx_length;
     uint8_t rx_length;
-    char adu[MODBUS_MAX_ADU_SIZE];
+    uint8_t adu[MODBUS_MAX_ADU_SIZE];
 } modbus_message_t;
 
 typedef struct {

@@ -627,7 +627,7 @@ void mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_
                 return;
 
             if(canned->spindle_off)
-                spindle_sync(pl_data->spindle.hal, gc_state.modal.spindle.state, pl_data->spindle.rpm);
+                spindle_sync(pl_data->spindle.hal, pl_data->spindle.state, pl_data->spindle.rpm);
         }
 
         pl_data->condition.rapid_motion = On; // Set rapid motion condition flag.
@@ -838,7 +838,7 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
 #endif
     } else {
 
-        if(settings.homing.seek_rate <= 0.0f)
+        if(settings.axis[0].homing_seek_rate <= 0.0f)
             return Status_HomingDisabled;
 
         // Check and abort homing cycle, if hard limits are already enabled. Helps prevent problems

@@ -35,6 +35,7 @@
 typedef struct {
     io_ports_detail_t *ports;
     char port_names[50];
+    ioport_bus_t enabled;
 } io_ports_private_t;
 
 typedef struct {
@@ -357,6 +358,9 @@ bool ioports_add (io_ports_data_t *ports, io_port_type_t type, uint8_t n_in, uin
             if(pn)
                 pn += i > 9 ? 4 : 3;
         }
+
+        cfg->in.enabled.mask = cfg->inx.mask;
+        cfg->out.enabled.mask = cfg->outx.mask;
     }
 
     return n_ports > 0;
@@ -511,7 +515,7 @@ static status_code_t aux_set_value (setting_id_t id, uint_fast16_t value)
 
         case Settings_IoPort_InvertIn:
 
-            change.mask = (uint8_t)value & digital.inx.mask;
+            change.mask = value & digital.inx.mask;
 
             if((changed.mask = settings.ioport.invert_in.mask ^ change.mask)) {
 
@@ -537,7 +541,7 @@ static status_code_t aux_set_value (setting_id_t id, uint_fast16_t value)
 
         case Settings_IoPort_Pullup_Disable:
 
-            change.mask = (uint8_t)value & digital.inx.mask;
+            change.mask = value & digital.inx.mask;
 
             if((changed.mask = settings.ioport.pullup_disable_in.mask ^ change.mask)) {
 
@@ -564,7 +568,7 @@ static status_code_t aux_set_value (setting_id_t id, uint_fast16_t value)
 
         case Settings_IoPort_InvertOut:
 
-            change.mask = (uint8_t)value & digital.outx.mask;
+            change.mask = value & digital.outx.mask;
 
             if((changed.mask = settings.ioport.invert_out.mask ^ change.mask)) {
 
@@ -590,7 +594,7 @@ static status_code_t aux_set_value (setting_id_t id, uint_fast16_t value)
 
         case Settings_IoPort_OD_Enable:
 
-            change.mask = (uint8_t)value & digital.outx.mask;
+            change.mask = value & digital.outx.mask;
 
             if((changed.mask = settings.ioport.od_enable_out.mask ^ change.mask)) {
 
@@ -628,19 +632,19 @@ static uint32_t aux_get_value (setting_id_t id)
     switch(id) {
 
         case Settings_IoPort_InvertIn:
-            value = settings.ioport.invert_in.mask;
+            value = settings.ioport.invert_in.mask & digital.in.enabled.mask;
             break;
 
         case Settings_IoPort_Pullup_Disable:
-            value = settings.ioport.pullup_disable_in.mask;
+            value = settings.ioport.pullup_disable_in.mask & digital.in.enabled.mask;
             break;
 
         case Settings_IoPort_InvertOut:
-            value = settings.ioport.invert_out.mask;
+            value = settings.ioport.invert_out.mask & digital.out.enabled.mask;
             break;
 
         case Settings_IoPort_OD_Enable:
-            value = settings.ioport.od_enable_out.mask;
+            value = settings.ioport.od_enable_out.mask & digital.out.enabled.mask;
             break;
 
         default:
@@ -731,19 +735,6 @@ static void ioport_settings_load (void)
         on_settings_loaded();
 }
 
-static setting_details_t setting_details = {
-    .groups = ioport_groups,
-    .n_groups = sizeof(ioport_groups) / sizeof(setting_group_detail_t),
-    .settings = ioport_settings,
-    .n_settings = sizeof(ioport_settings) / sizeof(setting_detail_t),
-#ifndef NO_SETTINGS_DESCRIPTIONS
-    .descriptions = ioport_settings_descr,
-    .n_descriptions = sizeof(ioport_settings_descr) / sizeof(setting_descr_t),
-#endif
-    .load = ioport_settings_load,
-    .save = settings_write_global
-};
-
 void ioport_setting_changed (setting_id_t id)
 {
     if(on_setting_changed)
@@ -765,6 +756,18 @@ void ioport_setting_changed (setting_id_t id)
                             in_config.debounce  = Off;
                             in_config.inverted  = settings.probe.invert_probe_pin;
                             in_config.pull_mode = settings.probe.disable_probe_pullup ? PullMode_None : PullMode_Up;
+
+                            if(in_config.inverted)
+                                settings.ioport.invert_in.mask |= (1 << xbar->id);
+                            else
+                                settings.ioport.invert_in.mask &= ~(1 << xbar->id);
+
+                            xbar->config(xbar, &in_config, false);
+                        } else if(xbar->config && xbar->function == Input_Toolsetter) {
+
+                            in_config.debounce  = Off;
+                            in_config.inverted  = settings.probe.invert_toolsetter_input;
+                            in_config.pull_mode = settings.probe.disable_toolsetter_pullup ? PullMode_None : PullMode_Up;
 
                             if(in_config.inverted)
                                 settings.ioport.invert_in.mask |= (1 << xbar->id);
@@ -818,6 +821,19 @@ void ioport_setting_changed (setting_id_t id)
 
 void ioports_add_settings (driver_settings_load_ptr settings_loaded, setting_changed_ptr setting_changed)
 {
+    static setting_details_t setting_details = {
+        .groups = ioport_groups,
+        .n_groups = sizeof(ioport_groups) / sizeof(setting_group_detail_t),
+        .settings = ioport_settings,
+        .n_settings = sizeof(ioport_settings) / sizeof(setting_detail_t),
+    #ifndef NO_SETTINGS_DESCRIPTIONS
+        .descriptions = ioport_settings_descr,
+        .n_descriptions = sizeof(ioport_settings_descr) / sizeof(setting_descr_t),
+    #endif
+        .load = ioport_settings_load,
+        .save = settings_write_global
+    };
+
     if(settings_loaded)
         on_settings_loaded = settings_loaded;
 

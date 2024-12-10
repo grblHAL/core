@@ -240,6 +240,9 @@ bool protocol_main_loop (void)
                 if (state_get() == STATE_JOG) // Block all other states from invoking motion cancel.
                     system_set_exec_state_flag(EXEC_MOTION_CANCEL);
 
+            } else if(c == ASCII_EOF) {
+                if(grbl.on_file_end)
+                    grbl.on_file_end(hal.stream.file, gc_state.last_error);
             } else if ((c == '\n') || (c == '\r')) { // End of line reached
 
                 // Check for possible secondary end of line character, do not process as empty line
@@ -279,7 +282,8 @@ bool protocol_main_loop (void)
                 else { // Parse and execute g-code block.
 
 #endif
-                    gc_state.last_error = gc_execute_block(line);
+                    if((gc_state.last_error = gc_execute_block(line)) != Status_OK)
+                        eol = '\0';
                 }
 
                 // Add a short delay for each block processed in Check Mode to
@@ -566,7 +570,6 @@ bool protocol_exec_rt_system (void)
                 sys.override.control = gc_state.modal.override_ctrl;
 
             gc_state.tool_change = false;
-            gc_state.modal.spindle.rpm_mode = SpindleSpeedMode_RPM;
 
             // Tell driver/plugins about reset.
             hal.driver_reset();
@@ -576,7 +579,7 @@ bool protocol_exec_rt_system (void)
 
             sys.flags.keep_input = Off;
 
-            gc_init();
+            gc_init(true);
             plan_reset();
             if(sys.alarm_pending == Alarm_ProbeProtect) {
                 st_go_idle();
@@ -684,7 +687,7 @@ bool protocol_exec_rt_system (void)
     if(!sys.override_delay.spindle && (rt_exec = get_spindle_override())) {
 
         bool spindle_stop = false;
-        spindle_ptrs_t *spindle = gc_spindle_get();
+        spindle_ptrs_t *spindle = gc_spindle_get(-1)->hal;
         override_t last_s_override = spindle->param->override_pct;
 
         do {
@@ -727,7 +730,7 @@ bool protocol_exec_rt_system (void)
 
         spindle_set_override(spindle, last_s_override);
 
-        if (spindle_stop && state_get() == STATE_HOLD && gc_state.modal.spindle.state.on) {
+        if (spindle_stop && state_get() == STATE_HOLD && gc_spindle_get(-1)->state.on) {
             // Spindle stop override allowed only while in HOLD state.
             // NOTE: Report flag is set in spindle_set_state() when spindle stop is executed.
             if (!sys.override.spindle_stop.value)

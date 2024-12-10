@@ -122,7 +122,7 @@ static void enter_sleep (void)
 
 static bool initiate_hold (uint_fast16_t new_state)
 {
-    spindle_ptrs_t *spindle;
+    spindle_t *spindle;
     spindle_num_t spindle_num = N_SYS_SPINDLE;
 
     if (settings.parking.flags.enabled) {
@@ -137,21 +137,21 @@ static bool initiate_hold (uint_fast16_t new_state)
     restore_condition.spindle_num = 0;
 
     do {
-        if((spindle = spindle_get(--spindle_num))) {
-            if(block && block->spindle.hal == spindle) {
+        if((spindle = gc_spindle_get(--spindle_num))) {
+            if(block && block->spindle.hal == spindle->hal) {
                 restore_condition.spindle_num = spindle_num;
                 restore_condition.spindle[spindle_num].hal = block->spindle.hal;
                 restore_condition.spindle[spindle_num].rpm = block->spindle.rpm;
                 restore_condition.spindle[spindle_num].state = block->spindle.state;
-            } else if(gc_state.spindle.hal == spindle) {
+            } else if(spindle->hal) {
                 restore_condition.spindle_num = spindle_num;
-                restore_condition.spindle[spindle_num].hal = gc_state.spindle.hal;
-                restore_condition.spindle[spindle_num].rpm = gc_state.spindle.rpm;
-                restore_condition.spindle[spindle_num].state = gc_state.modal.spindle.state;
+                restore_condition.spindle[spindle_num].hal = spindle->hal;
+                restore_condition.spindle[spindle_num].rpm = spindle->rpm;
+                restore_condition.spindle[spindle_num].state = spindle->state;
             } else {
-                restore_condition.spindle[spindle_num].hal = spindle;
-                restore_condition.spindle[spindle_num].rpm = spindle->param->rpm;
-                restore_condition.spindle[spindle_num].state = spindle->param->state;
+                restore_condition.spindle[spindle_num].hal = NULL;
+//                restore_condition.spindle[spindle_num].rpm = spindle->param->rpm;
+//                restore_condition.spindle[spindle_num].state = spindle->param->state;
             }
         } else
             restore_condition.spindle[spindle_num].hal = NULL;
@@ -352,7 +352,7 @@ void state_set (sys_state_t new_state)
 // Suspend manager. Controls spindle overrides in hold states.
 void state_suspend_manager (void)
 {
-    if (stateHandler != state_await_resume || !gc_state.modal.spindle.state.on)
+    if (stateHandler != state_await_resume || !gc_spindle_get(0)->state.on)
         return;
 
     if (sys.override.spindle_stop.value) {

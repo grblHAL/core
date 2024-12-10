@@ -1,6 +1,360 @@
 ## grblHAL changelog
 
+<a name="20241208"> Build 20241208
+
+Core:
+
+* Revised core setting structures, changed from 8-bit to 16-bit CRC checksums for improved detection of corruption/version mismatches.  
+__NOTE:__ Backup and restore settings over an update since _all_ settings will be reset to default. Any odometer data will also be lost.
+
+* Added option to homing enable setting (`$22`) for per axis homing feedrates.  
+When this option is selected setting `$24` and $`25` will be disabled and new axis settings made available;
+`$18<n>` replaces `$24` and `$19<n>` replaces `$25`. `<n>` is the axis number; `0` for X, `1` for Y, ...  
+__NOTE:__ if axes are set up for simultaneous homing and they do not have the same feedrates they will be homed separately.  
+__NOTE:__ `$18<n>` and `$19<n>` were previousely implemented by the Trinamic motor plugin, the implementation is now in the core.  
+__NOTE:__ core settings will now overflow the legacy 1024 byte boundary when > 5 axes are configured, in the previous version when > 6 axes were configured..
+
+Drivers:
+
+* All: updated for the revised settings structures.
+
+* iMXRT1062, RP2040 and SAM3X8E: improved step injection option used by the Plasma plugin and stepper spindle option.
+
+* RP2040: tuning for the new RP2350 MCU, fixes step timings.
+
+Plugins:
+
+* Some updated for the revised settings structures.
+
+---
+
+<a name="20241205"> 20241205
+
+Drivers:
+
+* RP2040: initial support for RP2350 \(Pico 2\) added to Web Builder.
+
+Plugins:
+
+* Trinamic: fixed min/max current calculations for TMC5160 driver. Ref. [issue #16](https://github.com/grblHAL/Plugins_motor/issues/16);
+
+---
+
+<a name="20241204"> 20241204
+
+Core:
+
+* Changed deprecated calls to `isinff()` and `isnanf()` to new \(C99\) versions.
+
+Drivers:
+
+* RP2040: CMakeLists.txt fixes for RP2350 builds.
+
+* STM32F4xx: disabled broken support for sensorless homing for LongBoard32 \(SLB\). Support for this board is still WIP.
+
+Plugins:
+
+* Motors , spindle and misc: changed deprecated calls to `isinff()` and `isnanf()` to new \(C99\) versions.
+
+---
+
+<a name="20241128">Build 20241128
+
+Core:
+
+* Added (or rather repurposed) field for build date to settings structure in preparation for coming changes.
+
+* Added code guards in order to free some memory for STM32F103 variants with 128K flash. Ref. [STM32F1xx driver issue #59](https://github.com/grblHAL/STM32F1xx/issues/59).
+
+* Changed Stop (`0x19`) real-time command behaviour, active tool offset and coordinate system will now be kept. Ref. [issue #610](https://github.com/grblHAL/core/issues/610).  
+
+Drivers:
+
+* All: updated for core change (settings structure).
+
+* SAM3X8E: fixed missing probe input for Protoneer v3 board. Ref. [issue #31](https://github.com/grblHAL/SAM3X8E/issues/31)
+
+* RP2040: switched to SDK v2.0.0 and added initial support for RP2350 (Pico 2). The Web Builder will be updated a little later for this change.
+
+Plugins:
+
+* Trinamic: removed superfluous semicolon. Ref. [issue #15](https://github.com/grblHAL/Plugins_motor/issues/15).
+
+* Networking: added some files to _CMakeLists.txt_, used by RP2350 driver.
+
+---
+
+<a name="20241121">Build 20241121
+
+Core:
+
+* downgrading settings reset backup
+
+Plugins:
+
+* Trinamic: removed superfluous semicolon. https://github.com/grblHAL/Plugins_motor/issues/15
+
+---
+
+<a name="20241121">20241121
+
+Core:
+
+* Fixed bug in setting home position to 0 when CoreXY kinematics is enabled. Ref. [ESP32 issue #77](https://github.com/grblHAL/ESP32/issues/77).
+
+---
+
+<a name="20241120">Build 20241120
+
+Core:
+
+* A bit of refactoring related to spindles as a first step for a coming settings structure revision, "hardened" some code.
+
+Drivers:
+
+* Some: added support for ["assorted small plugins"](https://github.com/grblHAL/Plugins_misc/), mainly for drivers available in the Web Builder.
+
+* STM32F1xx: moved board specific code to _board_ directory.
+
+* STM32F4xx: simplified configuration of Trinamic low-level interfaces, fixed typos in second RGB LED channel code
+and added workaround for RGB LEDs connected to debug pin beeing turned on at boot.
+
+Plugins:
+
+* Motors: refactored M-code handling and added support for Marlin style `M569` and `M919` commands. Some minor bug fixes.
+
+* Trinamic: fixed "bug" in TMC2660 current handling, extended API.
+
+* Spindle: changed settings handling when multiple spindles are configured. Fixed bug in `M104P<n>` M-code.  
+__NOTE:__ an automatic update of settings `$511`-`$513` will be attempted, this may fail so please check them after upgrading.
+
+---
+
+
+<a name="20241116">Build 20241116
+
+Core:
+
+* Added support for named o-sub/o-call to flow control, for calling gcode subroutines stored on SD card or in littlefs. Sub name matches filename with extension _.macro_.
+
+* Added core event for handling special gcode comments used by expressions: `DEBUG`, `PRINT` and `ABORT`. These can now be extended or new added to by plugins.
+
+* Added overridable default $-setting values for second PWM spindle to _grbl/config.c_.
+
+Plugins:
+
+* Trinamic: changed some default parameter values, fix bug in previously unused TMC2660 code.
+
+* Motors: fixed bugs in handling and visibility of extended settings.
+
+* Misc, eventout: added info to `$pins` command for pins mapped to event actions.
+
+---
+
+<a name="20241113">Build 20241113
+
+Core:
+
+* Added basic core support for toolsetter probe, changes $6 \(probe input inversion\) and $19 \(probe input pullup disable\) settings from boolean to bitfield when driver support is available.
+
+* Added a few new default values for $-settings in _config.h_, overridable from the compiler command line.
+
+* Added core support for per axis pulloff distance, needs plugin for configuring them.
+
+* Added HAL flags for disabling settings for MCU input pins pullup disable, may be set by drivers/boards that has buffered \(optocoupled\) inputs that is not possible to change.
+
+Plugins:
+
+* Spindle: fixed some naming inconsistencies.
+
+* Misc: added plugin for feed rate overrides via Marlin style M-code and plugin for configuring per axis homing pulloff distance.
+
+* Keypad, macros: added some overridable defaults.
+
+---
+
+<a name="20241110">Build 20241110
+
+Core:
+
+* Added generic passthru support for programming external MCU via USB > UART bridge. Requires driver support if to be used. Adds `$PTRGH` system command when available.
+
+Plugins:
+
+* Misc, ESP-AT: general improvements.
+
+---
+
+<a name="20241107">Build 20241107
+
+Core:
+
+* Removed deprecated stream flags, added stream event for line state \(RTS, DTR\) changes - initially for USB streams.
+
+Drivers:
+
+* Many: updated for removal of deprecated stream flags in the core.
+
+* STM32 drivers: added support for line state changed event.
+
+Plugins:
+
+* Trinamic: fix for incorrect min/max stepper current validation for TMC2130 and TMC2209. Ref. STM32F4xx [issue #197](https://github.com/grblHAL/STM32F4xx/issues/197).
+
+* Networking: updated WebSocket daemon for removal of deprecated stream flags in the core.
+
+---
+
+<a name="20241030">20241030
+
+Core:
+
+* Added init call for new ESP-AT plugin.
+
+Plugins:
+
+* Motors: fixed incorrect settings reference. Ref. [discussion #107](https://github.com/grblHAL/ESP32/discussions/107).
+
+* Misc. plugins, esp_at: added experimental support for Telnet over WiFi via an ESP32 running [ESP-AT](https://docs.espressif.com/projects/esp-at/en/latest/esp32/Get_Started/index.html).
+
+---
+
+<a name="20241025">Build 20241025
+
+Core:
+
+* Changed `_vminor` named parameter to return build date in YYMMDD format, previously value was 0.
+
+* Added support for LinuxCNC style `(ABORT,<msg>)` comment, requires expressions enabled.
+Terminates gcode program, outputs message and returns error 253.
+
+* Added `PRM[<setting>]` and `PRM[<setting>,<bit>]` functions to expressions, returns $-setting value or value of bit in integer type setting.
+
+* "hardened" flow control code, fixed bug in `repeat...continue` handling.
+
+* Changed signature of `grbl.on_gcode_comment` event, now returns status code.
+
+Drivers:
+
+* ESP32, RP2040: changed NVS storage for settings in flash from 2 to 4KB.
+
+* STM32F4xx: fixed typos.
+
+* Some: added note to _platformio.ino_ file.
+
+Plugins:
+
+* SD Card, macros: fixed G65P1 settings read macro, failed when reading some indexed settings.
+
+---
+
+<a name="20241023">Build 20241023
+
+Core:
+
+* Fixed some odd bugs in NGC flow control, prepared for file based named O-call subroutines.
+
+* Fixed incorrect comment string passed to `grbl.on_gcode_comment` event.
+
+* Added generic redirector for temporarily changing input stream to read from a file. Supports nesting.
+
+Drivers:
+
+* ESP32: fix for overriding UART0 pins, reverted  and fixed tests for ESP32-S3 conditional code.
+
+Plugins:
+
+* SD Card, macros: updated to use new input stream redirector, allows nesting of `G65` calls
+ \(max 5 levels depending on available memory\). __NOTE:__ Not extensively tested, feedback required.
+
+* SD card: updated to work alongside new file redirector.
+
+---
+
+<a name="20241019">Build 20241019
+
+Core:
+
+* Moved message substitution code from _gcode.c_ to _ngc_expr.c_.
+
+Drivers:
+
+* ESP32: fixed tests for ESP32-S3 conditional code, added overridable symbols for UART0 RX/TX pins.
+
+* STM32F4xx: fixed regression in spindle sync code. Ref. [discussion #612](https://github.com/grblHAL/core/discussions/612).
+
+Plugins:
+
+* Spindle: fixed name typo. Ref. [issue #34](https://github.com/grblHAL/Plugins_spindle/issues/34).
+
+---
+
+<a name="20241016">Build 20241016
+
+Core:
+
+* Improved parameter handling some more, now allows indirected O-calls and line numbers with O-word.
+
+* Fix for [issue #609](https://github.com/grblHAL/core/issues/609), homing may cause a controller crash.
+
+Plugins:
+
+* Spindle: fixed compiler warning. Ref. [issue #33](https://github.com/grblHAL/Plugins_spindle/issues/33).
+
+---
+
+<a name="20241014">Build 20241014
+
+Core:
+
+* Improved expression and parameter handling, simplified gcode parser related to this. Fixed typo in `OR` statement decode. 
+
+* Added clear of return value on `CALL` statement and added optional return value expression support to `ENDSUB`.
+
+* For developers: moved user M-code entry point hooks from the HAL structure to the core handlers and
+changed signature of the _check()_ function to better support valueless words \(letters\) when parameter support is enabled.
+Removed deprecated parameter from the _validate()_ call signature.
+
+* Improved handling of multiple simultaneous spindles. Still work in progress.
+
+Drivers: 
+
+* STM32F4xx and STM32F7xx: fixed some typos in new timer API. Ref. [issue #192](https://github.com/grblHAL/STM32F4xx/issues/192)
+and [issue #18](https://github.com/grblHAL/STM32F7xx/issues/18).
+
+Plugins and templates:
+
+* Some updated for move of core M-code entry points.
+
+---
+
+<a name="20241006">Build 20241006
+
+Core:
+
+* Fix for `M62` - `M68` regression. Ref. [issue #600](https://github.com/grblHAL/core/issues/600).
+
+* Fixed incorrect handling of `G65` call parameters, axis words had offsets added.  Ref. [issue #594](https://github.com/grblHAL/core/issues/594).
+
+* Refactored handling of multiple spindles. There are still some limitations but should work better now. Disabled override delays for now, needs investigation. Ref. [issue #598](https://github.com/grblHAL/core/issues/598).  
+__NOTE:__ Please report any erratic behaviour after installing this version since it is a rather major change.
+
+Drivers:
+
+* ESP32: fix for compilation error. Ref. [issue #122](https://github.com/grblHAL/ESP32/issues/122).  
+Fixes for handling multiple devices on a single SPI port. Fixed xPro v5 map for Modbus comms. Ref. [issue #121](https://github.com/grblHAL/ESP32/issues/121).
+
+* STM32F4xx: fix for compilation error for some boards when configured for Trinamic drivers.
+
+Plugins:
+
+* BLTouch: implemented `$BLTEST` command, verified.
+
+---
+
 <a name="20240928">Build 20240928
+
+Core:
 
 * Added `(PRINT, <msg>)` support and parameter formatting for `DEBUG` and `PRINT` commands. Available when expression support is enabled.
 

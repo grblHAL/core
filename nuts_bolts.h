@@ -64,11 +64,6 @@
 #endif
 #endif
 
-#if defined(__MSP430F5529__) || defined(__MSP432P401R__) || defined(__MSP432E401Y__) || defined(PART_TM4C123GH6PM) ||  defined(PART_TM4C1294NCPDT)
-#define isnanf(x) __isnanf(x)
-#define isinff(x) __isinff(x)
-#endif
-
 // Axis array index values. Must start with 0 and be continuous.
 #define X_AXIS 0 // Axis indexing value.
 #define Y_AXIS 1
@@ -233,10 +228,9 @@ float convert_delta_vector_to_unit_vector(float *vector);
 // parse ISO8601 datetime
 struct tm *get_datetime (const char *s);
 
-// calculate checksum byte for data
-uint8_t calc_checksum (uint8_t *data, uint32_t size);
-
 char *strcaps (char *s);
+
+uint_fast8_t bit_count (uint32_t bits);
 
 void dummy_handler (void);
 

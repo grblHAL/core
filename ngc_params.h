@@ -30,7 +30,14 @@
 
 #include "gcode.h"
 
+#ifndef NGC_MAX_PARAM_LENGTH
+#define NGC_MAX_PARAM_LENGTH 20
+#endif
+
+#define NGC_MAX_PARAM_ID 65535
+
 typedef uint16_t ngc_param_id_t;
+typedef uint32_t ngc_string_id_t;
 
 typedef struct {
     ngc_param_id_t id;
@@ -105,6 +112,13 @@ bool ngc_named_param_get (char *name, float *value);
 float ngc_named_param_get_by_id (ncg_name_param_id_t id);
 bool ngc_named_param_set (char *name, float value);
 bool ngc_named_param_exists (char *name);
+
+bool ngc_string_param_set (ngc_param_id_t id, char *value);
+ngc_string_id_t ngc_string_param_set_name (char *name);
+char *ngc_string_param_get (ngc_string_id_t id);
+bool ngc_string_param_exists (ngc_string_id_t id);
+void ngc_string_param_delete (ngc_string_id_t id);
+
 bool ngc_call_push (void *context);
 bool ngc_call_pop (void);
 uint_fast8_t ngc_call_level (void);
