@@ -521,17 +521,17 @@ typedef enum {
     // Calculated base values for driver/plugin stepper settings
     Setting_AxisExtended0        = Setting_AxisSettingsBase2,
     Setting_AxisExtended1        = Setting_AxisSettingsBase2 + AXIS_SETTINGS_INCREMENT,
-#if ENABLE_JERK_ACCELERATION
-    Setting_AxisJerk             = Setting_AxisSettingsBase2 + 2 * AXIS_SETTINGS_INCREMENT,
-#else
     Setting_AxisExtended2        = Setting_AxisSettingsBase2 + 2 * AXIS_SETTINGS_INCREMENT,
-#endif
     Setting_AxisExtended3        = Setting_AxisSettingsBase2 + 3 * AXIS_SETTINGS_INCREMENT,
     Setting_AxisExtended4        = Setting_AxisSettingsBase2 + 4 * AXIS_SETTINGS_INCREMENT,
     Setting_AxisExtended5        = Setting_AxisSettingsBase2 + 5 * AXIS_SETTINGS_INCREMENT,
     Setting_AxisExtended6        = Setting_AxisSettingsBase2 + 6 * AXIS_SETTINGS_INCREMENT,
     Setting_AxisExtended7        = Setting_AxisSettingsBase2 + 7 * AXIS_SETTINGS_INCREMENT,
+#if ENABLE_JERK_ACCELERATION
+    Setting_AxisJerk             = Setting_AxisSettingsBase2 + 8 * AXIS_SETTINGS_INCREMENT,
+#else
     Setting_AxisExtended8        = Setting_AxisSettingsBase2 + 8 * AXIS_SETTINGS_INCREMENT,
+#endif
     Setting_AxisExtended9        = Setting_AxisSettingsBase2 + 9 * AXIS_SETTINGS_INCREMENT,
 
     // Calculated base values for encoder settings
