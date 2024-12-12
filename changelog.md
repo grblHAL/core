@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+<a name="20241212"> 20241212
+
+Drivers:
+
+* ESP32: added generic map for ESP32-S3, refactored UART and lowlevel Trinamic driver code. Removed superfluous definitions in board maps.
+
+Plugins:
+
+* Trinamic: Disabled current settings pot for TMC2209 drivers. __NOTE:__ this may result in a larger current than expected flowing, if motors runs hot readjust!
+
+---
+
 <a name="20241210"> Build 20241210
 
 Core:
