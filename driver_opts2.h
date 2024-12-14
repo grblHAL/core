@@ -146,4 +146,12 @@
 #endif
 #endif
 
+#ifndef COPROC_STREAM
+#if USB_SERIAL_CDC
+#define COPROC_STREAM     0
+#else
+#define COPROC_STREAM     1
+#endif
+#endif
+
 /**/

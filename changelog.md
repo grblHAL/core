@@ -1,18 +1,38 @@
 ## grblHAL changelog
 
-<a name="20241212"> 20241212
+<a name="20241214">Build 20241214
+
+Core:
+
+* Added suppression of door open signal when in manual or semi-automatic tool change mode.
+
+Drivers:
+
+* ESP32: added board map for BTT Rodent. Untested!
+
+* STM32F7xx: added `$DFU` system command for entering DFU programming mode.
+
+Plugins:
+
+* Misc, ESP-AT: added compile time symbol for selecting stream to use.
+
+---
+
+<a name="20241212">20241212
 
 Drivers:
 
 * ESP32: added generic map for ESP32-S3, refactored UART and lowlevel Trinamic driver code. Removed superfluous definitions in board maps.
 
+* RP2040: fix for Ethernet config errors when no WizNet module is installed.
+
 Plugins:
 
-* Trinamic: Disabled current settings pot for TMC2209 drivers. __NOTE:__ this may result in a larger current than expected flowing, if motors runs hot readjust!
+* Trinamic: disabled current settings pot for TMC2209 drivers. __NOTE:__ this may result in a larger current than expected flowing, if motors runs hot readjust!
 
 ---
 
-<a name="20241210"> Build 20241210
+<a name="20241210">Build 20241210
 
 Core:
 
@@ -28,7 +48,7 @@ Plugins:
 
 ---
 
-<a name="20241208"> Build 20241208
+<a name="20241208">Build 20241208
 
 Core:
 
@@ -56,7 +76,7 @@ Plugins:
 
 ---
 
-<a name="20241205"> 20241205
+<a name="20241205">20241205
 
 Drivers:
 
@@ -68,7 +88,7 @@ Plugins:
 
 ---
 
-<a name="20241204"> 20241204
+<a name="20241204">20241204
 
 Core:
 

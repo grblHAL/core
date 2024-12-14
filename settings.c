@@ -2145,7 +2145,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_ToolChangeRestorePosition, "When set the spindle is moved so that the controlled point (tool tip) is the same as before the M6 command, if not the spindle is only moved to the Z home position." },
     { Setting_DualAxisLengthFailPercent, "Dual axis length fail in percent of axis max travel." },
     { Setting_DualAxisLengthFailMin, "Dual axis length fail minimum distance." },
-    { Setting_DualAxisLengthFailMax, "Dual axis length fail minimum distance." },
+    { Setting_DualAxisLengthFailMax, "Dual axis length fail maximum distance." },
 #if COMPATIBILITY_LEVEL <= 1
     { Setting_DisableG92Persistence, "Disables save/restore of G92 offset to non-volatile storage (NVS)." },
 #endif

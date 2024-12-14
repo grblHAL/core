@@ -78,7 +78,7 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
             mc_reset();
         else {
 #ifndef NO_SAFETY_DOOR_SUPPORT
-            if(signals.safety_door_ajar && hal.signals_cap.safety_door_ajar) {
+            if(signals.safety_door_ajar && hal.signals_cap.safety_door_ajar && !gc_state.tool_change) {
                 if(settings.safety_door.flags.ignore_when_idle) {
                     // Only stop the spindle (laser off) when idle or jogging,
                     // this to allow positioning the controlled point (spindle) when door is open.
