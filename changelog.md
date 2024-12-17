@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+<a name="20241217">Build 20241217
+
+Core:
+
+* Added preprocessor support for moving coolant outputs to auxiliary pool. Some minor bug fixes and code cleanup.  
+Those who have custom board maps must update pin assignments accordingly when updating to this or later versions.
+
+Drivers:
+
+* Most: moved coolant outputs to auxiliary outputs pool for many boards.  
+Web Builder functionality for assigning those outputs as coolant or as auxiliary (controlled by M62-M65) will be forthcoming.
+
+* ESP32: added driver support for second PWM spindle, only configurable for the MKS DLC32 v2 board for now.
+
+Plugins:
+
+* Spindle: removed obsoleted code, fix for second PWM spindle w/o direction output.
+
 <a name="20241214">Build 20241214
 
 Core:

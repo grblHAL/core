@@ -58,7 +58,7 @@
     onoff_spindle_init();
 #endif
 
-#if SPINDLE_ENABLE & (1<<SPINDLE_PWM2)
+#if SPINDLE_ENABLE & ((1<<SPINDLE_PWM2)|(1<<SPINDLE_PWM2_NODIR))
     extern void pwm_spindle_init (void);
     pwm_spindle_init();
 #endif

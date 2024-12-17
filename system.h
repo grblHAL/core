@@ -135,8 +135,9 @@ typedef union {
 
 // NOTE: the pin_function_t enum must be kept in sync with any changes!
 typedef union {
-    uint16_t value;
+    uint16_t bits;
     uint16_t mask;
+    uint16_t value;
     struct {
         uint16_t reset              :1,
                  feed_hold          :1,

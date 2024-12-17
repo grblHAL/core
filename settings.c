@@ -2912,14 +2912,18 @@ status_code_t setting_validate (setting_id_t id, float value, char *svalue)
 
 static bool settings_changed_spindle (void)
 {
-    static spindle_settings_t spindle_settings = {0};
+    static spindle_settings_t spindle_settings = {};
+    static spindle_pwm_settings_t spindle_pwm_settings = {};
 
-    bool changed;
+    bool base_changed, pwm_changed;
 
-    if((changed = memcmp(&spindle_settings, &settings.spindle, sizeof(spindle_settings_t))) != 0)
+    if((base_changed = memcmp(&spindle_settings, &settings.spindle, sizeof(spindle_settings_t))) != 0)
         memcpy(&spindle_settings, &settings.spindle, sizeof(spindle_settings_t));
 
-    return changed;
+    if((pwm_changed = memcmp(&spindle_pwm_settings, &settings.pwm_spindle, sizeof(spindle_pwm_settings_t))) != 0)
+        memcpy(&spindle_pwm_settings, &settings.pwm_spindle, sizeof(spindle_pwm_settings_t));
+
+    return base_changed || pwm_changed;
 }
 
 // A helper method to set settings from command line

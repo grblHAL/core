@@ -3,7 +3,7 @@
 Latest build date is 20241208, see the [changelog](changelog.md) for details.  
 
 > [!NOTE]
->  A settings reset will be performed on an update of builds prior to 20241208. Backup and restore of settings is recommended.  
+>  A settings reset will be performed on an update of builds prior to 20241217. Backup and restore of settings is recommended.  
 
 > [!NOTE]
 >  Build 20240222 has moved the probe input to the ioPorts pool of inputs and will be allocated from it when configured.
@@ -93,4 +93,4 @@ G/M-codes not supported by [legacy Grbl](https://github.com/gnea/grbl/wiki) are 
 Some [plugins](https://github.com/grblHAL/plugins) implements additional M-codes.
 
 ---
-20241209
+20241217

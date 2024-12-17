@@ -392,42 +392,83 @@ static inline control_signals_t aux_ctrl_scan_status (control_signals_t signals)
 #define AUX_CONTROLS_SCAN    0
 #endif
 
-#ifdef AUX_CONTROLS_OUT
+#if defined(AUX_CONTROLS_OUT) && !defined(AUX_CONTROLS)
+#define AUX_CONTROLS AUX_CONTROL_SPINDLE
+#elif !defined(AUX_CONTROLS)
+#define AUX_CONTROLS 0
+#endif
+
+#if AUX_CONTROLS
 
 // The following pins are bound explicitly to aux output pins
 static aux_ctrl_out_t aux_ctrl_out[] = {
-#if DRIVER_SPINDLE_ENABLE
+#if AUX_CONTROLS & AUX_CONTROL_SPINDLE
+#ifdef SPINDLE_ENABLE_PIN
+ #ifndef SPINDLE_ENABLE_PORT
+  #define SPINDLE_ENABLE_PORT NULL
+ #endif
     { .function = Output_SpindleOn,    .aux_port = 0xFF, .pin = SPINDLE_ENABLE_PIN,     .port = SPINDLE_ENABLE_PORT },
-#if DRIVER_SPINDLE_PWM_ENABLE
+#endif
+#ifdef SPINDLE_PWM_PIN
+ #ifndef SPINDLE_PWM_PORT
+  #define SPINDLE_PWM_PORT NULL
+ #endif
     { .function = Output_SpindlePWM,   .aux_port = 0xFF, .pin = SPINDLE_PWM_PIN,        .port = SPINDLE_PWM_PORT },
 #endif
-#if DRIVER_SPINDLE_DIR_ENABLE
+#ifdef SPINDLE_DIRECTION_PIN
+ #ifndef SPINDLE_DIRECTION_PORT
+  #define SPINDLE_DIRECTION_PORT NULL
+ #endif
     { .function = Output_SpindleDir,   .aux_port = 0xFF, .pin = SPINDLE_DIRECTION_PIN,  .port = SPINDLE_DIRECTION_PORT },
 #endif
-#endif // DRIVER_SPINDLE_ENABLE
-#if DRIVER_SPINDLE1_ENABLE
+
+#ifdef SPINDLE1_ENABLE_PIN
+ #ifndef SPINDLE1_ENABLE_PORT
+  #define SPINDLE1_ENABLE_PORT NULL
+ #endif
     { .function = Output_Spindle1On,   .aux_port = 0xFF, .pin = SPINDLE1_ENABLE_PIN,    .port = SPINDLE1_ENABLE_PORT },
-#if DRIVER_SPINDLE1_PWM_ENABLE
+#endif
+#ifdef SPINDLE1_PWM_PIN
+ #ifndef SPINDLE1_PWM_PORT
+  #define SPINDLE1_PWM_PORT NULL
+ #endif
     { .function = Output_Spindle1PWM,  .aux_port = 0xFF, .pin = SPINDLE1_PWM_PIN,       .port = SPINDLE1_PWM_PORT },
 #endif
-#if DRIVER_SPINDLE1_DIR_ENABLE
+#ifdef SPINDLE1_DIRECTION_PIN
+ #ifndef SPINDLE1_DIRECTION_PORT
+  #define SPINDLE1_DIRECTION_PORT NULL
+ #endif
     { .function = Output_Spindle1Dir,  .aux_port = 0xFF, .pin = SPINDLE1_DIRECTION_PIN, .port = SPINDLE1_DIRECTION_PORT },
 #endif
-#endif // DRIVER_SPINDLE1_DIR_ENABLE
+#endif // SPINDLES
+
+#if AUX_CONTROLS & AUX_CONTROL_COOLANT
+#ifdef COOLANT_FLOOD_PIN
+ #ifndef COOLANT_FLOOD_PORT
+  #define COOLANT_FLOOD_PORT NULL
+ #endif
+    { .function = Output_CoolantFlood, .aux_port = 0xFF, .pin = COOLANT_FLOOD_PIN,      .port = COOLANT_FLOOD_PORT },
+#endif
+#ifdef COOLANT_MIST_PIN
+ #ifndef COOLANT_MIST_PORT
+  #define COOLANT_MIST_PORT NULL
+ #endif
+    { .function = Output_CoolantMist,  .aux_port = 0xFF, .pin = COOLANT_MIST_PIN,       .port = COOLANT_MIST_PORT },
+#endif
+#endif // COOLANT
+
 #ifdef COPROC_RESET_PIN
+ #ifndef COPROC_RESET_PORT
+  #define COPROC_RESET_PORT NULL
+ #endif
     { .function = Output_CoProc_Reset, .aux_port = 0xFF, .pin = COPROC_RESET_PIN,       .port = COPROC_RESET_PORT },
 #endif
 #ifdef COPROC_BOOT0_PIN
+ #ifndef COPROC_BOOT0_PORT
+  #define COPROC_BOOT0_PORT NULL
+ #endif
     { .function = Output_CoProc_Boot0, .aux_port = 0xFF, .pin = COPROC_BOOT0_PIN,       .port = COPROC_BOOT0_PORT },
 #endif
-/*
-#ifdef COOLANT_FLOOD_PIN
-    { .function = Output_CoolantFlood, .aux_port = 0xFF, .pin = COOLANT_FLOOD_PIN, .port = COOLANT_FLOOD_PORT },
-#endif
-#ifdef COOLANT_MIST_PIN
-    { .function = Output_CoolantMist, .aux_port = 0xFF, .pin = COOLANT_MIST_PIN, .port = COOLANT_MIST_PORT },
-#endif
-*/
 };
 
 static inline aux_ctrl_out_t *aux_out_remap_explicit (void *port, uint8_t pin, uint8_t aux_port, void *output)
@@ -473,7 +514,7 @@ static inline void aux_ctrl_claim_out_ports (aux_claim_explicit_out_ptr aux_clai
     }
 }
 
-#endif // AUX_CONTROLS_OUT
+#endif // AUX_CONTROLS
 
 //
 

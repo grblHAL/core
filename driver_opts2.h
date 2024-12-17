@@ -25,28 +25,20 @@
 // NOTE: do NOT change options here - edit the driver specific my_machine.h instead!
 //
 
-#if DRIVER_SPINDLE_ENABLE && !defined(SPINDLE_ENABLE_PIN)
+#if (DRIVER_SPINDLE_ENABLE & SPINDLE_ENA) && !defined(SPINDLE_ENABLE_PIN)
 #warning "Selected spindle is not supported!"
-#undef DRIVER_SPINDLE_ENABLE
-#define DRIVER_SPINDLE_ENABLE 0
 #endif
 
-#if DRIVER_SPINDLE_DIR_ENABLE && !defined(SPINDLE_DIRECTION_PIN)
+#if (DRIVER_SPINDLE_ENABLE & SPINDLE_DIR) && !defined(SPINDLE_DIRECTION_PIN)
 #warning "Selected spindle is not fully supported - no direction output!"
-#undef DRIVER_SPINDLE_DIR_ENABLE
-#define DRIVER_SPINDLE_DIR_ENABLE 0
 #endif
 
-#if DRIVER_SPINDLE_PWM_ENABLE && (!DRIVER_SPINDLE_ENABLE || !defined(SPINDLE_PWM_PIN))
+#if (DRIVER_SPINDLE_ENABLE & SPINDLE_PWM) && !defined(SPINDLE_PWM_PIN)
 #warning "Selected spindle is not supported!"
-#undef DRIVER_SPINDLE_PWM_ENABLE
-#define DRIVER_SPINDLE_PWM_ENABLE 0
 #endif
 
-#if DRIVER_SPINDLE_PWM1_ENABLE && (!DRIVER_SPINDLE1_ENABLE || !defined(SPINDLE1_PWM_PIN))
+#if (DRIVER_SPINDLE1_ENABLE & SPINDLE_PWM) && !defined(SPINDLE_PWM_PIN)
 #warning "Selected spindle 1 is not supported!"
-#undef DRIVER_SPINDLE_PWM1_ENABLE
-#define DRIVER_SPINDLE_PWM1_ENABLE 0
 #endif
 
 #if MPG_ENABLE == 1 && !defined(MPG_MODE_PIN)
@@ -144,6 +136,12 @@
 #undef MPG_STREAM
 #define MPG_STREAM (MODBUS_RTU_STREAM + 1)
 #endif
+#endif
+
+#if defined(COPROC_RESET_PIN) && defined(COPROC_BOOT0_PIN)
+#define COPROC_PASSTHRU 1
+#else
+#define COPROC_PASSTHRU 0
 #endif
 
 #ifndef COPROC_STREAM
