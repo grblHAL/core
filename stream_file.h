@@ -24,5 +24,6 @@
 #include "vfs.h"
 #include "core_handlers.h"
 
+bool stream_is_file (void);
 void stream_redirect_close (vfs_file_t *file);
 vfs_file_t *stream_redirect_read (char *filename, status_message_ptr status_handler, on_file_end_ptr eof_handler);

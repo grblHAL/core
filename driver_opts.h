@@ -531,7 +531,7 @@
 #endif
 #ifndef FTP_ENABLE
 #define FTP_ENABLE          0
-#elif !SDCARD_ENABLE
+#elif !(SDCARD_ENABLE || LITTLEFS_ENABLE)
 #undef FTP_ENABLE
 #define FTP_ENABLE          0
 #endif
@@ -646,6 +646,19 @@
 
 #ifndef SDCARD_ENABLE
 #define SDCARD_ENABLE       0
+#endif
+
+#if LITTLEFS_ENABLE == 2 && SDCARD_ENABLE
+#undef LITTLEFS_ENABLE
+#define LITTLEFS_ENABLE     1
+#endif
+
+#if LITTLEFS_ENABLE
+#if LITTLEFS_ENABLE == 2
+#define LITTLEFS_MOUNT_DIR "/"
+#else
+#define LITTLEFS_MOUNT_DIR "/littlefs"
+#endif
 #endif
 
 #ifndef SPI_ENABLE

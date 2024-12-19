@@ -1,5 +1,26 @@
 ## grblHAL changelog
 
+<a name="20241219">Build 20241219
+
+Core:
+
+* Added directory \(mounts\) listing capabilities to the default root file system when no real root file system \(SD card\) is mounted.
+
+Boards:
+
+* ESP32, iMXRT1062, RP2040: added option to mount littlefs as root filesystem when SD card is not enabled.  
+Ref. RP2040 issue [#103](https://github.com/grblHAL/RP2040/issues/103).
+
+* STM32F3xx: added serial port to `$pins` report.
+
+Plugins:
+
+* WebUI, Networking and SD card: updated to handle littlefs mounted as root filesystem.
+
+---
+
+## grblHAL changelog
+
 <a name="20241217">Build 20241217
 
 Core:

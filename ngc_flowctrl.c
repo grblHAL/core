@@ -669,7 +669,7 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
                         if((subname = ngc_string_param_get((ngc_string_id_t)o_label))) {
                             char filename[60];
                             vfs_file_t *file;
-#if LITTLEFS_ENABLE
+#if LITTLEFS_ENABLE == 1
                             sprintf(filename, "/littlefs/%s.macro", subname);
 
                             if((file = stream_redirect_read(filename, onNamedSubError, onNamedSubEOF)) == NULL) {
