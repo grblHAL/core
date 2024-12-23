@@ -1,5 +1,14 @@
 ## grblHAL changelog
 
+<a name="20241222">20241222
+
+Drivers:
+
+* iMXRT1062: Added fix for not bringing up the network stack on link aquired when static IP configured.  
+Fixes for boards not booting when pin controlled MPG mode option selected.
+
+---
+
 <a name="20241222">Build 20241222
 
 Core:
