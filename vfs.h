@@ -168,6 +168,11 @@ typedef struct vfs_mount
     char path[64];
     const vfs_t *vfs;
     vfs_st_mode_t mode;
+#ifdef ESP_PLATFORM // some versions of ESP-IDF/Compiler combos are fcked up
+    time_t st_mtim;
+#else
+    time_t st_mtime;
+#endif
     struct vfs_mount *next;
 } vfs_mount_t;
 

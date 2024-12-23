@@ -1013,7 +1013,7 @@ void report_build_info (char *line, bool extended)
         strcat(buf, "SED,");
     #endif
 
-        if(hal.rtc.get_datetime)
+        if(hal.driver_cap.rtc)
             strcat(buf, "RTC,");
 
         if(canbus_enabled())
@@ -2483,7 +2483,7 @@ status_code_t report_time (void)
 
     if(hal.rtc.get_datetime) {
         struct tm time;
-        if((ok = !!hal.rtc.get_datetime(&time))) {
+        if((ok = hal.rtc.get_datetime(&time))) {
             hal.stream.write("[RTC:");
             hal.stream.write(uitoa(time.tm_year + 1900));
             print_uito2a("-", time.tm_mon + 1);

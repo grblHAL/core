@@ -1,5 +1,25 @@
 ## grblHAL changelog
 
+<a name="20241222">Build 20241222
+
+Core:
+
+* Improved handling of real-time clock \(RTC\).
+
+Drivers:
+
+* ESP32: added support for 4-lane SDIO SD card interface and SD card detect input. Updated RTC handling to match core.
+
+* iMXRT1062: fix for littlefs issue. Ref. [this comment](https://github.com/grblHAL/core/discussions/203#discussioncomment-11646077).
+
+* RP2040, STM32F4xx, STM3F27xx: updated RTC handling to match core.
+
+Plugins:
+
+* SD card, Networking: added missing include.
+
+---
+
 <a name="20241219">Build 20241219
 
 Core:
