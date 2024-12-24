@@ -63,7 +63,11 @@ typedef struct plan_block {
     float entry_speed_sqr;          // The current planned entry speed at block junction in (mm/min)^2
     float max_entry_speed_sqr;      // Maximum allowable entry speed based on the minimum of junction limit and
                                     // neighboring nominal speeds with overrides in (mm/min)^2
-    float acceleration;             // Axis-limit adjusted line acceleration in (mm/min^2). Does not change.
+    float acceleration;             // Effective acceleration over plannerblock calculated from trapezoidal movement plan. Does not change in trapezoidal mode.                     
+#if ENABLE_JERK_ACCELERATION   
+    float max_acceleration;         // Axis-limit adjusted line acceleration in (mm/min^2). Does not change.
+    float jerk;                     // Axis-limit adjusted jerk value in (mm/min^3). Does not change.
+#endif
     float millimeters;              // The remaining distance for this block to be executed in (mm).
                                     // NOTE: This value may be altered by stepper algorithm during execution.
 
@@ -73,6 +77,9 @@ typedef struct plan_block {
     float programmed_rate;          // Programmed rate of this block (mm/min).
 #ifdef KINEMATICS_API
     float rate_multiplier;          // Rate multiplier of this block.
+#endif
+#ifdef ENABLE_ACCELERATION_PROFILES
+    float acceleration_factor;        // Stores the currently used acceleration factor.
 #endif
     // Stored spindle speed data used by spindle overrides and resuming methods.
     spindle_t spindle;              // Block spindle parameters. Copied from pl_line_data.
@@ -88,6 +95,9 @@ typedef struct {
     float feed_rate;                // Desired feed rate for line motion. Value is ignored, if rapid motion.
 #ifdef KINEMATICS_API
     float rate_multiplier;          // Feed rate multiplier.
+#endif
+#ifdef ENABLE_ACCELERATION_PROFILES
+    float acceleration_factor;        // Stores the currently used acceleration factor.
 #endif
 #if ENABLE_PATH_BLENDING
     float path_tolerance;           //!< Path blending tolerance.
