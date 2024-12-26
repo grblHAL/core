@@ -778,19 +778,6 @@ static status_code_t set_estop_unlock (setting_id_t id, uint_fast16_t int_value)
     return Status_OK;
 }
 
-#if COMPATIBILITY_LEVEL <= 1
-
-static status_code_t set_offset_lock (setting_id_t id, uint_fast16_t int_value)
-{
-    settings.parking.flags.offset_lock = int_value & 0b111; // TODO: remove
-    settings.offset_lock.mask &= ~0b111; // TODO: remove
-    settings.offset_lock.mask |= settings.parking.flags.offset_lock;
-
-    return Status_OK;
-}
-
-#endif
-
 static inline void tmp_set_hard_limits (void)
 {
     sys.hard_limits.mask = settings.limits.flags.hard_enabled ? AXES_BITMASK : 0;
@@ -828,51 +815,9 @@ static status_code_t set_jog_soft_limited (setting_id_t id, uint_fast16_t int_va
     return Status_OK;
 }
 
-static status_code_t set_homing_enable (setting_id_t id, uint_fast16_t int_value)
-{
-    homing_flags_t homing;
-
-    homing.value = int_value;
-
-    if(homing.enabled) {
-#if COMPATIBILITY_LEVEL > 1
-        settings.homing.flags.enabled = On;
-        settings.homing.flags.init_lock = DEFAULT_HOMING_INIT_LOCK;
-        settings.homing.flags.single_axis_commands = DEFAULT_HOMING_SINGLE_AXIS_COMMANDS;
-        settings.homing.flags.force_set_origin = DEFAULT_HOMING_FORCE_SET_ORIGIN;
-        settings.homing.flags.manual = DEFAULT_HOMING_ALLOW_MANUAL;
-        settings.homing.flags.override_locks = DEFAULT_HOMING_OVERRIDE_LOCKS;
-        settings.homing.flags.keep_on_reset = DEFAULT_HOMING_KEEP_STATUS_ON_RESET;
-        settings.homing.flags.use_limit_switches = DEFAULT_HOMING_USE_LIMIT_SWITCHES;
-        settings.limits.flags.two_switches = DEFAULT_LIMITS_TWO_SWITCHES_ON_AXES;
-#else
-        settings.homing.flags.value = int_value & 0b1111;
-        settings.limits.flags.two_switches = homing.two_switches;
-        settings.homing.flags.manual = homing.manual;
-        settings.homing.flags.override_locks = homing.override_locks;
-        settings.homing.flags.keep_on_reset = homing.keep_on_reset;
-        settings.homing.flags.use_limit_switches = homing.use_limit_switches;
-#endif
-    } else {
-        settings.homing.flags.value = 0;
-        settings.limits.flags.soft_enabled = Off; // Force disable soft-limits.
-        settings.limits.flags.jog_soft_limited = Off;
-    }
-
-    return Status_OK;
-}
-
 static status_code_t set_enable_legacy_rt_commands (setting_id_t id, uint_fast16_t int_value)
 {
     settings.flags.legacy_rt_commands = int_value != 0;
-
-    return Status_OK;
-}
-
-static status_code_t set_homing_cycle (setting_id_t id, uint_fast16_t int_value)
-{
-    settings.homing.cycle[id - Setting_HomingCycle_1].mask = int_value;
-    limits_set_homing_axes();
 
     return Status_OK;
 }
