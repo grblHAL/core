@@ -2376,7 +2376,7 @@ status_code_t gc_execute_block (char *block)
             if (gc_block.words.e){
                 FAIL(Status_GcodeUnsupportedCommand);
                 break;}
-            else if (!gc_block.word.p){
+            else if (!gc_block.words.p){
                 gc_block.values.p = 1.0f;}
             else if (gc_block.values.p < 1.0f){
                 FAIL(Status_NegativeValue);}

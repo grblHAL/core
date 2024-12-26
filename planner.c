@@ -339,7 +339,7 @@ inline static float plan_compute_profile_parameters (plan_block_t *block, float 
     return nominal_speed;
 }
 
-static inline float limit_acceleration_by_axis_maximum (float *unit_vec)
+static inline float limit_acceleration_by_axis_maximum (float *unit_vec,)
 {
     uint_fast8_t idx = N_AXIS;
     float limit_value = SOME_LARGE_VALUE;
@@ -348,9 +348,6 @@ static inline float limit_acceleration_by_axis_maximum (float *unit_vec)
         if (unit_vec[--idx] != 0.0f)  // Avoid divide by zero.
             limit_value = min(limit_value, fabsf(settings.axis[idx].acceleration / unit_vec[idx]));
     } while(idx);
-#if ENABLE_ACCELERATION_PROFILES
-    limit_value *= block->acceleration_factor;
-#endif
     return limit_value;
 }
 
@@ -364,9 +361,6 @@ static inline float limit_jerk_by_axis_maximum (float *unit_vec)
         if (unit_vec[--idx] != 0.0f)  // Avoid divide by zero.
             limit_value = min(limit_value, fabsf(settings.axis[idx].jerk / unit_vec[idx]));
     } while(idx);
-#if ENABLE_ACCELERATION_PROFILES
-    limit_value *= block->acceleration_factor;
-#endif
     return limit_value;
 }
 #endif
@@ -531,8 +525,14 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
 #ifdef KINEMATICS_API
     block->rate_multiplier = pl_data->rate_multiplier;
 #endif
-#ifdef ENABLE_ACCELERATION_PROFILES
+#if ENABLE_ACCELERATION_PROFILES                                 // recalculate the acceleration limits when enabled.
     block->acceleration_factor = pl_data->acceleration_factor;
+#if ENABLE_JERK_ACCELERATION
+    block->max_acceleration *= block->acceleration_factor; 
+    block->jerk *= block->acceleration_factor;
+#else
+    block->acceleration *= block->acceleration_factor;
+#endif
 #endif
 
     // Store programmed rate.

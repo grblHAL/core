@@ -708,14 +708,13 @@ typedef struct {
     float steps_per_mm;
     float max_rate;
     float acceleration;
-#if ENABLE_JERK_ACCELERATION   
-    float jerk;
-#endif
     float max_travel;
     float dual_axis_offset;
     float homing_seek_rate;
     float homing_feed_rate;
+#if ENABLE_JERK_ACCELERATION 
     float jerk;
+#endif
 #if ENABLE_BACKLASH_COMPENSATION
     float backlash;
 #endif
