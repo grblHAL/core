@@ -1,10 +1,24 @@
 ## grblHAL changelog
 
+<a name="20241226">20241226
+
+Drivers:
+
+* STM32F4xx: fix for not enabling steppers after clearing E-stop alarm. Ref. issue [#203](https://github.com/grblHAL/STM32F4xx/issues/203).
+
+Plugins:
+
+* Networking: fix for not bringing up the network stack on link aquired when static IP configured, affects WizNet modules.
+
+* Motors: fix for "typo" blocking StealthChop mode for TMC2209 drivers when it should be for TMC2660. Ref. issue [#17](https://github.com/grblHAL/Plugins_motor/issues/17).
+
+--
+
 <a name="20241222">20241222
 
 Drivers:
 
-* iMXRT1062: Added fix for not bringing up the network stack on link aquired when static IP configured.  
+* iMXRT1062: added fix for not bringing up the network stack on link aquired when static IP configured.  
 Fixes for boards not booting when pin controlled MPG mode option selected.
 
 ---
