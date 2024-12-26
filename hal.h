@@ -70,7 +70,9 @@ typedef union {
                  pwm_spindle               :1,
                  probe_latch               :1,
                  toolsetter                :1, //!< Toolsetter (2nd probe) input is supported.
-                 unassigned                :9;
+                 rtc                       :1,
+                 rtc_set                   :1,
+                 unassigned                :7;
     };
 } driver_cap_t;
 

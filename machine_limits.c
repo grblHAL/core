@@ -558,7 +558,7 @@ status_code_t limits_go_home (axes_signals_t cycle)
         // If axes in cycle has different feed rates home them separately
         if(axis0 == 254) {
 
-            status_code_t status;
+            status_code_t status = Status_OK;
 
             idx = 0;
             while(cycle.mask) {

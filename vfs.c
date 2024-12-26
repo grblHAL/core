@@ -31,6 +31,28 @@
 #undef feof
 #endif
 
+static vfs_mount_t *get_rootfs (void);
+
+static inline vfs_mount_t *path_is_mount_dir (const char *path)
+{
+    size_t plen = strlen(path);
+
+    vfs_mount_t *mount = get_rootfs();
+
+    if(*path == '/' && plen == 1)
+        return mount;
+
+    size_t mlen;
+
+    if((mount = mount->next)) do {
+        mlen = strlen(mount->path) - 1;
+        if(mlen == plen && !strncmp(mount->path, path, mlen))
+            break;
+    } while((mount = mount->next));
+
+    return mount;
+}
+
 // NULL file system
 
 static vfs_file_t *fs_open (const char *filename, const char *mode)
@@ -79,7 +101,38 @@ static int fs_dirop (const char *path)
 
 static vfs_dir_t *fs_opendir (const char *path)
 {
-    return NULL;
+    static vfs_dir_t *dir = NULL;
+
+    if(dir == NULL)
+        dir = calloc(sizeof(vfs_dir_t) + 3, 1);
+
+    if(dir) {
+        vfs_mount_t **mount = (vfs_mount_t **)&dir->handle;
+        *mount = get_rootfs()->next;
+    }
+
+    return !strcmp(path, "/") ? dir : NULL;
+}
+
+static char *fs_readdir (vfs_dir_t *dir, vfs_dirent_t *dirent)
+{
+    vfs_mount_t **mount = (vfs_mount_t **)&dir->handle;
+
+    vfs_errno = 0;
+
+    if(*mount) {
+        strcpy(dirent->name, (*mount)->path);
+        *(strchr(dirent->name, '\0') - 1) = '\0';
+        dirent->st_mode = (*mount)->mode;
+        dirent->st_mode.directory = true;
+        while((*mount = (*mount)->next)) {
+            if(!(*mount)->mode.hidden)
+                break;
+        }
+    } else
+        *dirent->name = '\0';
+
+    return *dirent->name ? dirent->name : NULL;
 }
 
 static void fs_closedir (vfs_dir_t *dir)
@@ -88,7 +141,27 @@ static void fs_closedir (vfs_dir_t *dir)
 
 static int fs_stat (const char *filename, vfs_stat_t *st)
 {
-    return -1;
+    char path[64];
+    vfs_mount_t *mount;
+
+    if((mount = path_is_mount_dir(strcat(strcpy(path, "/"), filename)))) {
+
+        if(!(mount->vfs->fstat && (vfs_errno = mount->vfs->fstat("/", st) == 0))) {
+
+            vfs_errno = 0;
+            st->st_size = 1024;
+            st->st_mode = mount->mode;
+            st->st_mode.directory = true;
+#if ESP_PLATFORM
+            st->st_mtim = mount->st_mtim;
+#else
+            st->st_mtime = mount->st_mtime;
+#endif
+        }
+    } else
+        vfs_errno = -1;
+
+    return vfs_errno;
 }
 
 static int fs_chdir (const char *path)
@@ -114,6 +187,7 @@ static const vfs_t fs_null = {
     .fchdir = fs_chdir,
     .frmdir = fs_dirop,
     .fopendir = fs_opendir,
+    .readdir = fs_readdir,
     .fclosedir = fs_closedir,
     .fstat = fs_stat,
     .fgetcwd = fs_getcwd
@@ -133,6 +207,11 @@ static char cwd[100] = "/";
 int vfs_errno = 0;
 vfs_events_t vfs = {0};
 
+static vfs_mount_t *get_rootfs (void)
+{
+    return &root;    
+}
+
 // Strip trailing directory separator, FatFS dont't like it (WinSCP adds it)
 char *vfs_fixpath (char *path)
 {
@@ -141,25 +220,6 @@ char *vfs_fixpath (char *path)
         *s = '\0';
 
     return path;
-}
-
-static inline vfs_mount_t *path_is_mount_dir (const char *path)
-{
-    size_t plen = strlen(path);
-
-    if(*path == '/' && plen == 1)
-        return &root;
-
-    size_t mlen;
-    vfs_mount_t *mount = root.next;
-
-    if(mount) do {
-        mlen = strlen(mount->path) - 1;
-        if(mlen == plen && !strncmp(mount->path, path, mlen))
-            break;
-    } while((mount = mount->next));
-
-    return mount;
 }
 
 static vfs_mount_t *get_mount (const char *path)
@@ -324,7 +384,7 @@ int vfs_chdir (const char *path)
 
     vfs_errno = 0;
 
-    if(*path != '/') {
+    if(*path != '/' && strcmp(cwd, "/")) {
         if(strcmp(path, "..")) {
             if(strlen(cwd) > 1)
                 strcat(cwd, "/");
@@ -336,24 +396,24 @@ int vfs_chdir (const char *path)
         }
     } else {
 
-        strcpy(cwd, path);
+        if(*path == '/')
+            strcpy(cwd, path);
+        else
+            strcat(strcpy(cwd, "/"), path);
 
-        if((cwdmount = get_mount(path)) && strchr(path + 1, '/') == NULL && cwdmount != &root) {
+        vfs_fixpath(cwd);
+
+        if((cwdmount = get_mount(cwd)) && strchr(cwd + 1, '/') == NULL && cwdmount != &root) {
 
             strcpy(cwd, cwdmount->path);
-            char *s;
-            if((s = strrchr(cwd, '/')))
-                *s = '\0';
+            vfs_fixpath(cwd);
 
             return 0;
         }
     }
 
-    if((ret = cwdmount ? cwdmount->vfs->fchdir(path) : -1) != 0) { // + strlen(mount->path));))
-        char *s = strrchr(cwd, '/');
-        if(s)
-            *s = '\0';
-    }
+    if((ret = cwdmount ? cwdmount->vfs->fchdir(path) : -1) != 0) // + strlen(mount->path));))
+        vfs_fixpath(cwd);
 
     return ret;
 }
@@ -459,9 +519,9 @@ int vfs_stat (const char *filename, vfs_stat_t *st)
             st->st_mode.mode = 0;
             st->st_mode.directory = true;
 #if defined(ESP_PLATFORM)
-            st->st_mtim = (time_t)0;
+            st->st_mtim = mount->st_mtim;
 #else
-            st->st_mtime = (time_t)0;
+            st->st_mtime = mount->st_mtime;
 #endif
             ret = 0;
         }
@@ -489,6 +549,17 @@ vfs_free_t *vfs_fgetfree (const char *path)
     return NULL;
 }
 
+static bool vfs_get_time (struct tm *time)
+{
+    memset(time, 0, sizeof(struct tm));
+
+ // 2024-01-01:00:00:00
+    time->tm_year = 2024 - 1900;
+    time->tm_mday = 1;
+
+    return true;
+}
+
 bool vfs_mount (const char *path, const vfs_t *fs, vfs_st_mode_t mode)
 {
     vfs_mount_t *mount;
@@ -496,7 +567,7 @@ bool vfs_mount (const char *path, const vfs_t *fs, vfs_st_mode_t mode)
     if(!strcmp(path, "/")) {
         root.vfs = fs;
         root.mode = mode;
-    } else if((mount = (vfs_mount_t *)malloc(sizeof(vfs_mount_t)))) {
+    } else if((mount = (vfs_mount_t *)calloc(sizeof(vfs_mount_t), 1))) {
 
         strcpy(mount->path, path);
         if(mount->path[strlen(path) - 1] != '/')
@@ -505,6 +576,15 @@ bool vfs_mount (const char *path, const vfs_t *fs, vfs_st_mode_t mode)
         mount->vfs = fs;
         mount->mode = mode;
         mount->next = NULL;
+        if(hal.rtc.get_datetime) {
+            struct tm tm;
+            hal.rtc.get_datetime(&tm);
+#ifdef ESP_PLATFORM
+            mount->st_mtim = mktime(&tm);
+#else
+            mount->st_mtime = mktime(&tm);
+#endif
+        }
 
         vfs_mount_t *lmount = &root;
 
@@ -513,6 +593,9 @@ bool vfs_mount (const char *path, const vfs_t *fs, vfs_st_mode_t mode)
 
         lmount->next = mount;
     }
+
+    if(hal.rtc.get_datetime == NULL)
+        hal.rtc.get_datetime = vfs_get_time;
 
     if(fs && vfs.on_mount)
         vfs.on_mount(path, fs);

@@ -25,8 +25,9 @@
 
 // if changed to > 8 bits planner_cond_t needs to be changed too
 typedef union {
+    uint8_t bits;                  //!< Bitmask bits
+    uint8_t mask;                  //!< Bitmask
     uint8_t value;                 //!< Bitmask value
-    uint8_t mask;                  //!< Synonym for bitmask value
     struct {
         uint8_t flood          :1, //!< Flood coolant.
                 mist           :1, //!< Mist coolant, optional.

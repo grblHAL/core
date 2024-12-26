@@ -78,7 +78,7 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
             mc_reset();
         else {
 #ifndef NO_SAFETY_DOOR_SUPPORT
-            if(signals.safety_door_ajar && hal.signals_cap.safety_door_ajar) {
+            if(signals.safety_door_ajar && hal.signals_cap.safety_door_ajar && !gc_state.tool_change) {
                 if(settings.safety_door.flags.ignore_when_idle) {
                     // Only stop the spindle (laser off) when idle or jogging,
                     // this to allow positioning the controlled point (spindle) when door is open.
@@ -720,18 +720,23 @@ static status_code_t set_startup_line1 (sys_state_t state, char *args)
 
 static status_code_t rtc_action (sys_state_t state, char *args)
 {
-    status_code_t retval = Status_OK;
+    status_code_t retval;
 
-    if(args) {
+    if((retval = hal.driver_cap.rtc ? Status_OK : Status_InvalidStatement) == Status_OK) {
 
-        struct tm *time = get_datetime(args);
+        if(args == NULL)
+            retval = report_time();
 
-        if(time)
-            hal.rtc.set_datetime(time);
-        else
-            retval = Status_BadNumberFormat;
-    } else
-        retval = report_time();
+        else if(hal.rtc.set_datetime) {
+
+            struct tm *time = get_datetime(args);
+
+            if(time == NULL)
+                retval = Status_BadNumberFormat;
+            else if(!hal.rtc.set_datetime(time))
+                retval = Status_InvalidStatement;
+        }
+    }
 
     return retval;
 }
@@ -772,7 +777,7 @@ const char *help_rst (const char *cmd)
 
 const char *help_rtc (const char *cmd)
 {
-    if(hal.rtc.get_datetime) {
+    if(hal.driver_cap.rtc) {
         hal.stream.write("$RTC - output current time." ASCII_EOL);
         hal.stream.write("$RTC=<ISO8601 datetime> - set current time." ASCII_EOL);
     }

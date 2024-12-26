@@ -94,8 +94,12 @@ static void change_completed (void)
 
     grbl.on_probe_completed = NULL;
     gc_state.tool_change = probe_toolsetter = false;
-}
 
+#ifndef NO_SAFETY_DOOR_SUPPORT
+    if(hal.control.get_state().safety_door_ajar && hal.signals_cap.safety_door_ajar)
+        system_set_exec_state_flag(EXEC_SAFETY_DOOR);
+#endif
+}
 
 // Reset claimed HAL entry points and restore previous tool if needed on soft restart.
 // Called from EXEC_RESET and EXEC_STOP handlers (via HAL).

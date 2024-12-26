@@ -2273,7 +2273,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_ToolChangeRestorePosition, "When set the spindle is moved so that the controlled point (tool tip) is the same as before the M6 command, if not the spindle is only moved to the Z home position." },
     { Setting_DualAxisLengthFailPercent, "Dual axis length fail in percent of axis max travel." },
     { Setting_DualAxisLengthFailMin, "Dual axis length fail minimum distance." },
-    { Setting_DualAxisLengthFailMax, "Dual axis length fail minimum distance." },
+    { Setting_DualAxisLengthFailMax, "Dual axis length fail maximum distance." },
 #if COMPATIBILITY_LEVEL <= 1
     { Setting_DisableG92Persistence, "Disables save/restore of G92 offset to non-volatile storage (NVS)." },
 #endif
@@ -3040,14 +3040,18 @@ status_code_t setting_validate (setting_id_t id, float value, char *svalue)
 
 static bool settings_changed_spindle (void)
 {
-    static spindle_settings_t spindle_settings = {0};
+    static spindle_settings_t spindle_settings = {};
+    static spindle_pwm_settings_t spindle_pwm_settings = {};
 
-    bool changed;
+    bool base_changed, pwm_changed;
 
-    if((changed = memcmp(&spindle_settings, &settings.spindle, sizeof(spindle_settings_t))) != 0)
+    if((base_changed = memcmp(&spindle_settings, &settings.spindle, sizeof(spindle_settings_t))) != 0)
         memcpy(&spindle_settings, &settings.spindle, sizeof(spindle_settings_t));
 
-    return changed;
+    if((pwm_changed = memcmp(&spindle_pwm_settings, &settings.pwm_spindle, sizeof(spindle_pwm_settings_t))) != 0)
+        memcpy(&spindle_pwm_settings, &settings.pwm_spindle, sizeof(spindle_pwm_settings_t));
+
+    return base_changed || pwm_changed;
 }
 
 // A helper method to set settings from command line

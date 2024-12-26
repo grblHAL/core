@@ -62,7 +62,7 @@ static int16_t stream_read_file (void)
             return ASCII_LF;    // Return a linefeed if the last character was not a linefeed.
         }
     } else
-        c = SERIAL_NO_DATA; // TODO: close all streams?
+        return SERIAL_NO_DATA; // TODO: close all streams?
 
     return (int16_t)c;
 }
@@ -118,6 +118,11 @@ static void onReportHandlersInit (void)
 
     status_message = grbl.report.status_message;
     grbl.report.status_message = trap_status_messages;
+}
+
+bool stream_is_file (void)
+{
+    return hal.stream.type == StreamType_File;
 }
 
 vfs_file_t *stream_redirect_read (char *filename, status_message_ptr status_handler, on_file_end_ptr eof_handler)

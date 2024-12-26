@@ -286,7 +286,7 @@ int grbl_enter (void)
 
         spindle_ptrs_t *spindle = spindle_get_hal(spindle_get_default(), SpindleHAL_Raw);
 
-        spindle_id = spindle ? spindle->id : spindle->ref_id;
+        spindle_id = spindle ? spindle->id : 0;
         settings.spindle.ref_id = spindle ? spindle->ref_id : DEFAULT_SPINDLE;
     }
 

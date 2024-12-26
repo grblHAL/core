@@ -831,10 +831,6 @@ bool spindle_precompute_pwm_values (spindle_ptrs_t *spindle, spindle_pwm_t *pwm_
         pwm_data->compute_value = compute_dummy_pwm_value;
     }
 
-    pwm_data->flags.invert_pwm = pwm_data->flags.invert_pwm;
-    pwm_data->flags.always_on = pwm_data->flags.always_on;
-    pwm_data->flags.cloned = pwm_data->flags.cloned;
-
     spindle->context.pwm = pwm_data;
 
 #if ENABLE_SPINDLE_LINEARIZATION
