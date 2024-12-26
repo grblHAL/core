@@ -546,6 +546,9 @@ typedef struct {
     bool auto_restore;
     float feed_rate;                     //!< {F} NOTE: only set when saving modal state
 #endif
+#if ENABLE_ACCELERATION_PROFILES
+    float acceleration_profile;          //!< {G187} currently active acceleration profile
+#endif
 } gc_modal_t;
 
 //! Data for canned cycles.
