@@ -339,7 +339,7 @@ inline static float plan_compute_profile_parameters (plan_block_t *block, float 
     return nominal_speed;
 }
 
-static inline float limit_acceleration_by_axis_maximum (float *unit_vec,)
+static inline float limit_acceleration_by_axis_maximum (float *unit_vec)
 {
     uint_fast8_t idx = N_AXIS;
     float limit_value = SOME_LARGE_VALUE;

@@ -712,9 +712,7 @@ typedef struct {
     float dual_axis_offset;
     float homing_seek_rate;
     float homing_feed_rate;
-#if ENABLE_JERK_ACCELERATION 
     float jerk;
-#endif
 #if ENABLE_BACKLASH_COMPENSATION
     float backlash;
 #endif
