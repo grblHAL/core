@@ -528,7 +528,7 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
 #if ENABLE_ACCELERATION_PROFILES                                 // recalculate the acceleration limits when enabled.
     block->acceleration_factor = pl_data->acceleration_factor;
 #if ENABLE_JERK_ACCELERATION
-    block->max_acceleration *= block->acceleration_factor; 
+    block->max_acceleration *= block->acceleration_factor;
     block->jerk *= block->acceleration_factor;
 #else
     block->acceleration *= block->acceleration_factor;
@@ -739,6 +739,6 @@ void plan_data_init (plan_line_data_t *plan_data)
     plan_data->rate_multiplier = 1.0f;
 #endif
 #ifdef ENABLE_ACCELERATION_PROFILES
-    plan_data->acceleration_factor = lookupfactor((int)gc_state.modal.acceleration_profile-1);  //-1 for Array[0]
+    plan_data->acceleration_factor = 1.0f; 
 #endif
 }

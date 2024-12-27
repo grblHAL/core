@@ -547,7 +547,7 @@ typedef struct {
     float feed_rate;                     //!< {F} NOTE: only set when saving modal state
 #endif
 #if ENABLE_ACCELERATION_PROFILES
-    float acceleration_profile;          //!< {G187} currently active acceleration profile
+    float acceleration_factor;          //!< {G187} currently active factor of acceleration profile
 #endif
 } gc_modal_t;
 
