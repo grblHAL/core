@@ -2373,16 +2373,16 @@ status_code_t gc_execute_block (char *block)
             
 #if ENABLE_ACCELERATION_PROFILES
         case NonModal_SetAccelerationProfile:
-            if (gc_block.words.e){
+            if (gc_block.words.e)
                 FAIL(Status_GcodeUnsupportedCommand);
-                break;}
-            else if (!gc_block.words.p){
-                gc_block.values.p = 1.0f;}
-            else if (gc_block.values.p < 1.0f){
-                FAIL(Status_NegativeValue);}
-            else if (gc_block.values.p > 5.0f){
-                FAIL(Status_GcodeValueOutOfRange);}
-            gc_state.modal.acceleration_profile = gc_block.values.p;
+            else if (!gc_block.words.p)
+                gc_block.values.p = 1.0f;
+            else if (gc_block.values.p < 1.0f)
+                FAIL(Status_NegativeValue);
+            else if (gc_block.values.p > 5.0f)
+                FAIL(Status_GcodeValueOutOfRange);
+            else
+                gc_state.modal.acceleration_profile = gc_block.values.p;
             break;
 #endif
         default:

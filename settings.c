@@ -1196,13 +1196,6 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
 
 #if ENABLE_JERK_ACCELERATION      
         case Setting_AxisJerk:
-            if ((value * 60.0f * 60.0f) < (settings.axis[idx].acceleration * 10.0f)) { //ensuring that the acceleration ramp time is limited to at maximum 100ms (or 10 stepper segments).
-                settings.axis[idx].jerk = settings.axis[idx].acceleration * 10.0f * 60.0f; // mm/min^2 -> mm/min^3
-            }
-            else if ((settings.axis[idx].acceleration / (value * 60.0f * 60.0f * 60.0f)) < (1.0f / ACCELERATION_TICKS_PER_SECOND)) { // Limit Jerk if value is so large that it reverts back to trapezoidal.
-                settings.axis[idx].jerk = settings.axis[idx].acceleration * ACCELERATION_TICKS_PER_SECOND * 60.0f; // mm/min^2 -> mm/min^3
-            }
-            else
                 settings.axis[idx].jerk = value * 60.0f * 60.0f * 60.0f; // Convert to mm/min^3 for grbl internal use.
             break;
 #endif            
@@ -1284,12 +1277,6 @@ static float get_float (setting_id_t setting)
                 value = settings.axis[idx].acceleration / (60.0f * 60.0f); // Convert from mm/min^2 to mm/sec^2.
                 break;
 
-#if ENABLE_JERK_ACCELERATION          
-            case Setting_AxisJerk:
-                value = settings.axis[idx].jerk / (60.0f * 60.0f * 60.0f); // Convert from mm/min^3 to mm/sec^3.
-                break;
-#endif
-
             case Setting_AxisMaxTravel:
                 value = -settings.axis[idx].max_travel; // Store as negative for grbl internal use.
                 break;
@@ -1315,7 +1302,22 @@ static float get_float (setting_id_t setting)
             default:
                 break;
         }
-    } else switch(setting) {
+    } else if(setting >= Setting_AxisSettingsBase1 && setting <= Setting_AxisSettingsMax1) {
+
+        uint_fast8_t idx;
+
+        switch(settings_get_axis_base(setting, &idx)) {
+
+#if ENABLE_JERK_ACCELERATION          
+            case Setting_AxisJerk:
+                value = settings.axis[idx].jerk / (60.0f * 60.0f * 60.0f); // Convert from mm/min^3 to mm/sec^3.
+                break;
+#endif
+
+            default:
+                break;
+        }
+   } else switch(setting) {
 
         case Setting_HomingFeedRate:
             value = settings.axis[0].homing_feed_rate;
@@ -2017,6 +2019,9 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_AxisMaxTravel, Group_Axis0, "-axis maximum travel", axis_dist, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacyFn, set_axis_setting, get_float, NULL, AXIS_OPTS },
 #if ENABLE_BACKLASH_COMPENSATION
      { Setting_AxisBacklash, Group_Axis0, "-axis backlash compensation", axis_dist, Format_Decimal, "#####0.000##", NULL, NULL, Setting_IsExtendedFn, set_axis_setting, get_float, NULL, AXIS_OPTS },
+#endif
+#if ENABLE_JERK_ACCELERATION
+     { Setting_AxisJerk, Group_Axis0, "-axis jerk", axis_jerk, Format_Decimal, "#####0.000", NULL, NULL, Setting_IsExtendedFn, set_axis_setting, get_float, NULL, AXIS_OPTS },
 #endif
      { Setting_AxisAutoSquareOffset, Group_Axis0, "-axis dual axis offset", "mm", Format_Decimal, "-0.000", "-10", "10", Setting_IsExtendedFn, set_axis_setting, get_float, is_setting_available, AXIS_OPTS },
      { Setting_AxisHomingFeedRate, Group_Axis0, "-axis homing locate feed rate", axis_rate, Format_Decimal, "###0", NULL, NULL, Setting_NonCoreFn, set_axis_setting, get_float, is_setting_available, AXIS_OPTS },

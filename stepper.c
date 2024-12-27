@@ -898,8 +898,8 @@ void st_prep_buffer (void)
                 case Ramp_Accel:
                     // NOTE: Acceleration ramp only computes during first do-while loop.
 #if ENABLE_JERK_ACCELERATION   
-                    if (((mm_remaining - prep.accelerate_until) / (prep.current_speed + 1.0f)) <= (last_segment_accel / pl_block->jerk)) { 
-                        //+1.0f to avoid divide by 0 speed, minor effect on jerk ramp
+                    if (((mm_remaining - prep.accelerate_until) / (prep.current_speed + 0.001f)) <= (last_segment_accel / pl_block->jerk)) { 
+                        //+0.001f to avoid divide by 0 speed, minor effect on jerk ramp (+1.0f was too large for low jerk values)
                         // Check if we are on ramp up or ramp down. Ramp down if time to end of acceleration is less than time needed to reach 0 acceleration.
                         // Then limit acceleration change by jerk up to max acceleration and update for next segment.
                         // Minimum acceleration jerk per time_var to ensure acceleartion completes. Acceleration change at end of ramp is in acceptable jerk range.
@@ -942,8 +942,8 @@ void st_prep_buffer (void)
                 default: // case Ramp_Decel:
                     // NOTE: mm_var used as a misc worker variable to prevent errors when near zero speed.
 #if ENABLE_JERK_ACCELERATION   
-                    if ((mm_remaining / (prep.current_speed + 1.0f)) <= (last_segment_accel / pl_block->jerk)) { 
-                        //+1.0f to avoid divide by 0 speed, minor effect on jerk ramp
+                    if ((mm_remaining / (prep.current_speed + 0.001f)) <= (last_segment_accel / pl_block->jerk)) { 
+                        //+0.001f to avoid divide by 0 speed, minor effect on jerk ramp (+1.0f was too large for low jerk values)
                         // Check if we are on ramp up or ramp down. Ramp down if time to end of deceleration is less than time needed to reach 0 acceleration.
                         // Then limit acceleration change by jerk up to max acceleration and update for next segment.
                         // Minimum acceleration of jerk per time_var to ensure acceleration completes. Acceleration change at end of ramp is in acceptable jerk range.
@@ -968,9 +968,6 @@ void st_prep_buffer (void)
                     time_var = 2.0f * (mm_remaining - prep.mm_complete) / (prep.current_speed + prep.exit_speed);
                     mm_remaining = prep.mm_complete;
                     prep.current_speed = prep.exit_speed;
-#if ENABLE_JERK_ACCELERATION
-                    last_segment_accel = 0.0f;  // reset acceleration variable to 0 for next accel ramp
-#endif
             }
 
             dt += time_var; // Add computed ramp time to total segment time.
