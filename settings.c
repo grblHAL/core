@@ -515,6 +515,9 @@ float lookupfactor(uint8_t profile) {
         0.4f,   // 40% - Finish
         0.2f,   // 20% - Slow AF Mode
     };
+    if (profile >= sizeof(lookup) / sizeof(lookup[0])) {
+        profile = 0;
+    }
     return lookup[profile];
 }
 #endif

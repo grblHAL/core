@@ -739,6 +739,6 @@ void plan_data_init (plan_line_data_t *plan_data)
     plan_data->rate_multiplier = 1.0f;
 #endif
 #ifdef ENABLE_ACCELERATION_PROFILES
-    plan_data->acceleration_factor = lookupfactor(gc_state.modal.acceleration_profile);
+    plan_data->acceleration_factor = lookupfactor((int)gc_state.modal.acceleration_profile-1);  //-1 for Array[0]
 #endif
 }
