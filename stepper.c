@@ -866,6 +866,9 @@ void st_prep_buffer (void)
         float dt_max = DT_SEGMENT; // Maximum segment time
         float dt = 0.0f; // Initialize segment time
         float time_var = dt_max; // Time worker variable
+#if ENABLE_JERK_ACCELERATION   
+        float last_segment_accel = 0.0f; // Acceleration value of last computed segment. Initialize as 0.0
+#endif
         float mm_var; // mm - Distance worker variable
         float speed_var; // Speed worker variable
         float mm_remaining = pl_block->millimeters; // New segment distance from end of block.
@@ -894,7 +897,20 @@ void st_prep_buffer (void)
 
                 case Ramp_Accel:
                     // NOTE: Acceleration ramp only computes during first do-while loop.
+#if ENABLE_JERK_ACCELERATION   
+                    if (((mm_remaining - prep.accelerate_until) / (prep.current_speed + 0.001f)) <= (last_segment_accel / pl_block->jerk)) { 
+                        //+0.001f to avoid divide by 0 speed, minor effect on jerk ramp (+1.0f was too large for low jerk values)
+                        // Check if we are on ramp up or ramp down. Ramp down if time to end of acceleration is less than time needed to reach 0 acceleration.
+                        // Then limit acceleration change by jerk up to max acceleration and update for next segment.
+                        // Minimum acceleration jerk per time_var to ensure acceleartion completes. Acceleration change at end of ramp is in acceptable jerk range.
+                        last_segment_accel = max(last_segment_accel - pl_block->jerk * time_var, pl_block->jerk * time_var); 
+                    } else {
+                        last_segment_accel = min(last_segment_accel + pl_block->jerk * time_var, pl_block->max_acceleration); 
+                    }
+                    speed_var = last_segment_accel * time_var;
+#else
                     speed_var = pl_block->acceleration * time_var;
+#endif
                     mm_remaining -= time_var * (prep.current_speed + 0.5f * speed_var);
                     if (mm_remaining < prep.accelerate_until) { // End of acceleration ramp.
                         // Acceleration-cruise, acceleration-deceleration ramp junction, or end of block.
@@ -902,6 +918,9 @@ void st_prep_buffer (void)
                         time_var = 2.0f * (pl_block->millimeters - mm_remaining) / (prep.current_speed + prep.maximum_speed);
                         prep.ramp_type = mm_remaining == prep.decelerate_after ? Ramp_Decel : Ramp_Cruise;
                         prep.current_speed = prep.maximum_speed;
+#if ENABLE_JERK_ACCELERATION
+                        last_segment_accel = 0.0f;  // reset acceleration variable to 0 for next accel ramp
+#endif
                     } else // Acceleration only.
                         prep.current_speed += speed_var;
                     break;
@@ -922,7 +941,20 @@ void st_prep_buffer (void)
 
                 default: // case Ramp_Decel:
                     // NOTE: mm_var used as a misc worker variable to prevent errors when near zero speed.
+#if ENABLE_JERK_ACCELERATION   
+                    if ((mm_remaining / (prep.current_speed + 0.001f)) <= (last_segment_accel / pl_block->jerk)) { 
+                        //+0.001f to avoid divide by 0 speed, minor effect on jerk ramp (+1.0f was too large for low jerk values)
+                        // Check if we are on ramp up or ramp down. Ramp down if time to end of deceleration is less than time needed to reach 0 acceleration.
+                        // Then limit acceleration change by jerk up to max acceleration and update for next segment.
+                        // Minimum acceleration of jerk per time_var to ensure acceleration completes. Acceleration change at end of ramp is in acceptable jerk range.
+                        last_segment_accel = max(last_segment_accel - pl_block->jerk * time_var, pl_block->jerk * time_var); 
+                    } else {
+                        last_segment_accel = min(last_segment_accel + pl_block->jerk * time_var, pl_block->max_acceleration); 
+                    }
+                    speed_var = last_segment_accel * time_var; // Used as delta speed (mm/min)
+#else
                     speed_var = pl_block->acceleration * time_var; // Used as delta speed (mm/min)
+#endif
                     if (prep.current_speed > speed_var) { // Check if at or below zero speed.
                         // Compute distance from end of segment to end of block.
                         mm_var = mm_remaining - time_var * (prep.current_speed - 0.5f * speed_var); // (mm)

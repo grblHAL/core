@@ -361,6 +361,9 @@ void gc_init (bool stop)
 #if NGC_PARAMETERS_ENABLE
     ngc_modal_state_invalidate();
 #endif
+#if ENABLE_ACCELERATION_PROFILES
+    gc_state.modal.acceleration_factor = 1.0f; // Initialize machine with 100% Profile
+#endif
 
 //    if(settings.flags.lathe_mode)
 //        gc_state.modal.plane_select = PlaneSelect_ZX;
@@ -1193,6 +1196,15 @@ status_code_t gc_execute_block (char *block)
                         word_bit.modal_group.G11 = On;
                         gc_block.modal.scaling_active = int_value == 51;
                         break;
+
+#if ENABLE_ACCELERATION_PROFILES
+                    case 187:
+                        word_bit.modal_group.G0 = On;
+                        gc_block.non_modal_command = (non_modal_t)int_value;
+                        if(mantissa != 0)
+                            FAIL(Status_GcodeUnsupportedCommand);
+                        break;
+#endif
 
                     default: FAIL(Status_GcodeUnsupportedCommand); // [Unsupported G command]
                 } // end G-value switch
@@ -2358,7 +2370,19 @@ status_code_t gc_execute_block (char *block)
                     gc_block.values.xyz[idx] = gc_state.g92_coord_offset[idx];
             } while(idx);
             break;
+            
+#if ENABLE_ACCELERATION_PROFILES
+        case NonModal_SetAccelerationProfile:
+            if(gc_block.words.e)
+                FAIL(Status_GcodeUnsupportedCommand);
 
+            if(gc_block.words.p && (gc_block.values.p < 1.0f || gc_block.values.p > 5.0f))
+                FAIL(Status_GcodeValueOutOfRange);
+
+            gc_state.modal.acceleration_factor = lookupfactor(gc_block.words.p ? (uint8_t)gc_block.values.p - 1 : 0);
+            gc_block.words.p = Off;
+            break;
+#endif
         default:
 
             // At this point, the rest of the explicit axis commands treat the axis values as the traditional
@@ -3030,6 +3054,9 @@ status_code_t gc_execute_block (char *block)
     memset(&plan_data, 0, sizeof(plan_line_data_t)); // Zero plan_data struct
     plan_data.offset_id = gc_state.offset_id;
     plan_data.condition.target_validated = plan_data.condition.target_valid = sys.soft_limits.mask == 0;
+#if ENABLE_ACCELERATION_PROFILES
+    plan_data.acceleration_factor = gc_state.modal.acceleration_factor;
+#endif
 
     // Intercept jog commands and complete error checking for valid jog commands and execute.
     // NOTE: G-code parser state is not updated, except the position to ensure sequential jog
@@ -3819,6 +3846,9 @@ status_code_t gc_execute_block (char *block)
             gc_state.modal.coolant = (coolant_state_t){0};
             gc_state.modal.override_ctrl.feed_rate_disable = Off;
             gc_state.modal.override_ctrl.spindle_rpm_disable = Off;
+            #if ENABLE_ACCELERATION_PROFILES
+            gc_state.modal.acceleration_factor = 1.0f;
+            #endif
 
 #if N_SYS_SPINDLE > 1
 

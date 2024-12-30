@@ -59,7 +59,12 @@ typedef enum {
     NonModal_SetCoordinateOffset = 92,      //!< 92 - G92
     NonModal_ResetCoordinateOffset = 102,   //!< 102 - G92.1
     NonModal_ClearCoordinateOffset = 112,   //!< 112 - G92.2
-    NonModal_RestoreCoordinateOffset = 122  //!< 122 - G92.3
+ #if ENABLE_ACCELERATION_PROFILES
+    NonModal_RestoreCoordinateOffset = 122, //!< 122 - G92.3
+    NonModal_SetAccelerationProfile = 187   //!< 187 - G187 
+ #else
+    NonModal_RestoreCoordinateOffset = 122 //!< 122 - G92.3
+ #endif
 } non_modal_t;
 
 
@@ -540,6 +545,9 @@ typedef struct {
 #if NGC_PARAMETERS_ENABLE
     bool auto_restore;
     float feed_rate;                     //!< {F} NOTE: only set when saving modal state
+#endif
+#if ENABLE_ACCELERATION_PROFILES
+    float acceleration_factor;          //!< {G187} currently active factor of acceleration profile
 #endif
 } gc_modal_t;
 
