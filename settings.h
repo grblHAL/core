@@ -1081,10 +1081,6 @@ bool settings_read_coord_data(coord_system_id_t id, float (*coord_data)[N_AXIS])
 // Temporarily override acceleration, if 0 restore to configured setting value
 bool settings_override_acceleration (uint8_t axis, float acceleration);
 
-#if ENABLE_ACCELERATION_PROFILES
-float lookupfactor (uint8_t profile);
-#endif
-
 void settings_register (setting_details_t *details);
 setting_details_t *settings_get_details (void);
 bool settings_is_group_available (setting_group_t group);

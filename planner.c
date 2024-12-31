@@ -336,6 +336,7 @@ inline static float plan_compute_profile_parameters (plan_block_t *block, float 
     block->max_entry_speed_sqr = nominal_speed > prev_nominal_speed ? (prev_nominal_speed * prev_nominal_speed) : (nominal_speed * nominal_speed);
     if (block->max_entry_speed_sqr > block->max_junction_speed_sqr)
         block->max_entry_speed_sqr = block->max_junction_speed_sqr;
+
     return nominal_speed;
 }
 
@@ -348,6 +349,7 @@ static inline float limit_acceleration_by_axis_maximum (float *unit_vec)
         if (unit_vec[--idx] != 0.0f)  // Avoid divide by zero.
             limit_value = min(limit_value, fabsf(settings.axis[idx].acceleration / unit_vec[idx]));
     } while(idx);
+
     return limit_value;
 }
 
@@ -361,6 +363,7 @@ static inline float limit_jerk_by_axis_maximum (float *unit_vec)
         if (unit_vec[--idx] != 0.0f)  // Avoid divide by zero.
             limit_value = min(limit_value, fabsf(settings.axis[idx].jerk / unit_vec[idx]));
     } while(idx);
+
     return limit_value;
 }
 #endif
@@ -738,7 +741,7 @@ void plan_data_init (plan_line_data_t *plan_data)
 #ifdef KINEMATICS_API
     plan_data->rate_multiplier = 1.0f;
 #endif
-#ifdef ENABLE_ACCELERATION_PROFILES
-    plan_data->acceleration_factor = 1.0f; 
+#if ENABLE_ACCELERATION_PROFILES
+    plan_data->acceleration_factor = gc_get_accel_factor(0);
 #endif
 }

@@ -78,7 +78,7 @@ typedef struct plan_block {
 #ifdef KINEMATICS_API
     float rate_multiplier;          // Rate multiplier of this block.
 #endif
-#ifdef ENABLE_ACCELERATION_PROFILES
+#if ENABLE_ACCELERATION_PROFILES
     float acceleration_factor;        // Stores the currently used acceleration factor.
 #endif
     // Stored spindle speed data used by spindle overrides and resuming methods.
@@ -96,7 +96,7 @@ typedef struct {
 #ifdef KINEMATICS_API
     float rate_multiplier;          // Feed rate multiplier.
 #endif
-#ifdef ENABLE_ACCELERATION_PROFILES
+#if ENABLE_ACCELERATION_PROFILES
     float acceleration_factor;        // Stores the currently used acceleration factor.
 #endif
 #if ENABLE_PATH_BLENDING

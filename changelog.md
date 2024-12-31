@@ -1,10 +1,33 @@
 ## grblHAL changelog
 
+<a name="20241226">Build 20241230
+
+Core:
+
+* Fix for laser incorrectly enabled in laser mode when `M3S<n>` commanded in `G0` and `G80` modal states. Ref. issue [#644](https://github.com/grblHAL/core/issues/644).
+
+* Added support for 3rd order acceleration \(jerk\) and G187 gcode. Ref. pull request [#593](https://github.com/grblHAL/core/pull/593).
+
+Drivers:
+
+* STM32F4xx: updated ST framework to latest version, added support for ethernet via DP83848 PHY.
+
+* STM32F4xx, STM32F7xx: Improved SD card mount/dismount handling and added support for card detect signal.  
+Now flags RTC as set if date >= grblHAL build date.
+
+* LPC176x: added function required for Modbus support. Renamed bootloader build option to avoid confusion.
+
+Plugins:
+
+* SD card: improved mount/dismount handling.
+
+---
+
 <a name="20241226">20241226
 
 Drivers:
 
-* STM32F4xx: fix for not enabling steppers after clearing E-stop alarm. Ref. issue [#203](https://github.com/grblHAL/STM32F4xx/issues/203).
+* STM32F4xx: SuperLongBoard - fix for not enabling steppers after clearing E-stop alarm. Ref. issue [#203](https://github.com/grblHAL/STM32F4xx/issues/203).
 
 Plugins:
 

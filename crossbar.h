@@ -445,7 +445,6 @@ typedef enum {
     PinGroup_AuxOutput,
     PinGroup_AuxInputAnalog,
     PinGroup_AuxOutputAnalog,
-    PinGroup_SdCard,
     PinGroup_MotorChipSelect,
     PinGroup_MotorUART,
     PinGroup_I2C,
@@ -471,7 +470,8 @@ typedef enum {
     PinGroup_QEI_Index     = (1<<16),
     PinGroup_Motor_Warning = (1<<17),
     PinGroup_Motor_Fault   = (1<<18),
-    PinGroup_AuxInput      = (1<<19)
+    PinGroup_SdCard        = (1<<19),
+    PinGroup_AuxInput      = (1<<20)
 } pin_group_t;
 
 //! Pin interrupt modes, may be or'ed when reporting pin capability.

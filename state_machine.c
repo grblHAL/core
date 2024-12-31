@@ -76,14 +76,20 @@ static parking_data_t park = {0};
 
 static void state_spindle_restore (spindle_t *spindle)
 {
-    if(spindle->hal)
+    if(spindle->hal) {
+        if(grbl.on_spindle_programmed)
+            grbl.on_spindle_programmed(spindle->hal, spindle->state, spindle->rpm, spindle->rpm_mode);
         spindle_restore(spindle->hal, spindle->state, spindle->rpm);
+    }
 }
 
 static void state_spindle_set_state (spindle_t *spindle)
 {
-    if(spindle->hal)
+    if(spindle->hal) {
+        if(grbl.on_spindle_programmed)
+            grbl.on_spindle_programmed(spindle->hal, spindle->state, spindle->rpm, spindle->rpm_mode);
         spindle_set_state(spindle->hal, spindle->state, spindle->rpm);
+    }
 }
 
 static void state_restore_conditions (restore_condition_t *condition)
@@ -360,6 +366,8 @@ void state_suspend_manager (void)
         // Handles beginning of spindle stop
         if (sys.override.spindle_stop.initiate) {
             sys.override.spindle_stop.value = 0; // Clear stop override state
+            if(grbl.on_spindle_programmed)
+                grbl.on_spindle_programmed(restore_condition.spindle[restore_condition.spindle_num].hal, (spindle_state_t){0}, 0.0f, 0);
             spindle_set_state(restore_condition.spindle[restore_condition.spindle_num].hal, (spindle_state_t){0}, 0.0f); // De-energize
             sys.override.spindle_stop.enabled = On; // Set stop override state to enabled, if de-energized.
             if(grbl.on_override_changed)
