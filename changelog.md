@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+<a name="20250101">20250101
+
+Drivers: 
+
+* ESP32: fixed regression causing compiler failure if Bluetooth is enabled.
+
+* iMXRT1062: fixed regression causing compiler failure if laser PPI plugin is enabled.
+
+* STM32F4xx: updates for Web Builder.
+
+Plugins:
+
+* Laser, PPI: added disable of PPI mode on program end \(`M2`, `M30`\) and soft reset.
+
+---
+
 <a name="20241226">Build 20241230
 
 Core:
@@ -12,7 +28,7 @@ Drivers:
 
 * STM32F4xx: updated ST framework to latest version, added support for ethernet via DP83848 PHY.
 
-* STM32F4xx, STM32F7xx: Improved SD card mount/dismount handling and added support for card detect signal.  
+* STM32F4xx, STM32F7xx: improved SD card mount/dismount handling and added support for card detect signal.  
 Now flags RTC as set if date >= grblHAL build date.
 
 * LPC176x: added function required for Modbus support. Renamed bootloader build option to avoid confusion.
