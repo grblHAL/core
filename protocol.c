@@ -362,7 +362,7 @@ bool protocol_main_loop (void)
         // completed. In either case, auto-cycle start, if enabled, any queued moves.
         protocol_auto_cycle_start();
 
-        if(!protocol_execute_realtime() && sys.abort) // Runtime command check point.
+        if(sys.abort || !protocol_execute_realtime()) // Runtime command check point.
             return !sys.flags.exit;                   // Bail to main() program loop to reset system.
 
         sys.cancel = false;

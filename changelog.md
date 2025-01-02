@@ -1,5 +1,22 @@
 ## grblHAL changelog
 
+<a name="20250102">20250102
+
+Core:
+
+* Fix for coolant issue when resetting from feed hold state. Ref. STMF32F4xx issue [#205](https://github.com/grblHAL/STM32F4xx/issues/205).
+
+Drivers:
+
+* STM32F4xx, STM32F7xx: some minor fixes.
+
+Plugins:
+
+* Spindle: fix for alarm 14 beeing raised on reset. Ref. STMF32F4xx issue [#205](https://github.com/grblHAL/STM32F4xx/issues/205).  
+Added retry handling to Modbus RTU driver, updated VFD spindle drivers accordingly. 
+
+---
+
 <a name="20250101">20250101
 
 Drivers: 
@@ -8,7 +25,7 @@ Drivers:
 
 * iMXRT1062: fixed regression causing compiler failure if laser PPI plugin is enabled.
 
-* STM32F4xx: updates for Web Builder.
+* STM32F1xx, STM32F4xx: updates for Web Builder.
 
 Plugins:
 

@@ -65,6 +65,8 @@ typedef struct {
 } modbus_message_t;
 
 typedef struct {
+    uint8_t retries;
+    uint16_t retry_delay;
     void (*on_rx_packet)(modbus_message_t *msg);
     void (*on_rx_exception)(uint8_t code, void *context);
 } modbus_callbacks_t;

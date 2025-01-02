@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2024 Terje Io
+  Copyright (c) 2017-2025 Terje Io
   Copyright (c) 2011-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -1070,13 +1070,13 @@ static status_code_t set_linear_piece (setting_id_t id, char *svalue)
     float rpm, start, end;
 
     if(*svalue == '\0' || (svalue[0] == '0' && svalue[1] == '\0')) {
-        settings.spindle.pwm_piece[idx].rpm = NAN;
-        settings.spindle.pwm_piece[idx].start =
-        settings.spindle.pwm_piece[idx].end = 0.0f;
+        settings.pwm_spindle.pwm_piece[idx].rpm = NAN;
+        settings.pwm_spindle.pwm_piece[idx].start =
+        settings.pwm_spindle.pwm_piece[idx].end = 0.0f;
     } else if(sscanf(svalue, "%f,%f,%f", &rpm, &start, &end) == 3) {
-        settings.spindle.pwm_piece[idx].rpm = rpm;
-        settings.spindle.pwm_piece[idx].start = start;
-        settings.spindle.pwm_piece[idx].end = end;
+        settings.pwm_spindle.pwm_piece[idx].rpm = rpm;
+        settings.pwm_spindle.pwm_piece[idx].start = start;
+        settings.pwm_spindle.pwm_piece[idx].end = end;
 //??       if(idx == 0)
 //            settings.spindle.rpm_min = rpm;
     } else
@@ -1091,10 +1091,10 @@ static char *get_linear_piece (setting_id_t id)
 
     uint32_t idx = id - Setting_LinearSpindlePiece1;
 
-    if(isnan(settings.spindle.pwm_piece[idx].rpm))
+    if(isnan(settings.pwm_spindle.pwm_piece[idx].rpm))
         *buf = '\0';
     else
-        snprintf(buf, sizeof(buf), "%g,%g,%g", settings.spindle.pwm_piece[idx].rpm, settings.spindle.pwm_piece[idx].start, settings.spindle.pwm_piece[idx].end);
+        snprintf(buf, sizeof(buf), "%g,%g,%g", settings.pwm_spindle.pwm_piece[idx].rpm, settings.pwm_spindle.pwm_piece[idx].start, settings.pwm_spindle.pwm_piece[idx].end);
 
     return buf;
 }
