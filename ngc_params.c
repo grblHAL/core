@@ -646,6 +646,10 @@ bool ngc_named_param_get (char *name, float *value)
 
     name = ngc_name_tolower(name);
 
+    // Check if name is supplied, return false if not.
+    if((*name == '_' ? *(name + 1) : *name) == '\0')
+        return false;
+
     *value = 0.0f;
 
      if(*name == '_') do {
@@ -670,34 +674,9 @@ bool ngc_named_param_get (char *name, float *value)
 
 bool ngc_named_param_exists (char *name)
 {
-    bool ok = false;
-    uint_fast8_t idx = sizeof(ngc_named_ro_param) / sizeof(ngc_named_ro_param_t);
+    float value;
 
-    name = ngc_name_tolower(name);
-
-    // Check if name is supplied, return false if not.
-    if((*name == '_' ? *(name + 1) : *name) == '\0')
-        return false;
-
-    // Check if it is a (read only) predefined parameter.
-    if(*name == '_') do {
-        ok = !strcmp(name, ngc_named_ro_param[--idx].name);
-    } while(idx && !ok);
-
-    // If not predefined attempt to find it.
-    if(!ok && rw_global_params && strlen(name) <= NGC_MAX_PARAM_LENGTH) {
-
-        void *context = *name == '_' ? NULL : call_context;
-        ngc_named_rw_param_t *rw_param = rw_global_params;
-
-        while(rw_param) {
-            if((ok = rw_param->context == context && !strcmp(rw_param->name, name)))
-                break;
-            rw_param = rw_param->next;
-        }
-    }
-
-    return ok;
+    return ngc_named_param_get(name, &value);
 }
 
 bool ngc_named_param_set (char *name, float value)

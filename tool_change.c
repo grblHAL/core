@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2020-2024 Terje Io
+  Copyright (c) 2020-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -141,12 +141,11 @@ static bool restore (void)
 
     if(protocol_buffer_synchronize()) {
 
-
         sync_position();
 
-        coolant_sync(gc_state.modal.coolant);
+        coolant_restore(gc_state.modal.coolant, settings.coolant.on_delay);
         spindle_t *spindle = gc_spindle_get(-1);
-        spindle_restore(spindle->hal, spindle->state, spindle->rpm);
+        spindle_restore(spindle->hal, spindle->state, spindle->rpm, settings.spindle.on_delay);
 
         if(!settings.flags.no_restore_position_after_M6) {
             previous.values[plane.axis_linear] += gc_get_offset(plane.axis_linear, false);

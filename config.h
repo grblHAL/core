@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2020-2024 Terje Io
+  Copyright (c) 2020-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -1024,6 +1024,14 @@ Useful for some pre-built electronic boards.
 #endif
 ///@}
 
+/*! @name $673 - Setting_CoolantOnDelay
+*/
+///@{
+#if !defined DEFAULT_COOLANT_ON_DELAY || defined __DOXYGEN__
+#define DEFAULT_COOLANT_ON_DELAY 0 // milliseconds: 0 or 500 - 20000
+#endif
+///@}
+
 // Spindle settings (Group_Spindle)
 
 /*! @name $9 - Setting_SpindlePWMOptions
@@ -1127,6 +1135,14 @@ Default value is 0, meaning spindle sync is disabled
 ///@{
 #if !defined DEFAULT_SPINDLE_AT_SPEED_TOLERANCE || defined __DOXYGEN__
 #define DEFAULT_SPINDLE_AT_SPEED_TOLERANCE 0.0f // Percent - 0 means not checked
+#endif
+///@}
+
+/*! @name $394 - Setting_SpindleOnDelay
+*/
+///@{
+#if !defined DEFAULT_SPINDLE_ON_DELAY || defined __DOXYGEN__
+#define DEFAULT_SPINDLE_ON_DELAY 0 // milliseconds: 0 or 500 - 20000
 #endif
 ///@}
 
@@ -2195,6 +2211,26 @@ __NOTE:__ Must be a positive values.
 #if DEFAULT_ENABLE_SIGNALS_INVERT_MASK < 0
 #undef DEFAULT_ENABLE_SIGNALS_INVERT_MASK
 #define DEFAULT_ENABLE_SIGNALS_INVERT_MASK AXES_BITMASK
+#endif
+
+#if DEFAULT_SPINDLE_ON_DELAY
+#if DEFAULT_SPINDLE_ON_DELAY < 500
+#undef DEFAULT_SPINDLE_ON_DELAY
+#define DEFAULT_SPINDLE_ON_DELAY 500
+#elif DEFAULT_SPINDLE_ON_DELAY > 20000
+#undef DEFAULT_SPINDLE_ON_DELAY
+#define DEFAULT_SPINDLE_ON_DELAY 20000
+#endif
+#endif
+
+#if DEFAULT_COOLANT_ON_DELAY
+#if DEFAULT_COOLANT_ON_DELAY < 500
+#undef DEFAULT_COOLANT_ON_DELAY
+#define DEFAULT_COOLANT_ON_DELAY 500
+#elif DEFAULT_COOLANT_ON_DELAY > 20000
+#undef DEFAULT_COOLANT_ON_DELAY
+#define DEFAULT_COOLANT_ON_DELAY 20000
+#endif
 #endif
 
 #if DEFAULT_PARKING_ENABLE > 0

@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2024 Terje Io
+  Copyright (c) 2017-2025 Terje Io
   Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
 
   grblHAL is free software: you can redistribute it and/or modify
@@ -43,9 +43,11 @@ typedef struct {
 } coolant_settings_t;
 
 // Sets the coolant pins according to state specified.
-void coolant_set_state(coolant_state_t mode);
+void coolant_set_state (coolant_state_t mode);
 
 // G-code parser entry-point for setting coolant states. Checks for and executes additional conditions.
-bool coolant_sync(coolant_state_t mode);
+bool coolant_set_state_synced (coolant_state_t mode);
+
+void coolant_restore (coolant_state_t mode, uint16_t on_delay_ms);
 
 #endif

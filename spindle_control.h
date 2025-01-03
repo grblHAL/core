@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2024 Terje Io
+  Copyright (c) 2017-2025 Terje Io
   Copyright (c) 2012-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -340,17 +340,17 @@ typedef bool (*spindle_enumerate_callback_ptr)(spindle_info_t *spindle, void *da
 
 void spindle_set_override (spindle_ptrs_t *spindle, override_t speed_override);
 
-// Called by g-code parser when setting spindle state and requires a buffer sync.
-bool spindle_sync (spindle_ptrs_t *spindle, spindle_state_t state, float rpm);
-
 // Sets spindle running state with direction, enable, and spindle RPM.
 bool spindle_set_state (spindle_ptrs_t *spindle, spindle_state_t state, float rpm);
+
+// Called by g-code parser when setting spindle state and requires a buffer sync.
+bool spindle_set_state_synced (spindle_ptrs_t *spindle, spindle_state_t state, float rpm);
 
 // Spindle speed calculation and limit handling
 float spindle_set_rpm (spindle_ptrs_t *spindle, float rpm, override_t speed_override);
 
 // Restore spindle running state with direction, enable, spindle RPM and appropriate delay.
-bool spindle_restore (spindle_ptrs_t *spindle, spindle_state_t state, float rpm);
+bool spindle_restore (spindle_ptrs_t *spindle, spindle_state_t state, float rpm, uint16_t on_delay_ms);
 
 void spindle_all_off (void);
 
