@@ -7,7 +7,7 @@ Core:
 * Added new handling for spindle spin up and coolant start delays. Setting `$394` is for spindle spin up and `$673` for coolant start.  
 They can be either set to 0 or to a value in the range 0.5 - 20s. The settings are used both for initial delay and for restore delay after cancelling a feed hold or completing a tool change.  
 > [!NOTE]
-> If the spindle supports "at speed" functionality and this is enabled by setting $ > 0 then the spin up delay is used as a timeout value before alarm 14 is raised. If `$394` is set to 0 the timeout will default to one minute.
+> If the spindle supports "at speed" functionality and this is enabled by setting `$340` \(Spindle at speed tolerance\) > 0 then the spin up delay is used as a timeout value before alarm 14 is raised. If `$394` is set to 0 the timeout will default to one minute.
 
 > [!NOTE]
 > Setting `$392` and `$393`, if available, are now only used for spindle spin up delay and coolant start delay respectively when the safety door is closed.
