@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2024 Terje Io
+  Copyright (c) 2018-2025 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -74,41 +74,32 @@ typedef struct {
 // Declare and initialize parking local variables
 static parking_data_t park = {0};
 
-static void state_spindle_restore (spindle_t *spindle)
+static void state_spindle_restore (spindle_t *spindle, uint16_t on_delay_ms)
 {
     if(spindle->hal) {
         if(grbl.on_spindle_programmed)
             grbl.on_spindle_programmed(spindle->hal, spindle->state, spindle->rpm, spindle->rpm_mode);
-        spindle_restore(spindle->hal, spindle->state, spindle->rpm);
-    }
-}
-
-static void state_spindle_set_state (spindle_t *spindle)
-{
-    if(spindle->hal) {
-        if(grbl.on_spindle_programmed)
-            grbl.on_spindle_programmed(spindle->hal, spindle->state, spindle->rpm, spindle->rpm_mode);
-        spindle_set_state(spindle->hal, spindle->state, spindle->rpm);
+        spindle_restore(spindle->hal, spindle->state, spindle->rpm, on_delay_ms);
     }
 }
 
 static void state_restore_conditions (restore_condition_t *condition)
 {
-    if (!settings.parking.flags.enabled || !park.flags.restart) {
+    if(!settings.parking.flags.enabled || !park.flags.restart) {
 
         spindle_num_t spindle_num = N_SYS_SPINDLE;
 
         park.flags.restoring = On; //
 
         do {
-            state_spindle_restore(&condition->spindle[--spindle_num]);
+            state_spindle_restore(&condition->spindle[--spindle_num], (uint16_t)(settings.safety_door.spindle_on_delay * 1000.0f));
         } while(spindle_num);
 
         // Block if safety door re-opened during prior restore actions.
-        if (gc_state.modal.coolant.value != hal.coolant.get_state().value) {
+        if(gc_state.modal.coolant.value != hal.coolant.get_state().value) {
             // NOTE: Laser mode will honor this delay. An exhaust system is often controlled by this signal.
-            gc_coolant(condition->coolant);;
-            delay_sec(settings.safety_door.coolant_on_delay, DelayMode_SysSuspend);
+            coolant_restore(condition->coolant, (uint16_t)(settings.safety_door.coolant_on_delay * 1000.0f));
+            gc_coolant(condition->coolant);
         }
 
         park.flags.restoring = Off;
@@ -361,10 +352,10 @@ void state_suspend_manager (void)
     if (stateHandler != state_await_resume || !gc_spindle_get(0)->state.on)
         return;
 
-    if (sys.override.spindle_stop.value) {
+    if(sys.override.spindle_stop.value) {
 
         // Handles beginning of spindle stop
-        if (sys.override.spindle_stop.initiate) {
+        if(sys.override.spindle_stop.initiate) {
             sys.override.spindle_stop.value = 0; // Clear stop override state
             if(grbl.on_spindle_programmed)
                 grbl.on_spindle_programmed(restore_condition.spindle[restore_condition.spindle_num].hal, (spindle_state_t){0}, 0.0f, 0);
@@ -375,20 +366,17 @@ void state_suspend_manager (void)
         }
 
         // Handles restoring of spindle state
-        if (sys.override.spindle_stop.restore) {
+        if(sys.override.spindle_stop.restore) {
             grbl.report.feedback_message(Message_SpindleRestore);
-            if (restore_condition.spindle[restore_condition.spindle_num].hal->cap.laser) // When in laser mode, ignore spindle spin-up delay. Set to turn on laser when cycle starts.
-                sys.step_control.update_spindle_rpm = On;
-            else
-                state_spindle_set_state(&restore_condition.spindle[restore_condition.spindle_num]);
+            state_spindle_restore(&restore_condition.spindle[restore_condition.spindle_num], settings.spindle.on_delay);
             sys.override.spindle_stop.value = 0; // Clear stop override state
             if(grbl.on_override_changed)
                 grbl.on_override_changed(OverrideChanged_SpindleState);
         }
 
-    } else if (sys.step_control.update_spindle_rpm && restore_condition.spindle[0].hal->get_state(restore_condition.spindle[0].hal).on) {
+    } else if(sys.step_control.update_spindle_rpm && restore_condition.spindle[0].hal->get_state(restore_condition.spindle[0].hal).on) {
         // Handles spindle state during hold. NOTE: Spindle speed overrides may be altered during hold state.
-        state_spindle_set_state(&restore_condition.spindle[restore_condition.spindle_num]);
+        state_spindle_restore(&restore_condition.spindle[restore_condition.spindle_num], settings.spindle.on_delay);
         sys.step_control.update_spindle_rpm = Off;
     }
 }
@@ -669,13 +657,13 @@ static void state_await_resume (uint_fast16_t rt_exec)
 
                     if (restore_condition.spindle[restore_condition.spindle_num].state.on != restore_condition.spindle[restore_condition.spindle_num].hal->get_state(restore_condition.spindle[restore_condition.spindle_num].hal).on) {
                         grbl.report.feedback_message(Message_SpindleRestore);
-                        state_spindle_restore(&restore_condition.spindle[restore_condition.spindle_num]);
+                        state_spindle_restore(&restore_condition.spindle[restore_condition.spindle_num], settings.spindle.on_delay);
                     }
 
                     if (restore_condition.coolant.value != hal.coolant.get_state().value) {
                         // NOTE: Laser mode will honor this delay. An exhaust system is often controlled by coolant signals.
+                        coolant_restore(restore_condition.coolant, settings.coolant.on_delay);
                         gc_coolant(restore_condition.coolant);
-                        delay_sec(settings.safety_door.coolant_on_delay, DelayMode_SysSuspend);
                     }
 
                     sys.override.spindle_stop.value = 0; // Clear spindle stop override states

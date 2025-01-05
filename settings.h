@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2024 Terje Io
+  Copyright (c) 2017-2025 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -249,20 +249,20 @@ typedef enum {
     Settings_ModBus_RXTimeout = 375,
     Settings_RotaryAxes = 376,
     Setting_BlueToothInitOK = 377,
-    Setting_CoolantOnDelay = 378,
-    Setting_CoolantOffDelay = 379,
-    Setting_CoolantMinTemp = 380,
-    Setting_CoolantMaxTemp = 381,
-    Setting_CoolantOffset = 382,
-    Setting_CoolantGain = 383,
+    Setting_LaserCoolantOnDelay = 378,
+    Setting_LaserCoolantOffDelay = 379,
+    Setting_LaserCoolantMinTemp = 380,
+    Setting_LaserCoolantMaxTemp = 381,
+    Setting_LaserCoolantOffset = 382,
+    Setting_LaserCoolantGain = 383,
     Setting_DisableG92Persistence = 384,
     Setting_BlueToothStateInput = 385,
     Setting_FanPort0 = 386,
     Setting_FanPort1 = 387,
     Setting_FanPort2 = 388,
     Setting_FanPort3 = 389,
-    Setting_CoolantTempPort = 390,
-    Setting_CoolantOkPort = 391,
+    Setting_LaserCoolantTempPort = 390,
+    Setting_LaserCoolantOkPort = 391,
     Setting_DoorSpindleOnDelay = 392,
     Setting_DoorCoolantOnDelay = 393,
     Setting_SpindleOnDelay = 394, // made available if safety door input not provided
@@ -450,7 +450,7 @@ typedef enum {
 
     Setting_HomePinsInvertMask = 671,
     Setting_Reserved672 = 672,
-    Setting_HoldCoolantOnDelay = 673, // made available if safety door input not provided
+    Setting_CoolantOnDelay = 673,
 
     Setting_SpindleInvertMask1 = 716,
 
@@ -628,9 +628,9 @@ typedef union {
 } safety_door_setting_flags_t;
 
 typedef struct {
-    safety_door_setting_flags_t flags;
-    float spindle_on_delay;
-    float coolant_on_delay;
+    safety_door_setting_flags_t flags; // TODO: move to last element in next revision
+    float spindle_on_delay; // TODO: change to uint16_t in next revision
+    float coolant_on_delay; // TODO: change to uint16_t in next revision
 } safety_door_settings_t;
 
 typedef union {

@@ -160,6 +160,8 @@ PROGMEM const settings_t defaults = {
     .control_disable_pullup.mask = DEFAULT_DISABLE_CONTROL_PINS_PULL_UP_MASK,
 
     .spindle.ref_id = DEFAULT_SPINDLE,
+    .spindle.on_delay = DEFAULT_SPINDLE_ON_DELAY,
+    .spindle.at_speed_tolerance = DEFAULT_SPINDLE_AT_SPEED_TOLERANCE,
     .spindle.encoder_spindle = DEFAULT_SPINDLE,
     .spindle.ppr = DEFAULT_SPINDLE_PPR,
 
@@ -204,6 +206,7 @@ PROGMEM const settings_t defaults = {
   #endif
 #endif
 
+    .coolant.on_delay = DEFAULT_COOLANT_ON_DELAY,
     .coolant.invert.flood = DEFAULT_INVERT_COOLANT_FLOOD_PIN,
     .coolant.invert.mist = DEFAULT_INVERT_COOLANT_MIST_PIN,
 
@@ -1130,6 +1133,31 @@ setting_id_t settings_get_axis_base (setting_id_t id, uint_fast8_t *idx)
     return *idx < N_AXIS ? base : Setting_SettingsMax;
 }
 
+static status_code_t set_float (setting_id_t setting, float value)
+{
+    status_code_t status = Status_OK;
+
+    switch(setting) {
+
+        case Setting_SpindleAtSpeedTolerance:
+            settings.spindle.at_speed_tolerance = settings.pwm_spindle.at_speed_tolerance = value;
+            break;
+
+        case Setting_SpindleOnDelay:
+            settings.spindle.on_delay = (uint16_t)(value * 1000.0f);
+            break;
+
+        case Setting_CoolantOnDelay:
+            settings.coolant.on_delay = (uint16_t)(value * 1000.0f);
+            break;
+
+        default:
+            break;
+    }
+
+    return status;
+}
+
 static status_code_t set_axis_setting (setting_id_t setting, float value)
 {
     uint_fast8_t idx;
@@ -1292,8 +1320,20 @@ static float get_float (setting_id_t setting)
             value = settings.homing.pulloff;
             break;
 
+        case Setting_SpindleAtSpeedTolerance:
+            value = settings.pwm_spindle.at_speed_tolerance;
+            break;
+
         case Setting_ToolChangeProbingDistance:
             value = settings.tool_change.probing_distance;
+            break;
+
+        case Setting_SpindleOnDelay:
+            value = (float)settings.spindle.on_delay / 1000.0f;
+            break;
+
+        case Setting_CoolantOnDelay:
+            value = (float)settings.coolant.on_delay / 1000.0f;
             break;
 
         default:
@@ -1767,7 +1807,7 @@ static bool is_setting_available (const setting_detail_t *setting)
             break;
 
         case Setting_SpindleOnDelay:
-            available = !hal.signals_cap.safety_door_ajar && spindle_get_count() && !spindle_get_caps(true).at_speed;
+            available = spindle_get_count();
             break;
 
         case Setting_AutoReportInterval:
@@ -1794,7 +1834,7 @@ static bool is_setting_available (const setting_detail_t *setting)
             available = hal.homing.get_state != NULL && hal.home_cap.a.mask != 0;
             break;
 
-        case Setting_HoldCoolantOnDelay:
+        case Setting_CoolantOnDelay:
             available = !hal.signals_cap.safety_door_ajar && hal.coolant_cap.mask;
             break;
 
@@ -1987,7 +2027,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_AxisAutoSquareOffset, Group_Axis0, "-axis dual axis offset", "mm", Format_Decimal, "-0.000", "-10", "10", Setting_IsExtendedFn, set_axis_setting, get_float, is_setting_available, AXIS_OPTS },
      { Setting_AxisHomingFeedRate, Group_Axis0, "-axis homing locate feed rate", axis_rate, Format_Decimal, "###0", NULL, NULL, Setting_NonCoreFn, set_axis_setting, get_float, is_setting_available, AXIS_OPTS },
      { Setting_AxisHomingSeekRate, Group_Axis0, "-axis homing search seek rate", axis_rate, Format_Decimal, "###0", NULL, NULL, Setting_NonCoreFn, set_axis_setting, get_float, is_setting_available, AXIS_OPTS },
-     { Setting_SpindleAtSpeedTolerance, Group_Spindle, "Spindle at speed tolerance", "percent", Format_Decimal, "##0.0", NULL, NULL, Setting_IsExtended, &settings.pwm_spindle.at_speed_tolerance, NULL, is_setting_available },
+     { Setting_SpindleAtSpeedTolerance, Group_Spindle, "Spindle at speed tolerance", "percent", Format_Decimal, "##0.0", NULL, NULL, Setting_IsExtendedFn, set_float, get_float, is_setting_available },
      { Setting_ToolChangeMode, Group_Toolchange, "Tool change mode", NULL, Format_RadioButtons, "Normal,Manual touch off,Manual touch off @ G59.3,Automatic touch off @ G59.3,Ignore M6", NULL, NULL, Setting_IsExtendedFn, set_tool_change_mode, get_int, NULL },
      { Setting_ToolChangeProbingDistance, Group_Toolchange, "Tool change probing distance", "mm", Format_Decimal, "#####0.0", NULL, NULL, Setting_IsExtendedFn, set_tool_change_probing_distance, get_float, NULL },
      { Setting_ToolChangeFeedRate, Group_Toolchange, "Tool change locate feed rate", "mm/min", Format_Decimal, "#####0.0", NULL, NULL, Setting_IsExtended, &settings.tool_change.feed_rate, NULL, NULL },
@@ -2004,10 +2044,10 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Settings_RotaryAxes, Group_Stepper, "Rotary axes", NULL, Format_Bitfield, rotary_axes, NULL, NULL, Setting_IsExtendedFn, set_rotary_axes, get_int, NULL },
 #endif
 #ifndef NO_SAFETY_DOOR_SUPPORT
-     { Setting_DoorSpindleOnDelay, Group_SafetyDoor, "Spindle on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.spindle_on_delay, NULL, is_setting_available },
-     { Setting_DoorCoolantOnDelay, Group_SafetyDoor, "Coolant on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.coolant_on_delay, NULL, is_setting_available },
+     { Setting_DoorSpindleOnDelay, Group_SafetyDoor, "Spindle on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.spindle_on_delay, NULL, is_setting_available, { .allow_null = On } },
+     { Setting_DoorCoolantOnDelay, Group_SafetyDoor, "Coolant on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.coolant_on_delay, NULL, is_setting_available, { .allow_null = On } },
 #endif
-     { Setting_SpindleOnDelay, Group_Spindle, "Spindle on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.spindle_on_delay, NULL, is_setting_available },
+     { Setting_SpindleOnDelay, Group_Spindle, "Spindle on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtendedFn, set_float, get_float, is_setting_available, { .allow_null = On } },
      { Setting_SpindleType, Group_Spindle, "Default spindle", NULL, Format_RadioButtons, spindle_types, NULL, NULL, Setting_IsExtendedFn, set_default_spindle, get_int, is_setting_available },
      { Setting_PlannerBlocks, Group_General, "Planner buffer blocks", NULL, Format_Int16, "####0", "30", "1000", Setting_IsExtended, &settings.planner_buffer_blocks, NULL, NULL, { .reboot_required = On } },
      { Setting_AutoReportInterval, Group_General, "Autoreport interval", "ms", Format_Int16, "###0", "100", "1000", Setting_IsExtendedFn, set_report_interval, get_int, NULL, { .reboot_required = On, .allow_null = On } },
@@ -2025,7 +2065,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
 #endif
      { Setting_FSOptions, Group_General, "File systems options", NULL, Format_Bitfield, fs_options, NULL, NULL, Setting_IsExtended, &settings.fs_options.mask, NULL, is_setting_available },
      { Setting_HomePinsInvertMask, Group_Limits, "Invert home inputs", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.home_invert.mask, NULL, is_setting_available },
-     { Setting_HoldCoolantOnDelay, Group_Coolant, "Coolant on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.coolant_on_delay, NULL, is_setting_available }
+     { Setting_CoolantOnDelay, Group_Coolant, "Coolant on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtendedFn, set_float, get_float, is_setting_available, { .allow_null = On } }
 };
 
 #ifndef NO_SETTINGS_DESCRIPTIONS
@@ -2169,7 +2209,8 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_AxisHomingFeedRate, "Feed rate to slowly engage limit switch to determine its location accurately." },
     { Setting_AxisHomingSeekRate, "Seek rate to quickly find the limit switch before the slower locating phase." },
     { Setting_SpindleAtSpeedTolerance, "Spindle at speed tolerance as percentage deviation from programmed speed, set to 0 to disable.\\n"
-                                       "If not within tolerance when checked after spindle on delay ($392) alarm 14 is raised."
+                                       "If not within tolerance after timeout set by spindle on delay ($394) alarm 14 is raised.\\n"
+                                       "NOTE: if the spindle on delay is set to 0 the timeout defaults to one minute."
     },
     { Setting_ToolChangeMode, "Normal: allows jogging for manual touch off. Set new position manually.\\n\\n"
                               "Manual touch off: retracts tool axis to home position for tool change, use jogging or $TPW for touch off.\\n\\n"
@@ -2192,12 +2233,12 @@ PROGMEM static const setting_descr_t setting_descr[] = {
      { Settings_RotaryAxes, "Designates axes as rotary, interpretation some other relevant axis settings is changed accordingly." },
 #endif
 #ifndef NO_SAFETY_DOOR_SUPPORT
-    { Setting_DoorSpindleOnDelay, "Delay to allow spindle to spin up after safety door is opened or feed hold is canceled." },
-    { Setting_DoorCoolantOnDelay, "Delay to allow coolant to restart after safety door is opened or feed hold is canceled." },
-#else
-    { Setting_DoorSpindleOnDelay, "Delay to allow spindle to spin up when spindle at speed tolerance is > 0." },
+    { Setting_DoorSpindleOnDelay, "Delay to allow spindle to spin up after safety door is opened." },
+    { Setting_DoorCoolantOnDelay, "Delay to allow coolant to restart after safety door is opened." },
 #endif
-    { Setting_SpindleOnDelay, "Delay to allow spindle to restart after feed hold is canceled." },
+    { Setting_SpindleOnDelay, "Delay to allow spindle to spin up. 0 or 0.5 - 20s\\n"
+                              "If spindle supports ""at speed"" functionality it is the time to wait before alarm 14 is raised."
+    },
     { Setting_SpindleType, "Spindle selected on startup." },
     { Setting_PlannerBlocks, "Number of blocks in the planner buffer." },
     { Setting_AutoReportInterval, "Interval the real time report will be sent, set to 0 to disable." },
@@ -2219,7 +2260,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
 #endif
     { Setting_FSOptions, "Auto mount SD card on startup." },
     { Setting_HomePinsInvertMask, "Inverts the axis home input signals." },
-    { Setting_HoldCoolantOnDelay, "Delay to allow coolant to restart after feed hold is canceled." }
+    { Setting_CoolantOnDelay, "Delay to allow coolant to start. 0 or 0.5 - 20s" }
 };
 
 #endif
@@ -3221,9 +3262,19 @@ void settings_init (void)
             details->on_changed(&settings, changed);
     } while((details = details->next));
 
-
     if(!settings.flags.settings_downgrade && settings.version.build != (GRBL_BUILD - 20000000UL)) {
+
+        if(settings.version.build <= 250102) {
+            settings.spindle.on_delay = settings.safety_door.spindle_on_delay * 1000.0f;
+            settings.coolant.on_delay = settings.safety_door.coolant_on_delay * 1000.0f;
+            if((changed.spindle = settings.spindle.at_speed_tolerance != settings.pwm_spindle.at_speed_tolerance)) {
+                settings.spindle.at_speed_tolerance = settings.pwm_spindle.at_speed_tolerance;
+                hal.settings_changed(&settings, changed);
+            }
+        }
+
         settings.version.build = (GRBL_BUILD - 20000000UL);
+
         settings_write_global();
     }
 

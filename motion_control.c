@@ -627,7 +627,7 @@ void mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_
                 return;
 
             if(canned->spindle_off)
-                spindle_sync(pl_data->spindle.hal, pl_data->spindle.state, pl_data->spindle.rpm);
+                spindle_set_state_synced(pl_data->spindle.hal, pl_data->spindle.state, pl_data->spindle.rpm);
         }
 
         pl_data->condition.rapid_motion = On; // Set rapid motion condition flag.

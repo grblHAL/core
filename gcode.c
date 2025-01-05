@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2024 Terje Io
+  Copyright (c) 2017-2025 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -552,10 +552,8 @@ bool gc_modal_state_restore (gc_modal_t *copy)
         copy->auto_restore = false;
         copy->motion = gc_state.modal.motion;
 
-        if(copy->coolant.value != gc_state.modal.coolant.value) {
-            hal.coolant.set_state(copy->coolant);
-            delay_sec(settings.safety_door.coolant_on_delay, DelayMode_SysSuspend);
-        }
+        if(copy->coolant.value != gc_state.modal.coolant.value)
+            coolant_restore(copy->coolant, settings.coolant.on_delay);
 
 #if N_SYS_SPINDLE > 1
         uint_fast8_t idx = N_SYS_SPINDLE;
@@ -569,7 +567,7 @@ bool gc_modal_state_restore (gc_modal_t *copy)
         } while(idx);
 #else
         if(!memcmp(&copy->spindle, &gc_state.modal.spindle, offsetof(spindle_t, hal)))
-            spindle_restore(gc_state.modal.spindle.hal, copy->spindle.state, copy->spindle.rpm);
+            spindle_restore(gc_state.modal.spindle.hal, copy->spindle.state, copy->spindle.rpm, settings.spindle.on_delay);
 #endif
 
         memcpy(&gc_state.modal, copy, sizeof(gc_modal_t));
@@ -3177,7 +3175,7 @@ status_code_t gc_execute_block (char *block)
     if(sspindle->rpm != gc_block.values.s || gc_parser_flags.spindle_force_sync) {
         if(sspindle->state.on && !gc_parser_flags.laser_is_motion) {
             sspindle->hal->param->rpm = gc_block.values.s;
-            spindle_sync(sspindle->hal, sspindle->state, gc_parser_flags.laser_disable ? 0.0f : gc_block.values.s);
+            spindle_set_state_synced(sspindle->hal, sspindle->state, gc_parser_flags.laser_disable ? 0.0f : gc_block.values.s);
         }
         sspindle->rpm = gc_block.values.s; // Update spindle speed state.
     }
@@ -3333,7 +3331,7 @@ status_code_t gc_execute_block (char *block)
                         if(grbl.on_spindle_programmed)
                             grbl.on_spindle_programmed(sys_spindle->hal, gc_block.spindle_modal.state, sys_spindle->rpm, sys_spindle->rpm_mode);
 
-                        if((spindle_ok = spindle_sync(sys_spindle->hal, gc_block.spindle_modal.state, sys_spindle->rpm))) {
+                        if((spindle_ok = spindle_set_state_synced(sys_spindle->hal, gc_block.spindle_modal.state, sys_spindle->rpm))) {
                             if((sys_spindle->state = sys_spindle->hal->param->state = gc_block.spindle_modal.state).on)
                                 sspindle = sys_spindle;
                         }
@@ -3355,7 +3353,7 @@ status_code_t gc_execute_block (char *block)
             if(grbl.on_spindle_programmed)
                 grbl.on_spindle_programmed(sspindle->hal, gc_block.spindle_modal.state, plan_data.spindle.rpm, sspindle->rpm_mode);
 
-            if((spindle_ok = spindle_sync(sspindle->hal, gc_block.spindle_modal.state, plan_data.spindle.rpm)))
+            if((spindle_ok = spindle_set_state_synced(sspindle->hal, gc_block.spindle_modal.state, plan_data.spindle.rpm)))
                 sspindle->state = sspindle->hal->param->state = gc_block.spindle_modal.state;
 
             spindle_event = !spindle_ok;
@@ -3407,7 +3405,7 @@ status_code_t gc_execute_block (char *block)
     if (gc_parser_flags.set_coolant && gc_state.modal.coolant.value != gc_block.modal.coolant.value) {
     // NOTE: Coolant M-codes are modal. Only one command per line is allowed. But, multiple states
     // can exist at the same time, while coolant disable clears all states.
-        if(coolant_sync(gc_block.modal.coolant))
+        if(coolant_set_state_synced(gc_block.modal.coolant))
             gc_state.modal.coolant = gc_block.modal.coolant;
     }
 
