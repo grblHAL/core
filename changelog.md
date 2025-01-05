@@ -4,8 +4,7 @@
 
 Core:
 
-* Changed error code reported when file not found for `G65` macro or named `O`-sub calls from `39` to `84`.  
-Removed `IDLE` state requirement for executing `G65` macros, an error will no longer be returned and the macro will be run.  
+* Changed error code reported when file not found for named `O`-sub calls from `39` to `84`.
 
 * Added event handler for outputting welcome message on "native" USB connect for drivers that provides the linestate changed event. Ref. STMF32F4xx issue [#206](https://github.com/grblHAL/STM32F4xx/issues/206). 
 
@@ -18,6 +17,9 @@ Drivers:
 Plugins:
 
 * Bluetooth: updated for core change.
+
+* SD card: changed error code reported when file not found for `G65` macro calls from `39` to `84`.  
+Removed `IDLE` state requirement for executing `G65` macros, an error will no longer be returned and the macro will be run.  
 
 ---
 
