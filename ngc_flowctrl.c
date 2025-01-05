@@ -661,7 +661,7 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
 
                 if(!skipping) {
 
-                    ngc_sub_t *sub;
+                    ngc_sub_t *sub = NULL;
 
                     if(o_label > NGC_MAX_PARAM_ID) {
 
@@ -684,7 +684,7 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
                                 if((sub = add_sub(o_label, file)) == NULL)
                                     status = Status_FlowControlOutOfMemory;
                             } else
-                                status = Status_FlowControlOutOfMemory; // file not found...
+                                status = Status_FileOpenFailed;
                        }
                     } else if((sub = subs)) do {
                         if(sub->o_label == o_label && sub->file == hal.stream.file)

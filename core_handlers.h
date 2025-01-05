@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2020-2024 Terje Io
+  Copyright (c) 2020-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -58,7 +58,7 @@ typedef struct {
 
 // Report entry points set by core at startup and reset.
 
-typedef void (*init_message_ptr)(void);
+typedef void (*init_message_ptr)(stream_write_ptr write);
 typedef void (*help_message_ptr)(void);
 typedef status_code_t (*status_message_ptr)(status_code_t status_code);
 typedef message_code_t (*feedback_message_ptr)(message_code_t message_code);

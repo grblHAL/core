@@ -104,6 +104,7 @@ PROGMEM static const status_detail_t status_detail[] = {
     { Status_FlowControlStackOverflow, "Stack overflow while executing flow statement." },
     { Status_FlowControlOutOfMemory, "Out of memory while executing flow statement." },
 #endif
+    { Status_FileOpenFailed, "Could not open file." },
     { Status_UserException, "User defined error occured." }
 #endif // NO_SETTINGS_DESCRIPTIONS
 };
