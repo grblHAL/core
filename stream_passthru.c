@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2024 Terje Io
+  Copyright (c) 2024-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -190,7 +190,7 @@ void stream_passthru_init (uint8_t instance, uint32_t baud_rate, bool start)
 
             io_stream_t const *stream = stream_open_instance(instance, baud_rate, NULL, "Passthru");
 
-            if(stream != NULL) {
+            if((hal.stream.state.passthru = stream != NULL)) {
 
                 protocol_enqueue_foreground_task(passthru_start1, NULL); // enter passthrouh mode after finished booting grblHAL
 

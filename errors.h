@@ -112,6 +112,7 @@ typedef enum {
     Status_FlowControlSyntaxError = 81,
     Status_FlowControlStackOverflow = 82,
     Status_FlowControlOutOfMemory = 83,
+    Status_FileOpenFailed = 84,
     Status_StatusMax = Status_FlowControlOutOfMemory,
     Status_UserException = 253,
     Status_Handled,   // For internal use only

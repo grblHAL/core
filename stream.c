@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2024 Terje Io
+  Copyright (c) 2021-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -255,10 +255,19 @@ static bool stream_select (const io_stream_t *stream, bool add)
     static const io_stream_t *active_stream = NULL;
 
     bool send_init_message = false, mpg_enable = false;
+    static struct {
+        const io_stream_t *stream;
+        on_linestate_changed_ptr on_linestate_changed;
+    } usb = {};
 
     if(stream == base.stream) {
         base.is_up = add ? (stream->is_connected ? stream->is_connected : stream_connected) : is_not_connected;
         return true;
+    }
+
+    if(active_stream != NULL && hal.stream.state.is_usb) {
+        usb.stream = active_stream;
+        usb.on_linestate_changed = hal.stream.on_linestate_changed;
     }
 
     if(!add) { // disconnect
@@ -336,6 +345,9 @@ static bool stream_select (const io_stream_t *stream, bool add)
 
     memcpy(&hal.stream, stream, sizeof(io_stream_t));
 
+    if(stream == usb.stream)
+        hal.stream.on_linestate_changed = usb.on_linestate_changed;
+
     if(stream == base.stream && base.is_up == is_not_connected)
         base.is_up = stream_connected;
 
@@ -345,10 +357,8 @@ static bool stream_select (const io_stream_t *stream, bool add)
     if(stream->type == StreamType_WebSocket && !stream->state.webui_connected)
         hal.stream.state.webui_connected = webui_connected;
 
-    if(send_init_message) {
-        hal.stream.write_all = stream->write;
-        grbl.report.init_message();
-    }
+    if(send_init_message)
+        grbl.report.init_message(stream->write);
 
     hal.stream.write_all = stream_write_all;
     hal.stream.set_enqueue_rt_handler(protocol_enqueue_realtime_command);

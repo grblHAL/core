@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2024 Terje Io
+  Copyright (c) 2017-2025 Terje Io
   Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
 
   grblHAL is free software: you can redistribute it and/or modify
@@ -323,14 +323,14 @@ static message_code_t report_feedback_message (message_code_t id)
 }
 
 // Welcome message
-static void report_init_message (void)
+static void report_init_message (stream_write_ptr write)
 {
     override_counter = wco_counter = 0;
 
 #if COMPATIBILITY_LEVEL == 0
-    hal.stream.write_all(ASCII_EOL "GrblHAL " GRBL_VERSION " ['$' or '$HELP' for help]" ASCII_EOL);
+    write(ASCII_EOL "GrblHAL " GRBL_VERSION " ['$' or '$HELP' for help]" ASCII_EOL);
 #else
-    hal.stream.write_all(ASCII_EOL "Grbl " GRBL_VERSION " ['$' for help]" ASCII_EOL);
+    write(ASCII_EOL "Grbl " GRBL_VERSION " ['$' for help]" ASCII_EOL);
 #endif
 }
 

@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2019-2024 Terje Io
+  Copyright (c) 2019-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -235,7 +235,8 @@ typedef union {
         uint8_t webui_connected :1,
                 is_usb          :1,
                 linestate_event :1, //!< Set when driver supports on_linestate_changed event.
-                unused          :5;
+                passthru        :1, //!< Set when stream is in passthru mode.
+                unused          :4;
     };
 } io_stream_state_t;
 

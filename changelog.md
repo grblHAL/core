@@ -1,5 +1,28 @@
 ## grblHAL changelog
 
+<a name="20250104">20250104
+
+Core:
+
+* Changed error code reported when file not found for named `O`-sub calls from `39` to `84`.
+
+* Added event handler for outputting welcome message on "native" USB connect for drivers that provides the linestate changed event. Ref. STMF32F4xx issue [#206](https://github.com/grblHAL/STM32F4xx/issues/206). 
+
+Drivers:
+
+* LPC176x: added support for USB linestate changed event.
+
+* iMXRT1062: now outputs the welcome message on the first USB connection after a cold start.
+
+Plugins:
+
+* Bluetooth: updated for core change.
+
+* SD card: changed error code reported when file not found for `G65` macro calls from `39` to `84`.  
+Removed `IDLE` state requirement for executing `G65` macros, an error will no longer be returned and the macro will be run.  
+
+---
+
 <a name="20250103">20250103
 
 Core:
@@ -10,7 +33,7 @@ They can be either set to 0 or to a value in the range 0.5 - 20s. The settings a
 > If the spindle supports "at speed" functionality and this is enabled by setting `$340` \(Spindle at speed tolerance\) > 0 then the spin up delay is used as a timeout value before alarm 14 is raised. If `$394` is set to 0 the timeout will default to one minute.
 
 > [!NOTE]
-> Setting `$392` and `$393`, if available, are now only used for spindle spin up delay and coolant start delay respectively when the safety door is closed.
+> Settings `$392` and `$393`, if available, are now only used for spindle spin up delay and coolant start delay respectively when the safety door is closed.
 
 Plugins:
 

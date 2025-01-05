@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2024 Terje Io
+  Copyright (c) 2017-2025 Terje Io
   Copyright (c) 2011-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -92,6 +92,7 @@ grbl_hal_t hal;
 static driver_startup_t driver = { .ok = 0xFF };
 static core_task_t task_pool[CORE_TASK_POOL_SIZE] = {0};
 static core_task_t *next_task = NULL, *immediate_task = NULL, *systick_task = NULL, *last_freed = NULL;
+static on_linestate_changed_ptr on_linestate_changed;
 
 #ifdef KINEMATICS_API
 kinematics_t kinematics;
@@ -164,6 +165,20 @@ ISR_CODE static home_signals_t ISR_FUNC(get_homing_status2)(void)
     home.b.value = (limits.min2.value & source.min2.mask) | (limits.max2.value & source.max2.mask);
 
     return home;
+}
+
+static void output_welcome_message (void *data)
+{
+    grbl.report.init_message(hal.stream.write);
+}
+
+static void onLinestateChanged (serial_linestate_t state)
+{
+    if(state.dtr)
+        task_add_delayed(output_welcome_message, NULL, 200);
+
+    if(on_linestate_changed)
+        on_linestate_changed(state);
 }
 
 // main entry point
@@ -333,6 +348,11 @@ int grbl_enter (void)
         setting_remove_elements(Setting_FSOptions, fs_options.mask);
     }
 
+    if(hal.stream.state.linestate_event && !hal.stream.state.passthru) {
+        on_linestate_changed = hal.stream.on_linestate_changed;
+        hal.stream.on_linestate_changed = onLinestateChanged;
+    }
+
     // Initialization loop upon power-up or a system abort. For the latter, all processes
     // will return to this loop to be cleanly re-initialized.
     while(looping) {
@@ -380,7 +400,7 @@ int grbl_enter (void)
             tc_init();
 
         // Print welcome message. Indicates an initialization has occurred at power-up or with a reset.
-        grbl.report.init_message();
+        grbl.report.init_message(hal.stream.write_all);
 
         if(!settings.flags.no_unlock_after_estop && state_get() == STATE_ESTOP)
             state_set(STATE_ALARM);
