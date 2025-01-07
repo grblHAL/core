@@ -225,6 +225,7 @@ typedef struct {
     uint8_t encoder_spindle;
     uint16_t ppr;                               //!< Spindle encoder pulses per revolution (PPR).
     uint16_t on_delay;
+    uint16_t off_delay;
     float at_speed_tolerance;                   //!< Tolerance in percent of programmed speed.
 } spindle_settings_t;
 

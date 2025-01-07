@@ -1154,6 +1154,14 @@ Default value is 0, meaning spindle sync is disabled
 #endif
 ///@}
 
+/*! @name $539 - Setting_SpindleOffDelay
+*/
+///@{
+#if !defined DEFAULT_SPINDLE_OFF_DELAY || defined __DOXYGEN__
+#define DEFAULT_SPINDLE_OFF_DELAY 0 // milliseconds: 0 or 500 - 20000
+#endif
+///@}
+
 // Closed loop spindle settings (Group_Spindle_ClosedLoop)
 
 // $9 - Setting_SpindlePWMOptions

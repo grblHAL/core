@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2024 Terje Io
+  Copyright (c) 2017-2025 Terje Io
   Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -656,12 +656,8 @@ static float get_homing_rate (axes_signals_t cycle, homing_mode_t mode)
 {
     uint_fast8_t idx = 0;
 
-    while(cycle.mask) {
-        if(cycle.mask & 1)
-            break;
-        idx++;
-        cycle.mask >>= 1;
-    }
+    if(settings.homing.flags.per_axis_feedrates)
+        idx = ffs(cycle.mask) - 1;
 
     return mode == HomingMode_Locate ? settings.axis[idx].homing_feed_rate : settings.axis[idx].homing_seek_rate;
 }

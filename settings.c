@@ -161,6 +161,7 @@ PROGMEM const settings_t defaults = {
 
     .spindle.ref_id = DEFAULT_SPINDLE,
     .spindle.on_delay = DEFAULT_SPINDLE_ON_DELAY,
+    .spindle.off_delay = DEFAULT_SPINDLE_OFF_DELAY,
     .spindle.at_speed_tolerance = DEFAULT_SPINDLE_AT_SPEED_TOLERANCE,
     .spindle.encoder_spindle = DEFAULT_SPINDLE,
     .spindle.ppr = DEFAULT_SPINDLE_PPR,
@@ -1147,6 +1148,10 @@ static status_code_t set_float (setting_id_t setting, float value)
             settings.spindle.on_delay = (uint16_t)(value * 1000.0f);
             break;
 
+        case Setting_SpindleOffDelay:
+            settings.spindle.off_delay = (uint16_t)(value * 1000.0f);
+            break;
+
         case Setting_CoolantOnDelay:
             settings.coolant.on_delay = (uint16_t)(value * 1000.0f);
             break;
@@ -1330,6 +1335,10 @@ static float get_float (setting_id_t setting)
 
         case Setting_SpindleOnDelay:
             value = (float)settings.spindle.on_delay / 1000.0f;
+            break;
+
+        case Setting_SpindleOffDelay:
+            value = (float)settings.spindle.off_delay / 1000.0f;
             break;
 
         case Setting_CoolantOnDelay:
@@ -1807,6 +1816,7 @@ static bool is_setting_available (const setting_detail_t *setting)
             break;
 
         case Setting_SpindleOnDelay:
+        case Setting_SpindleOffDelay:
             available = spindle_get_count();
             break;
 
@@ -2063,6 +2073,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
 #if N_AXIS > 3
      { Setting_RotaryWrap, Group_Stepper, "Fast rotary go to G28", NULL, Format_Bitfield, rotary_axes, NULL, NULL, Setting_IsExtendedFn, set_rotary_wrap_axes, get_int, NULL },
 #endif
+     { Setting_SpindleOffDelay, Group_Spindle, "Spindle off delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtendedFn, set_float, get_float, is_setting_available, { .allow_null = On } },
      { Setting_FSOptions, Group_General, "File systems options", NULL, Format_Bitfield, fs_options, NULL, NULL, Setting_IsExtended, &settings.fs_options.mask, NULL, is_setting_available },
      { Setting_HomePinsInvertMask, Group_Limits, "Invert home inputs", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.home_invert.mask, NULL, is_setting_available },
      { Setting_CoolantOnDelay, Group_Coolant, "Coolant on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtendedFn, set_float, get_float, is_setting_available, { .allow_null = On } }
@@ -2237,7 +2248,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_DoorCoolantOnDelay, "Delay to allow coolant to restart after safety door is opened." },
 #endif
     { Setting_SpindleOnDelay, "Delay to allow spindle to spin up. 0 or 0.5 - 20s\\n"
-                              "If spindle supports ""at speed"" functionality it is the time to wait before alarm 14 is raised."
+                              "If spindle supports \"at speed\" functionality it is the time to wait before alarm 14 is raised."
     },
     { Setting_SpindleType, "Spindle selected on startup." },
     { Setting_PlannerBlocks, "Number of blocks in the planner buffer." },
@@ -2250,6 +2261,9 @@ PROGMEM static const setting_descr_t setting_descr[] = {
 #if NGC_EXPRESSIONS_ENABLE
     { Setting_NGCDebugOut, "Example: (debug, metric mode: #<_metric>, coord system: #5220)" },
 #endif
+    { Setting_SpindleOffDelay, "Delay to allow spindle to spin down. 0 or 0.5 - 20s\\n"
+                               "If spindle supports \"at speed\" functionality it is the time to wait before alarm 14 is raised."
+    },
     { Setting_EncoderSpindle, "Specifies which spindle has the encoder attached." },
 #if N_AXIS > 3
     { Setting_RotaryWrap, "Perform fast move to angle stored in G28 position.\\n"
