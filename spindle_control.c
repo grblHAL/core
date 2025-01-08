@@ -637,7 +637,7 @@ for it to reach the speed and raise an alarm if the speed is not reached within 
 bool spindle_set_state_synced (spindle_ptrs_t *spindle, spindle_state_t state, float rpm)
 {
     // Empty planner buffer to ensure spindle is set when programmed.
-    return protocol_buffer_synchronize() && spindle_set_state_wait(spindle, state, rpm, settings.spindle.on_delay, DelayMode_Dwell);
+    return protocol_buffer_synchronize() && spindle_set_state_wait(spindle, state, rpm, state.on ? settings.spindle.on_delay : settings.spindle.off_delay, DelayMode_Dwell);
 }
 
 /*! \brief Restore spindle running state with direction, enable, spindle RPM and appropriate delay.

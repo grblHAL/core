@@ -265,7 +265,7 @@ typedef enum {
     Setting_LaserCoolantOkPort = 391,
     Setting_DoorSpindleOnDelay = 392,
     Setting_DoorCoolantOnDelay = 393,
-    Setting_SpindleOnDelay = 394, // made available if safety door input not provided
+    Setting_SpindleOnDelay = 394,
     Setting_SpindleType = 395,
     Setting_WebUiTimeout = 396,
     Setting_WebUiAutoReportInterval = 397,
@@ -373,6 +373,7 @@ typedef enum {
     Setting_RGB_StripLengt0 = 536,
     Setting_RGB_StripLengt1 = 537,
     Setting_RotaryWrap = 538,
+    Setting_SpindleOffDelay = 539,
 
     Setting_Panel_SpindleSpeed       = 540,  // NOTE: Reserving settings values 540 to 579 for panel settings.
     Setting_Panel_ModbusAddress      = 541,

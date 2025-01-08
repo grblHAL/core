@@ -1,5 +1,27 @@
 ## grblHAL changelog
 
+<a name="20250107">20250107
+
+Core:
+
+* Added setting `$539` for spindle spin down delay. Ref. issue [#651](https://github.com/grblHAL/core/issues/651).
+
+Drivers:
+
+* RP2040, STM32F4xx and STM32F7xx: increased reset delay for WizNet ethernet modules.
+
+* iMXRT1062, STM32F4xx and STM32F7xx: fixed regression affecting step injection, used when stepper spindle or plasma THC is enabled.
+
+* STM32F7xx: removed code left over from copy/paste update. Ref. issue [#20](https://github.com/grblHAL/STM32F7xx/issues/20).
+
+Plugins:
+
+* Spindle, stepper: improved settings changes handling. Added a bit of documentation. Ref. issue [#30](https://github.com/grblHAL/Plugins_spindle/issues/30).
+
+* SD card: added inbuilt macro `G65P4` for getting the [current machine state](https://github.com/grblHAL/core/wiki/Expressions-and-flow-control#inbuilt-g65-macros).
+
+---
+
 <a name="20250104">20250104
 
 Core:
