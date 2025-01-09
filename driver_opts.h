@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2020-2024 Terje Io
+  Copyright (c) 2020-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -191,6 +191,11 @@
 #else
   #define TRINAMIC_SPI_ENABLE  0
 #endif
+#ifndef TRINAMIC_DEV
+#define TRINAMIC_DEV        0
+#endif
+
+#if NO_OPTS_POST
 #ifndef TRINAMIC_I2C
 #define TRINAMIC_I2C        0
 #endif
@@ -199,8 +204,6 @@
 #else
 #define TRINAMIC_MOTOR_ENABLE 0
 #endif
-#ifndef TRINAMIC_DEV
-#define TRINAMIC_DEV        0
 #endif
 
 #ifndef LITTLEFS_ENABLE

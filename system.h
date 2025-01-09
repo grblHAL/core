@@ -267,7 +267,8 @@ typedef union {
                  keep_input              :1, //!< Set to true to not flush stream input buffer on executing STOP.
                  auto_reporting          :1, //!< Set to true when auto real time reporting is enabled.
                  synchronizing           :1, //!< Set to true when protocol_buffer_synchronize() is running.
-                 unused                  :5;
+                 travel_changed          :1, //!< Set to true when maximum travel settings has changed.
+                 unused                  :4;
     };
 } system_flags_t;
 

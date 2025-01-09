@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2024 Terje Io
+  Copyright (c) 2021-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -124,6 +124,7 @@ typedef struct {
 } io_port_t;
 
 uint8_t ioports_available (io_port_type_t type, io_port_direction_t dir);
+xbar_t *ioport_get_info (io_port_type_t type, io_port_direction_t dir, uint8_t port);
 bool ioport_claim (io_port_type_t type, io_port_direction_t dir, uint8_t *port, const char *description);
 bool ioport_can_claim_explicit (void);
 uint8_t ioport_find_free (io_port_type_t type, io_port_direction_t dir, const char *description);

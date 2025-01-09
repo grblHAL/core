@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2024 Terje Io
+  Copyright (c) 2021-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -131,6 +131,28 @@ uint8_t ioport_find_free (io_port_type_t type, io_port_direction_t dir, const ch
     return found ? port : 255;
 }
 
+/*! \brief Return information about a digital or analog port.
+\param type as an \a #io_port_type_t enum value.
+\param dir as an \a #io_port_direction_t enum value.
+\param port the port aux number.
+\returns pointer to \a xbar_t struct if successful, NULL if not.
+*/
+xbar_t *ioport_get_info (io_port_type_t type, io_port_direction_t dir, uint8_t port)
+{
+    bool ok = false;
+    uint8_t n_ports = ioports_available(type, dir);
+    uint8_t base = type == Port_Digital
+                    ? (dir == Port_Input ? Input_Aux0 : Output_Aux0)
+                    : (dir == Port_Input ? Input_Analog_Aux0 : Output_Analog_Aux0);
+    xbar_t *portinfo = NULL;
+
+    if(hal.port.get_pin_info && n_ports) do {
+        ok = (portinfo = hal.port.get_pin_info(type, dir, --n_ports)) && (portinfo->function - base) == port;
+    } while(n_ports && !ok);
+
+    return ok ? portinfo : NULL;
+}
+
 /*! \brief Claim a digital or analog port for exclusive use.
 \param type as an \a #io_port_type_t enum value.
 \param dir as an \a #io_port_direction_t enum value.
@@ -140,26 +162,15 @@ uint8_t ioport_find_free (io_port_type_t type, io_port_direction_t dir, const ch
 */
 bool ioport_claim (io_port_type_t type, io_port_direction_t dir, uint8_t *port, const char *description)
 {
-    bool ok = false;
-    uint8_t n_ports = ioports_available(type, dir);
-    uint8_t base = type == Port_Digital
-                    ? (dir == Port_Input ? Input_Aux0 : Output_Aux0)
-                    : (dir == Port_Input ? Input_Analog_Aux0 : Output_Analog_Aux0);
+    bool ok;
 
-    if(hal.port.claim != NULL) {
+    if(hal.port.claim) {
 
         xbar_t *portinfo;
 
-        if(n_ports > 0) do {
-            n_ports--;
-            portinfo = hal.port.get_pin_info(type, dir, n_ports);
-            if((ok = portinfo && !portinfo->mode.claimed && (portinfo->function - base) == *port)) {
-                ok = hal.port.claim(type, dir, port, description);
-                break;
-            }
-        } while(n_ports && !ok);
+        ok = (portinfo = ioport_get_info(type, dir, *port)) && !portinfo->mode.claimed && hal.port.claim(type, dir, port, description);
 
-    } else if((ok = n_ports > 0)) {
+    } else if((ok = ioports_available(type, dir) > 0)) {
 
         if(type == Port_Digital)
             *port = dir == Port_Input ? --hal.port.num_digital_in : --hal.port.num_digital_out;
@@ -210,18 +221,21 @@ void ioport_assign_out_function (aux_ctrl_out_t *aux_ctrl, pin_function_t *funct
 */
 bool ioport_can_claim_explicit (void)
 {
-    return !(hal.port.claim == NULL || hal.port.get_pin_info == NULL);
+    return !!hal.port.claim && !!hal.port.get_pin_info;
 }
 
 bool ioports_enumerate (io_port_type_t type, io_port_direction_t dir, pin_cap_t filter, ioports_enumerate_callback_ptr callback, void *data)
 {
     bool ok = false;
-    uint8_t n_ports = ioports_available(type, dir);
+    uint8_t n_ports = ioports_available(type, dir),
+            base = type == Port_Digital
+                    ? (dir == Port_Input ? Input_Aux0 : Output_Aux0)
+                    : (dir == Port_Input ? Input_Analog_Aux0 : Output_Analog_Aux0);
     xbar_t *portinfo;
 
     if(n_ports && ioport_can_claim_explicit()) do {
         portinfo = hal.port.get_pin_info(type, dir, --n_ports);
-        if((portinfo->cap.mask & filter.mask) == filter.mask && (ok = callback(portinfo, n_ports, data)))
+        if((portinfo->cap.mask & filter.mask) == filter.mask && (ok = callback(portinfo, portinfo->function - base, data)))
             break;
     } while(n_ports);
 

@@ -1,6 +1,26 @@
 ## grblHAL changelog
 
-<a name="20250107">20250107
+<a name="20250109">Build 20250109
+
+Core:
+
+* Fixed inconsistent handling of auxiliary port numbers when claiming from plugins. New API call added related to this.
+
+* Added `ffs()` library function for `_WIN32` platform. Fixes issue [#655](https://github.com/grblHAL/core/issues/655).
+
+Drivers:
+
+* ESP32: added tentative support for Trinamic SPI driver configurations with individual chip select signals. Ref. issue [#133](https://github.com/grblHAL/ESP32/issues/133).
+
+* STM32F4xx: updated LongBoard32 definitions to use explicit auxilary pin mappings for keypad macros. Ref. issue [#207](https://github.com/grblHAL/STM32F4xx/issues/207).
+
+Plugins:
+
+* Bluetooth, Embroidery and Keypad, macros: updated to use new core functionality for claiming auxiliary pins.
+
+---
+
+<a name="20250107">Build 20250107
 
 Core:
 
@@ -22,7 +42,7 @@ Plugins:
 
 ---
 
-<a name="20250104">20250104
+<a name="20250104">Build 20250104
 
 Core:
 
@@ -45,7 +65,7 @@ Removed `IDLE` state requirement for executing `G65` macros, an error will no lo
 
 ---
 
-<a name="20250103">20250103
+<a name="20250103">Build 20250103
 
 Core:
 
@@ -63,7 +83,7 @@ Plugins:
 
 ---
 
-<a name="20250102">20250102
+<a name="20250102">Build 20250102
 
 Core:
 

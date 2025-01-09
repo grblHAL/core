@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2024 Terje Io
+  Copyright (c) 2017-2025 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -233,5 +233,23 @@ char *strcaps (char *s);
 uint_fast8_t bit_count (uint32_t bits);
 
 void dummy_handler (void);
+
+#ifdef _WIN32
+
+static int ffs (int i)
+{
+    int idx = 0;
+
+    while(i) {
+        idx++;
+        if(i & 1)
+            break;
+        i >>= 1;
+    }
+
+    return idx;
+}
+
+#endif // _WIN32
 
 #endif

@@ -428,6 +428,7 @@ static char ganged_axes[] = "X-Axis,Y-Axis,Z-Axis";
   #endif
 #endif
 
+static on_file_demarcate_ptr on_file_demarcate;
 static char fs_options[] = "Auto mount SD card,Hide LittleFS";
 static char spindle_types[100] = "";
 static char axis_dist[4] = "mm";
@@ -1205,14 +1206,11 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
 
         case Setting_AxisMaxTravel:
             if(settings.axis[idx].max_travel != -value) {
+                sys.flags.travel_changed = On;
                 bit_false(sys.homed.mask, bit(idx));
                 system_add_rt_report(Report_Homed);
             }
             settings.axis[idx].max_travel = -value; // Store as negative for internal use.
-            if(settings.homing.flags.init_lock && (sys.homing.mask & sys.homed.mask) != sys.homing.mask) {
-                system_raise_alarm(Alarm_HomingRequired);
-                grbl.report.feedback_message(Message_HomingCycleRequired);
-            }
             tmp_set_soft_limits();
             break;
 
@@ -3155,6 +3153,18 @@ bool settings_add_spindle_type (const char *type)
     return ok;
 }
 
+void onFileDemarcate (bool start)
+{
+    if(!start && sys.flags.travel_changed && limits_homing_required()) {
+        sys.flags.travel_changed = Off;
+        system_raise_alarm(Alarm_HomingRequired);
+        grbl.report.feedback_message(Message_HomingCycleRequired);
+    }
+
+    if(on_file_demarcate)
+        on_file_demarcate(start);
+}
+
 // Clear settings chain
 void settings_clear (void)
 {
@@ -3293,4 +3303,7 @@ void settings_init (void)
     }
 
     setting_details.on_changed = hal.settings_changed;
+
+    on_file_demarcate = grbl.on_file_demarcate;
+    grbl.on_file_demarcate = onFileDemarcate;
 }
