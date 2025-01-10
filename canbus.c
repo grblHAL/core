@@ -5,7 +5,7 @@
   Part of grblHAL
 
   Copyright (c) 2022 Jon Escombe
-  Copyright (c) 2024 Terje Io
+  Copyright (c) 2024-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -160,16 +160,6 @@ static void canbus_settings_load (void)
     canbus_start(baud[canbus_get_baud(Setting_CANbus_BaudRate)]);
 }
 
-static setting_details_t setting_details = {
-    .groups = canbus_groups,
-    .n_groups = sizeof(canbus_groups) / sizeof(setting_group_detail_t),
-    .settings = canbus_setting_detail,
-    .n_settings = sizeof(canbus_setting_detail) / sizeof(setting_detail_t),
-    .save = settings_write_global,
-    .load = canbus_settings_load,
-    .restore = canbus_settings_restore
-};
-
 // Public API
 
 bool canbus_enabled (void)
@@ -198,6 +188,17 @@ bool canbus_add_filter (uint32_t id, uint32_t mask, bool ext_id, can_rx_ptr call
 
 void canbus_init (void)
 {
+    static setting_details_t setting_details = {
+        .is_core = true,
+        .groups = canbus_groups,
+        .n_groups = sizeof(canbus_groups) / sizeof(setting_group_detail_t),
+        .settings = canbus_setting_detail,
+        .n_settings = sizeof(canbus_setting_detail) / sizeof(setting_detail_t),
+        .save = settings_write_global,
+        .load = canbus_settings_load,
+        .restore = canbus_settings_restore
+    };
+
     static bool init_ok = false;
 
     if(!init_ok) {

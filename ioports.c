@@ -836,6 +836,7 @@ void ioport_setting_changed (setting_id_t id)
 void ioports_add_settings (driver_settings_load_ptr settings_loaded, setting_changed_ptr setting_changed)
 {
     static setting_details_t setting_details = {
+        .is_core = true,
         .groups = ioport_groups,
         .n_groups = sizeof(ioport_groups) / sizeof(setting_group_detail_t),
         .settings = ioport_settings,

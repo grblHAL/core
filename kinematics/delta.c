@@ -883,6 +883,7 @@ static const char *delta_setting_get_description (setting_id_t id)
 void delta_robot_init (void)
 {
     static setting_details_t setting_details = {
+        .is_core = true,
         .groups = kinematics_groups,
         .n_groups = sizeof(kinematics_groups) / sizeof(setting_group_detail_t),
         .settings = kinematics_settings,

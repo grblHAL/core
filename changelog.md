@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+<a name="20250111">Build 20250111
+
+Core:
+
+* Fix for all `$RST` command variants resetting driver settings to default when only `$RST=*` and `$RST=&` should. Ref. issue [#659](https://github.com/grblHAL/core/issues/659).
+
+* Changed behaviour of `$RST=#` \(reset parameters such as coordinate systems and tool table\) to not reset coordinate systems locked by setting `$486`.
+
+Drivers:
+
+* STM32F7xx: fixed typos and removed leftover code in UNO board map. Ref. issue [#21](https://github.com/grblHAL/STM32F7xx/issues/21).
+
+Plugins:
+
+* Misc, eventout: fix for not initializing setting defaults when plugin first enabled.
+
+---
+
 <a name="20250110">Build 20250110
 
 Core:
