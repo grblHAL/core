@@ -25,6 +25,8 @@
 // NOTE: do NOT change options here - edit the driver specific my_machine.h instead!
 //
 
+#ifndef WEB_BUILD
+
 #if (DRIVER_SPINDLE_ENABLE & SPINDLE_ENA) && !defined(SPINDLE_ENABLE_PIN)
 #warning "Selected spindle is not supported!"
 #endif
@@ -41,6 +43,8 @@
 #warning "Selected spindle 1 is not supported!"
 #endif
 
+#endif
+
 #if MPG_ENABLE == 1 && !defined(MPG_MODE_PIN)
 #error "MPG_MODE_PIN must be defined!"
 #endif
@@ -48,7 +52,7 @@
 #if KEYPAD_ENABLE == 1 && !defined(I2C_STROBE_PORT)
 #error Keypad plugin not supported!
 #elif I2C_STROBE_ENABLE && !defined(I2C_STROBE_PORT)
-#error I2C strobe not supported!
+#error "I2C strobe not supported!"
 #endif
 
 #if EEPROM_ENABLE == 0

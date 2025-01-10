@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+<a name="20250110">20250110
+
+Core:
+
+* Non-functional changes: some configuration warnings suppressed in Web Builder builds, delta kinematics updated to not use deprecated functionality.
+
+Drivers:
+
+* ESP32: fixed typos and incorrect preprocessor code in some untested board maps.
+
+Plugins:
+
+* SD card, YModem protocol: changed to use local input buffer due to not working when Laserburn cluster plugin was enabled. Ref. [ioSender issue #443](https://github.com/terjeio/ioSender/issues/433).
+
+---
+
 <a name="20250109">Build 20250109
 
 Core:
@@ -16,7 +32,7 @@ Drivers:
 
 Plugins:
 
-* Bluetooth, Embroidery and Keypad, macros: updated to use new core functionality for claiming auxiliary pins.
+* Bluetooth, Embroidery, Spindle, PWM and Keypad, macros: updated to use new core functionality for claiming auxiliary pins.
 
 ---
 

@@ -91,7 +91,6 @@ static delta_properties_t machine = {0};
 static homing_mode_t homing_mode;
 static on_report_options_ptr on_report_options;
 static on_homing_completed_ptr on_homing_completed;
-static on_report_command_help_ptr on_report_command_help;
 static on_set_axis_setting_unit_ptr on_set_axis_setting_unit;
 static on_setting_get_description_ptr on_setting_get_description;
 static on_realtime_report_ptr on_realtime_report;
@@ -824,21 +823,6 @@ static void delta_settings_load (void)
     }
 }
 
-static setting_details_t setting_details = {
-    .groups = kinematics_groups,
-    .n_groups = sizeof(kinematics_groups) / sizeof(setting_group_detail_t),
-    .settings = kinematics_settings,
-    .n_settings = sizeof(kinematics_settings) / sizeof(setting_detail_t),
-#ifndef NO_SETTINGS_DESCRIPTIONS
-    .descriptions = kinematics_settings_descr,
-    .n_descriptions = sizeof(kinematics_settings_descr) / sizeof(setting_descr_t),
-#endif
-    .load = delta_settings_load,
-    .restore = delta_settings_restore,
-    .save = delta_settings_save,
-    .on_changed = delta_settings_changed
-};
-
 static void report_options (bool newopt)
 {
     on_report_options(newopt);
@@ -895,31 +879,33 @@ static const char *delta_setting_get_description (setting_id_t id)
             : (on_setting_get_description ? on_setting_get_description(id) : NULL);
 }
 
-static void delta_command_help (void)
-{
-    hal.stream.write("$DELTA - show info about delta robot parameters" ASCII_EOL);
-
-    if(on_report_command_help)
-        on_report_command_help();
-}
-
-const sys_command_t delta_command_list[] = {
-    {"DELTA", delta_info, { .noargs = On } },
-};
-
-static sys_commands_t delta_commands = {
-    .n_commands = sizeof(delta_command_list) / sizeof(sys_command_t),
-    .commands = delta_command_list
-};
-
-sys_commands_t *delta_get_commands()
-{
-    return &delta_commands;
-}
-
 // Initialize API pointers for Delta robot kinematics
 void delta_robot_init (void)
 {
+    static setting_details_t setting_details = {
+        .groups = kinematics_groups,
+        .n_groups = sizeof(kinematics_groups) / sizeof(setting_group_detail_t),
+        .settings = kinematics_settings,
+        .n_settings = sizeof(kinematics_settings) / sizeof(setting_detail_t),
+    #ifndef NO_SETTINGS_DESCRIPTIONS
+        .descriptions = kinematics_settings_descr,
+        .n_descriptions = sizeof(kinematics_settings_descr) / sizeof(setting_descr_t),
+    #endif
+        .load = delta_settings_load,
+        .restore = delta_settings_restore,
+        .save = delta_settings_save,
+        .on_changed = delta_settings_changed
+    };
+
+    static const sys_command_t delta_command_list[] = {
+        {"DELTA", delta_info, { .noargs = On }, { .str = "output info about delta robot parameters" } },
+    };
+
+    static sys_commands_t delta_commands = {
+        .n_commands = sizeof(delta_command_list) / sizeof(sys_command_t),
+        .commands = delta_command_list
+    };
+
     if((nvs_address = nvs_alloc(sizeof(delta_settings_t)))) {
 
         kinematics.limits_set_target_pos = delta_limits_set_target_pos;
@@ -945,12 +931,6 @@ void delta_robot_init (void)
         on_report_options = grbl.on_report_options;
         grbl.on_report_options = report_options;
 
-        delta_commands.on_get_commands = grbl.on_get_commands;
-        grbl.on_get_commands = delta_get_commands;
-
-        on_report_command_help = grbl.on_report_command_help;
-        grbl.on_report_command_help = delta_command_help;
-
         on_realtime_report = grbl.on_realtime_report;
         grbl.on_realtime_report = delta_real_time_report;
 
@@ -964,6 +944,7 @@ void delta_robot_init (void)
         grbl.on_setting_get_description = delta_setting_get_description;
 
         settings_register(&setting_details);
+        system_register_commands(&delta_commands);
     }
 }
 
