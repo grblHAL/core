@@ -196,7 +196,7 @@ bool protocol_main_loop (void)
         }
 #endif
         // All systems go!
-        system_execute_startup(); // Execute startup script.
+        protocol_enqueue_foreground_task(system_execute_startup, NULL); // Schedule startup script for execution.
     }
 
     // Ensure spindle and coolant is switched off on a cold start

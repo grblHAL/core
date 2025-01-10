@@ -129,7 +129,7 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
 
 /*! \brief Executes user startup scripts, if stored.
 */
-void system_execute_startup (void)
+void system_execute_startup (void *data)
 {
     if(hal.nvs.type != NVS_None) {
 
@@ -448,7 +448,7 @@ static status_code_t go_home (sys_state_t state, axes_signals_t axes)
         grbl.report.feedback_message(Message_None);
         // Execute startup scripts after successful homing.
         if (sys.homing.mask && (sys.homing.mask & sys.homed.mask) == sys.homing.mask)
-            system_execute_startup();
+            system_execute_startup(NULL);
         else if(limits_homing_required()) { // Keep alarm state active if homing is required and not all axes homed.
             sys.alarm = Alarm_HomingRequired;
             state_set(STATE_ALARM);

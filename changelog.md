@@ -1,8 +1,11 @@
 ## grblHAL changelog
 
-<a name="20250110">20250110
+<a name="20250110">Build 20250110
 
 Core:
+
+* Delayed execution of startup scripts `$N0` and `$N1` till after any startup tasks has completed.  
+E.g. this allows for auto mounting the SD card before any `G65` macro calls in such scripts are run.
 
 * Non-functional changes: some configuration warnings suppressed in Web Builder builds, delta kinematics updated to not use deprecated functionality.
 
@@ -13,6 +16,8 @@ Drivers:
 Plugins:
 
 * SD card, YModem protocol: changed to use local input buffer due to not working when Laserburn cluster plugin was enabled. Ref. [ioSender issue #443](https://github.com/terjeio/ioSender/issues/433).
+
+* SD card, FS macros: fixed regression causing tool change macros to fail. Ref. issue [#7](https://github.com/grblHAL/Plugin_SD_card/issues/7).
 
 ---
 
@@ -28,7 +33,7 @@ Drivers:
 
 * ESP32: added tentative support for Trinamic SPI driver configurations with individual chip select signals. Ref. issue [#133](https://github.com/grblHAL/ESP32/issues/133).
 
-* STM32F4xx: updated LongBoard32 definitions to use explicit auxilary pin mappings for keypad macros. Ref. issue [#207](https://github.com/grblHAL/STM32F4xx/issues/207).
+* STM32F4xx: updated LongBoard32 definitions to use explicit auxiliary pin mappings for keypad macros. Ref. issue [#207](https://github.com/grblHAL/STM32F4xx/issues/207).
 
 Plugins:
 

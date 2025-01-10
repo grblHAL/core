@@ -366,7 +366,7 @@ typedef struct sys_commands_str {
 extern system_t sys;
 
 status_code_t system_execute_line (char *line);
-void system_execute_startup (void);
+void system_execute_startup (void *data);
 void system_flag_wco_change (void);
 void system_convert_array_steps_to_mpos (float *position, int32_t *steps);
 bool system_xy_at_fixture (coord_system_id_t id, float tolerance);
