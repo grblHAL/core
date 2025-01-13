@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2024 Terje Io
+  Copyright (c) 2024-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -25,6 +25,8 @@
 // NOTE: do NOT change options here - edit the driver specific my_machine.h instead!
 //
 
+#ifndef WEB_BUILD
+
 #if (DRIVER_SPINDLE_ENABLE & SPINDLE_ENA) && !defined(SPINDLE_ENABLE_PIN)
 #warning "Selected spindle is not supported!"
 #endif
@@ -41,6 +43,8 @@
 #warning "Selected spindle 1 is not supported!"
 #endif
 
+#endif
+
 #if MPG_ENABLE == 1 && !defined(MPG_MODE_PIN)
 #error "MPG_MODE_PIN must be defined!"
 #endif
@@ -48,7 +52,7 @@
 #if KEYPAD_ENABLE == 1 && !defined(I2C_STROBE_PORT)
 #error Keypad plugin not supported!
 #elif I2C_STROBE_ENABLE && !defined(I2C_STROBE_PORT)
-#error I2C strobe not supported!
+#error "I2C strobe not supported!"
 #endif
 
 #if EEPROM_ENABLE == 0
@@ -58,13 +62,48 @@
 #endif
 
 #if TRINAMIC_ENABLE
+
 #include "motors/trinamic.h"
+
 #ifndef TRINAMIC_MIXED_DRIVERS
 #define TRINAMIC_MIXED_DRIVERS 1
 #endif
+
 #if TRINAMIC_UART_ENABLE == 1 && !defined(TRINAMIC_STREAM)
 #define TRINAMIC_STREAM 1
 #endif
+
+#if TRINAMIC_SPI_ENABLE == 1 || TRINAMIC_ENABLE == 2130 || TRINAMIC_ENABLE == 2660 || TRINAMIC_ENABLE == 5160
+
+#undef TRINAMIC_SPI_ENABLE
+#define TRINAMIC_SPI_40BIT     (1<<1)
+#define TRINAMIC_SPI_20BIT     (1<<2)
+#define TRINAMIC_SPI_CS_SINGLE (1<<3)
+
+#if TRINAMIC_ENABLE == 2660
+#ifdef MOTOR_CS_PORT
+#define TRINAMIC_SPI_ENABLE (TRINAMIC_SPI_20BIT|TRINAMIC_SPI_CS_SINGLE)
+#else
+#define TRINAMIC_SPI_ENABLE TRINAMIC_SPI_20BIT
+#endif
+#else
+#ifdef MOTOR_CS_PIN
+#define TRINAMIC_SPI_ENABLE (TRINAMIC_SPI_40BIT|TRINAMIC_SPI_CS_SINGLE)
+#else
+#define TRINAMIC_SPI_ENABLE TRINAMIC_SPI_40BIT
+#endif
+#endif
+#endif // TRINAMIC_SPI_ENABLE ...
+
+#endif // TRINAMIC_ENABLE
+
+#ifndef TRINAMIC_I2C
+#define TRINAMIC_I2C        0
+#endif
+#if TRINAMIC_ENABLE && TRINAMIC_I2C
+#define TRINAMIC_MOTOR_ENABLE 1
+#else
+#define TRINAMIC_MOTOR_ENABLE 0
 #endif
 
 #if USB_SERIAL_CDC && defined(SERIAL_PORT)

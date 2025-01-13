@@ -129,6 +129,7 @@ typedef status_code_t (*on_user_command_ptr)(char *line);
 typedef sys_commands_t *(*on_get_commands_ptr)(void);
 typedef status_code_t (*on_macro_execute_ptr)(macro_id_t macro); // macro implementations _must_ claim hal.stream.read to stream macros!
 typedef void (*on_macro_return_ptr)(void);
+typedef void (*on_file_demarcate_ptr)(bool start);
 
 typedef bool (*write_tool_data_ptr)(tool_data_t *tool_data);
 typedef bool (*read_tool_data_ptr)(tool_id_t tool_id, tool_data_t *tool_data);
@@ -254,6 +255,7 @@ typedef struct {
     on_spindle_select_ptr on_spindle_select;                //!< Called before spindle is selected, hook in HAL overrides here
     on_spindle_selected_ptr on_spindle_selected;            //!< Called when spindle is selected, do not change HAL pointers here!
     on_reset_ptr on_reset;                                  //!< Called from interrupt context.
+    on_file_demarcate_ptr on_file_demarcate;                //!< Called when percent sign is parsed in the gcode stream.
     on_file_open_ptr on_file_open;                          //!< Called when a file is opened for streaming.
     on_file_end_ptr on_file_end;                            //!< Called when a file opened for streaming reaches the end.
     user_mcode_ptrs_t user_mcode;                           //!< Optional handlers for user defined M-codes.

@@ -1121,6 +1121,7 @@ spindle1_pwm_settings_t *spindle1_settings_add (bool claim_ports)
 void spindle1_settings_register (spindle_cap_t cap, spindle1_settings_changed_ptr on_changed)
 {
     static setting_details_t spindle1_setting_details = {
+        .is_core = true,
         .settings = spindle1_settings,
         .n_settings = sizeof(spindle1_settings) / sizeof(setting_detail_t),
     #ifndef NO_SETTINGS_DESCRIPTIONS

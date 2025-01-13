@@ -428,6 +428,7 @@ static char ganged_axes[] = "X-Axis,Y-Axis,Z-Axis";
   #endif
 #endif
 
+static on_file_demarcate_ptr on_file_demarcate;
 static char fs_options[] = "Auto mount SD card,Hide LittleFS";
 static char spindle_types[100] = "";
 static char axis_dist[4] = "mm";
@@ -1205,14 +1206,11 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
 
         case Setting_AxisMaxTravel:
             if(settings.axis[idx].max_travel != -value) {
+                sys.flags.travel_changed = On;
                 bit_false(sys.homed.mask, bit(idx));
                 system_add_rt_report(Report_Homed);
             }
             settings.axis[idx].max_travel = -value; // Store as negative for internal use.
-            if(settings.homing.flags.init_lock && (sys.homing.mask & sys.homed.mask) != sys.homing.mask) {
-                system_raise_alarm(Alarm_HomingRequired);
-                grbl.report.feedback_message(Message_HomingCycleRequired);
-            }
             tmp_set_soft_limits();
             break;
 
@@ -2280,6 +2278,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
 #endif
 
 static setting_details_t setting_details = {
+    .is_core = true,
     .groups = setting_group_detail,
     .n_groups = sizeof(setting_group_detail) / sizeof(setting_group_detail_t),
     .settings = setting_detail,
@@ -2522,12 +2521,13 @@ void settings_restore (settings_restore_t restore)
         settings_write_global();
     }
 
-    if (restore.parameters) {
+    if(restore.parameters) {
         float coord_data[N_AXIS];
-
         memset(coord_data, 0, sizeof(coord_data));
-        for (idx = 0; idx <= N_WorkCoordinateSystems; idx++)
-            settings_write_coord_data((coord_system_id_t)idx, &coord_data);
+        for(idx = 0; idx <= N_WorkCoordinateSystems; idx++) {
+            if(idx < CoordinateSystem_G59_1 || idx > CoordinateSystem_G59_3 || bit_isfalse(settings.offset_lock.mask, bit(idx - CoordinateSystem_G59_1)))
+                settings_write_coord_data((coord_system_id_t)idx, &coord_data);
+        }
 
         settings_write_coord_data(CoordinateSystem_G92, &coord_data); // Clear G92 offsets
 
@@ -2536,12 +2536,12 @@ void settings_restore (settings_restore_t restore)
 #endif
     }
 
-    if (restore.startup_lines) {
+    if(restore.startup_lines) {
         for (idx = 0; idx < N_STARTUP_LINE; idx++)
             settings_write_startup_line(idx, empty_line);
     }
 
-    if (restore.build_info) {
+    if(restore.build_info) {
         settings_write_build_info(empty_line);
         settings_write_build_info(BUILD_INFO);
     }
@@ -2552,10 +2552,12 @@ void settings_restore (settings_restore_t restore)
     setting_details_t *details = setting_details.next;
 
     if(details) do {
-        if(details->restore)
-            details->restore();
-        if(details->on_changed)
-            details->on_changed(&settings, restore.defaults ? (settings_changed_flags_t){-1} : (settings_changed_flags_t){0});
+        if(details->is_core ? restore.defaults : restore.driver_parameters) {
+            if(details->restore)
+                details->restore();
+            if(details->on_changed)
+                details->on_changed(&settings, details->is_core ? (settings_changed_flags_t){-1} : (settings_changed_flags_t){0});
+        }
     } while((details = details->next));
 
     nvs_buffer_sync_physical();
@@ -3155,6 +3157,18 @@ bool settings_add_spindle_type (const char *type)
     return ok;
 }
 
+void onFileDemarcate (bool start)
+{
+    if(!start && sys.flags.travel_changed && limits_homing_required()) {
+        sys.flags.travel_changed = Off;
+        system_raise_alarm(Alarm_HomingRequired);
+        grbl.report.feedback_message(Message_HomingCycleRequired);
+    }
+
+    if(on_file_demarcate)
+        on_file_demarcate(start);
+}
+
 // Clear settings chain
 void settings_clear (void)
 {
@@ -3293,4 +3307,7 @@ void settings_init (void)
     }
 
     setting_details.on_changed = hal.settings_changed;
+
+    on_file_demarcate = grbl.on_file_demarcate;
+    grbl.on_file_demarcate = onFileDemarcate;
 }

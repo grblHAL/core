@@ -1,6 +1,65 @@
 ## grblHAL changelog
 
-<a name="20250107">20250107
+<a name="20250111">Build 20250111
+
+Core:
+
+* Fix for all `$RST` command variants resetting driver settings to default when only `$RST=*` and `$RST=&` should. Ref. issue [#659](https://github.com/grblHAL/core/issues/659).
+
+* Changed behaviour of `$RST=#` \(reset parameters such as coordinate systems and tool table\) to not reset coordinate systems locked by setting `$486`.
+
+Drivers:
+
+* STM32F7xx: fixed typos and removed leftover code in UNO board map. Ref. issue [#21](https://github.com/grblHAL/STM32F7xx/issues/21).
+
+Plugins:
+
+* Misc, eventout: fix for not initializing setting defaults when plugin first enabled.
+
+---
+
+<a name="20250110">Build 20250110
+
+Core:
+
+* Delayed execution of startup scripts `$N0` and `$N1` till after any startup tasks has completed.  
+E.g. this allows for auto mounting the SD card before any `G65` macro calls in such scripts are run.
+
+* Non-functional changes: some configuration warnings suppressed in Web Builder builds, delta kinematics updated to not use deprecated functionality.
+
+Drivers:
+
+* ESP32: fixed typos and incorrect preprocessor code in some untested board maps.
+
+Plugins:
+
+* SD card, YModem protocol: changed to use local input buffer due to not working when Laserburn cluster plugin was enabled. Ref. [ioSender issue #443](https://github.com/terjeio/ioSender/issues/433).
+
+* SD card, FS macros: fixed regression causing tool change macros to fail. Ref. issue [#7](https://github.com/grblHAL/Plugin_SD_card/issues/7).
+
+---
+
+<a name="20250109">Build 20250109
+
+Core:
+
+* Fixed inconsistent handling of auxiliary port numbers when claiming from plugins. New API call added related to this.
+
+* Added `ffs()` library function for `_WIN32` platform. Fixes issue [#655](https://github.com/grblHAL/core/issues/655).
+
+Drivers:
+
+* ESP32: added tentative support for Trinamic SPI driver configurations with individual chip select signals. Ref. issue [#133](https://github.com/grblHAL/ESP32/issues/133).
+
+* STM32F4xx: updated LongBoard32 definitions to use explicit auxiliary pin mappings for keypad macros. Ref. issue [#207](https://github.com/grblHAL/STM32F4xx/issues/207).
+
+Plugins:
+
+* Bluetooth, Embroidery, Spindle, PWM and Keypad, macros: updated to use new core functionality for claiming auxiliary pins.
+
+---
+
+<a name="20250107">Build 20250107
 
 Core:
 
@@ -22,7 +81,7 @@ Plugins:
 
 ---
 
-<a name="20250104">20250104
+<a name="20250104">Build 20250104
 
 Core:
 
@@ -45,7 +104,7 @@ Removed `IDLE` state requirement for executing `G65` macros, an error will no lo
 
 ---
 
-<a name="20250103">20250103
+<a name="20250103">Build 20250103
 
 Core:
 
@@ -63,7 +122,7 @@ Plugins:
 
 ---
 
-<a name="20250102">20250102
+<a name="20250102">Build 20250102
 
 Core:
 

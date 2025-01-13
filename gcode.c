@@ -819,6 +819,10 @@ status_code_t gc_execute_block (char *block)
         gc_state.file_run = !gc_state.file_run;
         if(message)
             gc_output_message(message);
+
+        if(grbl.on_file_demarcate)
+            grbl.on_file_demarcate(gc_state.file_run);
+
         return Status_OK;
     }
 

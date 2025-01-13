@@ -267,7 +267,8 @@ typedef union {
                  keep_input              :1, //!< Set to true to not flush stream input buffer on executing STOP.
                  auto_reporting          :1, //!< Set to true when auto real time reporting is enabled.
                  synchronizing           :1, //!< Set to true when protocol_buffer_synchronize() is running.
-                 unused                  :5;
+                 travel_changed          :1, //!< Set to true when maximum travel settings has changed.
+                 unused                  :4;
     };
 } system_flags_t;
 
@@ -365,7 +366,7 @@ typedef struct sys_commands_str {
 extern system_t sys;
 
 status_code_t system_execute_line (char *line);
-void system_execute_startup (void);
+void system_execute_startup (void *data);
 void system_flag_wco_change (void);
 void system_convert_array_steps_to_mpos (float *position, int32_t *steps);
 bool system_xy_at_fixture (coord_system_id_t id, float tolerance);

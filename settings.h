@@ -1024,6 +1024,7 @@ typedef void (*driver_settings_restore_ptr)(void);
 typedef bool (*driver_settings_iterator_ptr)(const setting_detail_t *setting, setting_output_ptr callback, void *data);
 
 typedef struct setting_details {
+    const bool is_core;
     const uint8_t n_groups;
     const setting_group_detail_t *groups;
     const uint16_t n_settings;

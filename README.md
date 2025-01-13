@@ -1,6 +1,6 @@
 ## grblHAL ##
 
-Latest build date is 20250107, see the [changelog](changelog.md) for details.  
+Latest build date is 20250110, see the [changelog](changelog.md) for details.  
 
 > [!NOTE]
 >  A settings reset will be performed on an update of builds prior to 20241208. Backup and restore of settings is recommended.  
