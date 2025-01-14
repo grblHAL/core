@@ -109,10 +109,10 @@ typedef bool (*ioports_enumerate_callback_ptr)(xbar_t *properties, uint8_t port,
 
 //! Properties and handlers for auxiliary digital and analog I/O.
 typedef struct {
-    uint8_t num_digital_in;                         //!< Number of digital inputs available.
-    uint8_t num_digital_out;                        //!< Number of digital outputs available.
-    uint8_t num_analog_in;                          //!< Number of analog inputs available.
-    uint8_t num_analog_out;                         //!< Number of analog outputs available.
+    uint8_t num_digital_in;                         //!< Deprecated, use ioports_unclaimed() to get count.
+    uint8_t num_digital_out;                        //!< Deprecated, use ioports_unclaimed() to get count.
+    uint8_t num_analog_in;                          //!< Deprecated, use ioports_unclaimed() to get count.
+    uint8_t num_analog_out;                         //!< Deprecated, use ioports_unclaimed() to get count.
     digital_out_ptr digital_out;                    //!< Optional handler for setting a digital output.
     analog_out_ptr analog_out;                      //!< Optional handler for setting an analog output.
     wait_on_input_ptr wait_on_input;                //!< Optional handler for reading a digital or analog input.
@@ -124,10 +124,11 @@ typedef struct {
 } io_port_t;
 
 uint8_t ioports_available (io_port_type_t type, io_port_direction_t dir);
+uint8_t ioports_unclaimed (io_port_type_t type, io_port_direction_t dir);
 xbar_t *ioport_get_info (io_port_type_t type, io_port_direction_t dir, uint8_t port);
 bool ioport_claim (io_port_type_t type, io_port_direction_t dir, uint8_t *port, const char *description);
 bool ioport_can_claim_explicit (void);
-uint8_t ioport_find_free (io_port_type_t type, io_port_direction_t dir, const char *description);
+uint8_t ioport_find_free (io_port_type_t type, io_port_direction_t dir, pin_cap_t filter, const char *description);
 bool ioports_enumerate (io_port_type_t type, io_port_direction_t dir, pin_cap_t filter, ioports_enumerate_callback_ptr callback, void *data);
 void ioport_assign_function (aux_ctrl_t *aux_ctrl, pin_function_t *function);
 void ioport_assign_out_function (aux_ctrl_out_t *aux_ctrl, pin_function_t *function);

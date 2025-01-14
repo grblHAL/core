@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2024 Terje Io
+  Copyright (c) 2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -120,6 +120,13 @@ static void onReportHandlersInit (void)
     grbl.report.status_message = trap_status_messages;
 }
 
+void stream_set_type (stream_type_t type, vfs_file_t *file)
+{
+    hal.stream.type = type;
+    if(!(hal.stream.file = file))
+        gc_state.file_stream = false;
+}
+
 bool stream_is_file (void)
 {
     return hal.stream.type == StreamType_File;
@@ -141,9 +148,8 @@ vfs_file_t *stream_redirect_read (char *filename, status_message_ptr status_hand
             rd_stream->eof_handler = eof_handler;
             rd_stream->status_handler = status_handler;
             rd_stream->next = NULL;
-            hal.stream.file = file;
-            hal.stream.type = StreamType_File;
             hal.stream.read = stream_read_file;
+            stream_set_type(StreamType_File, file);
             if(streams == NULL)
                 rd_streams = rd_stream;
             else do {
@@ -181,9 +187,8 @@ void stream_redirect_close (vfs_file_t *file)
     if(stream) do {
         if(stream->file_new == file) {
             vfs_close(file);
-            hal.stream.file = stream->file;
             hal.stream.read = stream->read;
-            hal.stream.type = stream->type;
+            stream_set_type(stream->type, stream->file);
             if(stream == rd_streams)
                 rd_streams = stream->next;
             else

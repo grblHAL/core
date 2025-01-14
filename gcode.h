@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2024 Terje Io
+  Copyright (c) 2017-2025 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -207,7 +207,8 @@ typedef enum {
     ProgramFlow_CompletedM2 = 2,    //!< 2 - M2
     ProgramFlow_CompletedM30 = 30,  //!< 30 - M30
     ProgramFlow_CompletedM60 = 60,  //!< 60 - M60
-    ProgramFlow_Return = 99         //!< 99 - M99
+    ProgramFlow_Return = 99,        //!< 99 - M99
+    ProgramFlow_EndPercent = 255    //!< 255 - %
 } program_flow_t;
 
 // Modal Group M9: Override control
@@ -625,6 +626,7 @@ typedef struct {
     uint32_t g43_pending;               //!< Tool offset to be selected on next M6, for macro ATC
 #endif
     bool file_run;                      //!< Tracks % command
+    bool file_stream;                   //!< Tracks streaming from file
     bool is_laser_ppi_mode;
     bool is_rpm_rate_adjusted;
     bool tool_change;

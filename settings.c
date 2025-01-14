@@ -1716,16 +1716,16 @@ float setting_get_float_value (const setting_detail_t *setting, uint_fast16_t of
     return value;
 }
 
-static bool is_group_available (const setting_detail_t *setting)
+static bool is_group_available (const setting_detail_t *setting, uint_fast16_t offset)
 {
     return settings_is_group_available(setting->group);
 }
 
-static bool is_setting_available (const setting_detail_t *setting)
+static bool is_setting_available (const setting_detail_t *setting, uint_fast16_t offset)
 {
     bool available = false;
 
-    if(setting) switch(normalize_id(setting->id)) {
+    if(setting) switch(setting->id) {
 
         case Setting_GangedDirInvertMask:
             available = hal.stepper.get_ganged && hal.stepper.get_ganged(false).mask != 0;
@@ -1843,7 +1843,7 @@ static bool is_setting_available (const setting_detail_t *setting)
             break;
 
         case Setting_CoolantOnDelay:
-            available = !hal.signals_cap.safety_door_ajar && hal.coolant_cap.mask;
+            available = hal.coolant_cap.mask;
             break;
 
         default:
@@ -1853,7 +1853,7 @@ static bool is_setting_available (const setting_detail_t *setting)
     return available;
 }
 
-static bool toolsetter_available (const setting_detail_t *setting)
+static bool toolsetter_available (const setting_detail_t *setting, uint_fast16_t offset)
 {
     bool available = false;
 
@@ -1878,7 +1878,7 @@ static bool toolsetter_available (const setting_detail_t *setting)
     return available;
 }
 
-static bool no_toolsetter_available (const setting_detail_t *setting)
+static bool no_toolsetter_available (const setting_detail_t *setting, uint_fast16_t offset)
 {
 #if COMPATIBILITY_LEVEL <= 1
 
@@ -2563,9 +2563,9 @@ void settings_restore (settings_restore_t restore)
     nvs_buffer_sync_physical();
 }
 
-inline static bool is_available (const setting_detail_t *setting)
+inline static bool is_available (const setting_detail_t *setting, uint_fast16_t offset)
 {
-    return setting->is_available == NULL || setting->is_available(setting);
+    return setting->is_available == NULL || setting->is_available(setting, offset);
 }
 
 bool settings_is_group_available (setting_group_t id)
@@ -2611,7 +2611,7 @@ bool settings_is_group_available (setting_group_t id)
                 do {
                     if(details->settings) {
                         for(idx = 0; idx < details->n_settings; idx++) {
-                            if(details->settings[idx].group == id && (available = is_available(&details->settings[idx])))
+                            if(details->settings[idx].group == id && (available = is_available(&details->settings[idx], 0)))
                                 break;
                         }
                     }
@@ -2664,7 +2664,7 @@ const setting_detail_t *setting_get_details (setting_id_t id, setting_details_t 
 
     do {
         for(idx = 0; idx < details->n_settings; idx++) {
-            if(details->settings[idx].id == id && is_available(&details->settings[idx])) {
+            if(details->settings[idx].id == id && is_available(&details->settings[idx], offset)) {
 
                 if(details->settings[idx].group == Group_Axis0 && grbl.on_set_axis_setting_unit)
                     set_axis_unit(&details->settings[idx], grbl.on_set_axis_setting_unit(details->settings[idx].id, offset));

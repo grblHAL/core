@@ -96,39 +96,57 @@ uint8_t ioports_available (io_port_type_t type, io_port_direction_t dir)
     return ports;
 }
 
+/*! \brief Get number of unclaimed digital or analog ports available.
+\param type as an \a #io_port_type_t enum value.
+\param dir as an \a #io_port_direction_t enum value.
+\returns number of ports available.
+*/
+uint8_t ioports_unclaimed (io_port_type_t type, io_port_direction_t dir)
+{
+    xbar_t *port;
+    uint8_t idx = 0, n_ports = 0;
+
+    if(hal.port.get_pin_info) do {
+        if((port = hal.port.get_pin_info(type, dir, idx++)) && !port->mode.claimed)
+            n_ports++;
+    } while(port);
+
+    return n_ports;
+}
+
+static struct ff_data {
+    uint8_t port;
+    const char *description;
+} ff_data;
+
+static bool match_port (xbar_t *properties, uint8_t port, void *data)
+{
+    if(((struct ff_data *)data)->description && (!properties->description || strcmp(properties->description, ((struct ff_data *)data)->description)))
+        return false;
+
+    ((struct ff_data *)data)->port = port;
+
+    return true;
+}
+
 /*! \brief find first free or claimed digital or analog port.
 \param type as an \a #io_port_type_t enum value.
 \param dir as an \a #io_port_direction_t enum value.
 \param description pointer to a \a char constant for the pin description of a previousely claimed port or NULL if searching for the first free port.
-\returns the port number if successful, 255 if not.
+\returns the port number if successful, 0xFF (255) if not.
 */
-uint8_t ioport_find_free (io_port_type_t type, io_port_direction_t dir, const char *description)
+uint8_t ioport_find_free (io_port_type_t type, io_port_direction_t dir, pin_cap_t filter, const char *description)
 {
-    uint8_t port;
-    bool found = false;
-    xbar_t *pin;
+    ff_data.port = 0xFF;
+    ff_data.description = (description && *description) ? description : NULL;
 
-    if(description) {
-        port = ioports_available(type, dir);
-        do {
-            if((pin = hal.port.get_pin_info(type, dir, --port))) {
-                if((found = pin->description && !strcmp(pin->description, description)))
-                    port = pin->id;
-            }
-        } while(port && !found);
+    // TODO: pass modified filter with .claimable off when looking for description match?
+    if(ff_data.description && !ioports_enumerate(type, dir, (pin_cap_t){}, match_port, (void *)&ff_data)) {
+        ff_data.description = NULL;
+        ioports_enumerate(type, dir, filter, match_port, (void *)&ff_data);
     }
 
-    if(!found) {
-        port = ioports_available(type, dir);
-        do {
-            if((pin = hal.port.get_pin_info(type, dir, --port))) {
-                if((found = !pin->mode.claimed))
-                    port = pin->id;
-            }
-        } while(port && !found);
-    }
-
-    return found ? port : 255;
+    return ff_data.port;
 }
 
 /*! \brief Return information about a digital or analog port.
@@ -170,15 +188,24 @@ bool ioport_claim (io_port_type_t type, io_port_direction_t dir, uint8_t *port, 
 
         ok = (portinfo = ioport_get_info(type, dir, *port)) && !portinfo->mode.claimed && hal.port.claim(type, dir, port, description);
 
-    } else if((ok = ioports_available(type, dir) > 0)) {
+    } else {
 
-        if(type == Port_Digital)
-            *port = dir == Port_Input ? --hal.port.num_digital_in : --hal.port.num_digital_out;
-        else
-            *port = dir == Port_Input ? --hal.port.num_analog_in : --hal.port.num_analog_out;
+        uint_fast8_t count;
+        get_pin_info_ptr get_pin_info = hal.port.get_pin_info;
 
-        if(hal.port.set_pin_description)
-            hal.port.set_pin_description(type, dir, *port, description);
+        hal.port.get_pin_info = NULL; // Force count of unclaimed ports only.
+
+        if((ok = (count = ioports_available(type, dir)) > 0 && *port == count - 1 )) {
+            if(type == Port_Digital)
+                *port = dir == Port_Input ? --hal.port.num_digital_in : --hal.port.num_digital_out;
+            else
+                *port = dir == Port_Input ? --hal.port.num_analog_in : --hal.port.num_analog_out;
+
+            if(hal.port.set_pin_description)
+                hal.port.set_pin_description(type, dir, *port, description);
+        }
+
+        hal.port.get_pin_info = get_pin_info;
     }
 
     return ok;
@@ -296,39 +323,41 @@ bool ioports_add (io_ports_data_t *ports, io_port_type_t type, uint8_t n_in, uin
     if(type == Port_Digital) {
 
         cfg = &digital;
-        digital_in = digital_out = -1;
 
         if(n_in) {
-            ports->in.n_start = hal.port.num_digital_in;
+            ports->in.n_start = ioports_available(Port_Digital, Port_Input);
             hal.port.num_digital_in += (ports->in.n_ports = n_in);
             ports->in.map = malloc(ports->in.n_ports * sizeof(ports->in.n_ports));
             digital.in.ports = &ports->in;
+            digital_in = -1;
         }
 
         if(n_out) {
-            ports->out.n_start = hal.port.num_digital_out;
+            ports->out.n_start = ioports_available(Port_Digital, Port_Output);
             hal.port.num_digital_out += (ports->out.n_ports = n_out);
             ports->out.map = malloc(ports->out.n_ports * sizeof(ports->out.n_ports));
             digital.out.ports = &ports->out;
+            digital_out = -1;
         }
 
     } else {
 
         cfg = &analog;
-        analog_in = analog_out = -1;
 
         if(n_in) {
-            ports->in.n_start = hal.port.num_analog_in;
+            ports->in.n_start = ioports_available(Port_Analog, Port_Input);
             hal.port.num_analog_in += (ports->in.n_ports = n_in);
             ports->in.map = malloc(ports->in.n_ports * sizeof(ports->in.n_ports));
             analog.in.ports = &ports->in;
+            analog_in = -1;
         }
 
         if(n_out) {
-            ports->out.n_start = hal.port.num_analog_out;
+            ports->out.n_start = ioports_available(Port_Analog, Port_Output);
             hal.port.num_analog_out += (ports->out.n_ports = n_out);
             ports->out.map = malloc(ports->out.n_ports * sizeof(ports->out.n_ports));
             analog.out.ports = &ports->out;
+            analog_out = -1;
         }
     }
 
@@ -496,7 +525,7 @@ void ioport_save_output_settings (xbar_t *xbar, gpio_out_config_t *config)
     settings_write_global();
 }
 
-static bool is_setting_available (const setting_detail_t *setting)
+static bool is_setting_available (const setting_detail_t *setting, uint_fast16_t offset)
 {
     bool available = false;
 

@@ -985,7 +985,7 @@ typedef struct setting_detail {
     setting_type_t type;
     void *value;
     void *get_value;
-    bool (*is_available)(const struct setting_detail *setting);
+    bool (*is_available)(const struct setting_detail *setting, uint_fast16_t offset);
     setting_detail_flags_t flags;
 } setting_detail_t;
 
