@@ -1,5 +1,39 @@
 ## grblHAL changelog
 
+<a name="20250115">20250115
+
+Plugins:
+
+Fans, Keypad, macros: bug fixes and changes to avoid compiler warnings.
+
+---
+
+<a name="20250114">Build 20250114
+
+Core:
+
+* "hardened" task deregistration code and changed signature of setting available and `ioport_find_free()` calls.
+
+* Some low-level ioport improvements, added definition for virtual pins/ports.  
+Deprecated direct access to number of the different ioport ports in `hal.port` struct, use `ioports_unclaimed()` instead.  
+
+Drivers:
+
+* ESP32: some fixes for Trinamic SPI comms.
+
+Plugins:
+
+* Many: updated for setting call signature changes and to take advantage of latest core functionality. 
+Plugins claiming auxiliary ports changed to use `-1` for port number settings that are to be ignored/not claimed.
+
+* Plasma: refactored, uses new task functionality for processing and has improved settings handling. Virtual auxiliary ports disabled for now.
+
+Templates:
+
+* Many: updated to take advandage of latest core functionality etc. Removed some superfluous ones.
+
+---
+
 <a name="20250111">Build 20250111
 
 Core:

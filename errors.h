@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2024 Terje Io
+  Copyright (c) 2017-2025 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -86,6 +86,7 @@ typedef enum {
     Status_GcodeInvalidRetractPosition = 54,
     Status_IllegalHomingConfiguration = 55,
     Status_GCodeCoordSystemLocked = 56,
+    Status_UnexpectedDemarcation = 57,
 
 // Some error codes as defined in bdring's ESP32 port
     Status_SDMountError = 60,

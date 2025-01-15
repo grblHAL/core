@@ -502,7 +502,7 @@ void report_grbl_settings (bool all, void *data)
         for(idx = 0; idx < details->n_settings; idx++) {
             setting = &details->settings[idx];
             if(!is_hidden(setting) && (all || setting->type == Setting_IsLegacy || setting->type == Setting_IsLegacyFn) &&
-                  (setting->is_available == NULL ||setting->is_available(setting))) {
+                  (setting->is_available == NULL ||setting->is_available(setting, 0))) {
                 *psetting++ = (setting_detail_t *)setting;
                 n_settings++;
             }
@@ -512,7 +512,7 @@ void report_grbl_settings (bool all, void *data)
         if(all && (details = details->next)) do {
             for(idx = 0; idx < details->n_settings; idx++) {
                 setting = &details->settings[idx];
-                if(!setting->flags.hidden && (setting->is_available == NULL || setting->is_available(setting))) {
+                if(!setting->flags.hidden && (setting->is_available == NULL || setting->is_available(setting, 0))) {
                     *psetting++ = (setting_detail_t *)setting;
                     n_settings++;
                 }
@@ -1101,15 +1101,20 @@ void report_build_info (char *line, bool extended)
         hal.stream.write("]" ASCII_EOL);
 #endif
 
-        if(hal.port.num_digital_in + hal.port.num_digital_out + hal.port.num_analog_in + hal.port.num_analog_out > 0) {
+        uint8_t digital_in = ioports_unclaimed(Port_Digital, Port_Input),
+                digital_out = ioports_unclaimed(Port_Digital, Port_Output),
+                analog_in = ioports_unclaimed(Port_Analog, Port_Input),
+                analog_out = ioports_unclaimed(Port_Analog, Port_Output);
+
+        if(digital_in || digital_out || analog_in || analog_out) {
             hal.stream.write("[AUX IO:");
-            hal.stream.write(uitoa(hal.port.num_digital_in));
+            hal.stream.write(uitoa(digital_in));
             hal.stream.write(",");
-            hal.stream.write(uitoa(hal.port.num_digital_out));
+            hal.stream.write(uitoa(digital_out));
             hal.stream.write(",");
-            hal.stream.write(uitoa(hal.port.num_analog_in));
+            hal.stream.write(uitoa(analog_in));
             hal.stream.write(",");
-            hal.stream.write(uitoa(hal.port.num_analog_out));
+            hal.stream.write(uitoa(analog_out));
             hal.stream.write("]" ASCII_EOL);
         }
 
@@ -1844,7 +1849,7 @@ static bool print_sorted (const setting_detail_t *setting, uint_fast16_t offset,
 static bool print_unsorted (const setting_detail_t *setting, uint_fast16_t offset, void *args)
 {
     if(!(((report_args_t *)args)->group == setting->group && ((report_args_t *)args)->offset != offset) &&
-       (setting->is_available == NULL ||setting->is_available(setting)))
+       (setting->is_available == NULL ||setting->is_available(setting, 0)))
         report_settings_detail(((report_args_t *)args)->format, setting, offset);
 
     return true;
@@ -1881,7 +1886,7 @@ static status_code_t print_settings_details (settings_format_t format, setting_g
         do {
             for(idx = 0; idx < details->n_settings; idx++) {
                 setting = &details->settings[idx];
-                if(!is_hidden(setting) && (group == Group_All || setting->group == args.group) && (setting->is_available == NULL || setting->is_available(setting))) {
+                if(!is_hidden(setting) && (group == Group_All || setting->group == args.group) && (setting->is_available == NULL || setting->is_available(setting, 0))) {
                     *psetting++ = (setting_detail_t *)setting;
                     n_settings++;
                 }

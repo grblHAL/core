@@ -213,6 +213,7 @@ typedef enum {
     Input_QEI_B,
     Input_QEI_Select,
     Input_QEI_Index,
+    Virtual_Pin,
 // Single pin bidirectional peripherals
     Bidirectional_MotorUARTX,
     Bidirectional = Bidirectional_MotorUARTX,
@@ -421,6 +422,7 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Input_QEI_B,                .name = "QEI B" },
     { .function = Input_QEI_Select,           .name = "QEI select" },
     { .function = Input_QEI_Index,            .name = "QEI index" },
+    { .function = Virtual_Pin,                .name = "Virtual" },
     { .function = Bidirectional_MotorUARTX,   .name = "UART X" },
     { .function = Bidirectional_MotorUARTY,   .name = "UART Y" },
     { .function = Bidirectional_MotorUARTZ,   .name = "UART Z" },
@@ -458,6 +460,7 @@ typedef enum {
     PinGroup_CAN,
     PinGroup_LED,
     PinGroup_Home,
+    PinGroup_Virtual,
 // Interrupt capable pins that may have debounce processing enabled
     PinGroup_Control       = (1<<8),
     PinGroup_Limit         = (1<<9),

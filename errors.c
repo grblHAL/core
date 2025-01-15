@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2024 Terje Io
+  Copyright (c) 2017-2025 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -87,6 +87,7 @@ PROGMEM static const status_detail_t status_detail[] = {
 #if COMPATIBILITY_LEVEL <= 1
     { Status_GCodeCoordSystemLocked, "Coordinate system is locked." },
 #endif
+    { Status_UnexpectedDemarcation, "Unexpected file demarcation." },
 #if NGC_EXPRESSIONS_ENABLE
     { Status_ExpressionUknownOp, "Unknown operation found in expression." },
     { Status_ExpressionDivideByZero, "Divide by zero in expression attempted." },

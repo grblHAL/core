@@ -798,32 +798,40 @@ status_code_t gc_execute_block (char *block)
         tool_id_t t;
     } single_meaning_value = {0};
 
-    block = gc_normalize_block(block, &status, &message);
+    bool fs_changed;
+    if((fs_changed = gc_state.file_stream ? hal.stream.file == NULL : hal.stream.file != NULL))
+        gc_state.file_stream = hal.stream.file != NULL;
 
+    block = gc_normalize_block(block, &status, &message);
     if(status != Status_OK)
         FAIL(status);
+
+    // Determine if the line is a program start/end marker.
+    if(block[0] == CMD_PROGRAM_DEMARCATION && block[1] == '\0') {
+
+        block[0] = '\0';
+
+        if(gc_state.file_stream) {
+
+            if(!fs_changed && !gc_state.file_run)
+                status = Status_UnexpectedDemarcation;
+            else if(!(gc_state.file_run = fs_changed)) {
+                protocol_buffer_synchronize(); // Empty planner buffer
+                grbl.report.feedback_message(Message_ProgramEnd);
+                if(grbl.on_program_completed)
+                    grbl.on_program_completed(ProgramFlow_EndPercent, state_get() == STATE_CHECK_MODE);
+            }
+        } else
+            gc_state.file_run = !gc_state.file_run;
+
+        if(status == Status_OK && grbl.on_file_demarcate)
+            grbl.on_file_demarcate(gc_state.file_run);
+    }
 
     if(block[0] == '\0') {
         if(message)
             gc_output_message(message);
         return status;
-    }
-
-    // Determine if the line is a program start/end marker.
-    // Old comment from protocol.c:
-    // NOTE: This maybe installed to tell grblHAL when a program is running vs manual input,
-    // where, during a program, the system auto-cycle start will continue to execute
-    // everything until the next '%' sign. This will help fix resuming issues with certain
-    // functions that empty the planner buffer to execute its task on-time.
-    if (block[0] == CMD_PROGRAM_DEMARCATION && block[1] == '\0') {
-        gc_state.file_run = !gc_state.file_run;
-        if(message)
-            gc_output_message(message);
-
-        if(grbl.on_file_demarcate)
-            grbl.on_file_demarcate(gc_state.file_run);
-
-        return Status_OK;
     }
 
   /* -------------------------------------------------------------------------------------

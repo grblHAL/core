@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2024 Terje Io
+  Copyright (c) 2024-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -26,4 +26,5 @@
 
 bool stream_is_file (void);
 void stream_redirect_close (vfs_file_t *file);
+void stream_set_type (stream_type_t type, vfs_file_t *file);
 vfs_file_t *stream_redirect_read (char *filename, status_message_ptr status_handler, on_file_end_ptr eof_handler);

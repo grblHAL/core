@@ -420,7 +420,7 @@ int grbl_enter (void)
     return 0;
 }
 
-static inline core_task_t *task_alloc (void)
+__attribute__((always_inline)) static inline core_task_t *task_alloc (void)
 {
     core_task_t *task = NULL;
     uint_fast8_t idx = CORE_TASK_POOL_SIZE;
@@ -436,7 +436,7 @@ static inline core_task_t *task_alloc (void)
     return task;
 }
 
-static inline void task_free (core_task_t *task)
+__attribute__((always_inline)) static inline void task_free (core_task_t *task)
 {
     task->fn = NULL;
     if(last_freed == NULL)
@@ -525,6 +525,8 @@ void task_delete (foreground_task_ptr fn, void *data)
 {
     core_task_t *task, *prev = NULL;
 
+    hal.irq_disable();
+
     if((task = next_task)) do {
         if(fn == task->fn && data == task->data) {
             if(prev)
@@ -536,6 +538,8 @@ void task_delete (foreground_task_ptr fn, void *data)
         }
         prev = task;
     } while((task = task->next));
+
+    hal.irq_enable();
 }
 
 ISR_CODE bool ISR_FUNC(task_add_systick)(foreground_task_ptr fn, void *data)
@@ -569,6 +573,8 @@ void task_delete_systick (foreground_task_ptr fn, void *data)
 {
     core_task_t *task, *prev = NULL;
 
+    hal.irq_disable();
+
     if((task = systick_task)) do {
         if(fn == task->fn && data == task->data) {
             if(prev)
@@ -580,6 +586,8 @@ void task_delete_systick (foreground_task_ptr fn, void *data)
         }
         prev = task;
     } while((task = task->next));
+
+    hal.irq_enable();
 }
 
 /*! \brief Enqueue a function to be called once by the foreground process.
