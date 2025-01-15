@@ -1,5 +1,13 @@
 ## grblHAL changelog
 
+<a name="20250115">20250115
+
+Plugins:
+
+Fans, Keypad, macros: bug fixes and changes to avoid compiler warnings.
+
+---
+
 <a name="20250114">Build 20250114
 
 Core:
@@ -15,7 +23,7 @@ Drivers:
 
 Plugins:
 
-* Many: updated for setting call signature changes and to take advandage of latest core functionality. 
+* Many: updated for setting call signature changes and to take advantage of latest core functionality. 
 Plugins claiming auxiliary ports changed to use `-1` for port number settings that are to be ignored/not claimed.
 
 * Plasma: refactored, uses new task functionality for processing and has improved settings handling. Virtual auxiliary ports disabled for now.
