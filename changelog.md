@@ -1,5 +1,28 @@
 ## grblHAL changelog
 
+<a name="20250116">Build 20250116
+
+Core:
+
+* Added definition for new plasma THC setting and signals for toolsetter.
+
+* Added named parameters `_probe_state` and `_toolsetter_state`. Both return `-1` if state is not available.  
+ These may return incorrect values initially so use with care.
+ 
+Drivers:
+
+* STM32F4xx: fixed random freezes when WizNet plugin is enabled for ethernet. Ref. issue [#208](https://github.com/grblHAL/STM32F4xx/issues/208).
+Added tentative board map for Sienci SuperLongBoard with external drivers \(SLB EXT\) and added support for toolsetter state for both SLB and SLB EXT.
+
+Plugins:
+
+* Plasma: added new setting `$674` for option flags, virtual ports and Z position sync. Ref. issue [#15](https://github.com/grblHAL/Plugin_plasma/issues/15].
+
+* Motors: added optional support for standstill current reduction on motion end for Trinamic TMC2660 drivers.
+Settings `$1` and `$37` controls which drivers are kept on.
+
+---
+
 <a name="20250115">20250115
 
 Plugins:

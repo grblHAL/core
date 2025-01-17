@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2020-2024 Terje Io
+  Copyright (c) 2020-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -32,12 +32,13 @@ typedef enum {
 typedef union {
     uint8_t value;
     struct {
-        uint8_t triggered   :1, //<! Set to true when probe is triggered.
-                connected   :1, //<! Set to true when probe is connected. Always set to true if the driver does not have a probe connected input.
-                inverted    :1, //<! For driver use
-                is_probing  :1, //<! For driver use
-                irq_enabled :1, //<! For driver use
-                unassigned  :3;
+        uint8_t triggered     :1, //<! Set to true when probe or toolsetter is triggered.
+                connected     :1, //<! Set to true when probe is connected. Always set to true if the driver does not have a probe connected input.
+                inverted      :1, //<! For driver use
+                is_probing    :1, //<! For driver use
+                irq_enabled   :1, //<! For driver use
+                tls_triggered :1, //<! Set to true when toolsetter is triggered.
+                unassigned    :2;
     };
 } probe_state_t;
 

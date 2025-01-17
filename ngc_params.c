@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2024 Terje Io
+  Copyright (c) 2021-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -151,6 +151,7 @@ static float probe_result (ngc_param_id_t id)
 {
     return sys.flags.probe_succeeded ? 1.0f : 0.0f;
 }
+
 /*
 static float home_pos (ngc_param_id_t id)
 {
@@ -407,8 +408,9 @@ PROGMEM static const ngc_named_ro_param_t ngc_named_ro_param[] = {
     { .name = "_selected_tool",       .id = NGCParam_selected_tool },
     { .name = "_selected_pocket",     .id = NGCParam_selected_pocket },
     { .name = "_call_level",          .id = NGCParam_call_level },
+    { .name = "_probe_state",         .id = NGCParam_probe_state },
+    { .name = "_toolsetter_state",    .id = NGCParam_toolsetter_state }
 };
-
 
 // Named parameters
 
@@ -611,6 +613,16 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
 
         case NGCParam_call_level:
             value = (float)ngc_call_level();
+            break;
+
+     // grblHAL extensions
+
+        case NGCParam_probe_state:
+            value = hal.probe.get_state ? (float)hal.probe.get_state().triggered : -1.0f;
+            break;
+
+        case NGCParam_toolsetter_state:
+            value = hal.probe.get_state && hal.driver_cap.toolsetter ? (float)hal.probe.get_state().tls_triggered : -1.0f;
             break;
 
         default:

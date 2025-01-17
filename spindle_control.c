@@ -948,17 +948,17 @@ static status_code_t set_pwm_port (setting_id_t id, uint_fast16_t int_value)
     return ok ? Status_OK : Status_SettingValueOutOfRange;
 }
 
-static bool has_pwm (const setting_detail_t *setting)
+static bool has_pwm (const setting_detail_t *setting, uint_fast16_t offset)
 {
     return spindle_cap.variable;
 }
 
-static bool has_freq (const setting_detail_t *setting)
+static bool has_freq (const setting_detail_t *setting, uint_fast16_t offset)
 {
     return spindle_cap.variable && !spindle_cap.cloned;
 }
 
-static bool has_ports (const setting_detail_t *setting)
+static bool has_ports (const setting_detail_t *setting, uint_fast16_t offset)
 {
     return ports_ok;
 }

@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2024 Terje Io
+  Copyright (c) 2021-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -100,6 +100,8 @@ typedef enum {
     NGCParam_selected_tool,
     NGCParam_selected_pocket,
     NGCParam_call_level,
+    NGCParam_probe_state,
+    NGCParam_toolsetter_state,
     NGCParam_Last
 } ncg_name_param_id_t;
 

@@ -139,22 +139,22 @@ typedef union {
     uint16_t mask;
     uint16_t value;
     struct {
-        uint16_t reset              :1,
-                 feed_hold          :1,
-                 cycle_start        :1,
-                 safety_door_ajar   :1,
-                 block_delete       :1,
-                 stop_disable       :1, //! M1
-                 e_stop             :1,
-                 probe_disconnected :1,
-                 motor_fault        :1,
-                 motor_warning      :1,
-                 limits_override    :1,
-                 single_block       :1,
-                 unassigned         :1,
-                 probe_overtravel   :1, //! used for probe protection
-                 probe_triggered    :1, //! used for probe protection
-                 deasserted         :1; //! this flag is set if signals are deasserted.
+        uint16_t reset                :1,
+                 feed_hold            :1,
+                 cycle_start          :1,
+                 safety_door_ajar     :1,
+                 block_delete         :1,
+                 stop_disable         :1, //! M1
+                 e_stop               :1,
+                 probe_disconnected   :1,
+                 motor_fault          :1,
+                 motor_warning        :1,
+                 limits_override      :1,
+                 single_block         :1,
+                 tls_overtravel       :1, //! used for probe (toolsetter) protection
+                 probe_overtravel     :1, //! used for probe protection
+                 probe_triggered      :1, //! used for probe protection
+                 deasserted           :1; //! this flag is set if signals are deasserted.
     };
 } control_signals_t;
 

@@ -186,7 +186,10 @@ bool ioport_claim (io_port_type_t type, io_port_direction_t dir, uint8_t *port, 
 
         xbar_t *portinfo;
 
-        ok = (portinfo = ioport_get_info(type, dir, *port)) && !portinfo->mode.claimed && hal.port.claim(type, dir, port, description);
+        ok = (portinfo = ioport_get_info(type, dir, *port)) &&
+//             portinfo->cap.claimable && TODO: add?
+                !portinfo->mode.claimed &&
+                  hal.port.claim(type, dir, port, description);
 
     } else {
 

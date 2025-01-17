@@ -2316,9 +2316,7 @@ void settings_write_build_info (char *line)
 bool settings_read_build_info(char *line)
 {
     if (!(hal.nvs.type != NVS_None && hal.nvs.memcpy_from_nvs((uint8_t *)line, NVS_ADDR_BUILD_INFO, sizeof(stored_line_t), true) == NVS_TransferResult_OK)) {
-        // Reset line with default value
-        line[0] = 0; // Empty line
-        settings_write_build_info(line);
+        settings_restore((settings_restore_t){ .build_info = On });
         return false;
     }
     return true;

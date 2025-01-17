@@ -452,6 +452,7 @@ typedef enum {
     Setting_HomePinsInvertMask = 671,
     Setting_Reserved672 = 672,
     Setting_CoolantOnDelay = 673,
+    Setting_THC_Options = 674,
 
     Setting_SpindleInvertMask1 = 716,
 
