@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2024 Terje Io
+  Copyright (c) 2021-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -42,6 +42,17 @@ typedef enum {
     Input_ProbeOvertravel,
     Input_Probe,
 // end control_signals_t sequence
+    Input_MotorFaultX,
+    Input_MotorFaultY,
+    Input_MotorFaultZ,
+    Input_MotorFaultA,
+    Input_MotorFaultB,
+    Input_MotorFaultC,
+    Input_MotorFaultU,
+    Input_MotorFaultV,
+    Input_MotorFaultX_2,
+    Input_MotorFaultY_2,
+    Input_MotorFaultZ_2,
     Input_Toolsetter,
     Input_ToolsetterOvertravel,
     Input_MPGSelect,
@@ -90,7 +101,11 @@ typedef enum {
     Input_Aux9,
     Input_Aux10,
     Input_Aux11,
-    Input_AuxMax = Input_Aux11,
+    Input_Aux12,
+    Input_Aux13,
+    Input_Aux14,
+    Input_Aux15,
+    Input_AuxMax = Input_Aux15,
     Input_Analog_Aux0,
     Input_Analog_Aux1,
     Input_Analog_Aux2,
@@ -250,6 +265,12 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Input_SingleBlock,          .name = "Single block" },
     { .function = Input_ProbeOvertravel,      .name = "Probe overtravel" },
     { .function = Input_Probe,                .name = "Probe" },
+    { .function = Input_MotorFaultX,          .name = "X motor fault" },
+    { .function = Input_MotorFaultY,          .name = "Y motor fault" },
+    { .function = Input_MotorFaultZ,          .name = "Z motor fault" },
+    { .function = Input_MotorFaultX_2,        .name = "X motor fault 2" },
+    { .function = Input_MotorFaultY_2,        .name = "Y motor fault 2" },
+    { .function = Input_MotorFaultZ_2,        .name = "Z motor fault 2" },
     { .function = Input_Toolsetter,           .name = "Toolsetter" },
     { .function = Input_ToolsetterOvertravel, .name = "Toolsetter overtravel" },
     { .function = Input_MPGSelect,            .name = "MPG mode select" },
@@ -283,6 +304,10 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Input_Aux9,                 .name = "Aux in 9" },
     { .function = Input_Aux10,                .name = "Aux in 10" },
     { .function = Input_Aux11,                .name = "Aux in 11" },
+    { .function = Input_Aux12,                .name = "Aux in 12" },
+    { .function = Input_Aux13,                .name = "Aux in 13" },
+    { .function = Input_Aux14,                .name = "Aux in 14" },
+    { .function = Input_Aux15,                .name = "Aux in 15" },
     { .function = Input_Analog_Aux0,          .name = "Aux analog in 0" },
     { .function = Input_Analog_Aux1,          .name = "Aux analog in 1" },
     { .function = Input_Analog_Aux2,          .name = "Aux analog in 2" },
@@ -317,6 +342,7 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Input_LimitA,               .name = "A limit min" },
     { .function = Input_LimitA_Max,           .name = "A limit max" },
     { .function = Input_HomeA,                .name = "A home" },
+    { .function = Input_MotorFaultA,          .name = "A motor fault" },
 #endif
 #ifdef B_AXIS
     { .function = Output_StepB,               .name = "B step" },
@@ -326,6 +352,7 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Input_LimitB,               .name = "B limit min" },
     { .function = Input_LimitB_Max,           .name = "B limit max" },
     { .function = Input_HomeB,                .name = "B home" },
+    { .function = Input_MotorFaultB,          .name = "B motor fault" },
 #endif
 #ifdef C_AXIS
     { .function = Output_StepC,               .name = "C step" },
@@ -334,6 +361,7 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Input_LimitC,               .name = "C limit min" },
     { .function = Input_LimitC_Max,           .name = "C limit max" },
     { .function = Input_HomeC,                .name = "C home" },
+    { .function = Input_MotorFaultC,          .name = "C motor fault" },
 #endif
 #ifdef U_AXIS
     { .function = Output_StepU,               .name = "U step" },
@@ -342,6 +370,7 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Input_LimitU,               .name = "U limit min" },
     { .function = Input_LimitU_Max,           .name = "U limit max" },
     { .function = Input_HomeU,                .name = "U home" },
+    { .function = Input_MotorFaultU,          .name = "U motor fault" },
 #endif
 #ifdef V_AXIS
     { .function = Output_StepV,               .name = "V step" },
@@ -350,6 +379,7 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Input_LimitV,               .name = "V limit min" },
     { .function = Input_LimitV_Max,           .name = "V limit max" },
     { .function = Input_HomeV,                .name = "V home" },
+    { .function = Input_MotorFaultV,          .name = "V motor fault" },
 #endif
 #ifndef NO_SETTINGS_DESCRIPTIONS
     { .function = Output_MotorChipSelect,     .name = "Motor CS" },
@@ -683,6 +713,11 @@ typedef union {
                 unassigned  :4;
     };
 } pin_debounce_t;
+
+static inline uint8_t xbar_fault_pin_to_axis (pin_function_t fn)
+{
+    return fn >= Input_MotorFaultX && fn <= Input_MotorFaultV ? fn - Input_MotorFaultX : (fn >= Input_MotorFaultX_2 && fn <= Input_MotorFaultZ_2 ? fn - Input_MotorFaultX_2 : 0);
+}
 
 void xbar_set_homing_source (void);
 limit_signals_t xbar_get_homing_source (void);

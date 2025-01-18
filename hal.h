@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2016-2024 Terje Io
+  Copyright (c) 2016-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -314,6 +314,13 @@ typedef axes_signals_t (*stepper_get_ganged_ptr)(bool auto_squared);
 */
 typedef void (*stepper_claim_motor_ptr)(uint_fast8_t axis_id, bool claim);
 
+/*! \brief Pointer to function for querying or resetting stepper driver status.
+
+\param reset \a true to reset status, \a false to query it.
+\returns stepper driver warning and fault status in a \a stepper_status_t struct.
+*/
+typedef stepper_status_t (*stepper_status_ptr)(bool reset);
+
 /*! \brief Pointer to callback function for outputting the next direction and step pulse signals. _Set by the core on startup._
 
 To be called by the driver from the main stepper interrupt handler (when the timer times out).
@@ -333,6 +340,7 @@ typedef struct {
     stepper_claim_motor_ptr claim_motor;                //!< Optional handler for claiming/releasing motor(s) from normal step/dir control.
     stepper_output_step_ptr output_step;                //!< Optional handler for outputting a single step pulse. _Experimental._ Called from interrupt context.
     motor_iterator_ptr motor_iterator;                  //!< Optional handler iteration over motor vs. axis mappings. Required for the motors plugin (Trinamic drivers).
+    stepper_status_ptr stepper_status;                  //!< Optional handler handler for querying steppper driver status or attempting to reset it.
 } stepper_ptrs_t;
 
 
@@ -662,7 +670,8 @@ typedef struct {
     limit_signals_t limits_cap;                     //!< Limit input signals supported by the driver.
     home_signals_t home_cap;                        //!< Home input signals supported by the driver.
     coolant_state_t coolant_cap;                    //!< Coolant outputs supported by the driver.
-
+    home_signals_t motor_warning_cap;               //!< Motor warning input signals (per motor) supported by the driver.
+    home_signals_t motor_fault_cap;                 //!< Motor fault input signals (per motor) supported by the driver.
 } grbl_hal_t;
 
 extern grbl_hal_t hal; //!< Global HAL struct.

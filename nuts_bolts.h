@@ -162,6 +162,18 @@ typedef struct {
     axes_signals_t b;       //!< Secondary home switch(es) status, required for auto squaring enabled axes if primary switches are available.
 } home_signals_t;
 
+//! \brief Stepper driver states struct.
+typedef union {
+    uint16_t state;
+    home_signals_t details; // Stepper driver signals states.
+} stepper_state_t;
+
+//! \brief // Stepper driver warning and fault signal states, consists of two packed stepper_state_t structs in 32 bits.
+typedef struct {
+    stepper_state_t warning; //!< Stepper drivers warning states.
+    stepper_state_t fault;   //!< Stepper drivers fault states.
+} stepper_status_t;
+
 #pragma pack(pop)
 
 typedef enum {

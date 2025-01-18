@@ -470,6 +470,11 @@ typedef enum {
     Setting_LinearSpindle1Piece3 = 739,
     Setting_LinearSpindle1Piece4 = 740,
 
+    Setting_MotorWarningsEnable = 742,
+    Setting_MotorWarningsInvert = 743,
+    Setting_MotorFaultsEnable = 744,
+    Setting_MotorFaultsInvert = 745,
+
     Setting_Action0    = 750,
     Setting_ActionBase = Setting_Action0,
     Setting_Action1    = 751,
@@ -853,7 +858,11 @@ typedef struct {
     position_pid_t position;    // Used for synchronized motion
     ioport_signals_t ioport;
     homing_settings_t homing;
-    char reserved[24];          // Reserved For future expansion
+    axes_signals_t motor_warning_enable;
+    axes_signals_t motor_warning_invert;
+    axes_signals_t motor_fault_enable;
+    axes_signals_t motor_fault_invert;
+    char reserved[20];          // Reserved For future expansion
 } settings_t;
 
 typedef enum {

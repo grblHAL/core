@@ -110,6 +110,11 @@ PROGMEM const settings_t defaults = {
     .steppers.is_rotary.mask = (DEFAULT_AXIS_ROTATIONAL_MASK & AXES_BITMASK) & 0b11111000,
     .steppers.rotary_wrap.mask = (DEFAULT_AXIS_ROTARY_WRAP_MASK & AXES_BITMASK) & 0b11111000,
 #endif
+    .motor_warning_enable.mask = DEFAULT_MOTOR_WARNING_SIGNALS_ENABLE,
+    .motor_warning_invert.mask = DEFAULT_MOTOR_WARNING_SIGNALS_INVERT,
+    .motor_fault_enable.mask = DEFAULT_MOTOR_FAULT_SIGNALS_ENABLE,
+    .motor_fault_invert.mask = DEFAULT_MOTOR_FAULT_SIGNALS_INVERT,
+
 #if DEFAULT_HOMING_ENABLE
     .homing.flags.enabled = DEFAULT_HOMING_ENABLE,
     .homing.flags.init_lock = DEFAULT_HOMING_INIT_LOCK,
@@ -1843,7 +1848,17 @@ static bool is_setting_available (const setting_detail_t *setting, uint_fast16_t
             break;
 
         case Setting_CoolantOnDelay:
-            available = hal.coolant_cap.mask;
+            available = hal.coolant_cap.mask != 0;
+            break;
+
+        case Setting_MotorWarningsEnable:
+        case Setting_MotorWarningsInvert:
+            available = hal.motor_warning_cap.a.mask != 0;
+            break;
+
+        case Setting_MotorFaultsEnable:
+        case Setting_MotorFaultsInvert:
+            available = hal.motor_fault_cap.a.mask != 0;
             break;
 
         default:
@@ -2074,7 +2089,11 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_SpindleOffDelay, Group_Spindle, "Spindle off delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtendedFn, set_float, get_float, is_setting_available, { .allow_null = On } },
      { Setting_FSOptions, Group_General, "File systems options", NULL, Format_Bitfield, fs_options, NULL, NULL, Setting_IsExtended, &settings.fs_options.mask, NULL, is_setting_available },
      { Setting_HomePinsInvertMask, Group_Limits, "Invert home inputs", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.home_invert.mask, NULL, is_setting_available },
-     { Setting_CoolantOnDelay, Group_Coolant, "Coolant on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtendedFn, set_float, get_float, is_setting_available, { .allow_null = On } }
+     { Setting_CoolantOnDelay, Group_Coolant, "Coolant on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtendedFn, set_float, get_float, is_setting_available, { .allow_null = On } },
+     { Setting_MotorWarningsEnable, Group_Stepper, "Motor warning inputs enable", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.motor_warning_enable, NULL, is_setting_available },
+     { Setting_MotorWarningsInvert, Group_Stepper, "Invert motor warning inputs", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.motor_warning_invert, NULL, is_setting_available },
+     { Setting_MotorFaultsEnable, Group_Stepper, "Motor fault inputs enable", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.motor_fault_enable, NULL, is_setting_available },
+     { Setting_MotorFaultsInvert, Group_Stepper, "Invert motor fault inputs", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.motor_fault_invert, NULL, is_setting_available }
 };
 
 #ifndef NO_SETTINGS_DESCRIPTIONS
@@ -2273,6 +2292,12 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_FSOptions, "Auto mount SD card on startup." },
     { Setting_HomePinsInvertMask, "Inverts the axis home input signals." },
     { Setting_CoolantOnDelay, "Delay to allow coolant to start. 0 or 0.5 - 20s" }
+/*
+    { Setting_MotorWarningsEnable, "Motor warning enable" },
+    { Setting_MotorWarningsInvert, "Invert motor warning inputs" },
+    { Setting_MotorFaultsEnable, "Motor fault enable" },
+    { Setting_MotorFaultsInvert, "Invert motor fault inputs" }
+*/
 };
 
 #endif

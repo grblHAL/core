@@ -1903,6 +1903,46 @@ For the controller the distance is unitless and and can be in degrees, radians, 
 #endif
 ///@}
 
+/*! @name $742 - Setting_MotorWarningsEnable
+\brief \ref axismask controlling the which motor warning signals to enable.
+Set this value to -1 or AXES_BITMASK to enable for all axes or specify which by mask.
+*/
+///@{
+#if !defined DEFAULT_MOTOR_WARNING_SIGNALS_ENABLE || defined __DOXYGEN__
+#define DEFAULT_MOTOR_WARNING_SIGNALS_ENABLE 0
+#endif
+///@}
+
+/*! @name $743 - Setting_MotorWarningsInvert
+\brief \ref axismask controlling the which motor warning signals to to invert.
+Set this value to -1 or AXES_BITMASK to invert all warning signals or specify for which axes by mask.
+*/
+///@{
+#if !defined DEFAULT_MOTOR_WARNING_SIGNALS_INVERT || defined __DOXYGEN__
+#define DEFAULT_MOTOR_WARNING_SIGNALS_INVERT 0
+#endif
+///@}
+
+/*! @name $744 - Setting_MotorFaultsEnable
+\brief \ref axismask controlling the which motor fault signals to enable.
+Set this value to -1 or AXES_BITMASK to enable for all axes or specify which by mask.
+*/
+///@{
+#if !defined DEFAULT_MOTOR_FAULT_SIGNALS_ENABLE || defined __DOXYGEN__
+#define DEFAULT_MOTOR_FAULT_SIGNALS_ENABLE 0
+#endif
+///@}
+
+/*! @name $745 - Setting_MotorFaultsInvert
+\brief \ref axismask controlling the which motor fault signals to to invert.
+Set this value to -1 or AXES_BITMASK to invert all fault signals or specify for which axes by mask.
+*/
+///@{
+#if !defined DEFAULT_MOTOR_FAULT_SIGNALS_INVERT || defined __DOXYGEN__
+#define DEFAULT_MOTOR_FAULT_SIGNALS_INVERT 0
+#endif
+///@}
+
 /*! @name $481 - Setting_AutoReportInterval
 Auto status report interval, allowed range is 100 - 1000. Set to 0 to disable.
 */

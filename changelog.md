@@ -1,5 +1,27 @@
 ## grblHAL changelog
 
+<a name="20250118">Build 20250118
+
+Core:
+
+* Added HAL support for stepper driver status signals \(warning and fault\) and new HAL entry point for querying/resetting driver status.
+
+* Added driver capability flags and settings, `$742` - `$745`, for enabling and inverting motor warning and fault input signals \(per axis\).
+
+* Improved jerk acceleration. Ref. PR [#660](https://github.com/grblHAL/core/pull/660).
+
+Plugins:
+
+* Trinamic: added up to 5 seconds startup delay to allow motor power to come up. Ref. issue [#19](https://github.com/grblHAL/Plugins_motor/issues/19).  
+Partially implemended new HAL entry point for querying/resetting driver status.
+
+Drivers:
+
+* STM32F4xx: added driver support for per motor stepper driver fault signals, updated SuperLongBoard EXT map/board specific code to match.  
+Fixed issue with homing/hard limits alarm affecting SuperLongBoards.
+
+---
+
 <a name="20250116">Build 20250116
 
 Core:
@@ -11,7 +33,7 @@ Core:
  
 Drivers:
 
-* STM32F4xx: fixed random freezes when WizNet plugin is enabled for ethernet. Ref. issue [#208](https://github.com/grblHAL/STM32F4xx/issues/208).
+* STM32F4xx: fixed random freezes when WizNet plugin is enabled for ethernet. Ref. issue [#208](https://github.com/grblHAL/STM32F4xx/issues/208).  
 Added tentative board map for Sienci SuperLongBoard with external drivers \(SLB EXT\) and added support for toolsetter state for both SLB and SLB EXT.
 
 Plugins:

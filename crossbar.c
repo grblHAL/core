@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2023-2024 Terje Io
+  Copyright (c) 2023-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -33,6 +33,8 @@ axes_signals_t xbar_fn_to_axismask (pin_function_t fn)
         case Input_LimitX_Max:
         case Input_LimitX_2:
         case Input_HomeX:
+        case Input_MotorFaultX:
+        case Input_MotorFaultX_2:
             mask.x = On;
             break;
 
@@ -40,6 +42,8 @@ axes_signals_t xbar_fn_to_axismask (pin_function_t fn)
         case Input_LimitY_Max:
         case Input_LimitY_2:
         case Input_HomeY:
+        case Input_MotorFaultY:
+        case Input_MotorFaultY_2:
             mask.y = On;
             break;
 
@@ -47,6 +51,8 @@ axes_signals_t xbar_fn_to_axismask (pin_function_t fn)
         case Input_LimitZ_Max:
         case Input_LimitZ_2:
         case Input_HomeZ:
+        case Input_MotorFaultZ:
+        case Input_MotorFaultZ_2:
             mask.z = On;
             break;
 
@@ -54,6 +60,7 @@ axes_signals_t xbar_fn_to_axismask (pin_function_t fn)
         case Input_LimitA:
         case Input_LimitA_Max:
         case Input_HomeA:
+        case Input_MotorFaultA:
             mask.a = On;
             break;
 #endif
@@ -61,6 +68,7 @@ axes_signals_t xbar_fn_to_axismask (pin_function_t fn)
         case Input_LimitB:
         case Input_LimitB_Max:
         case Input_HomeB:
+        case Input_MotorFaultB:
             mask.b = On;
             break;
 #endif
@@ -68,6 +76,7 @@ axes_signals_t xbar_fn_to_axismask (pin_function_t fn)
         case Input_LimitC:
         case Input_LimitC_Max:
         case Input_HomeC:
+        case Input_MotorFaultC:
             mask.c = On;
             break;
 #endif
@@ -75,6 +84,7 @@ axes_signals_t xbar_fn_to_axismask (pin_function_t fn)
         case Input_LimitU:
         case Input_LimitU_Max:
         case Input_HomeU:
+        case Input_MotorFaultU:
             mask.u = On;
             break;
 #endif
@@ -82,6 +92,7 @@ axes_signals_t xbar_fn_to_axismask (pin_function_t fn)
         case Input_LimitV:
         case Input_LimitV_Max:
         case Input_HomeV:
+        case Input_MotorFaultV:
             mask.v = On;
             break;
 #endif

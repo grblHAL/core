@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2024 Terje Io
+  Copyright (c) 2021-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -98,6 +98,11 @@
   #define X2_ENABLE_PIN     M3_ENABLE_PIN
   #define X2_ENABLE_BIT     (1<<M3_ENABLE_PIN)
 #endif
+#ifdef M3_MOTOR_FAULT_PIN
+  #define X2_MOTOR_FAULT_PORT   M3_MOTOR_FAULT_PORT
+  #define X2_MOTOR_FAULT_PIN    M3_MOTOR_FAULT_PIN
+  #define X2_MOTOR_FAULT_BIT    (1<<M3_MOTOR_FAULT_PIN)
+#endif
 
 #elif X_DOUBLED == 2
 
@@ -141,6 +146,11 @@
   #define X2_ENABLE_PORT    M4_ENABLE_PORT
   #define X2_ENABLE_PIN     M4_ENABLE_PIN
   #define X2_ENABLE_BIT     (1<<M4_ENABLE_PIN)
+#endif
+#ifdef M4_MOTOR_FAULT_PIN
+  #define X2_MOTOR_FAULT_PORT   M4_MOTOR_FAULT_PORT
+  #define X2_MOTOR_FAULT_PIN    M4_MOTOR_FAULT_PIN
+  #define X2_MOTOR_FAULT_BIT    (1<<M4_MOTOR_FAULT_PIN)
 #endif
 
 #elif X_DOUBLED == 3
@@ -186,6 +196,11 @@
   #define X2_ENABLE_PIN     M5_ENABLE_PIN
   #define X2_ENABLE_BIT     (1<<M5_ENABLE_PIN)
 #endif
+#ifdef M5_MOTOR_FAULT_PIN
+  #define X2_MOTOR_FAULT_PORT   M5_MOTOR_FAULT_PORT
+  #define X2_MOTOR_FAULT_PIN    M5_MOTOR_FAULT_PIN
+  #define X2_MOTOR_FAULT_BIT    (1<<M5_MOTOR_FAULT_PIN)
+#endif
 
 #elif X_DOUBLED == 4
 
@@ -230,6 +245,11 @@
   #define X2_ENABLE_PIN     M6_ENABLE_PIN
   #define X2_ENABLE_BIT     (1<<M6_ENABLE_PIN)
 #endif
+#ifdef M6_MOTOR_FAULT_PIN
+  #define X2_MOTOR_FAULT_PORT   M6_MOTOR_FAULT_PORT
+  #define X2_MOTOR_FAULT_PIN    M6_MOTOR_FAULT_PIN
+  #define X2_MOTOR_FAULT_BIT    (1<<M6_MOTOR_FAULT_PIN)
+#endif
 
 #elif X_DOUBLED == 5
 
@@ -273,6 +293,11 @@
   #define X2_ENABLE_PORT    M7_ENABLE_PORT
   #define X2_ENABLE_PIN     M7_ENABLE_PIN
   #define X2_ENABLE_BIT     (1<<M7_ENABLE_PIN)
+#endif
+#ifdef M7_MOTOR_FAULT_PIN
+  #define X2_MOTOR_FAULT_PORT   M7_MOTOR_FAULT_PORT
+  #define X2_MOTOR_FAULT_PIN    M7_MOTOR_FAULT_PIN
+  #define X2_MOTOR_FAULT_BIT    (1<<M7_MOTOR_FAULT_PIN)
 #endif
 
 #endif // X_DOUBLED
@@ -320,6 +345,11 @@
   #define Y2_ENABLE_PIN     M3_ENABLE_PIN
   #define Y2_ENABLE_BIT     (1<<M3_ENABLE_PIN)
 #endif
+#ifdef M3_MOTOR_FAULT_PIN
+  #define Y2_MOTOR_FAULT_PORT   M3_MOTOR_FAULT_PORT
+  #define Y2_MOTOR_FAULT_PIN    M3_MOTOR_FAULT_PIN
+  #define Y2_MOTOR_FAULT_BIT    (1<<M3_MOTOR_FAULT_PIN)
+#endif
 
 #elif Y_DOUBLED == 2
 
@@ -363,6 +393,11 @@
   #define Y2_ENABLE_PORT    M4_ENABLE_PORT
   #define Y2_ENABLE_PIN     M4_ENABLE_PIN
   #define Y2_ENABLE_BIT     (1<<M4_ENABLE_PIN)
+#endif
+#ifdef M4_MOTOR_FAULT_PIN
+  #define Y2_MOTOR_FAULT_PORT   M4_MOTOR_FAULT_PORT
+  #define Y2_MOTOR_FAULT_PIN    M4_MOTOR_FAULT_PIN
+  #define Y2_MOTOR_FAULT_BIT    (1<<M4_MOTOR_FAULT_PIN)
 #endif
 
 #elif Y_DOUBLED == 3
@@ -408,6 +443,11 @@
   #define Y2_ENABLE_PIN     M5_ENABLE_PIN
   #define Y2_ENABLE_BIT     (1<<M5_ENABLE_PIN)
 #endif
+#ifdef M5_MOTOR_FAULT_PIN
+  #define Y2_MOTOR_FAULT_PORT   M5_MOTOR_FAULT_PORT
+  #define Y2_MOTOR_FAULT_PIN    M5_MOTOR_FAULT_PIN
+  #define Y2_MOTOR_FAULT_BIT    (1<<M5_MOTOR_FAULT_PIN)
+#endif
 
 #elif Y_DOUBLED == 4
 
@@ -452,6 +492,11 @@
   #define Y2_ENABLE_PIN     M6_ENABLE_PIN
   #define Y2_ENABLE_BIT     (1<<M6_ENABLE_PIN)
 #endif
+#ifdef M6_MOTOR_FAULT_PIN
+  #define Y2_MOTOR_FAULT_PORT   M6_MOTOR_FAULT_PORT
+  #define Y2_MOTOR_FAULT_PIN    M6_MOTOR_FAULT_PIN
+  #define Y2_MOTOR_FAULT_BIT    (1<<M6_MOTOR_FAULT_PIN)
+#endif
 
 #elif Y_DOUBLED == 5
 
@@ -495,6 +540,11 @@
   #define Y2_ENABLE_PORT    M7_ENABLE_PORT
   #define Y2_ENABLE_PIN     M7_ENABLE_PIN
   #define Y2_ENABLE_BIT     (1<<M7_ENABLE_PIN)
+#endif
+#ifdef M7_MOTOR_FAULT_PIN
+  #define Y2_MOTOR_FAULT_PORT   M7_MOTOR_FAULT_PORT
+  #define Y2_MOTOR_FAULT_PIN    M7_MOTOR_FAULT_PIN
+  #define Y2_MOTOR_FAULT_BIT    (1<<M7_MOTOR_FAULT_PIN)
 #endif
 
 #endif // Y_DOUBLED
@@ -542,6 +592,11 @@
   #define Z2_ENABLE_PIN     M3_ENABLE_PIN
   #define Z2_ENABLE_BIT     (1<<M3_ENABLE_PIN)
 #endif
+#ifdef M3_MOTOR_FAULT_PIN
+  #define Z2_MOTOR_FAULT_PORT   M3_MOTOR_FAULT_PORT
+  #define Z2_MOTOR_FAULT_PIN    M3_MOTOR_FAULT_PIN
+  #define Z2_MOTOR_FAULT_BIT    (1<<M3_MOTOR_FAULT_PIN)
+#endif
 
 #elif Z_DOUBLED == 2
 
@@ -585,6 +640,11 @@
   #define Z2_ENABLE_PORT    M4_ENABLE_PORT
   #define Z2_ENABLE_PIN     M4_ENABLE_PIN
   #define Z2_ENABLE_BIT     (1<<M4_ENABLE_PIN)
+#endif
+#ifdef M4_MOTOR_FAULT_PIN
+  #define Z2_MOTOR_FAULT_PORT   M4_MOTOR_FAULT_PORT
+  #define Z2_MOTOR_FAULT_PIN    M4_MOTOR_FAULT_PIN
+  #define Z2_MOTOR_FAULT_BIT    (1<<M4_MOTOR_FAULT_PIN)
 #endif
 
 #elif Z_DOUBLED == 3
@@ -630,6 +690,11 @@
   #define Z2_ENABLE_PIN     M5_ENABLE_PIN
   #define Z2_ENABLE_BIT     (1<<M5_ENABLE_PIN)
 #endif
+#ifdef M5_MOTOR_FAULT_PIN
+  #define Z2_MOTOR_FAULT_PORT   M5_MOTOR_FAULT_PORT
+  #define Z2_MOTOR_FAULT_PIN    M5_MOTOR_FAULT_PIN
+  #define Z2_MOTOR_FAULT_BIT    (1<<M5_MOTOR_FAULT_PIN)
+#endif
 
 #elif Z_DOUBLED == 4
 
@@ -673,6 +738,11 @@
   #define Z2_ENABLE_PORT    M6_ENABLE_PORT
   #define Z2_ENABLE_PIN     M6_ENABLE_PIN
   #define Z2_ENABLE_BIT     (1<<M6_ENABLE_PIN)
+#endif
+#ifdef M6_MOTOR_FAULT_PIN
+  #define Z2_MOTOR_FAULT_PORT   M6_MOTOR_FAULT_PORT
+  #define Z2_MOTOR_FAULT_PIN    M6_MOTOR_FAULT_PIN
+  #define Z2_MOTOR_FAULT_BIT    (1<<M6_MOTOR_FAULT_PIN)
 #endif
 
 #elif Z_DOUBLED == 5
@@ -718,6 +788,12 @@
   #define Z2_ENABLE_PIN     M7_ENABLE_PIN
   #define Z2_ENABLE_BIT     (1<<M7_ENABLE_PIN)
 #endif
+#ifdef M7_MOTOR_FAULT_PIN
+  #define Z2_MOTOR_FAULT_PORT   M7_MOTOR_FAULT_PORT
+  #define Z2_MOTOR_FAULT_PIN    M7_MOTOR_FAULT_PIN
+  #define Z2_MOTOR_FAULT_BIT    (1<<M7_MOTOR_FAULT_PIN)
+#endif
+
 #endif // Z_DOUBLED
 
 #ifdef X_DOUBLED
@@ -750,6 +826,24 @@
 #define HOME2_MASK_SUM 0
 #endif
 
+#if defined(X2_MOTOR_FAULT_PIN) || defined(Y2_MOTOR_FAULT_PIN) || defined(Z2_MOTOR_FAULT_PIN)
+#define DUAL_MOTOR_FAULT_SWITCHES
+#ifndef X2_MOTOR_FAULT_BIT
+#define X2_MOTOR_FAULT_BIT 0
+#endif
+#ifndef Y2_MOTOR_FAULT_BIT
+#define Y2_MOTOR_FAULT_BIT 0
+#endif
+#ifndef Z2_MOTOR_FAULT_BIT
+#define Z2_MOTOR_FAULT_BIT 0
+#endif
+#define MOTOR_FAULT2_MASK (X2_MOTOR_FAULT_BIT|Y2_MOTOR_FAULT_BIT|Z2_MOTOR_FAULT_BIT)
+#define MOTOR_FAULT2_MASK_SUM (X2_MOTOR_FAULT_BIT+Y2_MOTOR_FAULT_BIT+Z2_MOTOR_FAULT_BIT)
+#else
+#define MOTOR_FAULT2_MASK 0
+#define MOTOR_FAULT2_MASK_SUM 0
+#endif
+
 #if defined(X2_LIMIT_PIN) || defined(Y2_LIMIT_PIN) || defined(Z2_LIMIT_PIN)
 #define DUAL_LIMIT_SWITCHES
 #ifndef X2_LIMIT_BIT
@@ -773,6 +867,7 @@
 #endif
 
 #ifdef A_AXIS
+
 #ifndef M3_AVAILABLE
   #error "A_AXIS pins are not available"
 #endif
@@ -802,9 +897,16 @@
   #define A_ENABLE_PIN      M3_ENABLE_PIN
   #define A_ENABLE_BIT      (1<<M3_ENABLE_PIN)
 #endif
+#ifdef M3_MOTOR_FAULT_PIN
+  #define A_MOTOR_FAULT_PORT    M3_MOTOR_FAULT_PORT
+  #define A_MOTOR_FAULT_PIN     M3_MOTOR_FAULT_PIN
+  #define A_MOTOR_FAULT_BIT     (1<<M3_MOTOR_FAULT_PIN)
 #endif
 
+#endif // A_AXIS
+
 #ifdef B_AXIS
+
 #ifndef M4_AVAILABLE
   #error "B_AXIS pins are not available"
 #endif
@@ -834,9 +936,16 @@
   #define B_ENABLE_PIN      M4_ENABLE_PIN
   #define B_ENABLE_BIT      (1<<M4_ENABLE_PIN)
 #endif
+#ifdef M4_MOTOR_FAULT_PIN
+  #define B_MOTOR_FAULT_PORT    M4_MOTOR_FAULT_PORT
+  #define B_MOTOR_FAULT_PIN     M4_MOTOR_FAULT_PIN
+  #define B_MOTOR_FAULT_BIT     (1<<M4_MOTOR_FAULT_PIN)
 #endif
 
+#endif //B_AXIS
+
 #ifdef C_AXIS
+
 #ifndef M5_AVAILABLE
   #error "C_AXIS pins are not available"
 #endif
@@ -866,9 +975,16 @@
   #define C_ENABLE_PIN      M5_ENABLE_PIN
   #define C_ENABLE_BIT      (1<<M5_ENABLE_PIN)
 #endif
+#ifdef M5_MOTOR_FAULT_PIN
+  #define C_MOTOR_FAULT_PORT    M5_MOTOR_FAULT_PORT
+  #define C_MOTOR_FAULT_PIN     M5_MOTOR_FAULT_PIN
+  #define C_MOTOR_FAULT_BIT     (1<<M5_MOTOR_FAULT_PIN)
 #endif
 
+#endif // C_AXIS
+
 #ifdef U_AXIS
+
 #ifndef M6_AVAILABLE
   #error "U_AXIS pins are not available"
 #endif
@@ -898,9 +1014,16 @@
   #define U_ENABLE_PIN      M6_ENABLE_PIN
   #define U_ENABLE_BIT      (1<<M6_ENABLE_PIN)
 #endif
+#ifdef M6_MOTOR_FAULT_PIN
+  #define U_MOTOR_FAULT_PORT    M6_MOTOR_FAULT_PORT
+  #define U_MOTOR_FAULT_PIN     M6_MOTOR_FAULT_PIN
+  #define U_MOTOR_FAULT_BIT     (1<<M6_MOTOR_FAULT_PIN)
 #endif
 
+#endif // U_AXIS
+
 #ifdef V_AXIS
+
 #ifndef M7_AVAILABLE
   #error "V_AXIS pins are not available"
 #endif
@@ -930,8 +1053,13 @@
   #define V_ENABLE_PIN      M7_ENABLE_PIN
   #define V_ENABLE_BIT      (1<<M7_ENABLE_PIN)
 #endif
+#ifdef M7_MOTOR_FAULT_PIN
+  #define V_MOTOR_FAULT_PORT    M7_MOTOR_FAULT_PORT
+  #define V_MOTOR_FAULT_PIN     M7_MOTOR_FAULT_PIN
+  #define V_MOTOR_FAULT_BIT     (1<<M6_MOTOR_FAULT_PIN)
 #endif
 
+#endif // V_AXIS
 
 #ifdef STEP_PORT
 #ifndef X_STEP_PORT
@@ -1053,6 +1181,28 @@
 #define Z_HOME_BIT (1<<Z_HOME_PIN)
 #else
 #define Z_HOME_BIT 0
+#endif
+#endif
+
+#ifndef X_MOTOR_FAULT_BIT
+#ifdef X_MOTOR_FAULT_PIN
+#define X_MOTOR_FAULT_BIT (1<<X_MOTOR_FAULT_PIN)
+#else
+#define X_MOTOR_FAULT_BIT 0
+#endif
+#endif
+#ifndef Y_MOTOR_FAULT_BIT
+#ifdef Y_MOTOR_FAULT_PIN
+#define Y_MOTOR_FAULT_BIT (1<<Y_MOTOR_FAULT_PIN)
+#else
+#define Y_MOTOR_FAULT_BIT 0
+#endif
+#endif
+#ifndef Z_MOTOR_FAULT_BIT
+#ifdef Z_MOTOR_FAULT_PIN
+#define Z_MOTOR_FAULT_BIT (1<<Z_MOTOR_FAULT_PIN)
+#else
+#define Z_MOTOR_FAULT_BIT 0
 #endif
 #endif
 
@@ -1263,6 +1413,34 @@
 
 #endif // LIMIT_MASK
 
+#ifndef MOTOR_FAULT_MASK
+
+#define MOTOR_FAULT_MASK_BASE (X_MOTOR_FAULT_BIT|Y_MOTOR_FAULT_BIT|Z_MOTOR_FAULT_BIT|MOTOR_FAULT2_MASK)
+#define MOTOR_FAULT_MASK_BASE_SUM (X_MOTOR_FAULT_BIT+Y_MOTOR_FAULT_BIT+Z_MOTOR_FAULT_BIT+MOTOR_FAULT2_MASK_SUM)
+
+#if N_AXIS == 3
+#define MOTOR_FAULT_MASK MOTOR_FAULT_MASK_BASE
+#define MOTOR_FAULT_MASK_SUM MOTOR_FAULT_MASK_BASE_SUM
+#define MOTOR_FAULT_MIN_CAP AXES_BITMASK
+#elif N_AXIS == 4
+#define MOTOR_FAULT_MASK (MOTOR_FAULT_MASK_BASE|A_MOTOR_FAULT_BIT)
+#define MOTOR_FAULT_MASK_SUM (MOTOR_FAULT_MASK_BASE_SUM+A_MOTOR_FAULT_BIT)
+#elif N_AXIS == 5
+#define MOTOR_FAULT_MASK (MOTOR_FAULT_MASK_BASE|A_MOTOR_FAULT_BIT|B_MOTOR_FAULT_BIT)
+#define MOTOR_FAULT_MASK_SUM (MOTOR_FAULT_MASK_BASE_SUM+A_MOTOR_FAULT_BIT+B_MOTOR_FAULT_BIT)
+#elif N_AXIS == 6
+#define MOTOR_FAULT_MASK (MOTOR_FAULT_MASK_BASE|A_MOTOR_FAULT_BIT|B_MOTOR_FAULT_BIT|C_MOTOR_FAULT_BIT)
+#define MOTOR_FAULT_MASK_SUM (MOTOR_FAULT_MASK_BASE_SUM+A_MOTOR_FAULT_BIT+B_MOTOR_FAULT_BIT+C_MOTOR_FAULT_BIT)
+#elif N_AXIS == 7
+#define MOTOR_FAULT_MASK (MOTOR_FAULT_MASK_BASE|A_MOTOR_FAULT_BIT|B_MOTOR_FAULT_BIT|C_MOTOR_FAULT_BIT|U_MOTOR_FAULT_BIT)
+#define MOTOR_FAULT_MASK_SUM (MOTOR_FAULT_MASK_BASE_SUM+A_MOTOR_FAULT_BIT+B_MOTOR_FAULT_BIT+C_MOTOR_FAULT_BIT+U_MOTOR_FAULT_BIT)
+#else
+#define MOTOR_FAULT_MASK (MOTOR_FAULT_MASK_BASE|A_MOTOR_FAULT_BIT|B_MOTOR_FAULT_BIT|C_MOTOR_FAULT_BIT|U_MOTOR_FAULT_BIT|V_MOTOR_FAULT_BIT)
+#define MOTOR_FAULT_MASK_SUM (MOTOR_FAULT_MASK_BASE_SUM+A_MOTOR_FAULT_BIT+B_MOTOR_FAULT_BIT+C_MOTOR_FAULT_BIT+U_MOTOR_FAULT_BIT+V_MOTOR_FAULT_BIT)
+#endif
+
+#endif // MOTOR_FAULT_MASK
+
 #ifndef N_GANGED
 #define N_GANGED 0
 #endif
@@ -1407,6 +1585,52 @@ static inline home_signals_t get_home_cap (void)
 #endif // HOME_MASK
 
     return home;
+}
+
+static inline home_signals_t get_motor_fault_cap (void)
+{
+    home_signals_t motor_fault = {0};
+
+#if MOTOR_FAULT_MASK
+
+#if X_MOTOR_FAULT_BIT
+    motor_fault.a.x = On;
+#endif
+#if Y_MOTOR_FAULT_BIT
+    motor_fault.a.y = On;
+#endif
+#if Z_MOTOR_FAULT_BIT
+    motor_fault.a.z = On;
+#endif
+#if A_MOTOR_FAULT_BIT
+    motor_fault.a.a = On;
+#endif
+#if B_MOTOR_FAULT_BIT
+    motor_fault.a.b = On;
+#endif
+#if C_MOTOR_FAULT_BIT
+    motor_fault.a.c = On;
+#endif
+#if U_MOTOR_FAULT_BIT
+    motor_fault.a.u = On;
+#endif
+#if V_MOTOR_FAULT_BIT
+    motor_fault.a.v = On;
+#endif
+
+#if X2_MOTOR_FAULT_BIT
+    motor_fault.b.x = On;
+#endif
+#if Y2_MOTOR_FAULT_BIT
+    motor_fault.b.y = On;
+#endif
+#if Z2_MOTOR_FAULT_BIT
+    motor_fault.b.z = On;
+#endif
+
+#endif // MOTOR_FAULT_MASK
+
+    return motor_fault;
 }
 
 /*EOF*/

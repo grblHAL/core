@@ -51,6 +51,12 @@
 
 #define MACH3_SCALING
 
+#ifdef NO_SETTINGS_DESCRIPTIONS
+#define GCODE_ADVANCED 0
+#else
+#define GCODE_ADVANCED 1
+#endif
+
 // Do not change, must be same as axis indices
 #define I_VALUE X_AXIS
 #define J_VALUE Y_AXIS
@@ -117,7 +123,6 @@ parser_state_t gc_state;
 
 #define FAIL(status) return(status);
 
-static gc_thread_data thread;
 static output_command_t *output_commands = NULL; // Linked list
 static scale_factor_t scale_factor = {
     .ijk[X_AXIS] = 1.0f,
@@ -492,6 +497,10 @@ static bool add_output_command (output_command_t *command)
     return add_cmd != NULL;
 }
 
+#if GCODE_ADVANCED
+
+static gc_thread_data thread;
+
 static status_code_t init_sync_motion (plan_line_data_t *pl_data, float pitch)
 {
     if(pl_data->spindle.hal->get_data == NULL)
@@ -518,6 +527,8 @@ static status_code_t init_sync_motion (plan_line_data_t *pl_data, float pitch)
 
     return Status_OK;
 }
+
+#endif // GCODE_ADVANCED
 
 // Output and free previously allocated message
 void gc_output_message (char *message)
@@ -698,6 +709,8 @@ status_code_t gc_execute_block (char *block)
 #endif
     };
 
+#if GCODE_ADVANCED
+
     static const parameter_words_t pq_words = {
         .p = On,
         .q = On
@@ -707,6 +720,8 @@ status_code_t gc_execute_block (char *block)
         .i = On,
         .j = On
     };
+
+#endif
 
     static const parameter_words_t positive_only_words = {
         .d = On,
@@ -1053,7 +1068,7 @@ status_code_t gc_execute_block (char *block)
                             mantissa = 0; // Set to zero to indicate valid non-integer G command.
                         }
                         break;
-
+#if GCODE_ADVANCED
                     case 33: case 76:
                         if(mantissa != 0)
                             FAIL(Status_GcodeUnsupportedCommand); // [G33.1 not yet supported]
@@ -1066,7 +1081,7 @@ status_code_t gc_execute_block (char *block)
 //                            gc_block.modal.motion = MotionMode_RigidTapping;
                         gc_block.modal.canned_cycle_active = false;
                         break;
-
+#endif
                     case 38:
                         if(!(hal.probe.get_state && ((mantissa == 20) || (mantissa == 30) || (mantissa == 40) || (mantissa == 50))))
                             FAIL(Status_GcodeUnsupportedCommand); // [probing not supported by driver or unsupported G38.x command]
@@ -1074,7 +1089,10 @@ status_code_t gc_execute_block (char *block)
                         mantissa = 0; // Set to zero to indicate valid non-integer G command.
                         //  No break. Continues to next line.
 
-                    case 0: case 1: case 2: case 3: case 5:
+                    case 0: case 1: case 2: case 3:
+#if GCODE_ADVANCED
+                    case 5:
+#endif
                         // Check for G0/1/2/3/38 being called with G10/28/30/92 on same block.
                         // * G43.1 is also an axis command but is not explicitly defined this way.
                         if (axis_command)
@@ -1094,7 +1112,7 @@ status_code_t gc_execute_block (char *block)
                             gc_block.modal.motion = (motion_mode_t)int_value;
                         gc_block.modal.canned_cycle_active = false;
                         break;
-
+#if GCODE_ADVANCED
                     case 73: case 81: case 82: case 83: case 85: case 86: case 89:
                         if (axis_command)
                             FAIL(Status_GcodeAxisCommandConflict); // [Axis word/command conflict]
@@ -1104,7 +1122,7 @@ status_code_t gc_execute_block (char *block)
                         gc_block.modal.motion = (motion_mode_t)int_value;
                         gc_parser_flags.canned_cycle_change = gc_block.modal.motion != gc_state.modal.motion;
                         break;
-
+#endif
                     case 17: case 18: case 19:
                         word_bit.modal_group.G2 = On;
                         gc_block.modal.plane_select = (plane_select_t)(int_value - 17);
@@ -2562,6 +2580,8 @@ status_code_t gc_execute_block (char *block)
             if(gc_block.spindle_modal.rpm_mode == SpindleSpeedMode_CSS && (!gc_block.spindle_modal.state.on || gc_block.values.s == 0.0f))
                  FAIL(Status_GcodeSpindleNotRunning);
 
+#if GCODE_ADVANCED
+
             // Check if feed rate is defined for the motion modes that require it.
             if(gc_block.modal.motion == MotionMode_SpindleSynchronized) {
 
@@ -2666,10 +2686,10 @@ status_code_t gc_execute_block (char *block)
 
                 gc_block.words.e = gc_block.words.h = gc_block.words.i = gc_block.words.j = gc_block.words.k = gc_block.words.l = gc_block.words.p = gc_block.words.q = gc_block.words.r = Off;
 
-            } else if (gc_block.values.f == 0.0f)
+            } else if(gc_block.values.f == 0.0f)
                 FAIL(Status_GcodeUndefinedFeedRate); // [Feed rate undefined]
 
-            if (gc_block.modal.canned_cycle_active) {
+            if(gc_block.modal.canned_cycle_active) {
 
                 if(gc_parser_flags.canned_cycle_change) {
 
@@ -2757,8 +2777,15 @@ status_code_t gc_execute_block (char *block)
                         break;
 
                 } // end switch gc_state.canned.motion
+            } else
+#else
 
-            } else switch (gc_block.modal.motion) {
+            if(gc_block.values.f == 0.0f)
+                FAIL(Status_GcodeUndefinedFeedRate); // [Feed rate undefined]
+
+#endif // GCODE_ADVANCED
+
+            switch (gc_block.modal.motion) {
 
                 case MotionMode_Linear:
                     // [G1 Errors]: Feed rate undefined. Axis letter not configured or without real value.
@@ -2950,6 +2977,8 @@ status_code_t gc_execute_block (char *block)
                     }
                     break;
 
+#if GCODE_ADVANCED
+
                 case MotionMode_CubicSpline:
                     // [G5 Errors]: Feed rate undefined.
                     // [G5 Plane Errors]: The active plane is not G17.
@@ -3029,6 +3058,8 @@ status_code_t gc_execute_block (char *block)
                     }
                     gc_block.words.i = gc_block.words.j = Off;
                     break;
+
+#endif // GCODE_ADVANCED
 
                 case MotionMode_ProbeTowardNoError:
                 case MotionMode_ProbeAwayNoError:
@@ -3720,6 +3751,8 @@ status_code_t gc_execute_block (char *block)
                         plane, gc_parser_flags.arc_is_clockwise ? -gc_block.arc_turns : gc_block.arc_turns);
                 break;
 
+#if GCODE_ADVANCED
+
             case MotionMode_CubicSpline:
                 {
                     point_2d_t cp1 = {
@@ -3791,6 +3824,8 @@ status_code_t gc_execute_block (char *block)
                 gc_state.canned.retract_mode = gc_state.modal.retract_mode;
                 mc_canned_drill(gc_state.modal.motion, gc_block.values.xyz, &plan_data, gc_state.position, plane, gc_block.values.l, &gc_state.canned);
                 break;
+
+#endif // GCODE_ADVANCED
 
             case MotionMode_ProbeToward:
             case MotionMode_ProbeTowardNoError:
