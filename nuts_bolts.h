@@ -210,8 +210,8 @@ typedef enum {
 #define bit_false(x, mask) (x) &= ~(mask)
 #define BIT_SET(x, bit, v) { if (v) { x |= (bit); } else { x &= ~(bit); } }
 
-#define bit_istrue(x, mask) ((x & (mask)) != 0)
-#define bit_isfalse(x, mask) ((x & (mask)) == 0)
+#define bit_istrue(x, mask) (((x) & (mask)) != 0)
+#define bit_isfalse(x, mask) (((x) & (mask)) == 0)
 
 // Converts an uint32 variable to string.
 char *uitoa (uint32_t n);

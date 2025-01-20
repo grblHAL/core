@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2024 Terje Io
+  Copyright (c) 2017-2025 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
   Copyright (c) 2011 Jens Geisler
@@ -234,10 +234,10 @@ bool plan_reset (void)
             else
                 break;
         }
-    }
 
-    if(block_buffer_size != settings.planner_buffer_blocks)
-        protocol_enqueue_foreground_task(report_plain, "Planner buffer size was reduced!");
+        if(block_buffer_size != settings.planner_buffer_blocks)
+            protocol_enqueue_foreground_task(report_plain, "Planner buffer size was reduced!");
+    }
 
     if(block_buffer == NULL)
         return false;

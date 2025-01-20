@@ -2624,6 +2624,39 @@ status_code_t report_spindles (bool machine_readable)
     return Status_OK;
 }
 
+status_code_t report_stepper_status (sys_state_t state, char *args)
+{
+    if(hal.stepper.status) {
+
+        char *append = buf;
+        stepper_status_t status = hal.stepper.status(false);
+
+        if(status.warning.state) {
+            hal.stream.write("[MOTORWARNING:");
+            append = axis_signals_tostring(buf, status.warning.details.a);
+            if(status.warning.details.b.bits) {
+                *append++ = ',';
+                axis_signals_tostring(append, status.warning.details.b);
+            }
+            hal.stream.write(buf);
+            hal.stream.write("]" ASCII_EOL);
+        }
+
+        if(status.fault.state) {
+            hal.stream.write("[MOTORFAULT:");
+            append = axis_signals_tostring(buf, status.fault.details.a);
+            if(status.fault.details.b.bits) {
+                *append++ = ',';
+                axis_signals_tostring(append, status.fault.details.b);
+            }
+            hal.stream.write(buf);
+            hal.stream.write("]" ASCII_EOL);
+        }
+    }
+
+    return hal.stepper.status ? Status_OK : Status_InvalidStatement;
+}
+
 void report_pid_log (void)
 {
 #ifdef PID_LOG

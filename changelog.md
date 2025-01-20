@@ -1,5 +1,35 @@
 ## grblHAL changelog
 
+<a name="20250120">Build 20250120
+
+Core:
+
+Added `$SDS` command for outputting **S**tepper **D**river **S**tatus.
+If not available an error is returned, if no driver errors/warnings then just `ok` else one or two status lines followed by `ok`:   
+
+`[MOTORWARNING:<axisletters>{,<axisletters>}]` and/or  
+`[MOTORFAULT:<axisletters>{,<axisletters>}]`  
+
+The first set of `<axisletters>` is for the primary drivers and the second for any secondary \(ganged\) drivers.
+
+Drivers:
+
+* ESP32: fixed board map for Fysetc E4. Ref discussion [#136](https://github.com/grblHAL/ESP32/discussions/136).
+
+* STM32F4xx: added tentative support for stepper driver status data for SuperLongBoard EXT, untested!
+
+Plugins:
+
+* SD card: changed status/error code retured when attempting to access card when no card is mounted to `64`.
+
+* Trinamic: added initial support for stepper driver status data that can be used for the `$SDS` command.  
+Currently fault status is returned for failure to initialize drivers and warning for overtemperature pre warning \(OTPW\).  
+OTPW status is only checked for on `M122` report commands or if driver polling is enabled.  
+Changed initialization sequence to check all drivers instead of exiting on first failure in order to provide per driver data for `$SDS`.   
+Fixed copy/paste error for `M913` command. Ref. discussion [#107](https://github.com/grblHAL/ESP32/discussions/107#discussioncomment-11886197).
+
+---
+
 <a name="20250118">Build 20250118
 
 Core:

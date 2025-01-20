@@ -719,6 +719,21 @@ static inline uint8_t xbar_fault_pin_to_axis (pin_function_t fn)
     return fn >= Input_MotorFaultX && fn <= Input_MotorFaultV ? fn - Input_MotorFaultX : (fn >= Input_MotorFaultX_2 && fn <= Input_MotorFaultZ_2 ? fn - Input_MotorFaultX_2 : 0);
 }
 
+static inline stepper_state_t xbar_stepper_state_set (stepper_state_t *state, uint8_t axis, bool b)
+{
+    if(b)
+        state->details.b.bits |= bit(axis);
+    else
+        state->details.a.bits |= bit(axis);
+
+    return *state;
+}
+
+static inline bool xbar_stepper_state_get (stepper_state_t state, uint8_t axis, bool b)
+{
+    return bit_istrue(b ? state.details.b.bits : state.details.a.bits, bit(axis));
+}
+
 void xbar_set_homing_source (void);
 limit_signals_t xbar_get_homing_source (void);
 limit_signals_t xbar_get_homing_source_from_cycle (axes_signals_t homing_cycle);

@@ -118,6 +118,9 @@ status_code_t report_pin_states (sys_state_t state, char *args);
 // Prints registered spindles.
 status_code_t report_spindles (bool machine_readable);
 
+// Prints current stepper (motor) status.
+status_code_t report_stepper_status (sys_state_t state, char *args);
+
 // Prints current RTC datetime in ISO8601 format (when available)
 status_code_t report_time (void);
 

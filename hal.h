@@ -340,7 +340,7 @@ typedef struct {
     stepper_claim_motor_ptr claim_motor;                //!< Optional handler for claiming/releasing motor(s) from normal step/dir control.
     stepper_output_step_ptr output_step;                //!< Optional handler for outputting a single step pulse. _Experimental._ Called from interrupt context.
     motor_iterator_ptr motor_iterator;                  //!< Optional handler iteration over motor vs. axis mappings. Required for the motors plugin (Trinamic drivers).
-    stepper_status_ptr stepper_status;                  //!< Optional handler handler for querying steppper driver status or attempting to reset it.
+    stepper_status_ptr status;                          //!< Optional handler handler for querying steppper driver status or attempting to reset it.
 } stepper_ptrs_t;
 
 

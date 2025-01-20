@@ -88,12 +88,11 @@ typedef enum {
     Status_GCodeCoordSystemLocked = 56,
     Status_UnexpectedDemarcation = 57,
 
-// Some error codes as defined in bdring's ESP32 port
     Status_SDMountError = 60,
     Status_SDReadError = 61,
     Status_SDFailedOpenDir = 62,
     Status_SDDirNotFound = 63,
-    Status_SDFileEmpty = 64,
+    Status_SDNotMounted = 64,
 
     Status_BTInitError = 70,
 

@@ -798,6 +798,11 @@ const char *help_spindle (const char *cmd)
     return NULL;
 }
 
+const char *help_steppers (const char *cmd)
+{
+    return hal.stepper.status ? "output stepper driver status" : NULL;
+}
+
 const char *help_pins (const char *cmd)
 {
     return hal.enumerate_pins ? "enumerate pin bindings" : NULL;
@@ -943,6 +948,7 @@ PROGMEM static const sys_command_t sys_commands[] = {
     { "LIM", report_current_limit_state, { .noargs = On, .allow_blocking = On }, { .str = "output current limit pins" } },
     { "SD", report_spindle_data, { .help_fn = On }, { .fn = help_spindle } },
     { "SR", spindle_reset_data, { .help_fn = On }, { .fn = help_spindle } },
+    { "SDS", report_stepper_status, { .noargs = On, .allow_blocking = On, .help_fn = On }, { .fn = help_steppers } },
     { "RTC", rtc_action, { .allow_blocking = On, .help_fn = On }, { .fn = help_rtc } },
     { "DWNGRD", settings_downgrade, { .noargs = On, .allow_blocking = On }, { .str = "toggle setting flags for downgrade" } },
 #ifdef DEBUGOUT
