@@ -1362,7 +1362,7 @@ status_code_t gc_execute_block (char *block)
                     case 63:
                     case 64:
                     case 65:
-                        if(ioports_unclaimed(Port_Digital, Port_Output) == 0)
+                        if(hal.port.digital_out == NULL || hal.port.num_digital_out == 0)
                             FAIL(Status_GcodeUnsupportedCommand); // [Unsupported M command]
                         word_bit.modal_group.M5 = On;
                         port_command = (io_mcode_t)int_value;
@@ -1936,7 +1936,7 @@ status_code_t gc_execute_block (char *block)
                     FAIL(Status_GcodeValueWordMissing);
                 if(gc_block.values.p < 0.0f)
                     FAIL(Status_NegativeValue);
-                if((uint32_t)gc_block.values.p + 1 > ioports_unclaimed(Port_Digital, Port_Output))
+                if((uint32_t)gc_block.values.p + 1 > hal.port.num_digital_out)
                     FAIL(Status_GcodeValueOutOfRange);
                 gc_block.output_command.is_digital = true;
                 gc_block.output_command.port = (uint8_t)gc_block.values.p;

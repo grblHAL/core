@@ -1,5 +1,29 @@
 ## grblHAL changelog
 
+<a name="20250122">20250122
+
+Core:
+
+* Guarded new code that caused compilation failure if `COMPATIBILITY_LEVEL` was set > 1.
+
+Drivers:
+
+* iMXRT1062: moved MCP3221 I2C ADC code to its correct home, fixes issue with it sometimes not beeing available for claiming by plugins.
+
+* RP2040: fixed generic map.Ref. issue [#108](https://github.com/grblHAL/RP2040/discussions/108).
+
+* STM32F1xx: fixed I2C strobe handling used by keypad plugin.
+
+* STM32F7xx: fix for error beeing reported when setting RTC clock.
+
+Plugins:
+
+* Networking: updated WizNet code to support lwIP version >= 2.2.0 for mDNS. Ref. issue [#109](https://github.com/grblHAL/RP2040/issues/109).
+
+* Plasma: fixed regression preventing visibility of some settings. Ref. issue [#17](https://github.com/grblHAL/Plugin_plasma/issues/17).
+
+---
+
 <a name="20250120">Build 20250120
 
 Core:

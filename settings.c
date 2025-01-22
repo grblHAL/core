@@ -2547,11 +2547,12 @@ void settings_restore (settings_restore_t restore)
     if(restore.parameters) {
         float coord_data[N_AXIS];
         memset(coord_data, 0, sizeof(coord_data));
+#if COMPATIBILITY_LEVEL <= 1
         for(idx = 0; idx <= N_WorkCoordinateSystems; idx++) {
             if(idx < CoordinateSystem_G59_1 || idx > CoordinateSystem_G59_3 || bit_isfalse(settings.offset_lock.mask, bit(idx - CoordinateSystem_G59_1)))
                 settings_write_coord_data((coord_system_id_t)idx, &coord_data);
         }
-
+#endif
         settings_write_coord_data(CoordinateSystem_G92, &coord_data); // Clear G92 offsets
 
 #if N_TOOLS
