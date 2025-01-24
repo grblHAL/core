@@ -354,16 +354,19 @@ static bool report_group_settings (const setting_group_detail_t *groups, const u
 {
     bool found = false;
     uint_fast8_t idx;
-    char c, *s, group[26];
+    char c, *s1, *s2, group[26];
 
     for(idx = 0; idx < n_groups; idx++) {
 
-        s = group;
+        s1 = s2 = group;
         strncpy(group, groups[idx].name, sizeof(group) - 1);
 
-        // Uppercase group name
-        while((c = *s))
-            *s++ = CAPS(c);
+        // Remove spaces and uppercase group name
+        while((c = *s1++)) {
+            if(c != ' ')
+                *s2++ = CAPS(c);
+        }
+        *s2 = '\0';
 
         if((found = matchhere(args, group))) {
             hal.stream.write(ASCII_EOL "---- ");
@@ -379,10 +382,6 @@ static bool report_group_settings (const setting_group_detail_t *groups, const u
 
 status_code_t report_help (char *args)
 {
-    // Strip leading spaces
-    while(*args == ' ')
-        args++;
-
     if(*args == '\0') {
 
         hal.stream.write("Help topics:" ASCII_EOL);

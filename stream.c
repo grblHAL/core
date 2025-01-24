@@ -526,6 +526,11 @@ bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stream_write_
     return connection != NULL;
 }
 
+static void report_mpg_mode (void *data)
+{
+    protocol_enqueue_realtime_command((char)((uint32_t)data));
+}
+
 bool stream_mpg_enable (bool on)
 {
     static io_stream_t org_stream = {
@@ -539,7 +544,7 @@ bool stream_mpg_enable (bool on)
 
     // Deny entering MPG mode if busy
     if(on == sys.mpg_mode || (on && (gc_state.file_run || !(state == STATE_IDLE || (state & (STATE_ALARM|STATE_ESTOP)))))) {
-        protocol_enqueue_realtime_command(CMD_STATUS_REPORT_ALL);
+        task_add_delayed(report_mpg_mode, (void *)CMD_STATUS_REPORT_ALL, 5);
         return false;
     }
 
@@ -576,7 +581,7 @@ bool stream_mpg_enable (bool on)
     system_add_rt_report(Report_MPGMode);
 
     // Force a realtime status report, all reports when MPG mode active
-    protocol_enqueue_realtime_command(on ? CMD_STATUS_REPORT_ALL : CMD_STATUS_REPORT);
+    task_add_delayed(report_mpg_mode, (void *)(on ? CMD_STATUS_REPORT_ALL : CMD_STATUS_REPORT), 5);
 
     return true;
 }

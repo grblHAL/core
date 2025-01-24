@@ -1,5 +1,36 @@
 ## grblHAL changelog
 
+<a name="20250124">Build 20250124
+
+Core:
+
+* Fixed `$help` topic search failing if target contains spaces. Ref. issue [#664](https://github.com/grblHAL/core/issues/664).
+
+* Improved default serial port mapping when both MPG mode and keypad plugin are enabled to ensure the port is shared.
+
+* Delayed status report output on MPG mode change a few milliseconds to avoid awakening the ESP32 guru that sometimes reboots the controller.
+
+Drivers:
+
+* iMXRT1062: harmonized code guard for enabling MCP3221 code with other drivers. Ref. discussion [#645](https://github.com/grblHAL/core/discussions/645#discussioncomment-11942596).
+
+* MSP432P401R: fixed Trinamic I2C interface bridge, added support for one auxiliary PWM output.
+
+* STM32F4xx: fixed typo and added PWM port to BTT SKR 2 map. Ref. issue [#190](https://github.com/grblHAL/STM32F4xx/issues/190#issuecomment-2563926583).  
+Some changes for the MKS Robin Nano board map. Ref. issue [#213](https://github.com/grblHAL/STM32F4xx/issues/213).
+
+Plugins:
+
+* Misc, RGB LED strips: fixed regression.
+
+* Keypad: added better description for serial port pins shared with MPG. This will change the `$PIN` output to be more precise sometime in the future.
+
+* Motors: fixed the Trinamic I2C interface. AFAIK noone besides me uses this...
+
+* Trinamic: fixed regression in the TMC1230 driver.
+
+---
+
 <a name="20250122">20250122
 
 Core:
