@@ -219,27 +219,27 @@ static aux_ctrl_t aux_ctrl[] = {
 // The following pins are bound explicitly to aux input pins
 #if PROBE_ENABLE && defined(PROBE_PIN) && defined(AUX_DEVICES)
 #ifdef PROBE_PORT
-    { .function = Input_Probe, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .value = 0 }, .pin = PROBE_PIN, .port = PROBE_PORT },
+    { .function = Input_Probe, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .value = 0 }, .pin = PROBE_PIN, .port = (void *)PROBE_PORT },
 #else
     { .function = Input_Probe, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .value = 0 }, .pin = PROBE_PIN, .port = NULL },
 #endif
 #endif
 #if SAFETY_DOOR_ENABLE && defined(SAFETY_DOOR_PIN)
 #ifdef SAFETY_DOOR_PORT
-    { .function = Input_SafetyDoor, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .safety_door_ajar = On }, .pin = SAFETY_DOOR_PIN, .port = SAFETY_DOOR_PORT },
+    { .function = Input_SafetyDoor, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .safety_door_ajar = On }, .pin = SAFETY_DOOR_PIN, .port = (void *)SAFETY_DOOR_PORT },
 #else
     { .function = Input_SafetyDoor, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .safety_door_ajar = On }, .pin = SAFETY_DOOR_PIN, .port = NULL },
 #endif
 #endif
 #if MOTOR_FAULT_ENABLE && defined(MOTOR_FAULT_PIN)
 #ifdef MOTOR_FAULT_PORT
-    { .function = Input_MotorFault, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .motor_fault = On }, .pin = MOTOR_FAULT_PIN, .port = MOTOR_FAULT_PORT },
+    { .function = Input_MotorFault, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .motor_fault = On }, .pin = MOTOR_FAULT_PIN, .port = (void *)MOTOR_FAULT_PORT },
 #else
     { .function = Input_MotorFault, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .motor_fault = On }, .pin = MOTOR_FAULT_PIN, .port = NULL },
 #endif
 #if MOTOR_WARNING_ENABLE && defined(MOTOR_WARNING_PIN)
 #ifdef MOTOR_WARNING_PORT
-    { .function = Input_MotorWarning, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .motor_fault = On }, .pin = MOTOR_WARNING_PIN, .port = MOTOR_WARNING_PORT },
+    { .function = Input_MotorWarning, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .motor_fault = On }, .pin = MOTOR_WARNING_PIN, .port = (void *)MOTOR_WARNING_PORT },
 #else
     { .function = Input_MotorWarning, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .motor_warning = On }, .pin = MOTOR_WARNING_PIN, .port = NULL },
 #endif
@@ -247,21 +247,21 @@ static aux_ctrl_t aux_ctrl[] = {
 #endif
 #if I2C_STROBE_ENABLE && defined(I2C_STROBE_PIN) && defined(AUX_DEVICES)
 #ifdef I2C_STROBE_PORT
-    { .function = Input_I2CStrobe, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Change), .cap = { .value = 0 }, .pin = I2C_STROBE_PIN, .port = I2C_STROBE_PORT },
+    { .function = Input_I2CStrobe, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Change), .cap = { .value = 0 }, .pin = I2C_STROBE_PIN, .port = (void *)I2C_STROBE_PORT },
 #else
     { .function = Input_I2CStrobe, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Change), .cap = { .value = 0 }, .pin = I2C_STROBE_PIN, .port = NULL },
 #endif
 #endif
 #if MPG_ENABLE == 1 && defined(MPG_MODE_PIN) && defined(AUX_DEVICES)
 #ifdef MPG_MODE_PORT
-    { .function = Input_MPGSelect, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Change), .cap = { .value = 0 }, .pin = MPG_MODE_PIN, .port = MPG_MODE_PORT },
+    { .function = Input_MPGSelect, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Change), .cap = { .value = 0 }, .pin = MPG_MODE_PIN, .port = (void *)MPG_MODE_PORT },
 #else
     { .function = Input_MPGSelect, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Change), .cap = { .value = 0 }, .pin = MPG_MODE_PIN, .port = NULL },
 #endif
 #endif
 #if QEI_SELECT_ENABLE && defined(QEI_SELECT_PIN) && defined(AUX_DEVICES)
 #ifdef QEI_SELECT_PORT
-    { .function = Input_QEI_Select, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .value = 0 }, .pin = QEI_SELECT_PIN, .port = QEI_SELECT_PORT },
+    { .function = Input_QEI_Select, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .value = 0 }, .pin = QEI_SELECT_PIN, .port = (void *)QEI_SELECT_PORT },
 #else
     { .function = Input_QEI_Select, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .value = 0 }, .pin = QEI_SELECT_PIN, .port = NULL },
 #endif
@@ -415,38 +415,38 @@ static aux_ctrl_out_t aux_ctrl_out[] = {
  #ifndef SPINDLE_ENABLE_PORT
   #define SPINDLE_ENABLE_PORT NULL
  #endif
-    { .function = Output_SpindleOn,    .aux_port = 0xFF, .pin = SPINDLE_ENABLE_PIN,     .port = SPINDLE_ENABLE_PORT },
+    { .function = Output_SpindleOn,    .aux_port = 0xFF, .pin = SPINDLE_ENABLE_PIN,     .port = (void *)SPINDLE_ENABLE_PORT },
 #endif
 #ifdef SPINDLE_PWM_PIN
  #ifndef SPINDLE_PWM_PORT
   #define SPINDLE_PWM_PORT NULL
  #endif
-    { .function = Output_SpindlePWM,   .aux_port = 0xFF, .pin = SPINDLE_PWM_PIN,        .port = SPINDLE_PWM_PORT },
+    { .function = Output_SpindlePWM,   .aux_port = 0xFF, .pin = SPINDLE_PWM_PIN,        .port = (void *)SPINDLE_PWM_PORT },
 #endif
 #ifdef SPINDLE_DIRECTION_PIN
  #ifndef SPINDLE_DIRECTION_PORT
   #define SPINDLE_DIRECTION_PORT NULL
  #endif
-    { .function = Output_SpindleDir,   .aux_port = 0xFF, .pin = SPINDLE_DIRECTION_PIN,  .port = SPINDLE_DIRECTION_PORT },
+    { .function = Output_SpindleDir,   .aux_port = 0xFF, .pin = SPINDLE_DIRECTION_PIN,  .port = (void *)SPINDLE_DIRECTION_PORT },
 #endif
 
 #ifdef SPINDLE1_ENABLE_PIN
  #ifndef SPINDLE1_ENABLE_PORT
   #define SPINDLE1_ENABLE_PORT NULL
  #endif
-    { .function = Output_Spindle1On,   .aux_port = 0xFF, .pin = SPINDLE1_ENABLE_PIN,    .port = SPINDLE1_ENABLE_PORT },
+    { .function = Output_Spindle1On,   .aux_port = 0xFF, .pin = SPINDLE1_ENABLE_PIN,    .port = (void *)SPINDLE1_ENABLE_PORT },
 #endif
 #ifdef SPINDLE1_PWM_PIN
  #ifndef SPINDLE1_PWM_PORT
   #define SPINDLE1_PWM_PORT NULL
  #endif
-    { .function = Output_Spindle1PWM,  .aux_port = 0xFF, .pin = SPINDLE1_PWM_PIN,       .port = SPINDLE1_PWM_PORT },
+    { .function = Output_Spindle1PWM,  .aux_port = 0xFF, .pin = SPINDLE1_PWM_PIN,       .port = (void *)SPINDLE1_PWM_PORT },
 #endif
 #ifdef SPINDLE1_DIRECTION_PIN
  #ifndef SPINDLE1_DIRECTION_PORT
   #define SPINDLE1_DIRECTION_PORT NULL
  #endif
-    { .function = Output_Spindle1Dir,  .aux_port = 0xFF, .pin = SPINDLE1_DIRECTION_PIN, .port = SPINDLE1_DIRECTION_PORT },
+    { .function = Output_Spindle1Dir,  .aux_port = 0xFF, .pin = SPINDLE1_DIRECTION_PIN, .port = (void *)SPINDLE1_DIRECTION_PORT },
 #endif
 #endif // SPINDLES
 
@@ -455,13 +455,13 @@ static aux_ctrl_out_t aux_ctrl_out[] = {
  #ifndef COOLANT_FLOOD_PORT
   #define COOLANT_FLOOD_PORT NULL
  #endif
-    { .function = Output_CoolantFlood, .aux_port = 0xFF, .pin = COOLANT_FLOOD_PIN,      .port = COOLANT_FLOOD_PORT },
+    { .function = Output_CoolantFlood, .aux_port = 0xFF, .pin = COOLANT_FLOOD_PIN,      .port = (void *)COOLANT_FLOOD_PORT },
 #endif
 #ifdef COOLANT_MIST_PIN
  #ifndef COOLANT_MIST_PORT
   #define COOLANT_MIST_PORT NULL
  #endif
-    { .function = Output_CoolantMist,  .aux_port = 0xFF, .pin = COOLANT_MIST_PIN,       .port = COOLANT_MIST_PORT },
+    { .function = Output_CoolantMist,  .aux_port = 0xFF, .pin = COOLANT_MIST_PIN,       .port = (void *)COOLANT_MIST_PORT },
 #endif
 #endif // COOLANT
 
@@ -469,13 +469,13 @@ static aux_ctrl_out_t aux_ctrl_out[] = {
  #ifndef COPROC_RESET_PORT
   #define COPROC_RESET_PORT NULL
  #endif
-    { .function = Output_CoProc_Reset, .aux_port = 0xFF, .pin = COPROC_RESET_PIN,       .port = COPROC_RESET_PORT },
+    { .function = Output_CoProc_Reset, .aux_port = 0xFF, .pin = COPROC_RESET_PIN,       .port = (void *)COPROC_RESET_PORT },
 #endif
 #ifdef COPROC_BOOT0_PIN
  #ifndef COPROC_BOOT0_PORT
   #define COPROC_BOOT0_PORT NULL
  #endif
-    { .function = Output_CoProc_Boot0, .aux_port = 0xFF, .pin = COPROC_BOOT0_PIN,       .port = COPROC_BOOT0_PORT },
+    { .function = Output_CoProc_Boot0, .aux_port = 0xFF, .pin = COPROC_BOOT0_PIN,       .port = (void *)COPROC_BOOT0_PORT },
 #endif
 };
 

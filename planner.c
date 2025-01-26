@@ -556,7 +556,7 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
     // Profiles are calculated as symmetrical (calculate to 1/2 programmed rate, then double)
     float time_to_max_accel = block->max_acceleration / block->jerk;    // unit: min - time it takes to reach max acceleration 
     float speed_after_jerkramp = 0.5f * block->jerk * time_to_max_accel * time_to_max_accel;   // unit: mm / min - velocity after one completed jerk ramp up - Vt = V0 + A0T + 1/2 jerk*T
-    if (0.5*block->programmed_rate > speed_after_jerkramp)
+    if(0.5f * block->programmed_rate > speed_after_jerkramp)
         // Profile time = 2x (1 complete jerk ramp + additional time at max_accel to reach desired speed)
         block->acceleration = block->programmed_rate / (2.0f *(time_to_max_accel + (0.5f * block->programmed_rate - speed_after_jerkramp) / block->max_acceleration));     
     else 

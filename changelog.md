@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+<a name="20250126">Build 20250126
+
+Core:
+
+* Changed core tool change routine to play nice with plugins subscribing to probe event.
+
+* Fixed typos in PR [#660](https://github.com/grblHAL/core/pull/660).
+
+Drivers:
+
+* STM32F4xx: updated the SuperLongBoard map.
+
+Plugins:
+
+* BLTouch: added `$BLRESET` command to reset the probe and stow of probe on soft reset.
+
+---
+
 <a name="20250124">Build 20250124
 
 Core:

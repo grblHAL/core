@@ -48,6 +48,7 @@ static driver_reset_ptr driver_reset = NULL;
 static enqueue_realtime_command_ptr enqueue_realtime_command = NULL;
 static control_signals_callback_ptr control_interrupt_callback = NULL;
 static on_homing_completed_ptr on_homing_completed = NULL;
+static on_probe_completed_ptr on_probe_completed;
 
 // Clear tool length offset on homing
 static void tc_on_homing_complete (axes_signals_t homing_cycle, bool success)
@@ -61,7 +62,7 @@ static void tc_on_homing_complete (axes_signals_t homing_cycle, bool success)
 
 // Set tool offset on successful $TPW probe, prompt for retry on failure.
 // Called via probe completed event.
-static void on_probe_completed (void)
+static void onProbeCompleted (void)
 {
     if(!sys.flags.probe_succeeded)
         grbl.report.feedback_message(Message_ProbeFailedRetry);
@@ -92,7 +93,9 @@ static void change_completed (void)
     if(probe_toolsetter)
         grbl.on_probe_toolsetter(&current_tool, NULL, true, false);
 
-    grbl.on_probe_completed = NULL;
+    if(grbl.on_probe_completed == onProbeCompleted)
+        grbl.on_probe_completed = on_probe_completed;
+
     gc_state.tool_change = probe_toolsetter = false;
 
 #ifndef NO_SAFETY_DOOR_SUPPORT
@@ -358,8 +361,10 @@ static status_code_t tool_change (parser_state_t *parser_state)
     if((sys.homed.mask & homed_req) != homed_req)
         return Status_HomingRequired;
 
-    if(settings.tool_change.mode != ToolChange_SemiAutomatic)
-        grbl.on_probe_completed = on_probe_completed;
+    if(settings.tool_change.mode != ToolChange_SemiAutomatic && grbl.on_probe_completed != onProbeCompleted) {
+        on_probe_completed = grbl.on_probe_completed;
+        grbl.on_probe_completed = onProbeCompleted;
+    }
 
     block_cycle_start = settings.tool_change.mode != ToolChange_SemiAutomatic;
 
@@ -474,7 +479,7 @@ void tc_init (void)
 }
 
 // Perform a probe cycle: set tool length offset and restart job if successful.
-// Note: tool length offset is set by the on_probe_completed event handler.
+// Note: tool length offset is set by the onProbeCompleted event handler.
 // Called by the $TPW system command.
 status_code_t tc_probe_workpiece (void)
 {

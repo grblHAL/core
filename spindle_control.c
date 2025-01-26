@@ -23,6 +23,9 @@
 
 #include <math.h>
 #include <string.h>
+#if ENABLE_SPINDLE_LINEARIZATION
+#include <stdio.h>
+#endif
 
 #include "hal.h"
 #include "protocol.h"

@@ -42,7 +42,7 @@
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_BUILD 20250124
+#define GRBL_BUILD 20250126
 
 #define GRBL_URL "https://github.com/grblHAL"
 

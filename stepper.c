@@ -875,7 +875,7 @@ void st_prep_buffer (void)
         float speed_var; // Speed worker variable
         float mm_remaining = pl_block->millimeters; // New segment distance from end of block.
         float minimum_mm = mm_remaining - prep.req_mm_increment; // Guarantee at least one step.
-#if ENABLE_ACCELERATION_PROFILES
+#if ENABLE_JERK_ACCELERATION
         float time_to_jerk;     // time needed for jerk ramp
         float jerk_rampdown;    // calculated startpoint of jerk rampdown
 #endif
