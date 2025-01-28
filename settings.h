@@ -453,6 +453,7 @@ typedef enum {
     Setting_Reserved672 = 672,
     Setting_CoolantOnDelay = 673,
     Setting_THC_Options = 674,
+    Setting_MacroATC_Options = 675,
 
     Setting_SpindleInvertMask1 = 716,
 
@@ -817,6 +818,15 @@ typedef struct {
 } tool_change_settings_t;
 
 typedef union {
+    uint8_t value;
+    struct {
+        uint8_t execute_m6t0       :1,
+                random_toolchanger :1,
+                unassigned         :6;
+    };
+} macro_atc_flags_t;
+
+typedef union {
     uint32_t value;
     struct {
         uint32_t id    :8;  // = SETTINGS_VERSION, incremented on structure changes.
@@ -862,7 +872,8 @@ typedef struct {
     axes_signals_t motor_warning_invert;
     axes_signals_t motor_fault_enable;
     axes_signals_t motor_fault_invert;
-    char reserved[20];          // Reserved For future expansion
+    macro_atc_flags_t macro_atc_flags;
+    char reserved[19];          // Reserved For future expansion
 } settings_t;
 
 typedef enum {

@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2022-2024 Terje Io
+  Copyright (c) 2022-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -204,7 +204,7 @@ static vfs_mount_t root = {
 static vfs_mount_t *cwdmount = &root;
 static char cwd[100] = "/";
 
-int vfs_errno = 0;
+volatile int vfs_errno = 0;
 vfs_events_t vfs = {0};
 
 static vfs_mount_t *get_rootfs (void)

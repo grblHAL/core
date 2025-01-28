@@ -1,20 +1,31 @@
 ## grblHAL changelog
 
-<a name="20250126">Build 20250126
+<a name="20250128">Build 20250128
 
 Core:
 
-* Changed core tool change routine to play nice with plugins subscribing to probe event.
+* Added setting definition for macro ATC options. Now hides core toolchange settings when macro based ATC is active to avoid confusion.
 
-* Fixed typos in PR [#660](https://github.com/grblHAL/core/pull/660).
+* "hardened" parser tool change code a bit.
 
 Drivers:
 
-* STM32F4xx: updated the SuperLongBoard map.
+* ESP32: fixed issue with Trinamic SPI code for "chained" drivers. Only bench tested with single driver. Ref. issue [#666](https://github.com/grblHAL/core/issues/666).
+
+* RP2040: updated to SDK 2.1.0 for Pico2 W support.
 
 Plugins:
 
-* BLTouch: added `$BLRESET` command to reset the probe and stow of probe on soft reset.
+* SD card: "hardened" code, now reports error 62 if mounted card is removed without unmounting and a file listing is asked for.  
+Added mounted state change element to the real-time report report: `|SD:0` when not mounted, `|SD:1` when mounted,
+`|SD:2` when not mounted and card detect is available and `|SD:3` when mounted automatically on card detected event.
+ 
+* SD card, macros: added setting `$675` for macro ATC options, currently one flag to enable execution of `M6T0` to unload tool.
+This setting was added to keep backwards compatibility, only enable if the tool change macro can handle it.
+
+Templates:
+
+* Persistent tool: did not set parser state correctly causing `M61Q0` to be ignored after restart.
 
 ---
 

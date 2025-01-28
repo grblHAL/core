@@ -1,13 +1,9 @@
 ## grblHAL ##
 
-Latest build date is 20250124, see the [changelog](changelog.md) for details.  
+Latest build date is 20250128, see the [changelog](changelog.md) for details.  
 
 > [!NOTE]
 >  A settings reset will be performed on an update of builds prior to 20241208. Backup and restore of settings is recommended.  
-
-> [!NOTE]
->  Build 20240222 has moved the probe input to the ioPorts pool of inputs and will be allocated from it when configured.
-The change is major and _potentially dangerous_, it may damage your probe, so please _verify correct operation_ after installing this, or later, builds.
 
 ---
 
@@ -93,4 +89,4 @@ G/M-codes not supported by [legacy Grbl](https://github.com/gnea/grbl/wiki) are 
 Some [plugins](https://github.com/grblHAL/plugins) implements additional M-codes.
 
 ---
-20250124
+20250128
