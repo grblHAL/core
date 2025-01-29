@@ -454,6 +454,9 @@ static char axis_steps[9] = "step/mm";
 static struct {
     bool valid;
     float acceleration[N_AXIS];
+#if ENABLE_JERK_ACCELERATION
+    float jerk[N_AXIS];
+#endif
 } override_backup = { .valid = false };
 
 static void save_override_backup (void)
@@ -463,6 +466,9 @@ static void save_override_backup (void)
     do {
         idx--;
         override_backup.acceleration[idx] = settings.axis[idx].acceleration;
+#if ENABLE_JERK_ACCELERATION
+        override_backup.jerk[idx] = settings.axis[idx].jerk;
+#endif
     } while(idx);
 
     override_backup.valid = true;
@@ -475,6 +481,9 @@ static void restore_override_backup (void)
     if(override_backup.valid) do {
         idx--;
         settings.axis[idx].acceleration = override_backup.acceleration[idx];
+#if ENABLE_JERK_ACCELERATION
+        settings.axis[idx].jerk = override_backup.jerk[idx];
+#endif
     } while(idx);
 }
 
@@ -498,6 +507,31 @@ bool settings_override_acceleration (uint8_t axis, float acceleration)
 
     return true;
 }
+
+#if ENABLE_JERK_ACCELERATION
+
+// Temporarily override jerk, if 0 restore to setting value.
+// Note: only allowed when current state is idle.
+bool settings_override_jerk (uint8_t axis, float jerk)
+{
+    sys_state_t state = state_get();
+
+    if(!(state == STATE_IDLE || (state & (STATE_HOMING|STATE_ALARM))))
+        return false;
+
+    if(jerk <= 0.0f) {
+        if(override_backup.valid)
+            settings.axis[axis].jerk = override_backup.jerk[axis];
+    } else {
+        if(!override_backup.valid)
+            save_override_backup();
+        settings.axis[axis].jerk = jerk * 60.0f * 60.0f * 60.0f; // Limit max to setting value?
+    }
+
+    return true;
+}
+
+#endif // ENABLE_JERK_ACCELERATION
 
 // ---
 
@@ -1205,7 +1239,7 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
 
 #if ENABLE_JERK_ACCELERATION      
         case Setting_AxisJerk:
-                settings.axis[idx].jerk = value * 60.0f * 60.0f * 60.0f; // Convert to mm/min^3 for internal use.
+            settings.axis[idx].jerk = override_backup.jerk[idx] = value * 60.0f * 60.0f * 60.0f; // Convert to mm/min^3 for internal use.
             break;
 #endif            
 

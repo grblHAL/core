@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+<a name="20250129">Build 20250129
+
+Core:
+
+* Added API call for overriding jerk settings, symbol for `M201.3` gcode.
+
+Drivers:
+
+* ESP32, STM32F4xx and STM32F7xx: added workaround for FatFs corrupting allocated memory after a failed mount attempt.
+
+Plugins:
+
+* SD card: added workaround for FatFs corrupting allocated memory after a failed mount attempt. Ref. RP2040 issue [#112](https://github.com/grblHAL/RP2040/issues/112).
+
+* OpenPNP: added tentative support for setting jerk with `M201.3`. Not tested!
+
+---
+
 <a name="20250128">Build 20250128
 
 Core:

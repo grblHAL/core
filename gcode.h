@@ -254,6 +254,7 @@ typedef enum {
     LaserPPI_Rate = 127,                //!< 127 - M127
     LaserPPI_PulseLength = 128,         //!< 128 - M128
     RGB_WriteLEDs = 150,                //!< 150 - M150, Marlin format
+    OpenPNP_SetJerk = 20130,            //!< 20130 - M201.3
     OpenPNP_SetAcceleration = 204,      //!< 204 - M204
     SetFeedOverrides = 220,             //!< 220 - M220, Marlin format
     PWMServo_SetPosition= 280,          //!< 280 - M280, Marlin format

@@ -1279,7 +1279,7 @@ status_code_t gc_execute_block (char *block)
                     continue;
                 }
 
-                if(mantissa > 0)
+                if(int_value <= 99 && mantissa > 0)
                     FAIL(Status_GcodeCommandValueNotInteger); // [No Mxx.x commands]
 
                 user_mcode = UserMCode_Unsupported;
@@ -1398,8 +1398,8 @@ status_code_t gc_execute_block (char *block)
                         break;
 
                     default:
-                        if(grbl.user_mcode.check && (user_mcode = grbl.user_mcode.check((user_mcode_t)int_value))) {
-                            gc_block.user_mcode = (user_mcode_t)int_value;
+                        if(grbl.user_mcode.check && (user_mcode = grbl.user_mcode.check((user_mcode_t)(mantissa ? int_value * 100 + mantissa : int_value)))) {
+                            gc_block.user_mcode = (user_mcode_t)(mantissa ? int_value * 100 + mantissa : int_value);
                             word_bit.modal_group.M10 = On;
                         } else
                             FAIL(Status_GcodeUnsupportedCommand); // [Unsupported M command]
