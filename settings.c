@@ -3360,7 +3360,7 @@ void settings_init (void)
     if(!settings.flags.settings_downgrade && settings.version.build != (GRBL_BUILD - 20000000UL)) {
 
         if(settings.version.build <= 250102) {
-            settings.spindle.on_delay = settings.safety_door.spindle_on_delay * 1000.0f;
+//            settings.spindle.on_delay = settings.safety_door.spindle_on_delay * 1000.0f;
             settings.coolant.on_delay = settings.safety_door.coolant_on_delay * 1000.0f;
             if((changed.spindle = settings.spindle.at_speed_tolerance != settings.pwm_spindle.at_speed_tolerance)) {
                 settings.spindle.at_speed_tolerance = settings.pwm_spindle.at_speed_tolerance;

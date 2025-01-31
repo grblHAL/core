@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+<a name="20250131">Build 20250131
+
+Core:
+
+* Fixed some typos causing compilation failure in some configurations.
+
+* No longer copies spindle on delay from door setting (`$392`) to the new general setting (`$340`) on update from pre 20250103 builds..
+
+* Fixed missed code change when general spindle on delay was implemented causing the delay to be inserted on a simple RPM change with the `S` word.
+
+Drivers:
+
+* STM32F4xx: Allow `$DFU` command if critical alarm is active. Fixed LongBoard32 map for incorrect motor -> axis mapping when four axes where configured.
+
+---
+
 <a name="20250129">Build 20250129
 
 Core:
@@ -450,8 +466,6 @@ Plugins:
 * WebUI, Networking and SD card: updated to handle littlefs mounted as root filesystem.
 
 ---
-
-## grblHAL changelog
 
 <a name="20241217">Build 20241217
 

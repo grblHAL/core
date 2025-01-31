@@ -573,7 +573,7 @@ bool gc_modal_state_restore (gc_modal_t *copy)
             if((spindle = &gc_state.modal.spindle[--idx])->hal) {
                 spindle_copy = &copy->spindle[idx];
                 if(!memcmp(spindle_copy, spindle, offsetof(spindle_t, hal)))
-                    spindle_restore(spindle->hal, spindle_copy->state, spindle_copy->rpm);
+                    spindle_restore(spindle->hal, spindle_copy->state, spindle_copy->rpm, settings.spindle.on_delay);
             }
         } while(idx);
 #else
@@ -3218,7 +3218,8 @@ status_code_t gc_execute_block (char *block)
     if(sspindle->rpm != gc_block.values.s || gc_parser_flags.spindle_force_sync) {
         if(sspindle->state.on && !gc_parser_flags.laser_is_motion) {
             sspindle->hal->param->rpm = gc_block.values.s;
-            spindle_set_state_synced(sspindle->hal, sspindle->state, gc_parser_flags.laser_disable ? 0.0f : gc_block.values.s);
+            protocol_buffer_synchronize();
+            spindle_set_state(sspindle->hal, sspindle->state, gc_parser_flags.laser_disable ? 0.0f : gc_block.values.s);
         }
         sspindle->rpm = gc_block.values.s; // Update spindle speed state.
     }
