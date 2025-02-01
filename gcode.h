@@ -276,7 +276,6 @@ typedef enum {
 //! Data for M62, M63 and M67 commands when executed synchronized with motion.
 typedef struct output_command {
     bool is_digital;
-    bool is_executed;
     uint8_t port;
     int32_t value;
     struct output_command *next;
@@ -701,6 +700,8 @@ float *gc_get_scaling (void);
 
 // Get current axis offset.
 float gc_get_offset (uint_fast8_t idx, bool real_time);
+
+void gc_clear_output_commands (output_command_t *cmd);
 
 spindle_t *gc_spindle_get (spindle_num_t spindle);
 

@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2016-2024 Terje Io
+  Copyright (c) 2016-2025 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -325,7 +325,6 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
                 // Execute output commands to be synchronized with motion
                 while(st.exec_block->output_commands) {
                     output_command_t *cmd = st.exec_block->output_commands;
-                    cmd->is_executed = true;
                     if(cmd->is_digital)
                         hal.port.digital_out(cmd->port, cmd->value != 0.0f);
                     else
@@ -335,7 +334,7 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
 
                 // Enqueue any message to be printed (by foreground process)
                 if(st.exec_block->message) {
-                    if(!protocol_enqueue_foreground_task((foreground_task_ptr)gc_output_message, st.exec_block->message))
+                    if(!task_add_immediate((foreground_task_ptr)gc_output_message, st.exec_block->message))
                         free(st.exec_block->message);
                     st.exec_block->message = NULL;
                 }

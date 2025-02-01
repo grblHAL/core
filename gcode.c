@@ -343,11 +343,7 @@ void gc_init (bool stop)
 #endif
 
     // Clear any pending output commands
-    while(output_commands) {
-        output_command_t *next = output_commands->next;
-        free(output_commands);
-        output_commands = next;
-    }
+    gc_clear_output_commands(output_commands);
 
     // Load default override status
     gc_state.modal.override_ctrl = sys.override.control;
@@ -495,6 +491,16 @@ static bool add_output_command (output_command_t *command)
     }
 
     return add_cmd != NULL;
+}
+
+// Free linked list of output commands
+void gc_clear_output_commands (output_command_t *cmd)
+{
+    while(cmd) {
+        output_command_t *next = cmd->next;
+        free(cmd);
+        cmd = next;
+    }
 }
 
 #if GCODE_ADVANCED
@@ -3727,8 +3733,6 @@ status_code_t gc_execute_block (char *block)
         plan_data.cam_tolerance = gc_state.cam_tolerance;
         plan_data.path_tolerance = gc_state.path_tolerance;
 #endif
-        output_commands = NULL;
-
         pos_update_t gc_update_pos = GCUpdatePos_Target;
 
         switch(gc_state.modal.motion) {
@@ -3847,16 +3851,11 @@ status_code_t gc_execute_block (char *block)
                 break;
         }
 
+        output_commands = plan_data.output_commands;
+
         // Do not update position on cancel (already done in protocol_exec_rt_system)
         if(sys.cancel)
             gc_update_pos = GCUpdatePos_None;
-
-        //  Clean out any remaining output commands (may linger on error)
-        while(plan_data.output_commands) {
-            output_command_t *next = plan_data.output_commands->next;
-            free(plan_data.output_commands);
-            plan_data.output_commands = next;
-        }
 
         // As far as the parser is concerned, the position is now == target. In reality the
         // motion control system might still be processing the action and the real tool position
@@ -3976,11 +3975,7 @@ status_code_t gc_execute_block (char *block)
                 grbl.on_program_completed(gc_state.modal.program_flow, check_mode);
 
             // Clear any pending output commands
-            while(output_commands) {
-                output_command_t *next = output_commands->next;
-                free(output_commands);
-                output_commands = next;
-            }
+            gc_clear_output_commands(output_commands);
 
 #if NGC_PARAMETERS_ENABLE
             ngc_modal_state_invalidate();

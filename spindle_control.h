@@ -86,7 +86,8 @@ typedef union {
                  gpio_controlled   :1, //!< On/off and direction is controlled by GPIO.
                  cmd_controlled    :1, //!< Command controlled, e.g. over ModBus.
                  cloned            :1, //!< Spindle is cloned.
-                 unassigned        :5;
+                 torch             :1, //!< Spindle is plasma torch.
+                 unassigned        :4;
     };
 } spindle_cap_t;
 

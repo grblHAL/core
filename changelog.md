@@ -1,18 +1,40 @@
 ## grblHAL changelog
 
+<a name="20250201">Build 20250201
+
+Core:
+
+* Fixed issue where aux output commands syncronized with motion was sometimes lost.
+
+* Added spindle capability flag for plasma torch and disable of spindle spin up/down delay if set.
+
+Drivers:
+
+* iMXRT1062, STM32F4xx and STM32F7xx: fixed step injection issue where stepper spindle did not release control for normal axis motion when off. Ref. issue [#36](https://github.com/dresco/STM32H7xx/issues/36).
+
+* iMXRT1062: fixed regression in handling of MCP3221 ADC converter. Ref. issue [#92](https://github.com/grblHAL/iMXRT1062/issues/92).
+
+* STM32F4xx: fixed incorrect order of some aux outputs in SuperLongBoard map.
+
+Plugins:
+
+* Plasma: more improvements - better handling of port assignments, THC M-code control and new mode for arc ok signal only \(no THC control\).
+
+---
+
 <a name="20250131">Build 20250131
 
 Core:
 
 * Fixed some typos causing compilation failure in some configurations.
 
-* No longer copies spindle on delay from door setting (`$392`) to the new general setting (`$340`) on update from pre 20250103 builds..
+* No longer copies spindle on delay from door setting (`$392`) to the new general setting (`$340`) on update from pre 20250103 builds.
 
 * Fixed missed code change when general spindle on delay was implemented causing the delay to be inserted on a simple RPM change with the `S` word.
 
 Drivers:
 
-* STM32F4xx: Allow `$DFU` command if critical alarm is active. Fixed LongBoard32 map for incorrect motor -> axis mapping when four axes where configured.
+* STM32F4xx: allow `$DFU` command if critical alarm is active. Fixed LongBoard32 map for incorrect motor -> axis mapping when four axes where configured.
 
 ---
 
