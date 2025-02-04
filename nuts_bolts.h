@@ -149,11 +149,14 @@ typedef union {
 #pragma pack(push, 1)
 
 //! \brief Limit switches struct, consists of four packed axes_signals_t structs in 32 bits.
-typedef struct {
-    axes_signals_t min;     //!< Min limit switches status, required.
-    axes_signals_t max;     //!< Max limit switches status, optional.
-    axes_signals_t min2;    //!< Secondary min limit switch(es) status, required for auto squaring enabled axes.
-    axes_signals_t max2;    //!< Secondary max limit switches status, optional (of no practical use?).
+typedef union {
+    uint32_t bits;
+    struct {
+        axes_signals_t min;     //!< Min limit switches status, required.
+        axes_signals_t max;     //!< Max limit switches status, optional.
+        axes_signals_t min2;    //!< Secondary min limit switch(es) status, required for auto squaring enabled axes.
+        axes_signals_t max2;    //!< Secondary max limit switches status, optional (of no practical use?).
+    };
 } limit_signals_t;
 
 //! \brief Home switches struct, consists of two packed axes_signals_t structs.

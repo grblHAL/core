@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+<a name="20250204">Build 20250204
+
+Core:
+
+* Changed limits struct to union and added field for access to all pin states in one statement. No functional change.
+
+Plugins:
+
+* Motors: refactored StallGuard homing code and fixed M914 validation bug. Added experimental SR-latch for catching diag output pulses by interrupt.
+
+---
+
 <a name="20250201">Build 20250201
 
 Core:
