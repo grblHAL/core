@@ -1,5 +1,13 @@
 ## grblHAL changelog
 
+<a name="20250205">20250205
+
+Drivers:
+
+* iMRX1062, SAM3X8E, STM32F4xx: fixed some typos.
+
+---
+
 <a name="20250204">Build 20250204
 
 Core:
