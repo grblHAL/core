@@ -801,6 +801,7 @@ typedef enum {
     ToolChange_Manual,
     ToolChange_Manual_G59_3,
     ToolChange_SemiAutomatic,
+    ToolChange_FastSemiAutomatic,
     ToolChange_Ignore
 } toolchange_mode_t;
 
