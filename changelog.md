@@ -1,5 +1,24 @@
 ## grblHAL changelog
 
+<a name="20250206">Build 20250206
+
+Core:
+
+* Added availability check for axis settings so plugins can hide unused/meaningless settings.
+
+Boards:
+
+* RP2040: fixed typo and duplicated pin allocation thay may make the reset/estop input non-functional depending on the configuration.
+Ref. issue [#114](https://github.com/grblHAL/RP2040/issues/114). 
+
+* STM32F4xx: added definitions for which axes/motors uses Trinamic drivers. 
+
+Plugins:
+
+* Motors: added configuration option for boards that has both hardwired Trinamic and non-Trinamic drivers/outputs.
+
+---
+
 <a name="20250205">20250205
 
 Drivers:

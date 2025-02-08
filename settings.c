@@ -2705,11 +2705,14 @@ bool settings_iterator (const setting_detail_t *setting, setting_output_ptr call
 
         for(axis_idx = 0; axis_idx < N_AXIS; axis_idx++) {
 
-            if(grbl.on_set_axis_setting_unit)
-                set_axis_unit(setting, grbl.on_set_axis_setting_unit(setting->id, axis_idx));
+            if(setting->is_available == NULL || setting->is_available(setting, axis_idx)) {
 
-            if(!(ok = callback(setting, axis_idx, data)))
-                break;
+                if(grbl.on_set_axis_setting_unit)
+                    set_axis_unit(setting, grbl.on_set_axis_setting_unit(setting->id, axis_idx));
+
+                if(!(ok = callback(setting, axis_idx, data)))
+                    break;
+            }
         }
     } else if(setting->flags.increment) {
         setting_details_t *set;
