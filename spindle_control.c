@@ -656,7 +656,10 @@ bool spindle_restore (spindle_ptrs_t *spindle, spindle_state_t state, float rpm,
     if((ok = spindle->cap.laser)) // When in laser mode, ignore spindle spin-up delay. Set to turn on laser when cycle starts.
         sys.step_control.update_spindle_rpm = On;
     else if(!(ok = state.value == spindle->get_state(spindle).value))
-        ok = spindle_set_state_wait(spindle, state, rpm, on_delay_ms, DelayMode_SysSuspend);
+        if(state.on || rpm > 0.0f)
+            ok = spindle_set_state_wait(spindle, state, rpm, on_delay_ms, DelayMode_SysSuspend);
+        else
+            ok = spindle_set_state(spindle, state, rpm);
 
     return ok;
 }
