@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+<a name="20250213">20250213
+
+Drivers:
+
+* ESP32: changes to allow building for ESP32-S3 in the Web Builder. Fixed regression in ESP32-S3 USB code.
+
+Plugins:
+
+* Networking: added mutex to ensure HTTP requests get executed sequentially by FreeRTOS enabled drivers.
+
+---
+
 <a name="20250206">Build 20250206
 
 Core:
@@ -11,7 +23,7 @@ Boards:
 * RP2040: fixed typo and duplicated pin allocation thay may make the reset/estop input non-functional depending on the configuration.
 Ref. issue [#114](https://github.com/grblHAL/RP2040/issues/114). 
 
-* STM32F4xx: added definitions for which axes/motors uses Trinamic drivers. 
+* STM32F4xx: added definitions for which axes/motors uses Trinamic drivers to the Longboard32 map. 
 
 Plugins:
 
