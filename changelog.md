@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+<a name="20250216">20250216
+
+Core:
+
+* Fixed issue with restoring spindle status for spindles making use optional spindle status flags. Ref. PR [#673](https://github.com/grblHAL/core/pull/673);
+
+Drivers:
+
+* ESP32: added OpenPNP plugin.
+
+Plugins:
+
+* Networking: added/updated mutexes to Websocket and Telnet daemons for FreeRTOS enabled drivers. Ref. PR [#13](https://github.com/grblHAL/Plugin_networking/pull/13).
+
+---
+
 <a name="20250213">20250213
 
 Drivers:
