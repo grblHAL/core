@@ -94,7 +94,7 @@ static on_homing_completed_ptr on_homing_completed;
 static on_set_axis_setting_unit_ptr on_set_axis_setting_unit;
 static on_setting_get_description_ptr on_setting_get_description;
 static on_realtime_report_ptr on_realtime_report;
-static jog_limits_ptr apply_jog_limits;
+static apply_travel_limits_ptr apply_travel_limits;
 #if N_AXIS > 3
 static travel_limits_ptr check_travel_limits;
 #endif
@@ -616,15 +616,15 @@ static bool delta_check_travel_limits (float *target, axes_signals_t axes, bool 
     return !failed;
 }
 
-static void delta_apply_jog_limits (float *target, float *position)
+static void delta_apply_travel_limits (float *target, float *position)
 {
     if(sys.homed.mask == 0)
         return;
 
     if(machine.cfg.flags.limit_to_cuboid)
-        apply_jog_limits(target, position);
+        apply_travel_limits(target, position);
 
-    else if(!is_target_inside_cuboid(target, true)) {
+    else if(position && !is_target_inside_cuboid(target, true)) {
 
         coord_data_t pos;
 
@@ -828,7 +828,7 @@ static void report_options (bool newopt)
     on_report_options(newopt);
 
     if(!newopt)
-        hal.stream.write("[KINEMATICS:Delta v0.04]" ASCII_EOL);
+        hal.stream.write("[KINEMATICS:Delta v0.05]" ASCII_EOL);
 }
 
 static status_code_t delta_info (sys_state_t state, char *args)
@@ -919,8 +919,8 @@ void delta_robot_init (void)
 
         grbl.on_jog_cancel = cancel_jog;
 
-        apply_jog_limits = grbl.apply_jog_limits;
-        grbl.apply_jog_limits = delta_apply_jog_limits;
+        apply_travel_limits = grbl.apply_travel_limits;
+        grbl.apply_travel_limits = delta_apply_travel_limits;
 
 #if N_AXIS > 3
         check_travel_limits = grbl.check_travel_limits;

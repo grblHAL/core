@@ -787,7 +787,7 @@ status_code_t mc_jog_execute (plan_line_data_t *pl_data, parser_block_t *gc_bloc
     pl_data->line_number = gc_block->values.n;
 
     if(settings.limits.flags.jog_soft_limited)
-        grbl.apply_jog_limits(gc_block->values.xyz, position);
+        grbl.apply_travel_limits(gc_block->values.xyz, position);
     else if(sys.soft_limits.mask && !grbl.check_travel_limits(gc_block->values.xyz, sys.soft_limits, true))
         return Status_TravelExceeded;
 
@@ -978,6 +978,9 @@ gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_f
     if (state_get() == STATE_CHECK_MODE)
         return GCProbe_CheckMode;
 
+    if(settings.probe.soft_limited)
+        grbl.apply_travel_limits(target, NULL);
+
     do {
         idx--;
         sys.probe_position[idx] = lroundf(target[idx] * settings.axis[idx].steps_per_mm);
@@ -1116,7 +1119,7 @@ void mc_override_ctrl_update (gc_override_flags_t override_state)
 ISR_CODE void ISR_FUNC(mc_reset)(void)
 {
     // Only this function can set the system reset. Helps prevent multiple kill calls.
-    if (bit_isfalse(sys.rt_exec_state, EXEC_RESET)) {
+    if(bit_isfalse(sys.rt_exec_state, EXEC_RESET)) {
 
         system_set_exec_state_flag(EXEC_RESET);
 
@@ -1127,13 +1130,11 @@ ISR_CODE void ISR_FUNC(mc_reset)(void)
         // NOTE: If steppers are kept enabled via the step idle delay setting, this also keeps
         // the steppers enabled by avoiding the go_idle call altogether, unless the motion state is
         // violated, by which, all bets are off.
-        if ((state_get() & (STATE_CYCLE|STATE_HOMING|STATE_JOG)) || sys.step_control.execute_hold || sys.step_control.execute_sys_motion) {
+        if((sys.position_lost = (state_get() & (STATE_CYCLE|STATE_HOMING|STATE_JOG)) || sys.step_control.execute_hold || sys.step_control.execute_sys_motion)) {
 
-            sys.position_lost = true;
-
-            if (state_get() != STATE_HOMING)
+            if(state_get() != STATE_HOMING)
                 system_set_exec_alarm(Alarm_AbortCycle);
-            else if (!sys.rt_exec_alarm)
+            else if(!sys.rt_exec_alarm)
                 system_set_exec_alarm(Alarm_HomingFailReset);
 
             st_go_idle(); // Force kill steppers. Position has likely been lost.

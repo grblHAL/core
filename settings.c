@@ -88,6 +88,7 @@ PROGMEM const settings_t defaults = {
 
     .probe.disable_probe_pullup = DEFAULT_PROBE_SIGNAL_DISABLE_PULLUP,
     .probe.allow_feed_override = DEFAULT_ALLOW_FEED_OVERRIDE_DURING_PROBE_CYCLES,
+    .probe.soft_limited = DEFAULT_SOFT_LIMIT_PROBE_CYCLES,
     .probe.invert_probe_pin = DEFAULT_PROBE_SIGNAL_INVERT,
     .probe.invert_toolsetter_input = DEFAULT_TOOLSETTER_SIGNAL_INVERT,
     .probe.disable_toolsetter_pullup = DEFAULT_TOOLSETTER_SIGNAL_DISABLE_PULLUP,
@@ -996,9 +997,11 @@ static status_code_t set_force_initialization_alarm (setting_id_t id, uint_fast1
     return Status_OK;
 }
 
-static status_code_t set_probe_allow_feed_override (setting_id_t id, uint_fast16_t int_value)
+static status_code_t set_probe_flags (setting_id_t id, uint_fast16_t int_value)
 {
-    settings.probe.allow_feed_override = int_value != 0;
+    settings.probe.allow_feed_override = bit_istrue(int_value, bit(0));
+    settings.probe.soft_limited = bit_istrue(int_value, bit(1));
+    settings.probe.enable_protection = bit_istrue(int_value, bit(2));
 
     return Status_OK;
 }
@@ -1513,15 +1516,15 @@ static uint32_t get_int (setting_id_t id)
             break;
 
         case Setting_HoldActions:
-            value = (settings.flags.disable_laser_during_hold ? bit(0) : 0) | (settings.flags.restore_after_feed_hold ? bit(1) : 0);
+            value = settings.flags.disable_laser_during_hold | (settings.flags.restore_after_feed_hold << 1);
             break;
 
         case Setting_ForceInitAlarm:
             value = settings.flags.force_initialization_alarm;
             break;
 
-        case Setting_ProbingFeedOverride:
-            value = settings.probe.allow_feed_override;
+        case Setting_ProbingFlags:
+            value = settings.probe.allow_feed_override | (settings.probe.soft_limited << 1) | (settings.probe.enable_protection << 2);
             break;
 
         case Setting_ToolChangeMode:
@@ -1770,7 +1773,7 @@ static bool is_setting_available (const setting_detail_t *setting, uint_fast16_t
             available = hal.stepper.get_ganged && hal.stepper.get_ganged(false).mask != 0;
             break;
 
-        case Setting_ProbingFeedOverride:
+        case Setting_ProbingFlags:
 //        case Setting_ToolChangeProbingDistance:
 //        case Setting_ToolChangeFeedRate:
 //        case Setting_ToolChangeSeekRate:
@@ -2063,7 +2066,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_SleepEnable, Group_General, "Sleep enable", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_sleep_enable, get_int, is_setting_available },
      { Setting_HoldActions, Group_General, "Feed hold actions", NULL, Format_Bitfield, "Disable laser during hold,Restore spindle and coolant state on resume", NULL, NULL, Setting_IsExtendedFn, set_hold_actions, get_int, NULL },
      { Setting_ForceInitAlarm, Group_General, "Force init alarm", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_force_initialization_alarm, get_int, NULL },
-     { Setting_ProbingFeedOverride, Group_Probing, "Probing feed override", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_probe_allow_feed_override, get_int, is_setting_available },
+     { Setting_ProbingFlags, Group_Probing, "Probing flags", NULL, Format_Bitfield, "Allow feed override,Apply soft limits", NULL, NULL, Setting_IsExtendedFn, set_probe_flags, get_int, is_setting_available },
 #if ENABLE_SPINDLE_LINEARIZATION
      { Setting_LinearSpindlePiece1, Group_Spindle, "Spindle linearisation, 1st point", NULL, Format_String, "x(39)", NULL, "39", Setting_IsExtendedFn, set_linear_piece, get_linear_piece, NULL },
   #if SPINDLE_NPWM_PIECES > 1
@@ -2211,7 +2214,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_SteppersEnergize, "Specifies which steppers not to disable when stopped." },
     { Setting_SpindlePPR, "Spindle encoder pulses per revolution." },
     { Setting_EnableLegacyRTCommands, "Enables \"normal\" processing of ?, ! and ~ characters when part of $-setting or comment. If disabled then they are added to the input string instead." },
-    { Setting_JogSoftLimited, "Limit jog commands to machine limits for homed axes." },
+    { Setting_JogSoftLimited, "Limit jog commands to machine workspace for homed axes." },
     { Setting_ParkingEnable, "Enables parking cycle, requires parking axis homed." },
     { Setting_ParkingAxis, "Define which axis that performs the parking motion." },
     { Setting_HomingLocateCycles, "Number of homing passes. Minimum 1, maximum 128." },
@@ -2244,7 +2247,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_SleepEnable, "Enable sleep mode." },
     { Setting_HoldActions, "Actions taken during feed hold and on resume from feed hold." },
     { Setting_ForceInitAlarm, "Start in alarm mode after a cold reset." },
-    { Setting_ProbingFeedOverride, "Allow feed override during probing." },
+    { Setting_ProbingFlags, "Allow feed override during probing and/or limit probing commands to machine workspace for homed axes." },
 #if ENABLE_SPINDLE_LINEARIZATION
      { Setting_LinearSpindlePiece1, "Comma separated list of values: RPM_MIN, RPM_LINE_A1, RPM_LINE_B1, set to blank to disable." },
   #if SPINDLE_NPWM_PIECES > 1

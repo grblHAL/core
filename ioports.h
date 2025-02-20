@@ -21,6 +21,8 @@
 
 #pragma once
 
+#define IOPORT_UNASSIGNED 255
+
 typedef enum {
     Port_Analog = 0,    //!< 0
     Port_Digital = 1    //!< 1
