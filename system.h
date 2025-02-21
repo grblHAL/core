@@ -293,8 +293,6 @@ typedef struct system {
     bool reset_pending;                     //!< Set when reset processing is underway.
     bool blocking_event;                    //!< Set when a blocking event that requires reset to clear is active.
     volatile bool steppers_deenergize;      //!< Set to true to deenergize stepperes
-    axes_signals_t tlo_reference_set;       //!< Axes with tool length reference offset set
-    int32_t tlo_reference[N_AXIS];          //!< Tool length reference offset
     alarm_code_t alarm_pending;             //!< Delayed alarm, currently used for probe protection
     system_flags_t flags;                   //!< Assorted state flags
     step_control_t step_control;            //!< Governs the step segment generator depending on system state.
@@ -319,6 +317,8 @@ typedef struct system {
     axes_signals_t homed;                   //!< Indicates which axes has been homed.
     float home_position[N_AXIS];            //!< Home position for homed axes.
     work_envelope_t work_envelope;          //!< Work envelope, only valid for homed axes.
+    axes_signals_t tlo_reference_set;       //!< Axes with tool length reference offset set
+    int32_t tlo_reference[N_AXIS];          //!< Tool length reference offset
 //@}
 //!  @name The following variables are not cleared upon soft reset, do NOT move. alarm must be first!
 //@{

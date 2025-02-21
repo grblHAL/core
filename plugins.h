@@ -104,6 +104,10 @@ typedef enum {
     WiFiMode_APSTA
 } grbl_wifi_mode_t;
 
+#ifdef WIN32
+#undef interface
+#endif
+
 typedef struct {
     const char *interface;
     bool is_ethernet;

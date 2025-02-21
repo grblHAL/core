@@ -451,12 +451,7 @@ void tc_init (void)
     if(!hal.stream.suspend_read) // Tool change requires support for suspending input stream.
         return;
 
-    if(sys.tlo_reference_set.mask != 0) {
-        sys.tlo_reference_set.mask = 0;
-        system_add_rt_report(Report_TLOReference);
-    }
-
-    gc_set_tool_offset(ToolLengthOffset_Cancel, 0, 0.0f);
+    system_add_rt_report(Report_TLOReference);
 
     if(settings.tool_change.mode == ToolChange_Disabled || settings.tool_change.mode == ToolChange_Ignore) {
         hal.tool.select = NULL;

@@ -85,6 +85,7 @@ PROGMEM const settings_t defaults = {
     .flags.restore_overrides = DEFAULT_RESET_OVERRIDES,
     .flags.no_restore_position_after_M6 = DEFAULT_TOOLCHANGE_NO_RESTORE_POSITION,
     .flags.no_unlock_after_estop = DEFAULT_NO_UNLOCK_AFTER_ESTOP,
+    .flags.keep_offsets_on_reset = DEFAULT_KEEP_OFFSETS_ON_RESET,
 
     .probe.disable_probe_pullup = DEFAULT_PROBE_SIGNAL_DISABLE_PULLUP,
     .probe.allow_feed_override = DEFAULT_ALLOW_FEED_OVERRIDE_DURING_PROBE_CYCLES,
@@ -406,7 +407,7 @@ PROGMEM static const setting_group_detail_t setting_group_detail [] = {
 
 static bool machine_mode_changed = false;
 #if COMPATIBILITY_LEVEL <= 1
-static char homing_options[] = "Enable,Enable single axis commands,Homing on startup required,Set machine origin to 0,Two switches shares one input,Allow manual,Override locks,Keep homed status on reset,Use limit switches,Per axis feedrates";
+static char homing_options[] = "Enable,Enable single axis commands,Homing on startup required,Set machine origin to 0,Two switches shares one input,Allow manual,Override locks,N/A,Use limit switches,Per axis feedrates";
 #endif
 static char control_signals[] = "Reset,Feed hold,Cycle start,Safety door,Block delete,Optional stop,EStop,Probe connected,Motor fault,Motor warning,Limits override,Single step blocks";
 static char spindle_signals[] = "Spindle enable,Spindle direction,PWM";
@@ -977,6 +978,14 @@ static status_code_t set_hold_actions (setting_id_t id, uint_fast16_t int_value)
 {
     settings.flags.disable_laser_during_hold = bit_istrue(int_value, bit(0));
     settings.flags.restore_after_feed_hold = bit_istrue(int_value, bit(1));
+
+    return Status_OK;
+}
+
+static status_code_t set_reset_actions (setting_id_t id, uint_fast16_t int_value)
+{
+    settings.homing.flags.keep_on_reset = bit_isfalse(int_value, bit(0));
+    settings.flags.keep_offsets_on_reset = bit_isfalse(int_value, bit(1));
 
     return Status_OK;
 }
@@ -1578,6 +1587,9 @@ static uint32_t get_int (setting_id_t id)
             value = settings.flags.ngc_debug_out;
             break;
 #endif
+        case Setting_ResetActions:
+            value = !settings.homing.flags.keep_on_reset | (!settings.flags.keep_offsets_on_reset << 1);
+            break;
 
         default:
             break;
@@ -2139,7 +2151,8 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_MotorWarningsEnable, Group_Stepper, "Motor warning inputs enable", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.motor_warning_enable, NULL, is_setting_available },
      { Setting_MotorWarningsInvert, Group_Stepper, "Invert motor warning inputs", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.motor_warning_invert, NULL, is_setting_available },
      { Setting_MotorFaultsEnable, Group_Stepper, "Motor fault inputs enable", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.motor_fault_enable, NULL, is_setting_available },
-     { Setting_MotorFaultsInvert, Group_Stepper, "Invert motor fault inputs", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.motor_fault_invert, NULL, is_setting_available }
+     { Setting_MotorFaultsInvert, Group_Stepper, "Invert motor fault inputs", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.motor_fault_invert, NULL, is_setting_available },
+     { Setting_ResetActions, Group_General, "Reset actions", NULL, Format_Bitfield, "Clear homed status if position was lost,Clear offsets (except G92)", NULL, NULL, Setting_IsExtendedFn, set_reset_actions, get_int, NULL }
 };
 
 #ifndef NO_SETTINGS_DESCRIPTIONS
@@ -2337,7 +2350,8 @@ PROGMEM static const setting_descr_t setting_descr[] = {
 #endif
     { Setting_FSOptions, "Auto mount SD card on startup." },
     { Setting_HomePinsInvertMask, "Inverts the axis home input signals." },
-    { Setting_CoolantOnDelay, "Delay to allow coolant to start. 0 or 0.5 - 20s" }
+    { Setting_CoolantOnDelay, "Delay to allow coolant to start. 0 or 0.5 - 20s." },
+    { Setting_ResetActions, "Controls actions taken on a soft reset." }
 /*
     { Setting_MotorWarningsEnable, "Motor warning enable" },
     { Setting_MotorWarningsInvert, "Invert motor warning inputs" },
@@ -3340,7 +3354,7 @@ void settings_init (void)
 #if COMPATIBILITY_LEVEL <= 1
     if(hal.homing.get_state == NULL) {
         homing_settings_flags_t homing;
-        homing.value = -1;
+        homing.value = (uint16_t)-1;
         homing.use_limit_switches = Off;
         setting_remove_elements(Setting_HomingEnable, homing.value);
     }

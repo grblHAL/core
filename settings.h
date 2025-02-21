@@ -454,6 +454,7 @@ typedef enum {
     Setting_CoolantOnDelay = 673,
     Setting_THC_Options = 674,
     Setting_MacroATC_Options = 675,
+    Setting_ResetActions = 676,
 
     Setting_SpindleInvertMask1 = 716,
 
@@ -587,7 +588,8 @@ typedef union {
                  no_restore_position_after_M6    :1,
                  no_unlock_after_estop           :1,
                  settings_downgrade              :1,
-         		 unassigned                      :15;
+                 keep_offsets_on_reset           :1,
+         		 unassigned                      :14;
     };
 } settingflags_t;
 

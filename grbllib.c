@@ -382,13 +382,13 @@ int grbl_enter (void)
         flush_override_buffers();
 
         // Reset primary systems.
-        hal.stream.reset_read_buffer(); // Clear input stream buffer
-        gc_init(false);                 // Set g-code parser to default state
+        hal.stream.reset_read_buffer();                 // Clear input stream buffer
+        gc_init(settings.flags.keep_offsets_on_reset);  // Set g-code parser to default state
         hal.limits.enable(settings.limits.flags.hard_enabled, (axes_signals_t){0});
-        plan_reset();                   // Clear block buffer and planner variables
-        st_reset();                     // Clear stepper subsystem variables.
-        limits_set_homing_axes();       // Set axes to be homed from settings.
-        system_init_switches();         // Set switches from inputs.
+        plan_reset();                                   // Clear block buffer and planner variables
+        st_reset();                                     // Clear stepper subsystem variables.
+        limits_set_homing_axes();                       // Set axes to be homed from settings.
+        system_init_switches();                         // Set switches from inputs.
 
         // Sync cleared gcode and planner positions to current system position.
         sync_position();

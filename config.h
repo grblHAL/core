@@ -93,7 +93,7 @@ __NOTE:__ if switching to a level > 1 please reset non-volatile storage with `$R
 /*! \def ENABLE_SPINDLE_LINEARIZATION
 \brief This feature alters the spindle PWM/speed to a nonlinear output with a simple piecewise linear curve.
 
-Useful for spindles that don't produce the right RPM from Grbl's standard spindle PWM
+Useful for spindles that don't produce the right RPM from grblHAL's standard spindle PWM
 linear model. Requires a solution by the 'fit_nonlinear_spindle.py' script in the /doc/script
 folder of the repo. See file comments on how to gather spindle data and run the script to
 generate a solution.
@@ -864,6 +864,31 @@ having trouble keeping up with planning new incoming motions as they are execute
 #endif
 ///@}
 
+/*! @name $676 - Setting_ResetActions
+This option controls actions taken on a soft reset.
+*/
+/*! /def DEFAULT_HOMING_KEEP_STATUS_ON_RESET
+\brief
+Enable this setting to keep homed status over a soft reset - if position was not lost due
+to a reset during motion.
+\internal Bit 6 in settings.homing.flags.
+*/
+#if !defined DEFAULT_HOMING_KEEP_STATUS_ON_RESET || defined __DOXYGEN__
+#define DEFAULT_HOMING_KEEP_STATUS_ON_RESET Off // Default disabled. Set to \ref On or 1 to enable.
+#endif
+///@}
+
+/*! /def DEFAULT_KEEP_OFFSETS_ON_RESET
+\brief
+Enable this setting to keep offsets (except G92 which is always kept) over a soft reset.
+\internal Bit 14 in settings.flags.
+*/
+///@{
+#if !defined DEFAULT_KEEP_OFFSETS_ON_RESET || defined __DOXYGEN__
+#define DEFAULT_KEEP_OFFSETS_ON_RESET Off
+#endif
+///@}
+
 // Control signals settings (Group_ControlSignals)
 
 #ifndef __DOXYGEN__ // For now do not include in documentation
@@ -1454,17 +1479,6 @@ To allow a soft reset to override the lock uncomment the line below.
 #if !defined DEFAULT_HOMING_OVERRIDE_LOCKS || defined __DOXYGEN__
 #define DEFAULT_HOMING_OVERRIDE_LOCKS Off // Default disabled. Set to \ref On or 1 to enable.
 #endif
-
-/*! /def DEFAULT_HOMING_KEEP_STATUS_ON_RESET
-\brief
-Enable this setting to keep homed status over a soft reset - if position was not lost due
-to a reset during motion.
-\internal Bit 6 in settings.homing.flags.
-*/
-#if !defined DEFAULT_HOMING_KEEP_STATUS_ON_RESET || defined __DOXYGEN__
-#define DEFAULT_HOMING_KEEP_STATUS_ON_RESET Off // Default disabled. Set to \ref On or 1 to enable.
-#endif
-///@}
 
 /*! /def DEFAULT_HOMING_USE_LIMIT_SWITCHES
 \brief

@@ -1,5 +1,24 @@
 ## grblHAL changelog
 
+<a name="20250221">Build 20250221
+
+Core:
+
+* Improved/fixed soft reset handling related to position lost if reset was executed during motion.
+
+* Added setting `$676` with flags to control soft reset actions. Bit 0 - clear homing status unless position was not lost, bit 1 - clear offsets except `G92`. Both defaults to `on`.  
+__NOTE:__ Bit 0 is moved from the corresponding setting flag in `$22` but inverted.
+
+* Workaround for Microsoft C adding a non-standard reserved keyword...
+
+Plugins:
+
+* Motors \(Trinamic\): bug fix for buffer overflow when 22 milliohm sense resistors were selected which resulted in max current > 9.999 mA.
+
+* Networking: simplified some code.
+
+---
+
 <a name="20250220">Build 20250220
 
 Core:

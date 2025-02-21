@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2024 Terje Io
+  Copyright (c) 2017-2025 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -1122,6 +1122,9 @@ ISR_CODE void ISR_FUNC(mc_reset)(void)
     if(bit_isfalse(sys.rt_exec_state, EXEC_RESET)) {
 
         system_set_exec_state_flag(EXEC_RESET);
+
+        if(sys.reset_pending || sys.blocking_event)
+            return;
 
         if(hal.stream.suspend_read)
             hal.stream.suspend_read(false);

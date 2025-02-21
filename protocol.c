@@ -466,7 +466,7 @@ bool protocol_exec_rt_system (void)
 
     if (sys.rt_exec_alarm && (rt_exec = system_clear_exec_alarm())) { // Enter only if any bit flag is true
 
-        if((sys.reset_pending = !!(sys.rt_exec_state & EXEC_RESET))) {
+        if((sys.reset_pending = bit_istrue(sys.rt_exec_state, EXEC_RESET))) {
             // Kill spindle and coolant.
             killed = true;
             spindle_all_off();
@@ -487,6 +487,8 @@ bool protocol_exec_rt_system (void)
                                    (alarm_code_t)rt_exec == Alarm_EStop ||
                                     (alarm_code_t)rt_exec == Alarm_MotorFault)) {
 
+            static const control_signals_t blocking_signals = { .e_stop = On, .motor_fault = On };
+
             system_set_exec_alarm(rt_exec);
 
             switch((alarm_code_t)rt_exec) {
@@ -504,13 +506,13 @@ bool protocol_exec_rt_system (void)
                     break;
             }
 
-            system_clear_exec_state_flag(EXEC_RESET); // Disable any existing reset
-
             *line = '\0';
             char_counter = 0;
             hal.stream.reset_read_buffer();
 
-            while (bit_isfalse(sys.rt_exec_state, EXEC_RESET)) {
+            system_clear_exec_state_flag(EXEC_RESET); // Disable any existing reset
+
+            while(!(sys.abort = bit_istrue(sys.rt_exec_state, EXEC_RESET)) || (hal.control.get_state().bits & blocking_signals.bits)) {
 
                 // Block everything, except reset and status reports, until user issues reset or power
                 // cycles. Hard limits typically occur while unattended or not paying attention. Gives
@@ -528,13 +530,15 @@ bool protocol_exec_rt_system (void)
             }
 
             system_clear_exec_alarm(); // Clear alarm
+
+            return false; // Nothing else to do but exit.
         }
     }
 
     if (sys.rt_exec_state && (rt_exec = system_clear_exec_states())) { // Get and clear volatile sys.rt_exec_state atomically.
 
         // Execute system abort.
-        if((sys.reset_pending = !!(rt_exec & EXEC_RESET))) {
+        if((sys.reset_pending = bit_istrue(rt_exec, EXEC_RESET))) {
 
             if(!killed) {
                 // Kill spindle and coolant.

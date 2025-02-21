@@ -1,6 +1,6 @@
 ## grblHAL ##
 
-Latest build date is 20250220, see the [changelog](changelog.md) for details.  
+Latest build date is 20250221, see the [changelog](changelog.md) for details.  
 
 > [!NOTE]
 >  A settings reset will be performed on an update of builds prior to 20241208. Backup and restore of settings is recommended.  
@@ -89,4 +89,4 @@ G/M-codes not supported by [legacy Grbl](https://github.com/gnea/grbl/wiki) are 
 Some [plugins](https://github.com/grblHAL/plugins) implements additional M-codes.
 
 ---
-20250220
+20250221
