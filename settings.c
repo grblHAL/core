@@ -1588,7 +1588,7 @@ static uint32_t get_int (setting_id_t id)
             break;
 #endif
         case Setting_ResetActions:
-            value = !settings.homing.flags.keep_on_reset | (!settings.flags.keep_offsets_on_reset << 1);
+            value = (!settings.homing.flags.keep_on_reset) | ((!settings.flags.keep_offsets_on_reset) << 1);
             break;
 
         default:
