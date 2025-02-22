@@ -348,6 +348,8 @@ bool spindle_set_state (spindle_ptrs_t *spindle, spindle_state_t state, float rp
 // Called by g-code parser when setting spindle state and requires a buffer sync.
 bool spindle_set_state_synced (spindle_ptrs_t *spindle, spindle_state_t state, float rpm);
 
+bool spindle_check_state (spindle_ptrs_t *spindle, spindle_state_t state);
+
 // Spindle speed calculation and limit handling
 float spindle_set_rpm (spindle_ptrs_t *spindle, float rpm, override_t speed_override);
 

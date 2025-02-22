@@ -516,8 +516,8 @@ typedef union {
 typedef struct {
     spindle_state_t state;          //!< {M3,M4,M5}
     spindle_rpm_mode_t rpm_mode;    //!< {G96,G97}
-    spindle_css_data_t *css;        //!< Data used for Constant Surface Speed Mode calculations
     spindle_cond_t condition;       //!< TODO: move data from planner_cond_t here
+    spindle_css_data_t *css;        //!< Data used for Constant Surface Speed Mode calculations
     float rpm;                      //!< Spindle speed. Must be second last!
     spindle_ptrs_t *hal;            //!< Spindle function pointers etc. Must be last!
 } spindle_t;

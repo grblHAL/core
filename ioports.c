@@ -32,9 +32,11 @@
 #include "hal.h"
 #include "settings.h"
 
+#define MAX_PORTS 16
+
 typedef struct {
     io_ports_detail_t *ports;
-    char port_names[50];
+    char port_names[8 * 6 + (MAX_PORTS - 8) * 7];
     ioport_bus_t enabled;
 } io_ports_private_t;
 
@@ -137,7 +139,7 @@ static bool match_port (xbar_t *properties, uint8_t port, void *data)
 */
 uint8_t ioport_find_free (io_port_type_t type, io_port_direction_t dir, pin_cap_t filter, const char *description)
 {
-    ff_data.port = 0xFF;
+    ff_data.port = IOPORT_UNASSIGNED;
     ff_data.description = (description && *description) ? description : NULL;
 
     // TODO: pass modified filter with .claimable off when looking for description match?
@@ -382,7 +384,7 @@ bool ioports_add (io_ports_data_t *ports, io_port_type_t type, uint8_t n_in, uin
                     ports->in.map[i] = i;
                 if(hal.port.set_pin_description)
                     hal.port.set_pin_description(type, Port_Input, i, get_pnum(ports, i));
-                if(i < 8) {
+                if(i < MAX_PORTS) {
                     cfg->inx.mask = (cfg->inx.mask << 1) + 1;
                     strcat(cfg->in.port_names, i == 0 ? "Aux " : ",Aux ");
                     strcat(cfg->in.port_names, uitoa(i));
@@ -394,7 +396,7 @@ bool ioports_add (io_ports_data_t *ports, io_port_type_t type, uint8_t n_in, uin
                     ports->out.map[i] = i;
                 if(hal.port.set_pin_description)
                     hal.port.set_pin_description(type, Port_Output, i, get_pnum(ports, i));
-                if(i < 8) {
+                if(i < MAX_PORTS) {
                     cfg->outx.mask = (cfg->outx.mask << 1) + 1;
                     strcat(cfg->out.port_names, i == 0 ? "Aux " : ",Aux ");
                     strcat(cfg->out.port_names, uitoa(i));

@@ -163,8 +163,8 @@ static bool initiate_hold (uint_fast16_t new_state)
         enqueue_spindle_override(CMD_OVERRIDE_SPINDLE_STOP);
 
     if (sys_state & (STATE_CYCLE|STATE_JOG)) {
-        st_update_plan_block_parameters();  // Notify stepper module to recompute for hold deceleration.
-        sys.step_control.execute_hold = On; // Initiate suspend state with active flag.
+        st_update_plan_block_parameters(false);	// Notify stepper module to recompute for hold deceleration.
+        sys.step_control.execute_hold = On; 	// Initiate suspend state with active flag.
         stateHandler = state_await_hold;
     }
 
@@ -424,8 +424,8 @@ static void state_cycle (uint_fast16_t rt_exec)
     if (rt_exec & EXEC_CYCLE_COMPLETE)
         state_set(gc_state.tool_change ? STATE_TOOL_CHANGE : STATE_IDLE);
 
-    if (rt_exec & EXEC_MOTION_CANCEL) {
-        st_update_plan_block_parameters();  // Notify stepper module to recompute for hold deceleration.
+    if (rt_exec & (EXEC_MOTION_CANCEL|EXEC_MOTION_CANCEL_FAST)) {
+        st_update_plan_block_parameters(!!(rt_exec & EXEC_MOTION_CANCEL_FAST));  // Notify stepper module to recompute for hold deceleration.
         sys.suspend = true;
         sys.step_control.execute_hold = On; // Initiate suspend state with active flag.
         stateHandler = state_await_motion_cancel;
@@ -470,8 +470,13 @@ static void state_await_motion_cancel (uint_fast16_t rt_exec)
             sync_position();
             sys.suspend = false;
         }
+
         state_set(pending_state);
-        if (gc_state.tool_change)
+
+        if(sys.alarm_pending) {
+            system_set_exec_alarm(sys.alarm_pending);
+            sys.alarm_pending = Alarm_None;
+        } else if(gc_state.tool_change)
             state_set(STATE_TOOL_CHANGE);
     }
 }
@@ -719,7 +724,7 @@ static void restart_retract (void)
     sys.parking_state = Parking_Retracting;
 
     if (sys.step_control.execute_sys_motion) {
-        st_update_plan_block_parameters(); // Notify stepper module to recompute for hold deceleration.
+        st_update_plan_block_parameters(false); // Notify stepper module to recompute for hold deceleration.
         sys.step_control.execute_hold = On;
         sys.step_control.execute_sys_motion = On;
     } else // else NO_MOTION is active.

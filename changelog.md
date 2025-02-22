@@ -1,5 +1,79 @@
 ## grblHAL changelog
 
+<a name="20250220">Build 20250220
+
+Core:
+
+* Changed `$65` setting to flags for allowing feed rate overrides during probing and limiting probe motion to be within machine workspace.
+Ref. ioSender issue [#402](https://github.com/terjeio/ioSender/issues/402).
+
+* Fixed regression, ref. discussion [#610](https://github.com/grblHAL/core/issues/610#issuecomment-2670224036).
+
+* Improved handling of stop realtime command \(`0x19`\) for faster motion halt without losing position.
+
+* Optimized RAM usage.
+
+Drivers:
+
+* Networking capable: updated for networking plugin changes.
+
+Plugins:
+
+* Keypad: now sends `$H` and `$X` commands directly to the system command parser bypassing status checks. Ref. issue [#12](https://github.com/grblHAL/Plugin_keypad/issues/12).
+
+* Networking: added network status changed event, refactored top level code to allow multiple interfaces. Added `$NETIF` command for listing interfaces with associated IP and MAC addresses.
+
+* WebUI: updated for networking plugin changes.
+
+---
+
+<a name="20250216">20250216
+
+Core:
+
+* Fixed issue with restoring spindle status for spindles making use optional spindle status flags. Ref. PR [#680](https://github.com/grblHAL/core/pull/680).
+
+Drivers:
+
+* ESP32: added OpenPNP plugin.
+
+Plugins:
+
+* Networking: added/updated mutexes to Websocket and Telnet daemons for FreeRTOS enabled drivers. Ref. PR [#13](https://github.com/grblHAL/Plugin_networking/pull/13).
+
+---
+
+<a name="20250213">20250213
+
+Drivers:
+
+* ESP32: changes to allow building for ESP32-S3 in the Web Builder. Fixed regression in ESP32-S3 USB code.
+
+Plugins:
+
+* Networking: added mutex to ensure HTTP requests get executed sequentially by FreeRTOS enabled drivers.
+
+---
+
+<a name="20250206">Build 20250206
+
+Core:
+
+* Added availability check for axis settings so plugins can hide unused/meaningless settings.
+
+Boards:
+
+* RP2040: fixed typo and duplicated pin allocation thay may make the reset/estop input non-functional depending on the configuration.
+Ref. issue [#114](https://github.com/grblHAL/RP2040/issues/114). 
+
+* STM32F4xx: added definitions for which axes/motors uses Trinamic drivers to the Longboard32 map. 
+
+Plugins:
+
+* Motors: added configuration option for boards that has both hardwired Trinamic and non-Trinamic drivers/outputs.
+
+---
+
 <a name="20250205">20250205
 
 Drivers:

@@ -75,7 +75,7 @@ bool protocol_enqueue_gcode (char *gcode)
 {
     bool ok = xcommand[0] == '\0' &&
                (state_get() == STATE_IDLE || (state_get() & (STATE_ALARM|STATE_JOG|STATE_TOOL_CHANGE))) &&
-                 bit_isfalse(sys.rt_exec_state, EXEC_MOTION_CANCEL);
+                 !((sys.rt_exec_state & (EXEC_MOTION_CANCEL|EXEC_MOTION_CANCEL_FAST)));
 
     if(ok && gc_state.file_run)
         ok = gc_state.modal.program_flow != ProgramFlow_Running || strncmp((char *)gcode, "$J=", 3);
@@ -362,7 +362,7 @@ bool protocol_main_loop (void)
         // completed. In either case, auto-cycle start, if enabled, any queued moves.
         protocol_auto_cycle_start();
 
-        if(sys.abort || !protocol_execute_realtime()) // Runtime command check point.
+        if(!protocol_execute_realtime() && sys.abort) // Runtime command check point.
             return !sys.flags.exit;                   // Bail to main() program loop to reset system.
 
         sys.cancel = false;
@@ -399,7 +399,7 @@ bool protocol_buffer_synchronize (void)
 // execute calls a buffer sync, or the planner buffer is full and ready to go.
 void protocol_auto_cycle_start (void)
 {
-    if (plan_get_current_block() != NULL) // Check if there are any blocks in the buffer.
+    if(!ABORTED && plan_get_current_block()) // Check if there are any blocks in the buffer.
         system_set_exec_state_flag(EXEC_CYCLE_START); // If so, execute them!
 }
 
@@ -562,6 +562,8 @@ bool protocol_exec_rt_system (void)
 
         if(rt_exec & EXEC_STOP) { // Experimental for now, must be verified. Do NOT move to interrupt context!
 
+            // Note: homing cannot be cancelled with EXEC_STOP
+
             sys.cancel = true;
             sys.step_control.flags = 0;
             sys.flags.feed_hold_pending = Off;
@@ -579,14 +581,27 @@ bool protocol_exec_rt_system (void)
 
             sys.flags.keep_input = Off;
 
+            if(sys.alarm_pending != Alarm_None) {
+
+                sys.position_lost = st_is_stepping();
+                system_raise_alarm(sys.alarm_pending);
+                sys.alarm_pending = Alarm_None;
+
+            } else if(st_is_stepping()) {
+
+                state_update(EXEC_MOTION_CANCEL_FAST);
+
+                do {
+                    st_prep_buffer(); // Check and prep segment buffer.
+                    grbl.on_execute_realtime(state_get());
+                } while(st_is_stepping());
+
+                rt_exec |= system_clear_exec_states();
+            }
+
             gc_init(true);
             plan_reset();
-            if(sys.alarm_pending == Alarm_ProbeProtect) {
-                st_go_idle();
-                system_set_exec_alarm(sys.alarm_pending);
-                sys.alarm_pending = Alarm_None;
-            } else
-                st_reset();
+            st_reset();
             sync_position();
 
             // Kill spindle and coolant. TODO: Check Mach3 behaviour?
@@ -594,7 +609,8 @@ bool protocol_exec_rt_system (void)
             gc_coolant((coolant_state_t){0});
 
             flush_override_buffers();
-            if(!((state_get() == STATE_ALARM) && (sys.alarm == Alarm_LimitsEngaged || sys.alarm == Alarm_HomingRequired))) {
+
+            if(!((state_get() == STATE_ALARM) && (sys.alarm == Alarm_LimitsEngaged || sys.alarm == Alarm_HomingRequired || sys.alarm == Alarm_ProbeProtect))) {
                 state_set(hal.control.get_state().safety_door_ajar ? STATE_SAFETY_DOOR : STATE_IDLE);
                 grbl.report.feedback_message(Message_Stop);
             }

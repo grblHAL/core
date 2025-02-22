@@ -1642,7 +1642,7 @@ are used the logic of the input signals should be be inverted with the \ref axis
 #endif
 ///@}
 
-/*! @name $65 - Setting_ProbingFeedOverride
+/*! @name $65 - Setting_ProbingFlags
 // By default, grblHAL disables feed rate overrides for all G38.x probe cycle commands. Although this
 // may be different than some pro-class machine control, it's arguable that it should be this way.
 // Most probe sensors produce different levels of error that is dependent on rate of speed. By
@@ -1652,6 +1652,9 @@ are used the logic of the input signals should be be inverted with the \ref axis
 ///@{
 #if !defined DEFAULT_ALLOW_FEED_OVERRIDE_DURING_PROBE_CYCLES || defined __DOXYGEN__
 #define DEFAULT_ALLOW_FEED_OVERRIDE_DURING_PROBE_CYCLES Off
+#endif
+#if !defined DEFAULT_SOFT_LIMIT_PROBE_CYCLES || defined __DOXYGEN__
+#define DEFAULT_SOFT_LIMIT_PROBE_CYCLES Off
 #endif
 ///@}
 

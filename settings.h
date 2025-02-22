@@ -113,7 +113,7 @@ typedef enum {
     Setting_SleepEnable = 62,
     Setting_HoldActions = 63,
     Setting_ForceInitAlarm = 64,
-    Setting_ProbingFeedOverride = 65,
+    Setting_ProbingFlags = 65,
 // Optional driver implemented settings for piecewise linear spindle PWM algorithm
     Setting_LinearSpindlePiece1 = 66,
     Setting_LinearSpindlePiece2 = 67,
@@ -602,7 +602,8 @@ typedef union {
                  enable_protection         :1,
                  invert_toolsetter_input   :1,
                  disable_toolsetter_pullup :1,
-                 unassigned                :8;
+                 soft_limited              :1,
+                 unassigned                :7;
     };
 } probeflags_t;
 

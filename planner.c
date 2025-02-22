@@ -136,7 +136,7 @@ static void planner_recalculate (void)
     if (block == block_buffer_planned) { // Only two plannable blocks in buffer. Reverse pass complete.
         // Check if the first block is the tail. If so, notify stepper to update its current parameters.
         if (block == block_buffer_tail)
-            st_update_plan_block_parameters();
+            st_update_plan_block_parameters(false);
     } else while (block != block_buffer_planned) { // Three or more plan-able blocks
 
         next = current;
@@ -145,7 +145,7 @@ static void planner_recalculate (void)
 
         // Check if next block is the tail block(=planned block). If so, update current stepper parameters.
         if (block == block_buffer_tail)
-            st_update_plan_block_parameters();
+            st_update_plan_block_parameters(false);
 
         // Compute maximum entry speed decelerating over the current block from its exit speed.
         if (current->entry_speed_sqr != current->max_entry_speed_sqr) {
@@ -679,7 +679,7 @@ uint_fast16_t plan_get_block_buffer_available (void)
 void plan_cycle_reinitialize (void)
 {
     // Re-plan from a complete stop. Reset planner entry speeds and buffer planned pointer.
-    st_update_plan_block_parameters();
+    st_update_plan_block_parameters(false);
     if((block_buffer_planned = block_buffer_tail) != block_buffer_head)
         planner_recalculate();
 }

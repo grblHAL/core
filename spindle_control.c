@@ -553,6 +553,21 @@ void spindle_set_override (spindle_ptrs_t *spindle, override_t speed_override)
     }
 }
 
+/*! \brief Checks actual spindle state against given state.
+\param spindle pointer to a \ref spindle_ptrs_t structure.
+\param state a \ref spindle_state_t structure.
+\returns \a true if on and ccw fields are equal, \a false otherwise.
+*/
+bool spindle_check_state (spindle_ptrs_t *spindle, spindle_state_t state)
+{
+    static const spindle_state_t mask = {
+       .on = On,
+       .ccw = On
+    };
+
+    return (state.value & mask.value) == (spindle->get_state(spindle).value & mask.value);
+}
+
 /*! \internal \brief Immediately sets spindle running state with direction and spindle rpm, if enabled.
 Called by g-code parser spindle_set_state_synced(), parking retract and restore, g-code program end,
 sleep, and spindle stop override.
@@ -595,7 +610,7 @@ for it to reach the speed and raise an alarm if the speed is not reached within 
 \param rpm the spindle RPM to set.
 \returns \a true if successful, \a false if the current controller state is \ref ABORTED.
 */
-static bool spindle_set_state_wait (spindle_ptrs_t *spindle, spindle_state_t state, float rpm, uint16_t on_delay_ms, delaymode_t delay_mode)
+static bool spindle_set_state_wait (spindle_ptrs_t *spindle, spindle_state_t state, float rpm, uint16_t delay_ms, delaymode_t delay_mode)
 {
     bool ok;
 
@@ -606,16 +621,16 @@ static bool spindle_set_state_wait (spindle_ptrs_t *spindle, spindle_state_t sta
             bool at_speed = !state.on || spindle->cap.torch || !spindle->cap.at_speed || spindle->at_speed_tolerance <= 0.0f;
 
             if(at_speed)
-                ok = on_delay_ms == 0 || spindle->cap.torch || delay_sec((float)on_delay_ms / 1000.0f, delay_mode);
+                ok = delay_ms == 0 || spindle->cap.torch || delay_sec((float)delay_ms / 1000.0f, delay_mode);
             else {
                 uint16_t delay = 0;
-                if(on_delay_ms == 0)
-                    on_delay_ms = 60000; // one minute...
+                if(delay_ms == 0)
+                    delay_ms = 60000; // one minute...
                 while(!(at_speed = spindle->get_state(spindle).at_speed)) {
                     if(!delay_sec(0.2f, delay_mode))
                         break;
                     delay += 200;
-                    if(delay > on_delay_ms) {
+                    if(delay > delay_ms) {
                         gc_spindle_off();
                         system_raise_alarm(Alarm_Spindle);
                         break;
@@ -649,14 +664,14 @@ bool spindle_set_state_synced (spindle_ptrs_t *spindle, spindle_state_t state, f
 \param rpm the spindle RPM to set.
 \returns \a true if successful, \a false if the current controller state is \ref ABORTED.
 */
-bool spindle_restore (spindle_ptrs_t *spindle, spindle_state_t state, float rpm, uint16_t on_delay_ms)
+bool spindle_restore (spindle_ptrs_t *spindle, spindle_state_t state, float rpm, uint16_t delay_ms)
 {
     bool ok;
 
     if((ok = spindle->cap.laser)) // When in laser mode, ignore spindle spin-up delay. Set to turn on laser when cycle starts.
         sys.step_control.update_spindle_rpm = On;
-    else if(!(ok = state.value == spindle->get_state(spindle).value))
-        ok = spindle_set_state_wait(spindle, state, rpm, on_delay_ms, DelayMode_SysSuspend);
+    else if(!(ok = spindle_check_state(spindle, state)))
+        ok = spindle_set_state_wait(spindle, state, rpm, delay_ms, DelayMode_SysSuspend);
 
     return ok;
 }

@@ -39,13 +39,6 @@
 #define DT_SEGMENT (1.0f / (ACCELERATION_TICKS_PER_SECOND * 60.0f)) // min/segment
 #define REQ_MM_INCREMENT_SCALAR 1.25f
 
-typedef enum {
-    Ramp_Accel,
-    Ramp_Cruise,
-    Ramp_Decel,
-    Ramp_DecelOverride
-} ramp_type_t;
-
 typedef union {
     uint8_t flags;
     struct {
@@ -56,6 +49,8 @@ typedef union {
                 unassigned         :4;
     };
 } prep_flags_t;
+
+static bool stepping = false;
 
 // Holds the planner block Bresenham algorithm execution data for the segments in the segment
 // buffer. Normally, this buffer is partially in-use, but, for the worst case scenario, it will
@@ -85,15 +80,14 @@ static amass_t amass;
 #endif
 
 // Used for blocking new segments being added to the seqment buffer until deceleration starts
-// after probe signal has been asserted.
-static volatile bool probe_asserted = false;
+// when fast stop is called for. TODO: it is likely that this flag can be removed - more testing required.
+static volatile bool exec_fast_hold = false;
 
 // Stepper timer ticks per minute
 static float cycles_per_min;
 
 // Step segment ring buffer pointers
-static volatile segment_t *segment_buffer_tail;
-static segment_t *segment_buffer_head, *segment_next_head;
+static volatile segment_t *segment_buffer_tail, *segment_buffer_head;
 
 #if ENABLE_JERK_ACCELERATION
 // Static storage for acceleration value of last computed segment.   
@@ -200,6 +194,7 @@ void st_wake_up (void)
     // Initialize stepper data to ensure first ISR call does not step and
     // cancel any pending steppers deenergize
     //st.exec_block = NULL;
+    stepping = true;
     sys.steppers_deenergize = false;
     hal.stepper.wake_up();
 }
@@ -211,6 +206,7 @@ ISR_CODE void ISR_FUNC(st_go_idle)(void)
 
     sys_state_t state = state_get();
 
+    stepping = false;
     hal.stepper.go_idle(false);
 
     // Set stepper driver idle state, disabled or enabled, depending on settings and circumstances.
@@ -227,6 +223,10 @@ ISR_CODE void ISR_FUNC(st_go_idle)(void)
         hal.stepper.enable(settings.steppers.idle_lock_time == 255 ? (axes_signals_t){AXES_BITMASK} : settings.steppers.energize, true);
 }
 
+bool st_is_stepping (void)
+{
+    return stepping && st.exec_block;
+}
 
 /* "The Stepper Driver Interrupt" - This timer interrupt is the workhorse of grblHAL. grblHAL employs
    the venerable Bresenham line algorithm to manage and exactly synchronize multi-axis moves.
@@ -411,19 +411,12 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
     // Monitors probe pin state and records the system position when detected.
     // NOTE: This function must be extremely efficient as to not bog down the stepper ISR.
     if (sys.probing_state == Probing_Active && hal.probe.get_state().triggered) {
-
         sys.probing_state = Probing_Off;
         memcpy(sys.probe_position, sys.position, sizeof(sys.position));
-        bit_true(sys.rt_exec_state, EXEC_MOTION_CANCEL);
-
 #ifdef MINIMIZE_PROBE_OVERSHOOT
-        // "Flush" segment buffer if full in order to start deceleration early.
-        if((probe_asserted = segment_buffer_head->next == segment_buffer_tail)) {
-            segment_buffer_head = segment_buffer_tail->next;
-            if(st.step_count < 3 || st.step_count < (st.exec_segment->n_step >> 3))
-                segment_buffer_head = segment_buffer_head->next;
-            segment_next_head = segment_next_head->next;
-        }
+        bit_true(sys.rt_exec_state, EXEC_MOTION_CANCEL_FAST);
+#else
+        bit_true(sys.rt_exec_state, EXEC_MOTION_CANCEL);
 #endif
     }
 
@@ -567,7 +560,6 @@ void st_reset (void)
     // Initialize stepper algorithm variables.
     pl_block = NULL;  // Planner block pointer used by segment buffer
     segment_buffer_tail = segment_buffer_head = &segment_buffer[0]; // empty = tail
-    segment_next_head = segment_buffer_head->next;
 
     memset(&prep, 0, sizeof(st_prep_t));
     memset(&st, 0, sizeof(stepper_t));
@@ -592,9 +584,28 @@ void st_rpm_changed (float rpm)
 }
 
 // Called by planner_recalculate() when the executing block is updated by the new plan.
-void st_update_plan_block_parameters (void)
+void st_update_plan_block_parameters (bool fast_hold)
 {
-    if (pl_block != NULL) { // Ignore if at start of a new block.
+    if(fast_hold) { // NOTE: experimental code!
+
+        hal.irq_disable();
+
+        segment_t *head = (segment_t *)segment_buffer_head;
+
+        if((exec_fast_hold = segment_buffer_head->next == segment_buffer_tail)) {
+            segment_buffer_head = segment_buffer_tail->next;
+            if(st.step_count < 3 || st.step_count < (st.exec_segment->n_step >> 3))
+                segment_buffer_head = segment_buffer_head->next;
+            while(segment_buffer_head->next != head && segment_buffer_head->ramp_type == Ramp_Decel)
+                segment_buffer_head = segment_buffer_head->next;
+            prep.current_speed = segment_buffer_head->current_rate;
+            segment_buffer_head = segment_buffer_head->next;
+        }
+
+        hal.irq_enable();
+    }
+
+    if(pl_block) { // Ignore if at start of a new block.
         prep.recalculate.velocity_profile = On;
         pl_block->entry_speed_sqr = prep.current_speed * prep.current_speed; // Update entry speed.
         pl_block = NULL; // Flag st_prep_segment() to load and check active velocity profile.
@@ -657,7 +668,7 @@ void st_prep_buffer (void)
     if (sys.step_control.end_motion)
         return;
 
-    while (segment_buffer_tail != segment_next_head) { // Check if we need to fill the buffer.
+    while (segment_buffer_head->next != segment_buffer_tail) { // Check if we need to fill the buffer.
 
         // Determine if we need to load a new planner block or if the block needs to be recomputed.
         if (pl_block == NULL) {
@@ -838,15 +849,15 @@ void st_prep_buffer (void)
             if(state_get() != STATE_HOMING)
                 sys.step_control.update_spindle_rpm |= pl_block->spindle.hal->cap.laser; // Force update whenever updating block in laser mode.
 
-            probe_asserted = false;
+            exec_fast_hold = false;
         }
 
-        // Block adding new segments after probe is asserted until deceleration is started.
-        if(probe_asserted)
+        // Block adding new segments until deceleration is started.
+        if(exec_fast_hold)
             return;
 
         // Initialize new segment
-        segment_t *prep_segment = segment_buffer_head;
+        segment_t *prep_segment = (segment_t *)segment_buffer_head;
 
         // Set new segment to point to the current segment data block.
         prep_segment->exec_block = st_prep_block;
@@ -1096,10 +1107,10 @@ void st_prep_buffer (void)
 
         prep_segment->cycles_per_tick = cycles;
         prep_segment->current_rate = prep.current_speed;
+        prep_segment->ramp_type = prep.ramp_type;
 
-        // Segment complete! Increment segment pointers, so stepper ISR can immediately execute it.
-        segment_buffer_head = segment_next_head;
-        segment_next_head = segment_next_head->next;
+        // Segment complete! Increment segment pointer, so stepper ISR can immediately execute it.
+        segment_buffer_head = segment_buffer_head->next;
 
         // Update the appropriate planner and segment data.
         pl_block->millimeters = mm_remaining;

@@ -814,14 +814,15 @@ static void clip_3d_target (coord_data_t *position, coord_data_t *target, work_e
 }
 
 // Limits jog commands to be within machine limits, homed axes only.
-static void apply_jog_limits (float *target, float *position)
+// If position is non-null clip XYZ motion.
+static void apply_travel_limits (float *target, float *position)
 {
     if(sys.homed.mask == 0)
         return;
 
     uint_fast8_t idx;
 
-    if((sys.homed.mask & 0b111) == 0b111) {
+    if(position && (sys.homed.mask & 0b111) == 0b111) {
 
         uint_fast8_t n_axes = 0;
 
@@ -849,6 +850,6 @@ void limits_init (void)
     hal.homing.get_feedrate = get_homing_rate;
     grbl.check_travel_limits = check_travel_limits;
     grbl.check_arc_travel_limits = check_arc_travel_limits;
-    grbl.apply_jog_limits = apply_jog_limits;
+    grbl.apply_travel_limits = apply_travel_limits;
     grbl.home_machine = homing_cycle;
 }

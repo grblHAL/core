@@ -7,7 +7,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2020-2024 Terje Io
+  Copyright (c) 2020-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -105,6 +105,7 @@ typedef enum {
 } grbl_wifi_mode_t;
 
 typedef struct {
+    const char *interface;
     bool is_ethernet;
     bool link_up;
     uint16_t mbps;
