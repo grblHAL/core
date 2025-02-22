@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+<a name="20250222">Build 20250222
+
+Core:
+
+* Added definition for LinuxCNC M190 gcode, required by plasma plugin. No functional change.
+
+Plugins:
+
+* Plasma: added basic support for LinuxCNC style M190 and "magic" comments. Untested. Ref. issue [#21](https://github.com/grblHAL/Plugin_plasma/issues/21).
+
+---
+
 <a name="20250221">Build 20250221
 
 Core:
