@@ -1,5 +1,20 @@
 ## grblHAL changelog
 
+<a name="20250223">Build 20250223
+
+Core:
+
+* Imported string utilities from networking plugin, increased max named parameter length to 30.
+
+Plugins:
+
+* Networking and WebUI: updated for move of string utilities to the core.
+
+* Plasma: enhanced basic materials support and added import of LinuxCNC and SheetCam style [material files](https://github.com/grblHAL/Plugin_plasma#materials).
+ Added support for setting feedrate via named parameter set from value in seleced material.
+
+---
+
 <a name="20250222">Build 20250222
 
 Core:

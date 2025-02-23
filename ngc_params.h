@@ -31,7 +31,7 @@
 #include "gcode.h"
 
 #ifndef NGC_MAX_PARAM_LENGTH
-#define NGC_MAX_PARAM_LENGTH 20
+#define NGC_MAX_PARAM_LENGTH 30
 #endif
 
 #define NGC_MAX_PARAM_ID 65535
