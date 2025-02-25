@@ -802,8 +802,8 @@ typedef enum {
     ToolChange_Manual,
     ToolChange_Manual_G59_3,
     ToolChange_SemiAutomatic,
-    ToolChange_FastSemiAutomatic,
-    ToolChange_Ignore
+    ToolChange_Ignore,
+	ToolChange_FastSemiAutomatic
 } toolchange_mode_t;
 
 typedef struct {
