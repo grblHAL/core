@@ -1019,7 +1019,7 @@ static status_code_t set_tool_change_mode (setting_id_t id, uint_fast16_t int_va
 {
     if(!hal.driver_cap.atc && hal.stream.suspend_read && int_value <= ToolChange_Ignore) {
 #if COMPATIBILITY_LEVEL > 1
-        if((toolchange_mode_t)int_value == ToolChange_Manual_G59_3 || (toolchange_mode_t)int_value == ToolChange_SemiAutomatic) || (toolchange_mode_t)int_value == FastToolChange_SemiAutomatic)
+        if((toolchange_mode_t)int_value == ToolChange_Manual_G59_3 || (toolchange_mode_t)int_value == ToolChange_SemiAutomatic || (toolchange_mode_t)int_value == ToolChange_FastSemiAutomatic)
             return Status_InvalidStatement;
 #endif
         settings.tool_change.mode = (toolchange_mode_t)int_value;
@@ -2303,7 +2303,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
                               "Manual touch off: retracts tool axis to home position for tool change, use jogging or $TPW for touch off.\\n\\n"
                               "Manual touch off @ G59.3: retracts tool axis to home position then to G59.3 position for tool change, use jogging or $TPW for touch off.\\n\\n"
                               "Automatic touch off @ G59.3: retracts tool axis to home position for tool change, then to G59.3 position for automatic touch off.\\n\\n"
-                              "Fast Automatic touch off @ G59.3: Same as automatic mode, except that it uses G38.4 style probing for faster touch off."
+                              "Fast Automatic touch off @ G59.3: Same as automatic mode, except that it uses G38.4 style probing for faster touch off.\\n\\n"
                               "All modes except \"Normal\" and \"Ignore M6\" returns the tool (controlled point) to original position after touch off."
     },
     { Setting_ToolChangeProbingDistance, "Maximum probing distance for automatic or $TPW touch off." },
