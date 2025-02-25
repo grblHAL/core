@@ -237,6 +237,15 @@ static void execute_probe (void *data)
         {
             system_convert_array_steps_to_mpos(target.values, sys.probe_position);
 
+        if(settings.tool_change.mode == ToolChange_FastSemiAutomatic){
+
+            // Retract slowly until contact lost.
+            plan_data.feed_rate = settings.tool_change.feed_rate;
+            target.values[plane.axis_linear] += TOOL_CHANGE_PROBE_RETRACT_DISTANCE;
+            flags.probe_is_away = true;
+            ok = mc_probe_cycle(target.values, &plan_data, flags) == GCProbe_Found;
+        } else {
+
             // Retract a bit and perform slow probe.
             plan_data.feed_rate = settings.tool_change.pulloff_rate;
             target.values[plane.axis_linear] += TOOL_CHANGE_PROBE_RETRACT_DISTANCE;
@@ -246,6 +255,7 @@ static void execute_probe (void *data)
                 ok = mc_probe_cycle(target.values, &plan_data, flags) == GCProbe_Found;
             }
         }
+    }
 
         if(ok) {
             if(!(sys.tlo_reference_set.mask & bit(plane.axis_linear))) {
@@ -277,7 +287,12 @@ ISR_CODE static void ISR_FUNC(trap_control_cycle_start)(control_signals_t signal
     if(signals.cycle_start) {
         if(!execute_posted) {
             if(!block_cycle_start)
-                execute_posted = protocol_enqueue_foreground_task(settings.tool_change.mode == ToolChange_SemiAutomatic ? execute_probe : execute_restore, NULL);
+                execute_posted = protocol_enqueue_foreground_task(
+                (settings.tool_change.mode == ToolChange_SemiAutomatic || 
+                settings.tool_change.mode == ToolChange_FastSemiAutomatic) 
+                ? execute_probe 
+                : execute_restore, 
+                NULL);
             else
                 protocol_enqueue_foreground_task(execute_warning, NULL);
         }
@@ -297,7 +312,12 @@ ISR_CODE static bool ISR_FUNC(trap_stream_cycle_start)(char c)
     if((drop = (c == CMD_CYCLE_START || c == CMD_CYCLE_START_LEGACY))) {
         if(!execute_posted) {
             if(!block_cycle_start)
-                execute_posted = protocol_enqueue_foreground_task(settings.tool_change.mode == ToolChange_SemiAutomatic ? execute_probe : execute_restore, NULL);
+                execute_posted = protocol_enqueue_foreground_task(
+                (settings.tool_change.mode == ToolChange_SemiAutomatic || 
+                settings.tool_change.mode == ToolChange_FastSemiAutomatic) 
+                ? execute_probe 
+                : execute_restore, 
+                NULL);
             else
                 protocol_enqueue_foreground_task(execute_warning, NULL);
         }
@@ -336,7 +356,7 @@ static status_code_t tool_change (parser_state_t *parser_state)
         return Status_OK;
 
 #if COMPATIBILITY_LEVEL > 1
-    if(settings.tool_change.mode == ToolChange_Manual_G59_3 || settings.tool_change.mode == ToolChange_SemiAutomatic)
+    if(settings.tool_change.mode == ToolChange_Manual_G59_3 || settings.tool_change.mode == ToolChange_SemiAutomatic || settings.tool_change.mode == ToolChange_FastSemiAutomatic)
         return Status_GcodeUnsupportedCommand;
 #endif
 
@@ -361,12 +381,12 @@ static status_code_t tool_change (parser_state_t *parser_state)
     if((sys.homed.mask & homed_req) != homed_req)
         return Status_HomingRequired;
 
-    if(settings.tool_change.mode != ToolChange_SemiAutomatic && grbl.on_probe_completed != onProbeCompleted) {
-        on_probe_completed = grbl.on_probe_completed;
-        grbl.on_probe_completed = onProbeCompleted;
-    }
+    if(settings.tool_change.mode != ToolChange_SemiAutomatic && 
+        settings.tool_change.mode != ToolChange_FastSemiAutomatic)
+        grbl.on_probe_completed = on_probe_completed;
 
-    block_cycle_start = settings.tool_change.mode != ToolChange_SemiAutomatic;
+    block_cycle_start = (settings.tool_change.mode != ToolChange_SemiAutomatic && 
+                         settings.tool_change.mode != ToolChange_FastSemiAutomatic);
 
     // Stop spindle and coolant.
     spindle_all_off();
@@ -376,7 +396,8 @@ static status_code_t tool_change (parser_state_t *parser_state)
     probe_toolsetter = grbl.on_probe_toolsetter != NULL &&
                        (settings.tool_change.mode == ToolChange_Manual ||
                          settings.tool_change.mode == ToolChange_Manual_G59_3 ||
-                          settings.tool_change.mode == ToolChange_SemiAutomatic);
+                          settings.tool_change.mode == ToolChange_SemiAutomatic ||
+                           settings.tool_change.mode == ToolChange_FastSemiAutomatic);
 
     // Save current position.
     system_convert_array_steps_to_mpos(previous.values, sys.position);
