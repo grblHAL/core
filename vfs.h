@@ -101,6 +101,7 @@ typedef struct {
 typedef struct {
     const char *name;
     size_t size;
+    vfs_st_mode_t st_mode;
     const uint8_t data[];
 } embedded_file_t;
 
@@ -121,6 +122,7 @@ typedef int (*vfs_rmdir_ptr)(const char *path);
 typedef vfs_dir_t *(*vfs_opendir_ptr)(const char *path);
 typedef char *(*vfs_readdir_ptr)(vfs_dir_t *dir, vfs_dirent_t *dirent);
 typedef void (*vfs_closedir_ptr)(vfs_dir_t *dir);
+typedef int (*vfs_chmod_ptr)(const char *filename, vfs_st_mode_t attr, vfs_st_mode_t mask);
 typedef int (*vfs_stat_ptr)(const char *filename, vfs_stat_t *st);
 typedef int (*vfs_utime_ptr)(const char *filename, struct tm *modified);
 
@@ -146,6 +148,7 @@ typedef struct
     vfs_opendir_ptr fopendir;
     vfs_readdir_ptr readdir;
     vfs_closedir_ptr fclosedir;
+    vfs_chmod_ptr fchmod;
     vfs_stat_ptr fstat;
     vfs_utime_ptr futime;
     vfs_getcwd_ptr fgetcwd;
@@ -154,7 +157,7 @@ typedef struct
 } vfs_t;
 
 typedef void (*on_vfs_changed_ptr)(const vfs_t *fs);
-typedef void (*on_vfs_mount_ptr)(const char *path, const vfs_t *fs);
+typedef void (*on_vfs_mount_ptr)(const char *path, const vfs_t *fs, vfs_st_mode_t mode);
 typedef void (*on_vfs_unmount_ptr)(const char *path);
 
 typedef struct {
@@ -224,6 +227,7 @@ vfs_dir_t *vfs_opendir (const char *path);
 vfs_dirent_t *vfs_readdir (vfs_dir_t *dir);
 void vfs_closedir (vfs_dir_t *dir);
 char *vfs_getcwd (char *buf, size_t len);
+int vfs_chmod (const char *filename, vfs_st_mode_t attr, vfs_st_mode_t mask);
 int vfs_stat (const char *filename, vfs_stat_t *st);
 int vfs_utime (const char *filename, struct tm *modified);
 vfs_free_t *vfs_fgetfree (const char *path);

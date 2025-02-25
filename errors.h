@@ -89,10 +89,12 @@ typedef enum {
     Status_UnexpectedDemarcation = 57,
 
     Status_SDMountError = 60,
-    Status_SDReadError = 61,
-    Status_SDFailedOpenDir = 62,
-    Status_SDDirNotFound = 63,
+    Status_FileReadError = 61,
+    Status_FsFailedOpenDir = 62,
+    Status_FSDirNotFound = 63,
     Status_SDNotMounted = 64,
+    Status_FsNotMounted = 65,
+    Status_FsReadOnly = 66,
 
     Status_BTInitError = 70,
 

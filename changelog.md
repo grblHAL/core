@@ -1,5 +1,33 @@
 ## grblHAL changelog
 
+<a name="20250225">Build 20250225
+
+Core \(for developers\):
+
+* Added `vfs_chmod()` to VFS \(Virtual File System\), for setting basic file attributes.
+
+* Changed signature of `vfs.on_mount() event`.
+
+* Added `grbl.on_cycle_start()` event, fired on cycle start signal asserted or on cycle start real time command received.
+
+Drivers:
+
+* ESP32 and RP2040: updated for plugin changes.
+
+Plugins:
+
+* SD card: moved file streaming code out of main _SD card_ plugin to new sub-plugin _FS stream_ - allows builds without SD card enabled to stream gcode from flash \(stored in littlefs\).
+Add `#define LITTLEFS_ENABLE 2` to _my_machine.h_ to enable, this will mount littlefs as the root file system. Only available for drivers/boards that has littlefs support.  
+Added `vfs_chmod()` implementation for FatFS and littlefs VFS drivers.  
+Fixed rewind bug, ref. issue [#8](https://github.com/grblHAL/Plugin_SD_card/issues/8).
+
+* Networking, WebUI and Plasma: removed reliance on SD card plugin for related features, moved to new _FS stream_ plugin instead. Updated file headers and done some general cleanup.
+
+* WebUI: now checks _hidden_ file attribute and only lists hidden files in the management \(forcefallback\) page.
+Files uploaded to littlefs from the management page will now get the _hidden_ attribute set automatically.
+
+---
+
 <a name="20250223">Build 20250223
 
 Core:
@@ -11,7 +39,7 @@ Plugins:
 * Networking and WebUI: updated for move of string utilities to the core.
 
 * Plasma: enhanced basic materials support and added import of LinuxCNC and SheetCam style [material files](https://github.com/grblHAL/Plugin_plasma#materials).
- Added support for setting feedrate via named parameter set from value in seleced material.
+ Added support for setting feedrate via named parameter set from value in selected material.
 
 ---
 

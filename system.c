@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2024 Terje Io
+  Copyright (c) 2017-2025 Terje Io
   Copyright (c) 2014-2016 Sungeun K. Jeon for Gnea Research LLC
 
   grblHAL is free software: you can redistribute it and/or modify
@@ -112,6 +112,8 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
                 system_set_exec_state_flag(EXEC_CYCLE_START);
                 sys.report.cycle_start = settings.status_report.pin_state;
                 gc_state.tool_change = false;
+                if(grbl.on_cycle_start)
+                    grbl.on_cycle_start();
             }
 
             if(signals.block_delete)

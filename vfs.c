@@ -502,6 +502,13 @@ char *vfs_getcwd (char *buf, size_t len)
     return buf ? buf : cwds;
 }
 
+int vfs_chmod (const char *filename, vfs_st_mode_t attr, vfs_st_mode_t mask)
+{
+    vfs_mount_t *mount = get_mount(filename);
+
+    return mount && mount->vfs->fchmod ? mount->vfs->fchmod(get_filename(mount, filename), attr, mask) : -1;
+}
+
 int vfs_stat (const char *filename, vfs_stat_t *st)
 {
     vfs_mount_t *mount = get_mount(filename);
@@ -598,7 +605,7 @@ bool vfs_mount (const char *path, const vfs_t *fs, vfs_st_mode_t mode)
         hal.rtc.get_datetime = vfs_get_time;
 
     if(fs && vfs.on_mount)
-        vfs.on_mount(path, fs);
+        vfs.on_mount(path, fs, mode);
 
     return fs != NULL;
 }

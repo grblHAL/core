@@ -92,6 +92,7 @@ typedef void (*on_wco_changed_ptr)(void);
 typedef void (*on_program_completed_ptr)(program_flow_t program_flow, bool check_mode);
 typedef void (*on_execute_realtime_ptr)(sys_state_t state);
 typedef void (*on_unknown_accessory_override_ptr)(uint8_t cmd);
+typedef void (*on_cycle_start_ptr)(void);
 typedef bool (*on_unknown_realtime_cmd_ptr)(char c);
 typedef void (*on_report_handlers_init_ptr)(void);
 typedef void (*on_report_options_ptr)(bool newopt);
@@ -233,9 +234,10 @@ typedef struct {
     on_get_settings_ptr on_get_settings;
     on_realtime_report_ptr on_realtime_report;
     on_unknown_feedback_message_ptr on_unknown_feedback_message;
-    on_unknown_realtime_cmd_ptr on_unknown_realtime_cmd;
-    on_unknown_sys_command_ptr on_unknown_sys_command;  //!< return Status_Unhandled if not handled.
-    on_get_commands_ptr on_get_commands;                //!< Deprecated, use system_register_commands() to register new commands.
+    on_cycle_start_ptr on_cycle_start;                      //!< Called from interrupt context. NOTE: this is for the cycle start signal.
+    on_unknown_realtime_cmd_ptr on_unknown_realtime_cmd;    //!< Called from interrupt context.
+    on_unknown_sys_command_ptr on_unknown_sys_command;      //!< return Status_Unhandled if not handled.
+    on_get_commands_ptr on_get_commands;                    //!< Deprecated, use system_register_commands() to register new commands.
     on_user_command_ptr on_user_command;
     on_stream_changed_ptr on_stream_changed;
     on_homing_rate_set_ptr on_homing_rate_set;

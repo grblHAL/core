@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2024 Terje Io
+  Copyright (c) 2017-2025 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -914,6 +914,8 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(char c)
             // Cancel any pending tool change
             gc_state.tool_change = false;
             drop = true;
+            if(grbl.on_cycle_start)
+                grbl.on_cycle_start();
             break;
 
         case CMD_FEED_HOLD:
@@ -1034,6 +1036,8 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(char c)
                 // Cancel any pending tool change
                 gc_state.tool_change = false;
                 drop = true;
+                if(grbl.on_cycle_start)
+                    grbl.on_cycle_start();
             }
             break;
 

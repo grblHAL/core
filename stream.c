@@ -300,8 +300,6 @@ static bool stream_select (const io_stream_t *stream, bool add)
 	} else if(add_connection(stream) == NULL)
         return false;
 
-    bool webui_connected = hal.stream.state.webui_connected;
-
     switch(stream->type) {
 
         case StreamType_Serial:
@@ -353,9 +351,6 @@ static bool stream_select (const io_stream_t *stream, bool add)
 
     if(hal.stream.is_connected == NULL)
         hal.stream.is_connected = stream == base.stream ? base.is_up : stream_connected;
-
-    if(stream->type == StreamType_WebSocket && !stream->state.webui_connected)
-        hal.stream.state.webui_connected = webui_connected;
 
     if(send_init_message)
         grbl.report.init_message(stream->write);
