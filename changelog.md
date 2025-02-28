@@ -1,5 +1,31 @@
 ## grblHAL changelog
 
+<a name="20250228">Build 20250228
+
+Core:
+
+* Refactored I2C interface definitions, added capabilities flags for run time discovery.
+
+Drivers:
+
+* All: updated for refactored I2C interface. Some updated from a non-compliant implementation of the previous version..
+
+* RP2040, STM32F7xx: added driver support for max limit switches. Ref. issue [#116](https://github.com/grblHAL/RP2040/issues/116).
+
+* STM32F4xx: aded support for I2C DMA writes.
+
+Plugins:
+
+* EEPROM, Keypad: updated for refactored I2C interface.
+
+* SD card: removed unused variable, only add chmod() support for FatFs if available.
+
+* Networking: added code guard to prevent compiler error in some configurations.
+
+* WebUI: fixed regression affecting WebUI v2.
+
+---
+
 <a name="20250225">Build 20250225
 
 Core \(for developers\):

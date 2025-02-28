@@ -576,6 +576,8 @@ bool vfs_mount (const char *path, const vfs_t *fs, vfs_st_mode_t mode)
         root.mode = mode;
     } else if((mount = (vfs_mount_t *)calloc(sizeof(vfs_mount_t), 1))) {
 
+        struct tm tm;
+
         strcpy(mount->path, path);
         if(mount->path[strlen(path) - 1] != '/')
             strcat(mount->path, "/");
@@ -583,9 +585,7 @@ bool vfs_mount (const char *path, const vfs_t *fs, vfs_st_mode_t mode)
         mount->vfs = fs;
         mount->mode = mode;
         mount->next = NULL;
-        if(hal.rtc.get_datetime) {
-            struct tm tm;
-            hal.rtc.get_datetime(&tm);
+        if(hal.rtc.get_datetime && hal.rtc.get_datetime(&tm)) {
 #ifdef ESP_PLATFORM
             mount->st_mtim = mktime(&tm);
 #else

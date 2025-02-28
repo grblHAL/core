@@ -214,9 +214,9 @@ static nvs_transfer_result_t memcpy_from_ram (uint8_t *destination, uint32_t sou
         *(destination++) = ram_get_byte(source++);
 
 #if NVS_CRC_BYTES == 1
-    return with_checksum ? (checksum == ram_get_byte(source) ? NVS_TransferResult_OK : NVS_TransferResult_Failed) : NVS_TransferResult_OK;
+    return !with_checksum || checksum == ram_get_byte(source);
 #else
-    return with_checksum ? (checksum == (ram_get_byte(source) | (ram_get_byte(source + 1) << 8)) ? NVS_TransferResult_OK : NVS_TransferResult_Failed) : NVS_TransferResult_OK;
+    return !with_checksum || checksum == (ram_get_byte(source) | (ram_get_byte(source + 1) << 8));
 #endif
 }
 

@@ -221,26 +221,66 @@ typedef struct {
     encoder_settings_t *settings;
 } encoder_t;
 
-// EEPROM/FRAM interface
+// I2C interface
+
+typedef uint_fast16_t i2c_address_t;
 
 typedef struct {
-    uint8_t address;
-    uint8_t word_addr_bytes;
-    uint16_t word_addr;
-    volatile uint_fast16_t count;
-    bool add_checksum;
-    uint8_t checksum;
+    i2c_address_t address;
+    union {
+        struct  {
+            uint8_t cmd_bytes;
+            uint16_t cmd;
+        };
+        struct  {
+            uint8_t word_addr_bytes;
+            uint16_t word_addr;
+        };
+    };
+    uint_fast16_t count;
+    bool no_block;
     uint8_t *data;
-} nvs_transfer_t;
+} i2c_transfer_t;
 
-extern nvs_transfer_result_t i2c_nvs_transfer (nvs_transfer_t *i2c, bool read);
+typedef union {
+    uint8_t ok;
+    struct {
+        uint8_t started         :1,
+                tx_non_blocking :1,
+                tx_dma          :1,
+                unassigned      :5;
+    };
+} i2c_cap_t;
 
-// I2C interface
+// DISPLAYS:
+
+// Interfaces
+#define DISPLAY_I2C             (1<<0) //!< 1
+#define DISPLAY_SPI             (1<<1) //!< 2
+#define DISPLAY_UART            (1<<2) //!< 4
+
+// Plugins
+#define DISPLAY_I2C_INTERFACE   ((1<<3)|DISPLAY_I2C) //!< 9
+#define DISPLAY_I2C_LEDS        ((1<<4)|DISPLAY_I2C) //!< 17
+#define DISPLAY_I2C_LUC         ((1<<5)|DISPLAY_I2C) //!< 33
+
+// EEPROM/FRAM:
+
+typedef i2c_transfer_t nvs_transfer_t;
+#define i2c_nvs_transfer(i2c, rd) i2c_transfer(i2c, rd)
+
+typedef bool nvs_transfer_result_t;
+#define NVS_TransferResult_OK true
+
+// I2C interface:
 
 typedef void (*keycode_callback_ptr)(const char c);
 
-extern bool i2c_probe (uint_fast16_t i2c_address);
-extern bool i2c_send (uint_fast16_t i2c_address, uint8_t *data, size_t size, bool block);
-extern void i2c_get_keycode (uint_fast16_t i2c_address, keycode_callback_ptr callback);
+extern i2c_cap_t i2c_start (void);
+extern bool i2c_probe (i2c_address_t i2c_address);
+extern bool i2c_send (i2c_address_t i2c_address, uint8_t *data, size_t size, bool block);
+extern bool i2c_receive (i2c_address_t i2cAddr, uint8_t *buf, size_t size, bool block);
+extern bool i2c_get_keycode (i2c_address_t i2c_address, keycode_callback_ptr callback);
+extern bool i2c_transfer (i2c_transfer_t *i2c, bool read);
 
 #endif

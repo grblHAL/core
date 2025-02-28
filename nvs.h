@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2023 Terje Io
+  Copyright (c) 2017-2025 Terje Io
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
   grblHAL is free software: you can redistribute it and/or modify
@@ -92,12 +92,6 @@ typedef struct {
     uint16_t size;          //!< Actual size of driver area in bytes.
 } nvs_driver_area_t;
 
-typedef enum {
-    NVS_TransferResult_Failed = 0,  //!< 0
-    NVS_TransferResult_Busy,        //!< 1
-    NVS_TransferResult_OK,          //!< 2
-} nvs_transfer_result_t;
-
 /*! \brief Pointer to function for getting a byte from NVS storage.
 \param addr index base address into the area.
 \returns byte read.
@@ -117,7 +111,7 @@ typedef void (*put_byte_ptr)(uint32_t addr, uint8_t new_value);
 \param with_checksum \a true calculate and verify checksum at the end of the data block, \a false do not calculate and verify checksum.
 \returns #nvs_transfer_result_t enum.
 */
-typedef nvs_transfer_result_t (*memcpy_from_nvs_ptr)(uint8_t *dest, uint32_t source, uint32_t size, bool with_checksum);
+typedef bool (*memcpy_from_nvs_ptr)(uint8_t *dest, uint32_t source, uint32_t size, bool with_checksum);
 
 /*! \brief Pointer to function for writing a block of data to NVS storage
 \param dest index based address into the storage area.
@@ -126,7 +120,7 @@ typedef nvs_transfer_result_t (*memcpy_from_nvs_ptr)(uint8_t *dest, uint32_t sou
 \param with_checksum \a true calculate and add a checksum at the end of the data block, \a false do not add checksum.
 \returns #nvs_transfer_result_t enum.
 */
-typedef nvs_transfer_result_t (*memcpy_to_nvs_ptr)(uint32_t dest, uint8_t *source, uint32_t size, bool with_checksum);
+typedef bool (*memcpy_to_nvs_ptr)(uint32_t dest, uint8_t *source, uint32_t size, bool with_checksum);
 
 /*! \brief Pointer to function for reading a block of data from flash based NVS storage.
 \param dest pointer to destination of data.

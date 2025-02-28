@@ -137,11 +137,8 @@
 #endif
 #endif
 
-#if DISPLAY_ENABLE == 2
-#ifdef I2C_ENABLE
-#undef I2C_ENABLE
-#endif
-#define I2C_ENABLE 1
+#ifndef DISPLAY_ENABLE
+#define DISPLAY_ENABLE      0
 #endif
 
 #ifndef EEPROM_ENABLE
@@ -151,16 +148,20 @@
 #define EEPROM_IS_FRAM      0
 #endif
 
-#ifndef I2C_ENABLE
-#if EEPROM_ENABLE || KEYPAD_ENABLE == 1 || DISPLAY_ENABLE == 1 || DISPLAY_ENABLE == 2 || I2C_STROBE_ENABLE || (TRINAMIC_ENABLE && TRINAMIC_I2C)
-#define I2C_ENABLE 1
+#if EEPROM_ENABLE || KEYPAD_ENABLE == 1 || I2C_STROBE_ENABLE || (DISPLAY_ENABLE & DISPLAY_I2C) || (TRINAMIC_ENABLE && TRINAMIC_I2C)
+#if defined(I2C_ENABLE) && I2C_ENABLE == 0
+#undef I2C_ENABLE
 #else
-#define I2C_ENABLE 0
+#define I2C_ENABLE          1
 #endif
 #endif
 
+#ifndef I2C_ENABLE
+#define I2C_ENABLE          0
+#endif
+
 #ifndef SPINDLE_SYNC_ENABLE
-#define SPINDLE_SYNC_ENABLE     0
+#define SPINDLE_SYNC_ENABLE 0
 #endif
 
 #ifndef SPINDLE_ENCODER_ENABLE
