@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+<a name="20250229">20250229
+
+Drivers:
+
+* STM32F4xx: fixed typo, added early SD card mount attempt for SuperLongBoards.
+
+Plugins:
+
+* SD card: added function that can be used by boards that shares the SD card SPI bus with other devices to attempt to mount the SD card early.
+
+---
+
 <a name="20250228">Build 20250228
 
 Core:
@@ -8,11 +20,13 @@ Core:
 
 Drivers:
 
-* All: updated for refactored I2C interface. Some updated from a non-compliant implementation of the previous version..
+* All: updated for refactored I2C interface. Some updated from a non-compliant implementation of the previous version.
+
+* RP2040: added detection of SDK version and switch to 200 MHz clock for RP2040 if >= 2.1.1.
 
 * RP2040, STM32F7xx: added driver support for max limit switches. Ref. issue [#116](https://github.com/grblHAL/RP2040/issues/116).
 
-* STM32F4xx: aded support for I2C DMA writes.
+* STM32F4xx: added support for I2C DMA writes.
 
 Plugins:
 
