@@ -38,6 +38,8 @@ typedef struct {
     io_ports_detail_t *ports;
     char port_names[8 * 6 + (MAX_PORTS - 8) * 7];
     ioport_bus_t enabled;
+    pin_function_t min_fn;
+    pin_function_t max_fn;
 } io_ports_private_t;
 
 typedef struct {
@@ -49,8 +51,26 @@ typedef struct {
 
 static driver_settings_load_ptr on_settings_loaded = NULL;
 static setting_changed_ptr on_setting_changed = NULL;
-static io_ports_cfg_t analog, digital;
+static io_ports_cfg_t digital = {
+                          .in.min_fn = Input_Aux0, .in.max_fn = Input_AuxMax,
+                          .out.min_fn = Output_Aux0, .out.max_fn = Output_AuxMax
+                      },
+                      analog = {
+                          .in.min_fn = Input_Analog_Aux0, .in.max_fn = Input_Analog_AuxMax,
+                          .out.min_fn = Output_Analog_Aux0, .out.max_fn = Output_Analog_AuxMax
+                      };
 static int16_t digital_in = -1, digital_out = -1, analog_in = -1, analog_out = -1;
+
+static inline io_ports_private_t *get_port_data (io_port_type_t type, io_port_direction_t dir)
+{
+    return type == Port_Digital ? (dir == Port_Input ? &digital.in : &digital.out) : (dir == Port_Input ? &analog.in : &analog.out);
+}
+
+// TODO: change to always use ioports_map_reverse()? add range check?
+static inline uint8_t resolve_portnum (io_ports_private_t *p_data, xbar_t *port)
+{
+    return port->function >= p_data->min_fn && port->function <= p_data->max_fn ? (port->function - p_data->min_fn) : ioports_map_reverse(p_data->ports, port->id);
+}
 
 static uint8_t ioports_count (io_port_type_t type, io_port_direction_t dir)
 {
@@ -161,13 +181,11 @@ xbar_t *ioport_get_info (io_port_type_t type, io_port_direction_t dir, uint8_t p
 {
     bool ok = false;
     uint8_t n_ports = ioports_available(type, dir);
-    uint8_t base = type == Port_Digital
-                    ? (dir == Port_Input ? Input_Aux0 : Output_Aux0)
-                    : (dir == Port_Input ? Input_Analog_Aux0 : Output_Analog_Aux0);
+    io_ports_private_t *p_data = get_port_data(type, dir);
     xbar_t *portinfo = NULL;
 
     if(hal.port.get_pin_info && n_ports) do {
-        ok = (portinfo = hal.port.get_pin_info(type, dir, --n_ports)) && (portinfo->function - base) == port;
+        ok = (portinfo = hal.port.get_pin_info(type, dir, --n_ports)) && resolve_portnum(p_data, portinfo) == port;
     } while(n_ports && !ok);
 
     return ok ? portinfo : NULL;
@@ -259,16 +277,17 @@ bool ioport_can_claim_explicit (void)
 bool ioports_enumerate (io_port_type_t type, io_port_direction_t dir, pin_cap_t filter, ioports_enumerate_callback_ptr callback, void *data)
 {
     bool ok = false;
-    uint8_t n_ports = ioports_available(type, dir),
-            base = type == Port_Digital
-                    ? (dir == Port_Input ? Input_Aux0 : Output_Aux0)
-                    : (dir == Port_Input ? Input_Analog_Aux0 : Output_Analog_Aux0);
-    xbar_t *portinfo;
+    uint_fast16_t n_ports = ioports_available(type, dir);
+    io_ports_private_t *p_data = get_port_data(type, dir);
 
     if(n_ports && ioport_can_claim_explicit()) do {
-        portinfo = hal.port.get_pin_info(type, dir, --n_ports);
-        if((portinfo->cap.mask & filter.mask) == filter.mask && (ok = callback(portinfo, portinfo->function - base, data)))
-            break;
+
+        xbar_t *portinfo;
+
+        if((portinfo = hal.port.get_pin_info(type, dir, --n_ports)) && (portinfo->cap.mask & filter.mask) == filter.mask) {
+            if((ok = callback(portinfo, resolve_portnum(p_data, portinfo), data)))
+                break;
+        }
     } while(n_ports);
 
     return ok;

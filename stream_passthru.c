@@ -23,12 +23,10 @@
 #include "task.h"
 #include "protocol.h"
 
-//static xbar_t *dtr, *rts;
 static uint8_t boot0_port = 0xFF, reset_port = 0xFF;
 static io_stream_t dest;
 static bool conn_ok = false;
 static on_linestate_changed_ptr on_linestate_changed;
-//static on_execute_realtime_ptr on_execute_realtime = NULL;
 
 // Weak implementation of low level function to be provided by the driver
 
@@ -38,25 +36,6 @@ __attribute__((weak)) void stream_passthru_enter (void)
 }
 
 // ****
-
-
-/*
-static void onExecuteRealtime (uint_fast16_t state)
-{
-    static bool lock = false;
-
-    int16_t c;
-
-    if(!lock) {
-        lock = true;
-        if((c = hal.stream.read()) != SERIAL_NO_DATA)
-            dest.write_char(c);
-        lock = false;
-    }
-
-    on_execute_realtime(state);
-}
-*/
 
 ISR_CODE static bool ISR_FUNC(forward_usb_rx)(char c)
 {
@@ -123,16 +102,13 @@ static void passthru_start2 (void *data)
 
     task_add_delayed(forward_uart_rx, NULL, 8);
 
-//    on_execute_realtime = grbl.on_execute_realtime;
-//    grbl.on_execute_realtime = onExecuteRealtime;
-
     dest.set_enqueue_rt_handler(stream_buffer_all);
     dest.cancel_read_buffer();
 }
 
 static void passthru_start1 (void *data)
 {
-    hal.port.digital_out(boot0_port, 0);
+    hal.port.digital_out(boot0_port, 1);
     hal.port.digital_out(reset_port, 0);
 
     on_linestate_changed = hal.stream.on_linestate_changed;
