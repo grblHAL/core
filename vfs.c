@@ -560,8 +560,8 @@ static bool vfs_get_time (struct tm *time)
 {
     memset(time, 0, sizeof(struct tm));
 
- // 2024-01-01:00:00:00
-    time->tm_year = 2024 - 1900;
+ // 2025-01-01:00:00:00
+    time->tm_year = 2025 - 1900;
     time->tm_mday = 1;
 
     return true;

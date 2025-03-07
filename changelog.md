@@ -1,5 +1,25 @@
 ## grblHAL changelog
 
+<a name="20250307">Build 20250307
+
+Core:
+
+* Updated build date, default VFS mount directory created date.
+
+Drivers:
+
+* ESP32: added hook for adding 3rd party plugins to build without touching upstream code.
+
+* STM32F4xx: removed some obsoleted preprocessor code. Ref. issue [#219](https://github.com/grblHAL/STM32F4xx/issues/219).
+
+Plugins:
+
+* Networking: updated ftp daemon to properly handle root file system mount/unmount events. Added ftp support for changing read-only attribute \(`W` - owner only\).
+
+* SD card, littlefs: now blocks deletion of read-only files.
+
+---
+
 <a name="20250305">20250305
 
 Core:
