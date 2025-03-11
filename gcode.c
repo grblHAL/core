@@ -1368,14 +1368,15 @@ status_code_t gc_execute_block (char *block)
                     case 63:
                     case 64:
                     case 65:
-                        if(hal.port.digital_out == NULL || hal.port.num_digital_out == 0)
+                        if(hal.port.digital_out == NULL || ioports_unclaimed(Port_Digital, Port_Output) == 0)
                             FAIL(Status_GcodeUnsupportedCommand); // [Unsupported M command]
                         word_bit.modal_group.M5 = On;
                         port_command = (io_mcode_t)int_value;
                         break;
 
                     case 66:
-                        if(hal.port.wait_on_input == NULL || (hal.port.num_digital_in == 0 && hal.port.num_analog_in == 0))
+                        if(hal.port.wait_on_input == NULL || (ioports_unclaimed(Port_Digital, Port_Input) == 0 &&
+                                                               ioports_unclaimed(Port_Analog, Port_Input) == 0))
                             FAIL(Status_GcodeUnsupportedCommand); // [Unsupported M command]
                         word_bit.modal_group.M5 = On;
                         port_command = (io_mcode_t)int_value;
@@ -1383,7 +1384,7 @@ status_code_t gc_execute_block (char *block)
 
                     case 67:
                     case 68:
-                        if(hal.port.analog_out == NULL || hal.port.num_analog_out == 0)
+                        if(hal.port.analog_out == NULL || ioports_unclaimed(Port_Analog, Port_Output) == 0)
                             FAIL(Status_GcodeUnsupportedCommand); // [Unsupported M command]
                         word_bit.modal_group.M5 = On;
                         port_command = (io_mcode_t)int_value;
@@ -1942,7 +1943,7 @@ status_code_t gc_execute_block (char *block)
                     FAIL(Status_GcodeValueWordMissing);
                 if(gc_block.values.p < 0.0f)
                     FAIL(Status_NegativeValue);
-                if((uint32_t)gc_block.values.p + 1 > hal.port.num_digital_out)
+                if((uint32_t)gc_block.values.p >= ioports_unclaimed(Port_Digital, Port_Output))
                     FAIL(Status_GcodeValueOutOfRange);
                 gc_block.output_command.is_digital = true;
                 gc_block.output_command.port = (uint8_t)gc_block.values.p;
@@ -1966,7 +1967,7 @@ status_code_t gc_execute_block (char *block)
                 if(gc_block.words.p) {
                     if(gc_block.values.p < 0.0f)
                         FAIL(Status_NegativeValue);
-                    if((uint32_t)gc_block.values.p + 1 > hal.port.num_digital_in)
+                    if((uint32_t)gc_block.values.p >= ioports_unclaimed(Port_Digital, Port_Input))
                         FAIL(Status_GcodeValueOutOfRange);
 
                     gc_block.output_command.is_digital = true;
@@ -1974,7 +1975,7 @@ status_code_t gc_execute_block (char *block)
                 }
 
                 if(gc_block.words.e) {
-                    if((uint32_t)gc_block.values.e + 1 > hal.port.num_analog_in)
+                    if((uint32_t)gc_block.values.e >= ioports_unclaimed(Port_Analog, Port_Input))
                         FAIL(Status_GcodeValueOutOfRange);
                     if((wait_mode_t)gc_block.values.l != WaitMode_Immediate)
                         FAIL(Status_GcodeValueOutOfRange);
@@ -1990,7 +1991,7 @@ status_code_t gc_execute_block (char *block)
             case IoMCode_AnalogOutImmediate:
                 if(!(gc_block.words.e || gc_block.words.q))
                     FAIL(Status_GcodeValueWordMissing);
-                if((uint32_t)gc_block.values.e + 1 > hal.port.num_analog_out)
+                if((uint32_t)gc_block.values.e >= ioports_unclaimed(Port_Analog, Port_Output))
                     FAIL(Status_GcodeRPMOutOfRange);
                 gc_block.output_command.is_digital = false;
                 gc_block.output_command.port = (uint8_t)gc_block.values.e;

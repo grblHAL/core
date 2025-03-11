@@ -1124,13 +1124,15 @@ static bool check_pwm_ports (void)
 
 spindle1_pwm_settings_t *spindle1_settings_add (bool claim_ports)
 {
-    if((ports_ok = claim_ports && hal.port.num_digital_out > 0 && check_pwm_ports())) {
+    uint8_t n_out;
 
-        sp1_settings.port_on = hal.port.num_digital_out - 1;
-        sp1_settings.port_dir = hal.port.num_digital_out > 1 ? hal.port.num_digital_out - 2 : 255;
+    if((ports_ok = claim_ports && (n_out = ioports_available(Port_Digital, Port_Output)) && check_pwm_ports())) {
+
+        sp1_settings.port_on = n_out - 1;
+        sp1_settings.port_dir = n_out > 1 ? n_out - 2 : 255;
 
         strcpy(max_aport, uitoa(sp1_settings.port_pwm));
-        strcpy(max_dport, uitoa(hal.port.num_digital_out - 1));
+        strcpy(max_dport, uitoa(n_out - 1));
     }
 
     return nvs_address == 0 && (!claim_ports || ports_ok) && (nvs_address = nvs_alloc(sizeof(spindle1_pwm_settings_t))) ? &sp1_settings : NULL;

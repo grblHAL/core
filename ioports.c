@@ -38,8 +38,11 @@ typedef struct {
     io_ports_detail_t *ports;
     char port_names[8 * 6 + (MAX_PORTS - 8) * 7];
     ioport_bus_t enabled;
+    int16_t count;
+    int16_t free;
     pin_function_t min_fn;
     pin_function_t max_fn;
+    uint8_t map[MAX_PORTS];
 } io_ports_private_t;
 
 typedef struct {
@@ -52,14 +55,21 @@ typedef struct {
 static driver_settings_load_ptr on_settings_loaded = NULL;
 static setting_changed_ptr on_setting_changed = NULL;
 static io_ports_cfg_t digital = {
+                          .in.count = -1,
+                          .in.free = -1,
                           .in.min_fn = Input_Aux0, .in.max_fn = Input_AuxMax,
+                          .out.count = -1,
+                          .out.free = -1,
                           .out.min_fn = Output_Aux0, .out.max_fn = Output_AuxMax
                       },
                       analog = {
+                          .in.count = -1,
+                          .in.free = -1,
                           .in.min_fn = Input_Analog_Aux0, .in.max_fn = Input_Analog_AuxMax,
+                          .out.count = -1,
+                          .out.free = -1,
                           .out.min_fn = Output_Analog_Aux0, .out.max_fn = Output_Analog_AuxMax
                       };
-static int16_t digital_in = -1, digital_out = -1, analog_in = -1, analog_out = -1;
 
 static inline io_ports_private_t *get_port_data (io_port_type_t type, io_port_direction_t dir)
 {
@@ -72,50 +82,36 @@ static inline uint8_t resolve_portnum (io_ports_private_t *p_data, xbar_t *port)
     return port->function >= p_data->min_fn && port->function <= p_data->max_fn ? (port->function - p_data->min_fn) : ioports_map_reverse(p_data->ports, port->id);
 }
 
-static uint8_t ioports_count (io_port_type_t type, io_port_direction_t dir)
+static uint8_t ioports_count (io_port_type_t type, io_port_direction_t dir, io_ports_private_t *p_data)
 {
     xbar_t *port;
-    uint8_t n_ports = 0;
+    uint8_t n_ports = 0, n_remapped = 0;
 
-    // determine how many ports, including claimed ports, that are available
-    do {
-        if((port = hal.port.get_pin_info(type, dir, n_ports)))
+    // determine how many ports, including claimed ports, that are available. remapped ports may be excluded.
+    if(hal.port.get_pin_info) do {
+        if((port = hal.port.get_pin_info(type, dir, n_ports))) {
             n_ports++;
+            if(p_data && (port->function < p_data->min_fn || port->function > p_data->max_fn))
+                n_remapped++;
+        }
     } while(port != NULL);
 
-    return n_ports;
+    return n_ports - n_remapped;
 }
 
 /*! \brief Get number of digital or analog ports available.
 \param type as an \a #io_port_type_t enum value.
 \param dir as an \a #io_port_direction_t enum value.
-\returns number of ports available including claimed ports if the API implementation supports that.
+\returns number of ports available excluding remapped ports but including claimed ports if the API implementation supports that.
 */
 uint8_t ioports_available (io_port_type_t type, io_port_direction_t dir)
 {
-    uint8_t ports = 0;
+    io_ports_private_t *p_data = get_port_data(type, dir);
 
-    if(hal.port.get_pin_info) {
+    if(p_data->count == -1)
+        p_data->count = ioports_count(type, dir, get_port_data(type, dir));
 
-        if(type == Port_Digital) {
-            if(dir == Port_Input)
-                ports = digital_in == -1 ? (digital_in = ioports_count(type, dir)) : (uint8_t)digital_in;
-            else
-                ports = digital_out == -1 ? (digital_out = ioports_count(type, dir)) : (uint8_t)digital_out;
-        } else {
-            if(dir == Port_Input)
-                ports = analog_in == -1 ? (analog_in = ioports_count(type, dir)) : (uint8_t)analog_in;
-            else
-                ports = analog_out == -1 ? (analog_out = ioports_count(type, dir)) : (uint8_t)analog_out;
-        }
-    } else {
-        if(type == Port_Digital)
-            ports = dir == Port_Input ? hal.port.num_digital_in : hal.port.num_digital_out;
-        else
-            ports = dir == Port_Input ? hal.port.num_analog_in : hal.port.num_analog_out;
-    }
-
-    return ports;
+    return p_data->count;
 }
 
 /*! \brief Get number of unclaimed digital or analog ports available.
@@ -125,15 +121,22 @@ uint8_t ioports_available (io_port_type_t type, io_port_direction_t dir)
 */
 uint8_t ioports_unclaimed (io_port_type_t type, io_port_direction_t dir)
 {
-    xbar_t *port;
-    uint8_t idx = 0, n_ports = 0;
+    io_ports_private_t *p_data = get_port_data(type, dir);
 
-    if(hal.port.get_pin_info) do {
-        if((port = hal.port.get_pin_info(type, dir, idx++)) && !port->mode.claimed)
-            n_ports++;
-    } while(port);
+    if(p_data->free == -1) {
 
-    return n_ports;
+        xbar_t *port;
+        uint8_t idx = 0;
+
+        p_data->free = 0;
+
+        if(hal.port.get_pin_info) do {
+            if((port = hal.port.get_pin_info(type, dir, idx++)) && !port->mode.claimed)
+                p_data->free++;
+        } while(port);
+    }
+
+    return p_data->free;
 }
 
 static struct ff_data {
@@ -177,19 +180,55 @@ uint8_t ioport_find_free (io_port_type_t type, io_port_direction_t dir, pin_cap_
 \param port the port aux number.
 \returns pointer to \a xbar_t struct if successful, NULL if not.
 */
-xbar_t *ioport_get_info (io_port_type_t type, io_port_direction_t dir, uint8_t port)
+static xbar_t *get_info (io_port_type_t type, io_port_direction_t dir, uint8_t port, bool claim)
 {
     bool ok = false;
-    uint8_t n_ports = ioports_available(type, dir);
-    io_ports_private_t *p_data = get_port_data(type, dir);
     xbar_t *portinfo = NULL;
+    io_ports_private_t *p_data = get_port_data(type, dir);
+    uint8_t n_ports = p_data->ports ? p_data->ports->n_ports : 0;
 
     if(hal.port.get_pin_info && n_ports) do {
-        ok = (portinfo = hal.port.get_pin_info(type, dir, --n_ports)) && resolve_portnum(p_data, portinfo) == port;
+        ok = (portinfo = hal.port.get_pin_info(type, dir, --n_ports)) && !(claim && portinfo->mode.claimed) && resolve_portnum(p_data, portinfo) == port;
     } while(n_ports && !ok);
 
     return ok ? portinfo : NULL;
 }
+
+/*! \brief Return information about a digital or analog port.
+\param type as an \a #io_port_type_t enum value.
+\param dir as an \a #io_port_direction_t enum value.
+\param port the port aux number.
+\returns pointer to \a xbar_t struct if successful, NULL if not.
+*/
+xbar_t *ioport_get_info (io_port_type_t type, io_port_direction_t dir, uint8_t port)
+{
+    return get_info(type, dir, port, false);
+}
+
+
+/* code to keep deprecated data updated, to be removed */
+
+static inline uint8_t get_hcount (io_port_type_t type, io_port_direction_t dir)
+{
+    return type == Port_Digital
+            ? (dir == Port_Input ? hal.port.num_digital_in : hal.port.num_digital_out)
+            : (dir == Port_Input ? hal.port.num_analog_in : hal.port.num_analog_out);
+}
+
+static inline void dec_hcount (io_port_type_t type, io_port_direction_t dir)
+{
+    if(type == Port_Digital) {
+        if(dir == Port_Input)
+            hal.port.num_digital_in--;
+        else
+            hal.port.num_digital_out--;
+    } else if(dir == Port_Input)
+        hal.port.num_analog_in--;
+    else
+        hal.port.num_analog_out--;
+}
+
+/* end deprecated */
 
 /*! \brief Claim a digital or analog port for exclusive use.
 \param type as an \a #io_port_type_t enum value.
@@ -200,35 +239,23 @@ xbar_t *ioport_get_info (io_port_type_t type, io_port_direction_t dir, uint8_t p
 */
 bool ioport_claim (io_port_type_t type, io_port_direction_t dir, uint8_t *port, const char *description)
 {
-    bool ok;
+    bool ok = false;
 
     if(hal.port.claim) {
 
         xbar_t *portinfo;
+        uint8_t hcnt = get_hcount(type, dir);
 
-        ok = (portinfo = ioport_get_info(type, dir, *port)) &&
-//             portinfo->cap.claimable && TODO: add?
-                !portinfo->mode.claimed &&
-                  hal.port.claim(type, dir, port, description);
+        if((ok = (portinfo = get_info(type, dir, *port, true)) &&
+    //             portinfo->cap.claimable && TODO: add?
+                    !portinfo->mode.claimed &&
+                      hal.port.claim(type, dir, port, description))) {
 
-    } else {
+            get_port_data(type, dir)->free = -1;
 
-        uint_fast8_t count;
-        get_pin_info_ptr get_pin_info = hal.port.get_pin_info;
-
-        hal.port.get_pin_info = NULL; // Force count of unclaimed ports only.
-
-        if((ok = (count = ioports_available(type, dir)) > 0 && *port == count - 1 )) {
-            if(type == Port_Digital)
-                *port = dir == Port_Input ? --hal.port.num_digital_in : --hal.port.num_digital_out;
-            else
-                *port = dir == Port_Input ? --hal.port.num_analog_in : --hal.port.num_analog_out;
-
-            if(hal.port.set_pin_description)
-                hal.port.set_pin_description(type, dir, *port, description);
+            if(get_hcount(type, dir) == hcnt)
+                dec_hcount(type, dir);
         }
-
-        hal.port.get_pin_info = get_pin_info;
     }
 
     return ok;
@@ -246,6 +273,7 @@ void ioport_assign_function (aux_ctrl_t *aux_ctrl, pin_function_t *function)
 
         *function = aux_ctrl->function;
         digital.inx.mask &= ~(1 << input->id);
+        digital.in.count = digital.in.free = -1;
         hal.signals_cap.mask |= aux_ctrl->cap.mask;
 
         if(aux_ctrl->function == Input_Probe || xbar_fn_to_signals_mask(aux_ctrl->function).mask)
@@ -261,13 +289,14 @@ void ioport_assign_out_function (aux_ctrl_out_t *aux_ctrl, pin_function_t *funct
 
         *function = aux_ctrl->function;
         digital.outx.mask &= ~(1 << output->id);
+        digital.out.count = digital.out.free = -1;
 
         setting_remove_elements(Settings_IoPort_InvertOut, digital.outx.mask);
     }
 }
 
 /*! \brief Check if ports can be claimed by aux number or not.
-\returns true if ports can be claimed by aux number, false if claimed ports are allocated by the API.
+\returns true if ports can be claimed by aux number, false if not.
 */
 bool ioport_can_claim_explicit (void)
 {
@@ -277,18 +306,31 @@ bool ioport_can_claim_explicit (void)
 bool ioports_enumerate (io_port_type_t type, io_port_direction_t dir, pin_cap_t filter, ioports_enumerate_callback_ptr callback, void *data)
 {
     bool ok = false;
-    uint_fast16_t n_ports = ioports_available(type, dir);
     io_ports_private_t *p_data = get_port_data(type, dir);
 
-    if(n_ports && ioport_can_claim_explicit()) do {
+    if(p_data->ports && p_data->ports->n_ports && ioport_can_claim_explicit()) {
 
-        xbar_t *portinfo;
+       xbar_t *portinfo;
+       uint_fast16_t n_ports;
 
-        if((portinfo = hal.port.get_pin_info(type, dir, --n_ports)) && (portinfo->cap.mask & filter.mask) == filter.mask) {
-            if((ok = callback(portinfo, resolve_portnum(p_data, portinfo), data)))
-                break;
-        }
-    } while(n_ports);
+       if(filter.mask) {
+
+           uint_fast16_t n_ports = p_data->ports->n_ports;
+
+           do {
+                if((portinfo = hal.port.get_pin_info(type, dir, --n_ports)) && (portinfo->cap.mask & filter.mask) == filter.mask) {
+                    if((ok = callback(portinfo, resolve_portnum(p_data, portinfo), data)))
+                        break;
+                }
+            } while(n_ports);
+
+       } else for(n_ports = 0; n_ports < p_data->ports->n_ports; n_ports++) {
+           if((portinfo = hal.port.get_pin_info(type, dir, n_ports))) {
+               if((ok = callback(portinfo, resolve_portnum(p_data, portinfo), data)))
+                   break;
+           }
+       }
+    }
 
     return ok;
 }
@@ -337,6 +379,25 @@ static char *get_pnum (io_ports_data_t *ports, uint8_t port)
     return ports->pnum ? (ports->pnum + (port * 3) + (port > 9 ? port - 10 : 0)) : NULL;
 }
 
+static uint8_t add_ports (io_ports_detail_t *ports, uint8_t *map, io_port_type_t type, io_port_direction_t dir, uint8_t n_ports)
+{
+    io_ports_private_t *p_data = get_port_data(type, dir);
+
+    ports->n_start = ioports_count(type, dir, NULL);
+
+    if(ports->n_start + n_ports > MAX_PORTS)
+        n_ports = MAX_PORTS - ports->n_start;
+
+    ports->n_ports = n_ports;
+    ports->idx_last += n_ports;
+    ports->map = map;
+    if(p_data->ports == NULL) // for now...
+        p_data->ports = ports;
+    p_data->count = -1;
+
+    return n_ports;
+}
+
 bool ioports_add (io_ports_data_t *ports, io_port_type_t type, uint8_t n_in, uint8_t n_out)
 {
     uint_fast8_t n_ports;
@@ -348,41 +409,21 @@ bool ioports_add (io_ports_data_t *ports, io_port_type_t type, uint8_t n_in, uin
 
         cfg = &digital;
 
-        if(n_in) {
-            ports->in.n_start = ioports_available(Port_Digital, Port_Input);
-            hal.port.num_digital_in += (ports->in.n_ports = n_in);
-            ports->in.map = malloc(ports->in.n_ports * sizeof(ports->in.n_ports));
-            digital.in.ports = &ports->in;
-            digital_in = -1;
-        }
+        if(n_in)
+            hal.port.num_digital_in += add_ports(&ports->in, digital.in.map, type, Port_Input, n_in);
 
-        if(n_out) {
-            ports->out.n_start = ioports_available(Port_Digital, Port_Output);
-            hal.port.num_digital_out += (ports->out.n_ports = n_out);
-            ports->out.map = malloc(ports->out.n_ports * sizeof(ports->out.n_ports));
-            digital.out.ports = &ports->out;
-            digital_out = -1;
-        }
+        if(n_out)
+            hal.port.num_digital_out += add_ports(&ports->out, digital.out.map, type, Port_Output, n_out);
 
     } else {
 
         cfg = &analog;
 
-        if(n_in) {
-            ports->in.n_start = ioports_available(Port_Analog, Port_Input);
-            hal.port.num_analog_in += (ports->in.n_ports = n_in);
-            ports->in.map = malloc(ports->in.n_ports * sizeof(ports->in.n_ports));
-            analog.in.ports = &ports->in;
-            analog_in = -1;
-        }
+        if(n_in)
+            hal.port.num_analog_in += add_ports(&ports->in, analog.in.map, type, Port_Input, n_in);
 
-        if(n_out) {
-            ports->out.n_start = ioports_available(Port_Analog, Port_Output);
-            hal.port.num_analog_out += (ports->out.n_ports = n_out);
-            ports->out.map = malloc(ports->out.n_ports * sizeof(ports->out.n_ports));
-            analog.out.ports = &ports->out;
-            analog_out = -1;
-        }
+        if(n_out)
+            hal.port.num_analog_out += add_ports(&ports->out, analog.out.map, type, Port_Output, n_out);
     }
 
     if((n_ports = max(ports->in.n_ports, ports->out.n_ports)) > 0)  {
@@ -432,6 +473,24 @@ bool ioports_add (io_ports_data_t *ports, io_port_type_t type, uint8_t n_in, uin
 
     return n_ports > 0;
 }
+/*
+bool ioports_add_digital (io_digital_t *digital)
+{
+    if(ioports_add(&digital, Port_Digital, digital->ports->in.n_ports, digital->ports->out.n_ports))  {
+
+        if(digital->ports->in.n_ports) {
+            hal.port.wait_on_input = digital->wait_on_input;
+            hal.port.register_interrupt_handler = digital->register_interrupt_handler;
+        }
+
+        if(digital->ports->out.n_ports)
+            hal.port.digital_out = digital->digital_out;
+
+        hal.port.claim = digital->claim;
+        hal.port.get_pin_info = digital->get_pin_info;
+    }
+}
+*/
 
 ISR_CODE uint8_t ISR_FUNC(ioports_map_reverse)(io_ports_detail_t *type, uint8_t port)
 {

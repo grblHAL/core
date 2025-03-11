@@ -264,6 +264,15 @@ typedef union {
 #define DISPLAY_I2C_LEDS        ((1<<4)|DISPLAY_I2C) //!< 17
 #define DISPLAY_I2C_LUC         ((1<<5)|DISPLAY_I2C) //!< 33
 
+// Driver chips
+
+#define DISPLAY_DRIVER_SH1106  1
+#define DISPLAY_DRIVER_SSD1306 2
+#define DISPLAY_DRIVER_SSD1331 3
+#define DISPLAY_DRIVER_ILI9340 4
+#define DISPLAY_DRIVER_ILI9341 5
+#define DISPLAY_DRIVER_ILI9486 6
+
 // EEPROM/FRAM:
 
 typedef i2c_transfer_t nvs_transfer_t;

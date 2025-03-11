@@ -147,6 +147,7 @@ struct io_ports_data;
 typedef struct {
     uint8_t n_ports;
     uint8_t n_start;
+    uint8_t idx_last;
     uint8_t *map;
 } io_ports_detail_t;
 
@@ -156,6 +157,27 @@ typedef struct io_ports_data {
     io_ports_detail_t out;
     char *(*get_pnum)(struct io_ports_data *data, uint8_t port);
 } io_ports_data_t;
+
+/*
+typedef struct {
+    io_ports_data_t *analog;
+    analog_out_ptr analog_out;                      //!< Handler for setting an analog output.
+    wait_on_input_ptr wait_on_input;                //!< Handler for reading a digital or analog input.
+    set_pin_description_ptr set_pin_description;    //!< Handler for setting a description of an auxiliary pin.
+    get_pin_info_ptr get_pin_info;                  //!< Handler for getting information about an auxiliary pin.
+    claim_port_ptr claim;                           //!< Handler for claiming an auxiliary pin for exclusive use.
+} io_analog_t;
+
+typedef struct {
+    io_ports_data_t *ports;
+    digital_out_ptr digital_out;                    //!< Handler for setting a digital output.
+    wait_on_input_ptr wait_on_input;                //!< Handler for reading a digital or analog input.
+    set_pin_description_ptr set_pin_description;    //!< Handler for setting a description of an auxiliary pin.
+    get_pin_info_ptr get_pin_info;                  //!< Handler for getting information about an auxiliary pin.
+    claim_port_ptr claim;                           //!< Handler for claiming an auxiliary pin for exclusive use.
+    ioport_register_interrupt_handler_ptr register_interrupt_handler;
+} io_digital_t;
+*/
 
 //!* \brief Precalculated values that may be set/used by HAL driver to speed up analog input to PWM conversions. */
 typedef struct {
@@ -171,6 +193,8 @@ typedef struct {
 } ioports_pwm_t;
 
 bool ioports_add (io_ports_data_t *ports, io_port_type_t type, uint8_t n_in, uint8_t n_out);
+//bool ioports_add_analog (io_analog_t *ports);
+//bool ioports_add_digital (io_digital_t *ports);
 void ioports_add_settings (driver_settings_load_ptr settings_loaded, setting_changed_ptr setting_changed);
 void ioport_save_input_settings (xbar_t *xbar, gpio_in_config_t *config);
 void ioport_save_output_settings (xbar_t *xbar, gpio_out_config_t *config);

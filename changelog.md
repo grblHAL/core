@@ -1,5 +1,31 @@
 ## grblHAL changelog
 
+<a name="20250311">Build 20250311
+
+Core:
+
+* Some ioports HAL wrapper functions refactored. Fixes persisting issue with coprocessor control pins mentioned [here](https://github.com/grblHAL/core/discussions/675#discussioncomment-12434634).
+
+* Changed some parts to no longer reference deprecated code.
+
+* Added some display driver symbols \(for plugin use\).
+
+Drivers:
+
+* STM32F4xx: added flexi-HAL board, ref. PR [#]().
+
+* STM32F4xx, STM32F7xx: fix for regression causing axis drift when step delay was enabled with $29. Ref. issue [#220](https://github.com/grblHAL/STM32F4xx/issues/220).
+
+* ESP32: fixed board map errors.Ref issue [#150](https://github.com/grblHAL/ESP32/issues/150). Improved I2C driver code.
+
+Plugins:
+
+* Networking: workaround for iMXRT1062 compiler \(linker?\) issue.
+
+* OpenPNP: no longer references deprecated code.
+
+---
+
 <a name="20250307">Build 20250307
 
 Core:
