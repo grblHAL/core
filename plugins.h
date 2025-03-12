@@ -260,9 +260,9 @@ typedef union {
 #define DISPLAY_UART            (1<<2) //!< 4
 
 // Plugins
-#define DISPLAY_I2C_INTERFACE   ((1<<3)|DISPLAY_I2C) //!< 9
-#define DISPLAY_I2C_LEDS        ((1<<4)|DISPLAY_I2C) //!< 17
-#define DISPLAY_I2C_LUC         ((1<<5)|DISPLAY_I2C) //!< 33
+#define DISPLAY_I2C_INTERFACE   ((1<<3)|DISPLAY_I2C) //!< 9  - @grblhal
+#define DISPLAY_I2C_LEDS        ((1<<4)|DISPLAY_I2C) //!< 17 - @grblhal
+#define DISPLAY_I2C_OLED_1      ((1<<5)|DISPLAY_I2C) //!< 33 - @luc-github
 
 // Driver chips
 

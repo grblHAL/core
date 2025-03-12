@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+<a name="20250312">20250312
+
+Core:
+
+* Changed display plugin defines/symbols. No functional change.
+
+Drivers:
+
+* STM32F1xx: added PC9 as option for spindle PWM output.
+
+* RP2040: "hardened" code in order to avoid occasional too short step intervals at high step rates. Fixed copy/paste error.
+
+Plugins:
+
+* Spindle: fix for incorrect sign returned from spindle data function used for spindle sync. Depends on stepper configuration.
+
+---
+
 <a name="20250311">Build 20250311
 
 Core:
@@ -12,11 +30,11 @@ Core:
 
 Drivers:
 
-* STM32F4xx: added flexi-HAL board, ref. PR [#]().
+* STM32F4xx: added flexi-HAL board, ref. PR [#217](https://github.com/grblHAL/STM32F4xx/pull/217).
 
 * STM32F4xx, STM32F7xx: fix for regression causing axis drift when step delay was enabled with $29. Ref. issue [#220](https://github.com/grblHAL/STM32F4xx/issues/220).
 
-* ESP32: fixed board map errors.Ref issue [#150](https://github.com/grblHAL/ESP32/issues/150). Improved I2C driver code.
+* ESP32: fixed board map errors. Ref issue [#150](https://github.com/grblHAL/ESP32/issues/150). Improved I2C driver code.
 
 Plugins:
 
