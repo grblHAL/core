@@ -1017,7 +1017,7 @@ static status_code_t set_probe_flags (setting_id_t id, uint_fast16_t int_value)
 
 static status_code_t set_tool_change_mode (setting_id_t id, uint_fast16_t int_value)
 {
-    if(!hal.driver_cap.atc && hal.stream.suspend_read && int_value <= ToolChange_Ignore) {
+    if(!hal.driver_cap.atc && hal.stream.suspend_read && int_value <= ToolChange_FastSemiAutomatic) {
 #if COMPATIBILITY_LEVEL > 1
         if((toolchange_mode_t)int_value == ToolChange_Manual_G59_3 || (toolchange_mode_t)int_value == ToolChange_SemiAutomatic || (toolchange_mode_t)int_value == ToolChange_FastSemiAutomatic)
             return Status_InvalidStatement;
