@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+<a name="20250313">Build 20250313
+
+Core:
+
+* Added setting $677 for stepper spindle options.
+
+Drivers:
+
+* ESP32: added tentative board map for FluidNC v3 6-pack board.
+
+Plugins:
+
+* Spindle: fixed issues with stepper spindle enable/disable via S-commands. Related to issue [#30](https://github.com/grblHAL/Plugins_spindle/issues/30).
+
+---
+
 <a name="20250312">20250312
 
 Core:
@@ -14,7 +30,7 @@ Drivers:
 
 Plugins:
 
-* Spindle: fix for incorrect sign returned from spindle data function used for spindle sync. Depends on stepper configuration.
+* Spindle: fix for incorrect sign returned from stepper spindle data function used for spindle sync. Depends on stepper configuration.
 
 ---
 

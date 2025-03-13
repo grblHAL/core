@@ -455,6 +455,7 @@ typedef enum {
     Setting_THC_Options = 674,
     Setting_MacroATC_Options = 675,
     Setting_ResetActions = 676,
+    Setting_StepperSpindle_Options = 677,
 
     Setting_SpindleInvertMask1 = 716,
 
@@ -877,7 +878,8 @@ typedef struct {
     axes_signals_t motor_fault_enable;
     axes_signals_t motor_fault_invert;
     macro_atc_flags_t macro_atc_flags;
-    char reserved[19];          // Reserved For future expansion
+    stepper_spindle_settings_flags_t stepper_spindle_flags;
+    char reserved[18];          // Reserved For future expansion
 } settings_t;
 
 typedef enum {

@@ -208,6 +208,16 @@ typedef union {
     };
 } spindle_settings_flags_t;
 
+typedef union {
+    uint8_t value;
+    uint8_t mask;
+    struct {
+        uint8_t allow_axis_control    :1,
+                sync_position         :1,
+                unassigned            :6;
+    };
+} stepper_spindle_settings_flags_t;
+
 typedef struct {
     spindle_state_t invert;
     spindle_settings_flags_t flags;

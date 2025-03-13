@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2023-2024 Terje Io
+  Copyright (c) 2023-2025 Terje Io
 
   Algorithm based on article/code by David Austin:
   https://www.embedded.com/generate-stepper-motor-speed-profiles-in-real-time/
@@ -315,6 +315,11 @@ Motor will be accelerated or decelerated to the new speed.
 */
 float st2_motor_set_speed (st2_motor_t *motor, float speed)
 {
+    if(speed == 0.0f) {
+        st2_motor_stop(motor);
+        return speed;
+    }
+
     motor->speed = speed > settings.axis[motor->idx].max_rate ? settings.axis[motor->idx].max_rate : speed;
     motor->speed *= settings.axis[motor->idx].steps_per_mm / 60.0f;
 
