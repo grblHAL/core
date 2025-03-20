@@ -65,11 +65,11 @@ typedef message_code_t (*feedback_message_ptr)(message_code_t message_code);
 typedef alarm_code_t (*alarm_message_ptr)(alarm_code_t alarm_code);
 
 typedef struct {
-    init_message_ptr init_message;          //<! Prints system welcome message.
-    help_message_ptr help_message;          //<! Prints system help message.
-    status_message_ptr status_message;      //<! Prints system status messages.
-    feedback_message_ptr feedback_message;  //<! Prints miscellaneous feedback messages.
-    alarm_message_ptr alarm_message;        //<! Prints alarm message.
+    init_message_ptr init_message;          //!< Prints system welcome message.
+    help_message_ptr help_message;          //!< Prints system help message.
+    status_message_ptr status_message;      //!< Prints system status messages.
+    feedback_message_ptr feedback_message;  //!< Prints miscellaneous feedback messages.
+    alarm_message_ptr alarm_message;        //!< Prints alarm message.
     setting_output_ptr setting;
 } report_t;
 

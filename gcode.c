@@ -166,6 +166,21 @@ parser_state_t *gc_get_state (void)
     return &gc_state;
 }
 
+char *gc_coord_system_to_str (coord_system_id_t id)
+{
+    static char buf[6];
+
+    uint8_t g5x = id + 54;
+
+    strcat(strcpy(buf, "G"), uitoa((uint32_t)(g5x > 59 ? 59 : g5x)));
+    if(g5x > 59) {
+        strcat(buf, ".");
+        strcat(buf, uitoa((uint32_t)(g5x - 59)));
+    }
+
+    return buf;
+}
+
 static void set_spindle_override (spindle_t *spindle, bool disable)
 {
     if(spindle->hal && spindle->hal->param->state.override_disable != disable) {

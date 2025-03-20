@@ -452,11 +452,11 @@ static void task_execute (sys_state_t state)
     if(immediate_task && sys.driver_started) {
 
         hal.irq_disable();
-        task = immediate_task;
-        immediate_task = NULL;
+        if((task = immediate_task))
+            immediate_task = NULL;
         hal.irq_enable();
 
-        do {
+        if(task) do {
             void *data = task->data;
             foreground_task_ptr fn = task->fn;
             task_free(task);
@@ -474,12 +474,27 @@ static void task_execute (sys_state_t state)
         task->fn(task->data);
     } while((task = task->next));
 
-    while(next_task && (int32_t)(next_task->time - now) <= 0) {
+    while((task = next_task) && (int32_t)(task->time - now) <= 0) {
 
-        void *data = next_task->data;
-        foreground_task_ptr fn = next_task->fn;
-        task_free(next_task);
-        next_task = next_task->next;
+        hal.irq_disable();
+
+        if(task == next_task)
+            next_task = task->next;
+        else {
+            core_task_t *t;
+            if((t = next_task)) {
+                while(t->next && t->next != task)
+                    t = t->next;
+                if(t->next && t->next == task)
+                    t->next = task->next;
+            }
+        }
+
+        hal.irq_enable();
+
+        void *data = task->data;
+        foreground_task_ptr fn = task->fn;
+        task_free(task);
 
         fn(data);
     }

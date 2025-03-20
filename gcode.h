@@ -702,6 +702,8 @@ float *gc_get_scaling (void);
 // Get current axis offset.
 float gc_get_offset (uint_fast8_t idx, bool real_time);
 
+char *gc_coord_system_to_str (coord_system_id_t id);
+
 void gc_clear_output_commands (output_command_t *cmd);
 
 spindle_t *gc_spindle_get (spindle_num_t spindle);

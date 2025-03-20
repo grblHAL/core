@@ -42,7 +42,7 @@
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_BUILD 20250313
+#define GRBL_BUILD 20250317
 
 #define GRBL_URL "https://github.com/grblHAL"
 
@@ -84,52 +84,61 @@
 // g-code programs, maybe selected for interface programs.
 // NOTE: If changed, manually update help message in report.c.
 
-#define CMD_EXIT 0x03 // ctrl-C (ETX)
-#define CMD_REBOOT 0x14 // ctrl-T (DC4) - only acted upon if preceded by 0x1B (ESC)
-#define CMD_RESET 0x18 // ctrl-X (CAN)
-#define CMD_STOP 0x19 // ctrl-Y (EM)
-#define CMD_STATUS_REPORT_LEGACY '?'
-#define CMD_CYCLE_START_LEGACY '~'
-#define CMD_FEED_HOLD_LEGACY '!'
-#define CMD_PROGRAM_DEMARCATION '%'
+#define CMD_EXIT                    0x03 //!< ctrl-C (ETX)
+#define CMD_REBOOT                  0x14 //!< ctrl-T (DC4) - only acted upon if preceded by 0x1B (ESC)
+#define CMD_RESET                   0x18 //!< ctrl-X (CAN)
+#define CMD_STOP                    0x19 //!< ctrl-Y (EM)
+#define CMD_STATUS_REPORT_LEGACY    '?'
+#define CMD_CYCLE_START_LEGACY      '~'
+#define CMD_FEED_HOLD_LEGACY        '!'
+#define CMD_PROGRAM_DEMARCATION     '%'
 
 // NOTE: All override realtime commands must be in the extended ASCII character set, starting
 // at character value 128 (0x80) and up to 255 (0xFF). If the normal set of realtime commands,
 // such as status reports, feed hold, reset, and cycle start, are moved to the extended set
 // space, protocol.c's protocol_process_realtime() will need to be modified to accommodate the change.
-#define CMD_STATUS_REPORT 0x80 // TODO: use 0x05 ctrl-E ENQ instead?
-#define CMD_CYCLE_START 0x81   // TODO: use 0x06 ctrl-F ACK instead? or SYN/DC2/DC3?
-#define CMD_FEED_HOLD 0x82     // TODO: use 0x15 ctrl-U NAK instead?
-#define CMD_GCODE_REPORT 0x83
-#define CMD_SAFETY_DOOR 0x84
-#define CMD_JOG_CANCEL  0x85
+#define CMD_STATUS_REPORT                   0x80 // TODO: use 0x05 ctrl-E ENQ instead?
+#define CMD_CYCLE_START                     0x81 // TODO: use 0x06 ctrl-F ACK instead? or SYN/DC2/DC3?
+#define CMD_FEED_HOLD                       0x82 // TODO: use 0x15 ctrl-U NAK instead?
+#define CMD_GCODE_REPORT                    0x83
+#define CMD_SAFETY_DOOR                     0x84
+#define CMD_JOG_CANCEL                      0x85
 //#define CMD_DEBUG_REPORT 0x86 // Only when DEBUG enabled, sends debug report in '{}' braces.
-#define CMD_STATUS_REPORT_ALL 0x87
-#define CMD_OPTIONAL_STOP_TOGGLE 0x88
-#define CMD_SINGLE_BLOCK_TOGGLE 0x89
-#define CMD_OVERRIDE_FAN0_TOGGLE 0x8A       // Toggle Fan 0 on/off, not implemented by the core.
-#define CMD_MPG_MODE_TOGGLE 0x8B            // Toggle MPG mode on/off, not implemented by the core.
-#define CMD_AUTO_REPORTING_TOGGLE 0x8C      // Toggle auto real time reporting if configured.
-#define CMD_OVERRIDE_FEED_RESET 0x90        // Restores feed override value to 100%.
-#define CMD_OVERRIDE_FEED_COARSE_PLUS 0x91
-#define CMD_OVERRIDE_FEED_COARSE_MINUS 0x92
-#define CMD_OVERRIDE_FEED_FINE_PLUS 0x93
-#define CMD_OVERRIDE_FEED_FINE_MINUS 0x94
-#define CMD_OVERRIDE_RAPID_RESET 0x95       // Restores rapid override value to 100%.
-#define CMD_OVERRIDE_RAPID_MEDIUM 0x96
-#define CMD_OVERRIDE_RAPID_LOW 0x97
+#define CMD_STATUS_REPORT_ALL               0x87
+#define CMD_OPTIONAL_STOP_TOGGLE            0x88
+#define CMD_SINGLE_BLOCK_TOGGLE             0x89
+#define CMD_OVERRIDE_FAN0_TOGGLE            0x8A //!< Toggle Fan 0 on/off, not implemented by the core.
+#define CMD_MPG_MODE_TOGGLE                 0x8B //!< Toggle MPG mode on/off, not implemented by the core.
+#define CMD_AUTO_REPORTING_TOGGLE           0x8C //!< Toggle auto real time reporting if configured.
+#define CMD_OVERRIDE_FEED_RESET             0x90 //!< Restores feed override value to 100%.
+#define CMD_OVERRIDE_FEED_COARSE_PLUS       0x91
+#define CMD_OVERRIDE_FEED_COARSE_MINUS      0x92
+#define CMD_OVERRIDE_FEED_FINE_PLUS         0x93
+#define CMD_OVERRIDE_FEED_FINE_MINUS        0x94
+#define CMD_OVERRIDE_RAPID_RESET            0x95 //!< Restores rapid override value to 100%.
+#define CMD_OVERRIDE_RAPID_MEDIUM           0x96
+#define CMD_OVERRIDE_RAPID_LOW              0x97
 // #define CMD_OVERRIDE_RAPID_EXTRA_LOW 0x98 // *NOT SUPPORTED*
 #define CMD_OVERRIDE_SPINDLE_RESET 0x99     // Restores spindle override value to 100%.
-#define CMD_OVERRIDE_SPINDLE_COARSE_PLUS 0x9A
-#define CMD_OVERRIDE_SPINDLE_COARSE_MINUS 0x9B
-#define CMD_OVERRIDE_SPINDLE_FINE_PLUS 0x9C
-#define CMD_OVERRIDE_SPINDLE_FINE_MINUS 0x9D
-#define CMD_OVERRIDE_SPINDLE_STOP 0x9E
-#define CMD_OVERRIDE_COOLANT_FLOOD_TOGGLE 0xA0
-#define CMD_OVERRIDE_COOLANT_MIST_TOGGLE 0xA1
-#define CMD_PID_REPORT 0xA2
-#define CMD_TOOL_ACK 0xA3
-#define CMD_PROBE_CONNECTED_TOGGLE 0xA4
+#define CMD_OVERRIDE_SPINDLE_COARSE_PLUS    0x9A
+#define CMD_OVERRIDE_SPINDLE_COARSE_MINUS   0x9B
+#define CMD_OVERRIDE_SPINDLE_FINE_PLUS      0x9C
+#define CMD_OVERRIDE_SPINDLE_FINE_MINUS     0x9D
+#define CMD_OVERRIDE_SPINDLE_STOP           0x9E
+#define CMD_OVERRIDE_COOLANT_FLOOD_TOGGLE   0xA0
+#define CMD_OVERRIDE_COOLANT_MIST_TOGGLE    0xA1
+#define CMD_PID_REPORT                      0xA2
+#define CMD_TOOL_ACK                        0xA3
+#define CMD_PROBE_CONNECTED_TOGGLE          0xA4
+// The following character codes are reserved for plugin use
+#define CMD_MACRO_0 0xB0
+#define CMD_MACRO_1 0xB1
+#define CMD_MACRO_2 0xB2
+#define CMD_MACRO_3 0xB3
+#define CMD_MACRO_4 0xB4
+#define CMD_MACRO_5 0xB5
+#define CMD_MACRO_6 0xB6
+#define CMD_MACRO_7 0xB7
 
 // System motion line numbers must be zero.
 #define JOG_LINE_NUMBER 0

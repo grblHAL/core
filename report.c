@@ -75,19 +75,6 @@ static char *appendbuf (int argc, ...)
     return buf;
 }
 
-static char *map_coord_system (coord_system_id_t id)
-{
-    uint8_t g5x = id + 54;
-
-    strcpy(buf, uitoa((uint32_t)(g5x > 59 ? 59 : g5x)));
-    if(g5x > 59) {
-        strcat(buf, ".");
-        strcat(buf, uitoa((uint32_t)(g5x - 59)));
-    }
-
-    return buf;
-}
-
 // Convert axis position values to null terminated string (mm).
 static char *get_axis_values_mm (float *axis_values)
 {
@@ -642,7 +629,7 @@ void report_ngc_parameters (void)
                 break;
 
             default: // G54-G59
-                hal.stream.write(map_coord_system((coord_system_id_t)idx));
+                hal.stream.write(gc_coord_system_to_str((coord_system_id_t)idx) + 1);
                 break;
         }
 
@@ -710,8 +697,8 @@ void report_gcode_modes (void)
     } else
         hal.stream.write(uitoa((uint32_t)gc_state.modal.motion));
 
-    hal.stream.write(" G");
-    hal.stream.write(map_coord_system(gc_state.modal.coord_system.id));
+    hal.stream.write(" ");
+    hal.stream.write(gc_coord_system_to_str(gc_state.modal.coord_system.id));
 
 #if COMPATIBILITY_LEVEL < 10
 
@@ -1375,8 +1362,8 @@ void report_realtime_status (void)
         }
 
         if(report.gwco) {
-            hal.stream.write_all("|WCS:G");
-            hal.stream.write_all(map_coord_system(gc_state.modal.coord_system.id));
+            hal.stream.write_all("|WCS:");
+            hal.stream.write_all(gc_coord_system_to_str(gc_state.modal.coord_system.id));
         }
 
         if(report.overrides) {

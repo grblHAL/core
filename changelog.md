@@ -1,5 +1,29 @@
 ## grblHAL changelog
 
+<a name="20250320">Build 20250320
+
+Core:
+
+* "Hardened" task handler code, reseved some realtime control characters for macro plugins, added missing file to _CMakeLists.txt_ and made private function public for plugin use.
+
+Drivers:
+
+* ESP32: added tentative support for fourth motor for MKS DLC32 MAX board. Untested.
+
+* RP2040: moved support code for MCP3221 ADC, fixed bug affecting RP2450 IRQ handling for gpio numbers > 31 and added plasma plugin.
+
+* STM32F4xx: expanded check for I2C peripheral beeing ready to accept new commands.
+
+* STM32Fxxxx: updated _my_machine.h_ for display enable change.
+
+Plugins:
+
+* Keypad: added PR [#16](https://github.com/grblHAL/Plugin_keypad/pull/16) and keycode 'o' for cycling through coordinate systems. Changed default macro keycode bindings to new reserved realtime control characters.
+
+* Some: removed Arduino specific include paths.
+
+---
+
 <a name="20250313">Build 20250313
 
 Core:
@@ -12,7 +36,7 @@ Drivers:
 
 Plugins:
 
-* Spindle: fixed issues with stepper spindle enable/disable via S-commands. Related to issue [#30](https://github.com/grblHAL/Plugins_spindle/issues/30).
+* Spindle: added support for setting $677. Fixed issues with stepper spindle enable/disable via S-commands. Related to issue [#30](https://github.com/grblHAL/Plugins_spindle/issues/30).
 
 ---
 
