@@ -205,6 +205,11 @@
     event_out_init();
 #endif
 
+#if PICOHAL_ENABLE
+    extern void picohal_init (void);
+    picohal_init();
+#endif
+
 // End third party plugin definitions.
 
 #if ODOMETER_ENABLE
