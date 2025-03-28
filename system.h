@@ -85,6 +85,30 @@ __NOTE:__ flags are mutually exclusive, bit map allows testing for multiple stat
 #define STATE_TOOL_CHANGE   bit(9) //!< Manual tool change, similar to #STATE_HOLD - but stops spindle and allows jogging.
 ///@}
 
+//! \def system_state_t
+/*! @name System state enum values.
+
+This enum contains definitions for the bit position of \ref sys_state flags, bit 0 is 1. ffs() can be used to get it from a \ref sys_state_t value.
+
+__NOTE:__ these enum values are not referenced in the core.
+*/
+///@{
+typedef enum {
+    SystemState_Idle = 0,
+    SystemState_Alarm = 1,
+    SystemState_CheckMode = 2,
+    SystemState_Homing = 3,
+    SystemState_Cycle = 4,
+    SystemState_Hold = 5,
+    SystemState_Jog = 6,
+    SystemState_DoorOpen = 7,
+    SystemState_Sleep = 8,
+    SystemState_EStop = 9,
+    SystemState_ToolChange = 10,
+    SystemState_Undefined = 255
+} __attribute__ ((__packed__)) system_state_t;
+///@}
+
 #ifdef ARDUINO
 
 typedef enum  {
@@ -269,7 +293,8 @@ typedef union {
                  auto_reporting          :1, //!< Set to true when auto real time reporting is enabled.
                  synchronizing           :1, //!< Set to true when protocol_buffer_synchronize() is running.
                  travel_changed          :1, //!< Set to true when maximum travel settings has changed.
-                 unused                  :4;
+                 is_homing               :1,
+                 unused                  :3;
     };
 } system_flags_t;
 

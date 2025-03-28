@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2019-2024 Terje Io
+  Copyright (c) 2019-2025 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -43,14 +43,38 @@ typedef union {
     };
 } planner_cond_t;
 
+typedef union {
+    uint32_t value[N_AXIS];
+    struct {
+        uint32_t x;
+        uint32_t y;
+        uint32_t z;
+#ifdef A_AXIS
+        uint32_t a;
+#endif
+#ifdef B_AXIS
+        uint32_t b;
+#endif
+#ifdef C_AXIS
+        uint32_t c;
+#endif
+#ifdef U_AXIS
+        uint32_t u;
+#endif
+#ifdef V_AXIS
+        uint32_t v;
+#endif
+    };
+} steps_t;
+
 // This struct stores a linear movement of a g-code block motion with its critical "nominal" values
 // are as specified in the source g-code.
 typedef struct plan_block {
     // Fields used by the bresenham algorithm for tracing the line
     // NOTE: Used by stepper algorithm to execute the block correctly. Do not alter these values.
-    uint32_t steps[N_AXIS];         // Step count along each axis
+    steps_t steps;                  // Step count along each axis
     uint32_t step_event_count;      // The maximum step axis count and number of steps required to complete this block.
-    axes_signals_t direction_bits;  // The direction bit set for this block (refers to *_DIRECTION_PIN in config.h)
+    axes_signals_t direction;       // The direction bit set for this block (refers to *_DIRECTION_PIN in config.h)
 
     offset_id_t offset_id;
     // Block condition data to ensure correct execution depending on states and overrides.

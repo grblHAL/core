@@ -139,6 +139,30 @@ typedef union {
 } axes_signals_t;
 
 typedef union {
+    int32_t value[N_AXIS];
+    struct {
+        int32_t x;
+        int32_t y;
+        int32_t z;
+#ifdef A_AXIS
+        int32_t a;
+#endif
+#ifdef B_AXIS
+        int32_t b;
+#endif
+#ifdef C_AXIS
+        int32_t c;
+#endif
+#ifdef U_AXIS
+        int32_t u;
+#endif
+#ifdef V_AXIS
+        int32_t v;
+#endif
+    };
+} mpos_t;
+
+typedef union {
     float values[2];
     struct {
         float x;

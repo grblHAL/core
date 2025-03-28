@@ -1254,7 +1254,7 @@ report_tracking_flags_t system_get_rt_report_flags (void)
 Fires the \ref grbl.on_rt_reports_added event.
 \param report a #report_tracking_t enum containing the flag(s) to set or clear.
  */
-void system_add_rt_report (report_tracking_t report)
+ISR_CODE void system_add_rt_report (report_tracking_t report)
 {
     switch(report) {
 

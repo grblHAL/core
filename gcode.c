@@ -3821,8 +3821,7 @@ status_code_t gc_execute_block (char *block)
 
                     mc_line(gc_block.values.xyz, &plan_data);
 
-                    protocol_buffer_synchronize();    // Wait until synchronized move is finished,
-                    sys.override.control = overrides; // then restore previous override disable status.
+                    mc_override_ctrl_update(overrides);  // Wait until synchronized move is finished, then restore previous override disable status.
                 }
                 break;
 
@@ -3838,7 +3837,7 @@ status_code_t gc_execute_block (char *block)
 
                     mc_thread(&plan_data, gc_state.position, &thread, overrides.feed_hold_disable);
 
-                    sys.override.control = overrides; // then restore previous override disable status.
+                    mc_override_ctrl_update(overrides); // Wait until synchronized move is finished, then restore previous override disable status.
                 }
                 break;
 
@@ -3889,9 +3888,7 @@ status_code_t gc_execute_block (char *block)
     // [21. Program flow ]:
     // M0,M1,M2,M30,M60: Perform non-running program flow actions. During a program pause, the buffer may
     // refill and can only be resumed by the cycle start run-time command.
-    gc_state.modal.program_flow = gc_block.modal.program_flow;
-
-    if(gc_state.modal.program_flow || sys.flags.single_block) {
+    if((gc_state.modal.program_flow = gc_block.modal.program_flow) || sys.flags.single_block) {
 
         protocol_buffer_synchronize(); // Sync and finish all remaining buffered motions before moving on.
 

@@ -1338,9 +1338,11 @@ void report_realtime_status (void)
 
         if (override_counter > 0 && !report.overrides)
             override_counter--;
-        else if((report.overrides = !report.wco)) {
-            report.spindle = report.spindle || spindle_0_state.on;
-            report.coolant = report.coolant || hal.coolant.get_state().value != 0;
+        else {
+            if((report.overrides = !report.wco)) {
+                report.spindle = report.spindle || spindle_0_state.on;
+                report.coolant = report.coolant || hal.coolant.get_state().value != 0;
+            }
             override_counter = state & (STATE_HOMING|STATE_CYCLE|STATE_HOLD|STATE_JOG|STATE_SAFETY_DOOR)
                                 ? (REPORT_OVERRIDE_REFRESH_BUSY_COUNT - 1) // Reset counter for slow refresh
                                 : (REPORT_OVERRIDE_REFRESH_IDLE_COUNT - 1);

@@ -47,14 +47,14 @@ __NOTE:__ This data is copied from the prepped planner blocks so that the planne
 typedef struct st_block {
     uint_fast8_t id;                  //!< Id may be used by driver to track changes
     struct st_block *next;            //!< Pointer to next element in cirular list of blocks
-    uint32_t steps[N_AXIS];
+    steps_t steps;
     uint32_t step_event_count;
     float steps_per_mm;
     float millimeters;
     float programmed_rate;
     char *message;                     //!< Message to be displayed when block is executed
     output_command_t *output_commands; //!< Output commands (linked list) to be performed when block is executed
-    axes_signals_t direction_bits;
+    axes_signals_t direction;
     gc_override_flags_t overrides;     //!< Block bitfield variable for overrides
     bool backlash_motion;
     bool dynamic_rpm;                  //!< Tracks motions that require dynamic RPM adjustment
@@ -82,34 +82,16 @@ typedef struct st_segment {
 
 //! Stepper ISR data struct. Contains the running data for the main stepper ISR.
 typedef struct stepper {
-    uint32_t counter_x,             //!< Counter variable for the Bresenham line tracer, X-axis
-             counter_y,             //!< Counter variable for the Bresenham line tracer, Y-axis
-             counter_z              //!< Counter variable for the Bresenham line tracer, Z-axis
-    #ifdef A_AXIS
-           , counter_a              //!< Counter variable for the Bresenham line tracer, A-axis
-    #endif
-    #ifdef B_AXIS
-           , counter_b              //!< Counter variable for the Bresenham line tracer, B-axis
-    #endif
-    #ifdef C_AXIS
-           , counter_c              //!< Counter variable for the Bresenham line tracer, C-axis
-    #endif
-    #ifdef U_AXIS
-           , counter_u              //!< Counter variable for the Bresenham line tracer, U-axis
-    #endif
-    #ifdef V_AXIS
-           , counter_v              //!< Counter variable for the Bresenham line tracer, V-axis
-    #endif
-;
     bool new_block;                 //!< Set to true when a new block is started, might be referenced by driver code for advanced functionality.
-    bool dir_change;                //!< Set to true on direction changes, might be referenced by driver for advanced functionality.
-    axes_signals_t step_outbits;    //!< The stepping signals to be output.
-    axes_signals_t dir_outbits;     //!< The direction signals to be output. The direction signals may be output only when \ref stepper.dir_change is true to reduce overhead.
-    uint32_t steps[N_AXIS];         //!< Number of step pulse event events per axis step pulse generated.
+    axes_signals_t dir_changed;     //!< Per axis bits set to true on direction changes, might be referenced by driver for advanced functionality.
+    axes_signals_t step_out;        //!< The stepping signals to be output.
+    axes_signals_t dir_out;         //!< The direction signals to be output. The direction signals may be output only when \ref stepper.dir_change is true to reduce overhead.
     uint_fast8_t amass_level;       //!< AMASS level for this segment.
-//    uint_fast16_t spindle_pwm;
     uint_fast16_t step_count;       //!< Steps remaining in line segment motion.
     uint32_t step_event_count;      //!< Number of step pulse events to be output by this segment.
+    steps_t steps;                  //!< Number of step pulse event events per axis step pulse generated.
+    steps_t counter;                //!< Counter variables for the Bresenham line tracer.
+//    uint_fast16_t spindle_pwm;
     st_block_t *exec_block;         //!< Pointer to the block data for the segment being executed.
     segment_t *exec_segment;        //!< Pointer to the segment being executed.
 } stepper_t;

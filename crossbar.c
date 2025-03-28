@@ -117,7 +117,7 @@ void xbar_set_homing_source (void)
 }
 
 // Returns limit signals used by homing when home signals are not available.
-limit_signals_t xbar_get_homing_source (void)
+ISR_CODE limit_signals_t xbar_get_homing_source (void)
 {
     return home_source;
 }

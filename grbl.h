@@ -42,7 +42,7 @@
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_BUILD 20250317
+#define GRBL_BUILD 20250328
 
 #define GRBL_URL "https://github.com/grblHAL"
 
@@ -52,7 +52,7 @@
 #ifdef GRBL_ESP32
 #include "esp_attr.h"
 #define ISR_CODE IRAM_ATTR
-#else
+#elif !defined(ISR_CODE)
 // #define ISR_CODE __attribute__((long_call, section(".data")))
 // Used to decorate code run in interrupt context.
 // Do not remove or change unless you know what you are doing.

@@ -1,5 +1,34 @@
 ## grblHAL changelog
 
+<a name="20250328">Build 20250328
+
+Core:
+
+* Reduced default step pulse length to 5 microseconds. Added HAL parameter for minimum step pulse length set by driver, used for validation of $0 setting.
+
+* Changed HAL API signature for outputting step pulses, optimized to allow drivers to only change direction outputs when there is an actual direction change.
+
+* Improved handling of overrides at end of program when all motion is buffered. Possible fix for issue [#714](https://github.com/grblHAL/core/discussions/714).
+
+* Some optimizations to allow higher step rates.
+
+Drivers:
+
+* All: updated for core HAL signature change.
+
+* Most: added hardcoded (compile time overridable) minimum step pulse off time, defaults to 2 microseconds. This will limit max. possible step rate with a given step pulse length \(from $0 setting\).
+
+* iMRXT1062, RP2040: reduced minimum step pulse length to 1 microsecond.
+
+* STM32F1xx, STM32F3xx: increased minimum step pulse length to 3.5 microseconds.
+
+* STM32F7xx: reduced minimum step pulse length to 1.5 microsecond, moved critical code run in IRQ context to ITC RAM.
+
+* STM32F1xx, STM32F3xx, STM32F4xx and STM32F7xx: changed to use single timer for step generation, eliminates \(reduces?\) risk for lost steps at very high step rates and reduces jitter.  
+Added new compile time tuning parameters for interrupt latency used for step pulse timings, board developers may want to check and possibly override these in their board maps.
+
+---
+
 <a name="20250320">Build 20250320
 
 Core:

@@ -49,9 +49,9 @@
 #error "MPG_MODE_PIN must be defined!"
 #endif
 
-#if KEYPAD_ENABLE == 1 && !defined(I2C_STROBE_PORT)
+#if KEYPAD_ENABLE == 1 && !defined(I2C_STROBE_PIN)
 #error Keypad plugin not supported!
-#elif I2C_STROBE_ENABLE && !defined(I2C_STROBE_PORT)
+#elif I2C_STROBE_ENABLE && !defined(I2C_STROBE_PIN)
 #error "I2C strobe not supported!"
 #endif
 

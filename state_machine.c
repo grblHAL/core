@@ -338,6 +338,8 @@ void state_set (sys_state_t new_state)
                 break;
         }
 
+        sys.flags.is_homing = sys_state == STATE_HOMING;
+
         if(!(sys_state & (STATE_ALARM|STATE_ESTOP)))
             sys.alarm = Alarm_None;
 

@@ -212,6 +212,7 @@ int grbl_enter (void)
     hal.irq_disable = dummy_handler;
     hal.irq_claim = dummy_irq_claim;
     hal.nvs.size = GRBL_NVS_SIZE;
+    hal.step_us_min = 2.0f;
     hal.coolant_cap.flood = On;
     hal.limits.interrupt_callback = limit_interrupt_handler;
     hal.control.interrupt_callback = control_interrupt_handler;
@@ -536,7 +537,7 @@ ISR_CODE bool ISR_FUNC(task_add_delayed)(foreground_task_ptr fn, void *data, uin
     return task != NULL;
 }
 
-void task_delete (foreground_task_ptr fn, void *data)
+ISR_CODE void task_delete (foreground_task_ptr fn, void *data)
 {
     core_task_t *task, *prev = NULL;
 

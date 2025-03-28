@@ -67,7 +67,7 @@ static st_block_t st_block_buffer[SEGMENT_BUFFER_SIZE - 1];
 static segment_t segment_buffer[SEGMENT_BUFFER_SIZE];
 
 // Stepper ISR data struct. Contains the running data for the main stepper ISR.
-static stepper_t st;
+static stepper_t st = {};
 
 #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
 typedef struct {
@@ -90,7 +90,7 @@ static float cycles_per_min;
 static volatile segment_t *segment_buffer_tail, *segment_buffer_head;
 
 #if ENABLE_JERK_ACCELERATION
-// Static storage for acceleration value of last computed segment.   
+// Static storage for acceleration value of last computed segment.
 static float last_segment_accel = 0.0f;
 #endif
 
@@ -276,6 +276,7 @@ bool st_is_stepping (void)
 
 ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
 {
+    static uint32_t cycles_per_tick = 0;
 #if ENABLE_BACKLASH_COMPENSATION
     static bool backlash_motion;
 #endif
@@ -285,29 +286,32 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
 
         hal.stepper.pulse_start(&st);
 
-        st.new_block = st.dir_change = false;
+        st.new_block = false;
 
-        if (st.step_count == 0) // Segment is complete. Discard current segment.
+        if(st.step_count == 0) // Segment is complete. Discard current segment.
             st.exec_segment = NULL;
     }
 
     // If there is no step segment, attempt to pop one from the stepper buffer
-    if (st.exec_segment == NULL) {
+    if(st.exec_segment == NULL) {
         // Anything in the buffer? If so, load and initialize next step segment.
-        if (segment_buffer_tail != segment_buffer_head) {
+        if(segment_buffer_tail != segment_buffer_head) {
 
-            // Initialize new step segment and load number of steps to execute
+            // Initialize new step segment.
             st.exec_segment = (segment_t *)segment_buffer_tail;
 
-            // Initialize step segment timing per step and load number of steps to execute.
-            hal.stepper.cycles_per_tick(st.exec_segment->cycles_per_tick);
+            // Initialize step segment timing per step.
+            if(st.exec_segment->cycles_per_tick != cycles_per_tick)
+                hal.stepper.cycles_per_tick((cycles_per_tick = st.exec_segment->cycles_per_tick));
+
+            //  Load number of steps to execute.
             st.step_count = st.exec_segment->n_step; // NOTE: Can sometimes be zero when moving slow.
 
             // If the new segment starts a new planner block, initialize stepper variables and counters.
-            if (st.exec_block != st.exec_segment->exec_block) {
+            if(st.exec_block != st.exec_segment->exec_block) {
 
-                if((st.dir_change = st.exec_block == NULL || st.dir_outbits.value != st.exec_segment->exec_block->direction_bits.value))
-                    st.dir_outbits = st.exec_segment->exec_block->direction_bits;
+                if((st.dir_changed.bits = st.dir_out.bits ^ st.exec_segment->exec_block->direction.bits))
+                    st.dir_out = st.exec_segment->exec_block->direction;
 
                 if(st.exec_block != NULL && st.exec_block->offset_id != st.exec_segment->exec_block->offset_id)
                     sys.report.wco = sys.report.force_wco = On; // Do not generate grbl.on_rt_reports_added event!
@@ -340,21 +344,21 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
                 }
 
                 // Initialize Bresenham line and distance counters
-                st.counter_x = st.counter_y = st.counter_z
+                st.counter.x = st.counter.y = st.counter.z
                 #ifdef A_AXIS
-                  = st.counter_a
+                  = st.counter.a
                 #endif
                 #ifdef B_AXIS
-                  = st.counter_b
+                  = st.counter.b
                 #endif
                 #ifdef C_AXIS
-                  = st.counter_c
+                  = st.counter.c
                 #endif
                 #ifdef U_AXIS
-                  = st.counter_u
+                  = st.counter.u
                 #endif
                 #ifdef V_AXIS
-                  = st.counter_v
+                  = st.counter.v
                 #endif
                   = st.step_event_count >> 1;
 
@@ -363,28 +367,18 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
               #endif
             }
 
-          #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
+#ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
+
             // With AMASS enabled, adjust Bresenham axis increment counters according to AMASS level.
             st.amass_level = st.exec_segment->amass_level;
-            st.steps[X_AXIS] = st.exec_block->steps[X_AXIS] >> st.amass_level;
-            st.steps[Y_AXIS] = st.exec_block->steps[Y_AXIS] >> st.amass_level;
-            st.steps[Z_AXIS] = st.exec_block->steps[Z_AXIS] >> st.amass_level;
-           #ifdef A_AXIS
-            st.steps[A_AXIS] = st.exec_block->steps[A_AXIS] >> st.amass_level;
-           #endif
-           #ifdef B_AXIS
-            st.steps[B_AXIS] = st.exec_block->steps[B_AXIS] >> st.amass_level;
-           #endif
-           #ifdef C_AXIS
-            st.steps[C_AXIS] = st.exec_block->steps[C_AXIS] >> st.amass_level;
-           #endif
-           #ifdef U_AXIS
-            st.steps[U_AXIS] = st.exec_block->steps[U_AXIS] >> st.amass_level;
-           #endif
-           #ifdef V_AXIS
-            st.steps[V_AXIS] = st.exec_block->steps[V_AXIS] >> st.amass_level;
-           #endif
-         #endif
+
+            uint_fast8_t idx = N_AXIS;
+            do {
+                idx--;
+                st.steps.value[idx] = st.exec_block->steps.value[idx] >> st.amass_level;
+            } while(idx);
+
+#endif
 
             if(st.exec_segment->update_pwm)
                 st.exec_segment->update_pwm(st.exec_block->spindle, st.exec_segment->spindle_pwm);
@@ -400,6 +394,7 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
                 st.exec_block->spindle->update_pwm(st.exec_block->spindle, st.exec_block->spindle->pwm_off_value);
             }
 
+            cycles_per_tick = 0;
             st.exec_block = NULL;
             system_set_exec_state_flag(EXEC_CYCLE_COMPLETE); // Flag main program for cycle complete
 
@@ -420,107 +415,107 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
 #endif
     }
 
-    register axes_signals_t step_outbits = (axes_signals_t){0};
+    register axes_signals_t step_out = (axes_signals_t){0};
 
     // Execute step displacement profile by Bresenham line algorithm
 
-    st.counter_x += st.steps[X_AXIS];
-    if (st.counter_x > st.step_event_count) {
-        step_outbits.x = On;
-        st.counter_x -= st.step_event_count;
+    st.counter.x += st.steps.value[X_AXIS];
+    if (st.counter.x > st.step_event_count) {
+        step_out.x = On;
+        st.counter.x -= st.step_event_count;
 #if ENABLE_BACKLASH_COMPENSATION
         if(!backlash_motion)
 #endif
-            sys.position[X_AXIS] = sys.position[X_AXIS] + (st.dir_outbits.x ? -1 : 1);
+            sys.position[X_AXIS] = sys.position[X_AXIS] + (st.dir_out.x ? -1 : 1);
     }
 
-    st.counter_y += st.steps[Y_AXIS];
-    if (st.counter_y > st.step_event_count) {
-        step_outbits.y = On;
-        st.counter_y -= st.step_event_count;
+    st.counter.y += st.steps.value[Y_AXIS];
+    if (st.counter.y > st.step_event_count) {
+        step_out.y = On;
+        st.counter.y -= st.step_event_count;
 #if ENABLE_BACKLASH_COMPENSATION
         if(!backlash_motion)
 #endif
-            sys.position[Y_AXIS] = sys.position[Y_AXIS] + (st.dir_outbits.y ? -1 : 1);
+            sys.position[Y_AXIS] = sys.position[Y_AXIS] + (st.dir_out.y ? -1 : 1);
     }
 
-    st.counter_z += st.steps[Z_AXIS];
-    if (st.counter_z > st.step_event_count) {
-        step_outbits.z = On;
-        st.counter_z -= st.step_event_count;
+    st.counter.z += st.steps.value[Z_AXIS];
+    if (st.counter.z > st.step_event_count) {
+        step_out.z = On;
+        st.counter.z -= st.step_event_count;
 #if ENABLE_BACKLASH_COMPENSATION
         if(!backlash_motion)
 #endif
-            sys.position[Z_AXIS] = sys.position[Z_AXIS] + (st.dir_outbits.z ? -1 : 1);
+            sys.position[Z_AXIS] = sys.position[Z_AXIS] + (st.dir_out.z ? -1 : 1);
     }
 
   #ifdef A_AXIS
-      st.counter_a += st.steps[A_AXIS];
-      if (st.counter_a > st.step_event_count) {
-          step_outbits.a = On;
-          st.counter_a -= st.step_event_count;
+      st.counter.a += st.steps.value[A_AXIS];
+      if (st.counter.a > st.step_event_count) {
+          step_out.a = On;
+          st.counter.a -= st.step_event_count;
 #if ENABLE_BACKLASH_COMPENSATION
         if(!backlash_motion)
 #endif
-              sys.position[A_AXIS] = sys.position[A_AXIS] + (st.dir_outbits.a ? -1 : 1);
+              sys.position[A_AXIS] = sys.position[A_AXIS] + (st.dir_out.a ? -1 : 1);
       }
   #endif
 
   #ifdef B_AXIS
-      st.counter_b += st.steps[B_AXIS];
-      if (st.counter_b > st.step_event_count) {
-          step_outbits.b = On;
-          st.counter_b -= st.step_event_count;
+      st.counter.b += st.steps.value[B_AXIS];
+      if (st.counter.b > st.step_event_count) {
+          step_out.b = On;
+          st.counter.b -= st.step_event_count;
 #if ENABLE_BACKLASH_COMPENSATION
         if(!backlash_motion)
 #endif
-              sys.position[B_AXIS] = sys.position[B_AXIS] + (st.dir_outbits.b ? -1 : 1);
+              sys.position[B_AXIS] = sys.position[B_AXIS] + (st.dir_out.b ? -1 : 1);
       }
   #endif
 
   #ifdef C_AXIS
-      st.counter_c += st.steps[C_AXIS];
-      if (st.counter_c > st.step_event_count) {
-          step_outbits.c = On;
-          st.counter_c -= st.step_event_count;
+      st.counter.c += st.steps.value[C_AXIS];
+      if (st.counter.c > st.step_event_count) {
+          step_out.c = On;
+          st.counter.c -= st.step_event_count;
 #if ENABLE_BACKLASH_COMPENSATION
         if(!backlash_motion)
 #endif
-              sys.position[C_AXIS] = sys.position[C_AXIS] + (st.dir_outbits.c ? -1 : 1);
+              sys.position[C_AXIS] = sys.position[C_AXIS] + (st.dir_out.c ? -1 : 1);
       }
   #endif
 
   #ifdef U_AXIS
-    st.counter_u += st.steps[U_AXIS];
-    if (st.counter_u > st.step_event_count) {
-        step_outbits.u = On;
-        st.counter_u -= st.step_event_count;
+    st.counter.u += st.steps.value[U_AXIS];
+    if (st.counter.u > st.step_event_count) {
+        step_out.u = On;
+        st.counter.u -= st.step_event_count;
 #if ENABLE_BACKLASH_COMPENSATION
       if(!backlash_motion)
 #endif
-            sys.position[U_AXIS] = sys.position[U_AXIS] + (st.dir_outbits.u ? -1 : 1);
+            sys.position[U_AXIS] = sys.position[U_AXIS] + (st.dir_out.u ? -1 : 1);
     }
   #endif
 
   #ifdef V_AXIS
-    st.counter_v += st.steps[V_AXIS];
-    if (st.counter_v > st.step_event_count) {
-        step_outbits.v = On;
-        st.counter_v -= st.step_event_count;
+    st.counter.v += st.steps.value[V_AXIS];
+    if (st.counter.v > st.step_event_count) {
+        step_out.v = On;
+        st.counter.v -= st.step_event_count;
 #if ENABLE_BACKLASH_COMPENSATION
       if(!backlash_motion)
 #endif
-            sys.position[V_AXIS] = sys.position[V_AXIS] + (st.dir_outbits.v ? -1 : 1);
+            sys.position[V_AXIS] = sys.position[V_AXIS] + (st.dir_out.v ? -1 : 1);
     }
   #endif
 
-    st.step_outbits.value = step_outbits.value;
+    st.step_out.bits = step_out.bits;
 
     // During a homing cycle, lock out and prevent desired axes from moving.
-    if (state_get() == STATE_HOMING)
-        st.step_outbits.value &= sys.homing_axis_lock.mask;
+    if(sys.flags.is_homing)
+        st.step_out.bits &= sys.homing_axis_lock.bits;
 
-    if (st.step_count == 0 || --st.step_count == 0) {
+    if(st.step_count == 0 || --st.step_count == 0) {
         // Segment is complete. Advance segment tail pointer.
         segment_buffer_tail = segment_buffer_tail->next;
     }
@@ -561,8 +556,12 @@ void st_reset (void)
     pl_block = NULL;  // Planner block pointer used by segment buffer
     segment_buffer_tail = segment_buffer_head = &segment_buffer[0]; // empty = tail
 
+    axes_signals_t dir_out = st.dir_out;
+
     memset(&prep, 0, sizeof(st_prep_t));
     memset(&st, 0, sizeof(stepper_t));
+
+    st.dir_out = dir_out;
 
 #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
     // TODO: move to driver?
@@ -710,12 +709,12 @@ void st_prep_buffer (void)
                 // If the original data is divided, we can lose a step from integer roundoff.
                 do {
                     idx--;
-                    st_prep_block->steps[idx] = pl_block->steps[idx] << MAX_AMASS_LEVEL;
+                    st_prep_block->steps.value[idx] = pl_block->steps.value[idx] << MAX_AMASS_LEVEL;
                 } while(idx);
                 st_prep_block->step_event_count = pl_block->step_event_count << MAX_AMASS_LEVEL;
               #endif
 
-                st_prep_block->direction_bits = pl_block->direction_bits;
+                st_prep_block->direction = pl_block->direction;
                 st_prep_block->programmed_rate = pl_block->programmed_rate;
 //                st_prep_block->r = pl_block->programmed_rate;
                 st_prep_block->millimeters = pl_block->millimeters;
@@ -921,9 +920,9 @@ void st_prep_buffer (void)
                         // Check if we are on ramp up or ramp down. Ramp down if distance to end of acceleration is less than distance needed to reach 0 acceleration.
                         // Then limit acceleration change by jerk up to max acceleration and update for next segment.
                         // Minimum acceleration jerk per time_var to ensure acceleration completes. Acceleration change at end of ramp is in acceptable jerk range.
-                        last_segment_accel = min(last_segment_accel + pl_block->jerk * time_var, pl_block->max_acceleration); 
+                        last_segment_accel = min(last_segment_accel + pl_block->jerk * time_var, pl_block->max_acceleration);
                     } else {
-                        last_segment_accel = max(last_segment_accel - pl_block->jerk * time_var, pl_block->jerk * time_var);  
+                        last_segment_accel = max(last_segment_accel - pl_block->jerk * time_var, pl_block->jerk * time_var);
                     }
                     speed_var = last_segment_accel * time_var;
 #else
@@ -959,16 +958,16 @@ void st_prep_buffer (void)
 
                 default: // case Ramp_Decel:
                     // NOTE: mm_var used as a misc worker variable to prevent errors when near zero speed.
-#if ENABLE_JERK_ACCELERATION   
+#if ENABLE_JERK_ACCELERATION
                     time_to_jerk = last_segment_accel / pl_block->jerk;
                     jerk_rampdown = prep.exit_speed + time_to_jerk * (last_segment_accel - (0.5f * pl_block->jerk * time_to_jerk)); // Speedpoint to start ramping down deceleration. (V = a * t - 1/2 j * t^2)
                     if (prep.current_speed > jerk_rampdown) {
                         // Check if we are on ramp up or ramp down. Ramp down if speed is less than speed needed for reaching 0 acceleration.
                         // Then limit acceleration change by jerk up to max acceleration and update for next segment.
                         // Minimum acceleration of jerk per time_var to ensure deceleration completes. Acceleration change at end of ramp is in acceptable jerk range.
-                        last_segment_accel = min(last_segment_accel + pl_block->jerk * time_var, pl_block->max_acceleration); 
+                        last_segment_accel = min(last_segment_accel + pl_block->jerk * time_var, pl_block->max_acceleration);
                     } else {
-                        last_segment_accel = max(last_segment_accel - pl_block->jerk * time_var, pl_block->jerk * time_var);  
+                        last_segment_accel = max(last_segment_accel - pl_block->jerk * time_var, pl_block->jerk * time_var);
                     }
                     speed_var = last_segment_accel * time_var; // Used as delta speed (mm/min)
 #else

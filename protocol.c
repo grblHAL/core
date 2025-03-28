@@ -138,7 +138,7 @@ static bool recheck_line (char *line, line_flags_t *flags)
 }
 
 /*
-  GRBL PRIMARY LOOP:
+  grblHAL PRIMARY LOOP:
 */
 bool protocol_main_loop (void)
 {
@@ -274,8 +274,15 @@ bool protocol_main_loop (void)
                     }
                 } else if(*line == '[' && grbl.on_user_command)
                     gc_state.last_error = grbl.on_user_command(line);
-                else if (state_get() & (STATE_ALARM|STATE_ESTOP|STATE_JOG)) // Everything else is gcode. Block if in alarm, eStop or jog mode.
-                    gc_state.last_error = Status_SystemGClock;
+                else if(state_get() & (STATE_ALARM|STATE_ESTOP|STATE_JOG)) { // Everything else is gcode. Block if in alarm, eStop or jog mode.
+                    if(*line == CMD_PROGRAM_DEMARCATION && line[1] == '\0' && (state_get() & (STATE_ALARM|STATE_ESTOP))) {
+                        gc_state.file_run = !gc_state.file_run;
+                        gc_state.last_error = Status_OK;
+                        if(grbl.on_file_demarcate)
+                            grbl.on_file_demarcate(gc_state.file_run);
+                    } else
+                        gc_state.last_error = Status_SystemGClock;
+                }
 #if COMPATIBILITY_LEVEL == 0
                 else if(gc_state.last_error == Status_OK || gc_state.last_error == Status_GcodeToolChangePending) { // Parse and execute g-code block.
 #else
@@ -383,7 +390,7 @@ bool protocol_buffer_synchronize (void)
     // If system is queued, ensure cycle resumes if the auto start flag is present.
     protocol_auto_cycle_start();
 
-    sys.flags.synchronizing = On;
+    sys.flags.synchronizing = gc_state.modal.program_flow == ProgramFlow_Running;
     while ((ok = protocol_execute_realtime()) && (plan_get_current_block() || state_get() == STATE_CYCLE));
     sys.flags.synchronizing = Off;
 

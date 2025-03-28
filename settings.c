@@ -436,6 +436,7 @@ static char ganged_axes[] = "X-Axis,Y-Axis,Z-Axis";
 #endif
 
 static on_file_demarcate_ptr on_file_demarcate;
+static char step_us_min[4];
 static char fs_options[] = "Auto mount SD card,Hide LittleFS";
 static char spindle_types[100] = "";
 static char axis_dist[4] = "mm";
@@ -570,6 +571,35 @@ static status_code_t set_limits_invert_mask (setting_id_t id, uint_fast16_t int_
 }
 
 #endif
+
+static status_code_t validate_pulse_width (float max_rate, float steps_per_mm, float pulse_width)
+{
+/*
+    float f_step = (max_rate * steps_per_mm) / 60.0f;
+
+    return !gc_state.file_run && ((hal.max_step_rate && f_step > (float)hal.max_step_rate) || (pulse_width + 2.0f) > 1000000.0 / f_step) ? Status_MaxStepRateExceeded : Status_OK;
+*/
+    return Status_OK;
+}
+
+static status_code_t set_pulse_width (setting_id_t id, float value)
+{
+    uint_fast8_t idx = N_AXIS;
+    status_code_t status = Status_OK;
+
+    do {
+        idx--;
+#if N_AXIS > 3
+        if(bit_isfalse(settings.steppers.is_rotary.mask, bit(idx)))
+#endif
+            status = validate_pulse_width(settings.axis[idx].max_rate, settings.axis[idx].steps_per_mm, value);
+    } while(idx && status == Status_OK);
+
+    if(status == Status_OK)
+        settings.steppers.pulse_microseconds = value;
+
+    return status;
+}
 
 static status_code_t set_probe_invert (setting_id_t id, uint_fast16_t int_value)
 {
@@ -1223,9 +1253,7 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
     switch(settings_get_axis_base(setting, &idx)) {
 
         case Setting_AxisStepsPerMM:
-            if (hal.max_step_rate && value * settings.axis[idx].max_rate > (float)hal.max_step_rate * 60.0f)
-                status = Status_MaxStepRateExceeded;
-            else {
+            if((status = validate_pulse_width(settings.axis[idx].max_rate, value, settings.steppers.pulse_microseconds)) == Status_OK) {
                 if(settings.axis[idx].steps_per_mm > 0.0f && settings.axis[idx].steps_per_mm != value) {
                     float comp = value / settings.axis[idx].steps_per_mm;
                     sys.position[idx] *= comp;
@@ -1239,9 +1267,7 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
             break;
 
         case Setting_AxisMaxRate:
-            if (hal.max_step_rate && value * settings.axis[idx].steps_per_mm > (float)hal.max_step_rate * 60.0f)
-                status = Status_MaxStepRateExceeded;
-            else
+            if((status = validate_pulse_width(value, settings.axis[idx].steps_per_mm, settings.steppers.pulse_microseconds)) == Status_OK)
                 settings.axis[idx].max_rate = value;
             break;
 
@@ -1361,6 +1387,10 @@ static float get_float (setting_id_t setting)
                 break;
         }
     } else switch(setting) {
+
+        case Setting_PulseMicroseconds:
+            value = settings.steppers.pulse_microseconds;
+            break;
 
         case Setting_HomingFeedRate:
             value = settings.axis[0].homing_feed_rate;
@@ -1981,7 +2011,7 @@ static bool no_toolsetter_available (const setting_detail_t *setting, uint_fast1
 }
 
 PROGMEM static const setting_detail_t setting_detail[] = {
-     { Setting_PulseMicroseconds, Group_Stepper, "Step pulse time", "microseconds", Format_Decimal, "#0.0", "2.0", NULL, Setting_IsLegacy, &settings.steppers.pulse_microseconds, NULL, NULL },
+     { Setting_PulseMicroseconds, Group_Stepper, "Step pulse time", "microseconds", Format_Decimal, "#0.0", step_us_min, NULL, Setting_IsLegacyFn, set_pulse_width, get_float, NULL },
      { Setting_StepperIdleLockTime, Group_Stepper, "Step idle delay", "milliseconds", Format_Int16, "####0", NULL, "65535", Setting_IsLegacy, &settings.steppers.idle_lock_time, NULL, NULL },
      { Setting_StepInvertMask, Group_Stepper, "Step pulse invert", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsLegacy, &settings.steppers.step_invert.mask, NULL, NULL },
      { Setting_DirInvertMask, Group_Stepper, "Step direction invert", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsLegacy, &settings.steppers.dir_invert.mask, NULL, NULL },
@@ -2158,8 +2188,9 @@ PROGMEM static const setting_detail_t setting_detail[] = {
 #ifndef NO_SETTINGS_DESCRIPTIONS
 
 PROGMEM static const setting_descr_t setting_descr[] = {
-    { Setting_PulseMicroseconds, "Sets time length per step. Minimum 2 microseconds.\\n\\n"
-                                 "This needs to be reduced from the default value of 10 when max. step rates exceed approximately 80 kHz."
+    { Setting_PulseMicroseconds, "Step pulse length in microseconds.\\n"
+                                 "Minimum depends on the processor and is typically in the range of 1 - 2.5.\\n\\n"
+                                 "The length has to be reduced from the default value of 5 when max. step rate exceed approximately 140 kHz."
     },
     { Setting_StepperIdleLockTime, "Sets a short hold delay when stopping to let dynamics settle before disabling steppers. Value 255 keeps motors enabled." },
     { Setting_StepInvertMask, "Inverts the step signals (active low)." },
@@ -2210,7 +2241,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_HomingPulloff, "Retract distance after triggering switch to disengage it. Homing will fail if switch isn't cleared." },
     { Setting_G73Retract, "G73 retract distance (for chip breaking drilling)." },
     { Setting_PulseDelayMicroseconds, "Step pulse delay.\\n\\n"
-                                      "Normally leave this at 0 as there is an implicit delay on direction changes when AMASS is active."
+                                      "When set > 0 and less than 2 the value is rounded up to 2 microseconds."
     },
     { Setting_RpmMax, "Maximum spindle speed, can be overridden by spindle plugins." },
     { Setting_RpmMin, "Minimum spindle speed, can be overridden by spindle plugins.\\n\\n"
@@ -2506,14 +2537,9 @@ static bool settings_clear_tool_data (void)
 
 #endif // N_TOOLS
 
-// Read global settings from persistent storage.
-// Checks version-byte of non-volatile storage and global settings copy.
-bool read_global_settings ()
+// Sanity check of settings, board map could have been changed...
+static void sanity_check (void)
 {
-    bool ok = hal.nvs.type != NVS_None && SETTINGS_VERSION == hal.nvs.get_byte(0) && hal.nvs.memcpy_from_nvs((uint8_t *)&settings, NVS_ADDR_GLOBAL, sizeof(settings_t), true) == NVS_TransferResult_OK;
-
-    // Sanity check of settings, board map could have been changed...
-
 #if LATHE_UVW_OPTION
     settings.mode = Mode_Lathe;
 #else
@@ -2526,6 +2552,25 @@ bool read_global_settings ()
 
     if(!hal.driver_cap.spindle_encoder)
         settings.spindle.ppr = 0;
+
+    if(settings.steppers.pulse_microseconds < hal.step_us_min)
+        settings.steppers.pulse_microseconds = hal.step_us_min;
+
+    if(hal.max_step_rate) {
+
+        uint_fast8_t idx = N_AXIS;
+        do {
+            idx--;
+#if N_AXIS > 3
+            if(bit_isfalse(settings.steppers.is_rotary.mask, bit(idx)) &&
+#else
+            if(
+#endif
+            (settings.axis[idx].max_rate * settings.axis[idx].steps_per_mm) / 60.0f > (float)hal.max_step_rate)
+                settings.axis[idx].max_rate = (float)hal.max_step_rate * 60.0f / settings.axis[idx].steps_per_mm;
+            // TODO: warn if changed?
+        } while(idx);
+    }
 
     if(SLEEP_DURATION <= 0.0f)
         settings.flags.sleep_enable = Off;
@@ -2545,10 +2590,18 @@ bool read_global_settings ()
 
     settings.control_invert.mask |= limits_override.mask;
     settings.control_disable_pullup.mask &= ~limits_override.mask;
+}
+
+// Read global settings from persistent storage.
+// Checks version-byte of non-volatile storage and global settings copy.
+bool read_global_settings (void)
+{
+    bool ok = hal.nvs.type != NVS_None && SETTINGS_VERSION == hal.nvs.get_byte(0) && hal.nvs.memcpy_from_nvs((uint8_t *)&settings, NVS_ADDR_GLOBAL, sizeof(settings_t), true) == NVS_TransferResult_OK;
+
+    sanity_check();
 
     return ok && settings.version.id == SETTINGS_VERSION;
 }
-
 
 // Write global settings to persistent storage
 void settings_write_global (void)
@@ -3247,10 +3300,15 @@ bool settings_add_spindle_type (const char *type)
 
 void onFileDemarcate (bool start)
 {
-    if(!start && sys.flags.travel_changed && limits_homing_required()) {
-        sys.flags.travel_changed = Off;
-        system_raise_alarm(Alarm_HomingRequired);
-        grbl.report.feedback_message(Message_HomingCycleRequired);
+    if(!start) {
+
+        sanity_check();
+
+        if(sys.flags.travel_changed && limits_homing_required()) {
+            sys.flags.travel_changed = Off;
+            system_raise_alarm(Alarm_HomingRequired);
+            grbl.report.feedback_message(Message_HomingCycleRequired);
+        }
     }
 
     if(on_file_demarcate)
@@ -3289,6 +3347,8 @@ void settings_init (void)
         grbl.tool_table.tool = &tools;
     }
 #endif
+
+    strcpy(step_us_min, ftoa(hal.step_us_min, 1));
 
     if(!read_global_settings()) {
 

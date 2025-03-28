@@ -394,6 +394,8 @@ static inline float limit_max_rate_by_axis_maximum (float *unit_vec)
    to execute the special system motion. */
 bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
 {
+    static axes_signals_t direction = {};
+
     // Prepare and initialize new block. Copy relevant pl_data for block execution.
     plan_block_t *block = block_buffer_head;
     int32_t target_steps[N_AXIS], position_steps[N_AXIS], delta_steps;
@@ -427,22 +429,24 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
 
         target_steps[idx] = lroundf(target[idx] * settings.axis[idx].steps_per_mm);
         if((delta_steps = target_steps[idx] - position_steps[idx])) {
-            block->steps[idx] = labs(delta_steps);
-            block->step_event_count = max(block->step_event_count, block->steps[idx]);
+            block->steps.value[idx] = labs(delta_steps);
+            block->step_event_count = max(block->step_event_count, block->steps.value[idx]);
             unit_vec[idx] = (float)delta_steps / settings.axis[idx].steps_per_mm; // Store unit vector numerator
+            // Set direction bits. Bit enabled always means direction is negative.
+            if(delta_steps < 0)
+                direction.bits |= bit(idx);
+            else
+                direction.bits &= ~bit(idx);
 #if N_AXIS > 3  && ROTARY_FIX
             motion.mask |= bit(idx);
 #endif
         } else {
-            block->steps[idx] = 0;
+            block->steps.value[idx] = 0;
             unit_vec[idx] = 0.0f; // Store unit vector numerator
         }
-
-        // Set direction bits. Bit enabled always means direction is negative.
-        if (delta_steps < 0)
-            block->direction_bits.mask |= bit(idx);
-
     } while(idx);
+
+    block->direction = direction;
 
     // Calculate RPMs to be used for Constant Surface Speed (CSS) calculations.
     if(block->spindle.css) {
