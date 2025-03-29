@@ -195,7 +195,10 @@ void st_wake_up (void)
     // cancel any pending steppers deenergize
     //st.exec_block = NULL;
     stepping = true;
+    st.dir_out.bits = 0;
     sys.steppers_deenergize = false;
+
+    hal.stepper.go_idle(true); // Reset step & dir outputs
     hal.stepper.wake_up();
 }
 
@@ -529,9 +532,7 @@ void st_reset (void)
     if(hal.probe.configure)
         hal.probe.configure(false, false);
 
-    // Initialize stepper driver idle state, clear step and direction port pins.
-    st_go_idle();
-   // hal.stepper.go_idle(true);
+    st_go_idle(); // Initialize stepper driver idle state.
 
     // NOTE: buffer indices starts from 1 for simpler driver coding!
 
@@ -556,12 +557,8 @@ void st_reset (void)
     pl_block = NULL;  // Planner block pointer used by segment buffer
     segment_buffer_tail = segment_buffer_head = &segment_buffer[0]; // empty = tail
 
-    axes_signals_t dir_out = st.dir_out;
-
     memset(&prep, 0, sizeof(st_prep_t));
     memset(&st, 0, sizeof(stepper_t));
-
-    st.dir_out = dir_out;
 
 #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
     // TODO: move to driver?

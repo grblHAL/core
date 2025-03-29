@@ -245,6 +245,10 @@ void state_set (sys_state_t new_state)
                 sys_state = pending_state = new_state;
                 park.flags.value = 0;
                 stateHandler = state_idle;
+                if(sys.flags.feed_hold_pending) {
+                    pending_state = STATE_HOLD;
+                    system_set_exec_state_flag(EXEC_FEED_HOLD);
+                }
                 break;
 
             case STATE_CYCLE:
@@ -298,16 +302,16 @@ void state_set (sys_state_t new_state)
                 break;
 
             case STATE_HOLD:
-                if (sys.override.control.sync && sys.override.control.feed_hold_disable)
-                    sys.flags.feed_hold_pending = On;
-                if (!((sys_state & STATE_JOG) || sys.override.control.feed_hold_disable)) {
-                    if (!initiate_hold(new_state)) {
+                if(!((sys_state & STATE_JOG) || sys.override.control.feed_hold_disable) ||
+                      (pending_state == STATE_HOLD && sys.flags.feed_hold_pending)) {
+                    if(!initiate_hold(new_state)) {
                         sys.holding_state = Hold_Complete;
                         stateHandler = state_await_resume;
                     }
                     sys_state = new_state;
                     sys.flags.feed_hold_pending = Off;
-                }
+                } else if(sys.override.control.sync && sys.override.control.feed_hold_disable)
+                    sys.flags.feed_hold_pending = On;
                 break;
 
             case STATE_SAFETY_DOOR:

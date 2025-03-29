@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+<a name="20250329">Build 20250329
+
+Core:
+
+* Fix for feedhold during G33 and G76 synchronized motion not beeing delayed until motion completed.
+
+* "Hardened" new optimized code to ensure initial motion is going in the correct direction.
+
+Drivers:
+
+* Most: harmonized handling of HAL stepper go idle call.
+
+Plugins:
+
+* Motors, odometer: updated for 20250328 core changes.
+
+---
+
 <a name="20250328">Build 20250328
 
 Core:

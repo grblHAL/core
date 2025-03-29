@@ -646,13 +646,6 @@ bool protocol_exec_rt_system (void)
 
         rt_exec &= ~(EXEC_STOP|EXEC_STATUS_REPORT|EXEC_GCODE_REPORT|EXEC_PID_REPORT|EXEC_TLO_REPORT|EXEC_RT_COMMAND); // clear requests already processed
 
-        if(sys.flags.feed_hold_pending) {
-            if(rt_exec & EXEC_CYCLE_START)
-                sys.flags.feed_hold_pending = Off;
-            else if(!sys.override.control.feed_hold_disable)
-                rt_exec |= EXEC_FEED_HOLD;
-        }
-
         // Let state machine handle any remaining requests
         if(rt_exec)
             state_update(rt_exec);

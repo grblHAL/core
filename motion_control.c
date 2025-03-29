@@ -742,6 +742,9 @@ void mc_thread (plan_line_data_t *pl_data, float *position, gc_thread_data *thre
                 return;
         }
 
+        if(!protocol_buffer_synchronize() && state_get() != STATE_IDLE) // Wait until any previous moves are finished.
+            return;
+
         pl_data->condition.rapid_motion = On;       // Set rapid motion condition flag and
         pl_data->spindle.state.synchronized = Off;  // disable spindle sync for retract & reposition
 
