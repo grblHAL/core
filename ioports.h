@@ -58,6 +58,19 @@ __NOTE:__ The latest value read is stored in \ref #sys sys.var5399.
 */
 typedef int32_t (*wait_on_input_ptr)(io_port_type_t type, uint8_t port, wait_mode_t wait_mode, float timeout);
 
+/*! \brief Pointer to function for reading a digital or analog input.
+
+__NOTE:__ The latest value read is stored in \ref #sys sys.var5399.
+
+\param type as an \a #io_port_type_t enum value.
+\param port port number.
+\param wait_mode a #wait_mode_t enum value.
+\param timeout in seconds, ignored if wait_mode is #WaitMode_Immediate (0).
+\returns read value if successful, -1 otherwise.
+*/
+typedef int32_t (*ll_wait_on_input_ptr)(uint8_t port, wait_mode_t wait_mode, float timeout);
+
+
 /*! \brief Pointer to function for setting pin description for a digital or analog port.
 \param type as an \a #io_port_type_t enum value.
 \param dir as an \a #io_port_direction_t enum value.
@@ -65,6 +78,15 @@ typedef int32_t (*wait_on_input_ptr)(io_port_type_t type, uint8_t port, wait_mod
 \param s pointer to null terminated description string.
 */
 typedef void (*set_pin_description_ptr)(io_port_type_t type, io_port_direction_t dir, uint8_t port, const char *s);
+
+/*! \brief Pointer to function for setting pin description for a digital or analog port.
+\param type as an \a #io_port_type_t enum value.
+\param dir as an \a #io_port_direction_t enum value.
+\param port port number.
+\param s pointer to null terminated description string.
+*/
+typedef void (*ll_set_pin_description_ptr)(io_port_direction_t dir, uint8_t port, const char *s);
+
 
 /*! \brief Pointer to function for getting information about a digital or analog port.
 <br>__NOTE:__ The port information pointed to will be overwritten by the next call to this function.
@@ -75,6 +97,15 @@ typedef void (*set_pin_description_ptr)(io_port_type_t type, io_port_direction_t
 */
 typedef xbar_t *(*get_pin_info_ptr)(io_port_type_t type, io_port_direction_t dir, uint8_t port);
 
+/*! \brief Pointer to function for getting information about a digital or analog port.
+<br>__NOTE:__ The port information pointed to will be overwritten by the next call to this function.
+\param type as an \a #io_port_type_t enum value.
+\param dir as an \a #io_port_direction_t enum value.
+\param port port number.
+\returns pointer to port information in a xbar_t struct if successful, NULL if not.
+*/
+typedef xbar_t *(*ll_get_pin_info_ptr)(io_port_direction_t dir, uint8_t port);
+
 /*! \brief Pointer to function for claiming a digital or analog port for exclusive use.
 \param type as an \a #io_port_type_t enum value.
 \param dir as an \a #io_port_direction_t enum value.
@@ -83,6 +114,16 @@ typedef xbar_t *(*get_pin_info_ptr)(io_port_type_t type, io_port_direction_t dir
 \returns true if successful, false if not.
 */
 typedef bool (*claim_port_ptr)(io_port_type_t type, io_port_direction_t dir, uint8_t *port, const char *description);
+
+/*! \brief Pointer to function for claiming a digital or analog port for exclusive use.
+\param type as an \a #io_port_type_t enum value.
+\param dir as an \a #io_port_direction_t enum value.
+\param port port number.
+\param description description of the pin function.
+\returns true if successful, false if not.
+*/
+typedef bool (*ll_claim_port_ptr)(io_port_direction_t dir, uint8_t port, uint8_t user_port, const char *description);
+
 
 /*! \brief Pointer to function for swapping two digital or analog ports.
 \param type as an \a #io_port_type_t enum value.
@@ -106,6 +147,15 @@ typedef void (*ioport_interrupt_callback_ptr)(uint8_t port, bool state);
 \returns true if successful, false otherwise.
 */
 typedef bool (*ioport_register_interrupt_handler_ptr)(uint8_t port, pin_irq_mode_t irq_mode, ioport_interrupt_callback_ptr interrupt_callback);
+
+/*! \brief Pointer to function for registering or deregistering an interrupt handler for a digital input port.
+\param port port number.
+\param user_port port number to be used for the callback.
+\param irq_mode a \a #pin_irq_mode_t enum value.
+\param interrupt_callback pointer to the callback function to register or NULL to deregister the current callback.
+\returns true if successful, false otherwise.
+*/
+typedef bool (*ll_ioport_register_interrupt_handler_ptr)(uint8_t port, uint8_t user_port, pin_irq_mode_t irq_mode, ioport_interrupt_callback_ptr interrupt_callback);
 
 typedef bool (*ioports_enumerate_callback_ptr)(xbar_t *properties, uint8_t port, void *data);
 
@@ -148,36 +198,32 @@ typedef struct {
     uint8_t n_ports;
     uint8_t n_start;
     uint8_t idx_last;
-    uint8_t *map;
+    uint8_t *map;               //!< Deprecated - do not reference in new code!
 } io_ports_detail_t;
 
 typedef struct io_ports_data {
-    char *pnum;
+    const char *pnum;           //!< Deprecated - do not reference in new code!
     io_ports_detail_t in;
     io_ports_detail_t out;
-    char *(*get_pnum)(struct io_ports_data *data, uint8_t port);
+    const char *(*get_pnum)(struct io_ports_data *data, uint8_t port); //!< Deprecated - do not reference in new code!
 } io_ports_data_t;
 
-/*
 typedef struct {
-    io_ports_data_t *analog;
-    analog_out_ptr analog_out;                      //!< Handler for setting an analog output.
-    wait_on_input_ptr wait_on_input;                //!< Handler for reading a digital or analog input.
-    set_pin_description_ptr set_pin_description;    //!< Handler for setting a description of an auxiliary pin.
-    get_pin_info_ptr get_pin_info;                  //!< Handler for getting information about an auxiliary pin.
-    claim_port_ptr claim;                           //!< Handler for claiming an auxiliary pin for exclusive use.
+    io_ports_data_t *ports;
+    analog_out_ptr analog_out;                         //!< Handler for setting an analog output.
+    ll_wait_on_input_ptr wait_on_input;                //!< Handler for reading a digital or analog input.
+    ll_set_pin_description_ptr set_pin_description;    //!< Handler for setting a description of an auxiliary pin.
+    ll_get_pin_info_ptr get_pin_info;                  //!< Handler for getting information about an auxiliary pin.
 } io_analog_t;
 
 typedef struct {
     io_ports_data_t *ports;
-    digital_out_ptr digital_out;                    //!< Handler for setting a digital output.
-    wait_on_input_ptr wait_on_input;                //!< Handler for reading a digital or analog input.
-    set_pin_description_ptr set_pin_description;    //!< Handler for setting a description of an auxiliary pin.
-    get_pin_info_ptr get_pin_info;                  //!< Handler for getting information about an auxiliary pin.
-    claim_port_ptr claim;                           //!< Handler for claiming an auxiliary pin for exclusive use.
-    ioport_register_interrupt_handler_ptr register_interrupt_handler;
+    digital_out_ptr digital_out;                       //!< Handler for setting a digital output.
+    ll_ioport_register_interrupt_handler_ptr register_interrupt_handler;
+    ll_wait_on_input_ptr wait_on_input;                //!< Handler for reading a digital or analog input.
+    ll_set_pin_description_ptr set_pin_description;    //!< Handler for setting a description of an auxiliary pin.
+    ll_get_pin_info_ptr get_pin_info;                  //!< Handler for getting information about an auxiliary pin.
 } io_digital_t;
-*/
 
 //!* \brief Precalculated values that may be set/used by HAL driver to speed up analog input to PWM conversions. */
 typedef struct {
@@ -192,9 +238,9 @@ typedef struct {
     bool always_on;
 } ioports_pwm_t;
 
-bool ioports_add (io_ports_data_t *ports, io_port_type_t type, uint8_t n_in, uint8_t n_out);
-//bool ioports_add_analog (io_analog_t *ports);
-//bool ioports_add_digital (io_digital_t *ports);
+bool ioports_add (io_ports_data_t *ports, io_port_type_t type, uint8_t n_in, uint8_t n_out); //!< Deprecated - do not use in new code!
+bool ioports_add_analog (io_analog_t *ports);
+bool ioports_add_digital (io_digital_t *ports);
 void ioports_add_settings (driver_settings_load_ptr settings_loaded, setting_changed_ptr setting_changed);
 void ioport_save_input_settings (xbar_t *xbar, gpio_in_config_t *config);
 void ioport_save_output_settings (xbar_t *xbar, gpio_out_config_t *config);

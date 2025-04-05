@@ -48,6 +48,7 @@ void coolant_set_state (coolant_state_t mode)
         hal.coolant.set_state(mode);
         if(mode.value && settings.coolant.on_delay)
             delay_sec((float)settings.coolant.on_delay / 1000.0f, DelayMode_Dwell);
+        system_add_rt_report(Report_Coolant);
     }
 }
 

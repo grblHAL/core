@@ -98,6 +98,11 @@
     laser_coolant_init();
 #endif
 
+#if LASER_OVD_ENABLE
+    extern void laser_ovd_init (void);
+    laser_ovd_init();
+#endif
+
 #if FANS_ENABLE
     extern void fans_init (void);
     fans_init();

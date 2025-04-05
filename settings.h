@@ -457,6 +457,8 @@ typedef enum {
     Setting_ResetActions = 676,
     Setting_StepperSpindle_Options = 677,
 
+    Setting_SpindlePWMOptions1 = 709,
+
     Setting_SpindleInvertMask1 = 716,
 
     Setting_RpmMax1 = 730,

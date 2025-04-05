@@ -138,6 +138,7 @@ struct spindle_param;   // members defined below
 typedef bool (*spindle_config_ptr)(struct spindle_ptrs *spindle);
 
 /*! \brief Pointer to function for setting the spindle state.
+\param spindle a pointer to a \ref spindle_struct.
 \param state a \a spindle_state_t union variable.
 \param rpm spindle RPM.
 */
@@ -148,6 +149,7 @@ typedef void (*esp32_spindle_off_ptr)(struct spindle_ptrs *spindle);
 #endif
 
 /*! \brief Pointer to function for getting the spindle state.
+\param spindle a pointer to a \ref spindle_struct.
 \returns state in a \a spindle_state_t union variable.
 */
 typedef spindle_state_t (*spindle_get_state_ptr)(struct spindle_ptrs *spindle);
@@ -156,12 +158,14 @@ typedef spindle_state_t (*spindle_get_state_ptr)(struct spindle_ptrs *spindle);
 
 Typically this is a wrapper for the spindle_compute_pwm_value() function provided by the core.
 
+\param spindle a pointer to a \ref spindle_struct.
 \param rpm spindle RPM.
 \returns the corresponding PWM value.
 */
 typedef uint_fast16_t (*spindle_get_pwm_ptr)(struct spindle_ptrs *spindle, float rpm);
 
 /*! \brief Pointer to function for updating spindle speed on the fly.
+\param spindle a pointer to a \ref spindle_struct.
 \param pwm new spindle PWM value.
 \returns the actual PWM value used.
 
@@ -187,9 +191,10 @@ typedef void (*spindle_reset_data_ptr)(void);
 
 /*! \brief Pointer to function for outputting a spindle on pulse.
 Used for Pulses Per Inch (PPI) laser mode.
+\param spindle a pointer to a \ref spindle_struct.
 \param pulse_length spindle on length in microseconds.
 */
-typedef void (*spindle_pulse_on_ptr)(uint_fast16_t pulse_length);
+typedef void (*spindle_pulse_on_ptr)(struct spindle_ptrs *spindle, uint_fast16_t pulse_length);
 
 typedef struct {
     float rpm;
@@ -250,11 +255,14 @@ typedef struct {
 typedef union {
     uint8_t value;
     struct {
-        uint8_t invert_pwm         :1, //!< NOTE: set (by driver) when inversion is done in code
-                always_on          :1,
-                cloned             :1,
-                laser_mode_disable :1,
-                unused             :4;
+        uint8_t invert_pwm          :1, //!< NOTE: set (by driver) when inversion is done in code
+                always_on           :1,
+                cloned              :1,
+                rpm_controlled      :1,
+                laser_mode_disable  :1,
+                laser_off_overdrive :1,
+                enable_out          :1,
+                unused              :1;
     };
 } spindle_pwm_flags_t;
 
@@ -263,15 +271,18 @@ typedef struct spindle_pwm {
     uint32_t f_clock;
     spindle_pwm_settings_t *settings;
     uint_fast16_t period;
-    uint_fast16_t off_value;    //!< NOTE: this value holds the inverted version if software PWM inversion is enabled by the driver.
+    uint_fast16_t off_value;        //!< NOTE: this value holds the inverted version if software PWM inversion is enabled by the driver.
     uint_fast16_t min_value;
     uint_fast16_t max_value;
-    float rpm_min;              //!< Minimum spindle RPM.
-    float pwm_gradient;
+    float off_overdrive_pct;        //!< Percent of programmed value to add when turning off enable signal, used when spindle enable is RPM controlled.
+    uint_fast16_t pwm_overdrive;    //!< Adjusted PWM value to use when turning off enable signal, used when spindle enable is RPM controlled.
     spindle_pwm_flags_t flags;
+    float rpm_min;                  //!< Minimum spindle RPM.
+    float pwm_gradient;
     int_fast16_t offset;
     uint_fast16_t n_pieces;
     pwm_piece_t piece[SPINDLE_NPWM_PIECES];
+    void (*set_laser_overdrive)(struct spindle_pwm *pwm_data, float pct);
     uint_fast16_t (*compute_value)(struct spindle_pwm *pwm_data, float rpm, bool pid_limit);
 } spindle_pwm_t;
 

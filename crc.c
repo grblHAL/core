@@ -37,17 +37,17 @@ uint16_t grbl_crc8 (const uint8_t *buf, uint32_t size)
 // Lifted from his FreeModbus Libary
 uint16_t modbus_crc16x (const uint8_t *buf, uint_fast16_t len)
 {
+    uint_fast8_t i;
     uint16_t crc = 0xFFFF;
-    uint_fast8_t pos, i;
-
-    for (pos = 0; pos < len; pos++) {
-        crc ^= (uint16_t)buf[pos];          // XOR byte into least sig. byte of crc
-        for (i = 8; i != 0; i--) {          // Loop over each bit
-            if ((crc & 0x0001) != 0) {      // If the LSB is set
-                crc >>= 1;                  // Shift right and XOR 0xA001
+ 
+    while(len--) {
+        crc ^= (uint16_t)*buf++;;       // XOR byte into least sig. byte of crc
+        for(i = 8; i != 0; i--) {       // Loop over each bit
+            if(crc & 0x0001) {          // If the LSB is set
+                crc >>= 1;              // Shift right and XOR 0xA001
                 crc ^= 0xA001;
-            } else                          // Else LSB is not set
-                crc >>= 1;                  // Just shift right
+            } else                      // Else LSB is not set
+                crc >>= 1;              // Just shift right
         }
     }
 

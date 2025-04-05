@@ -335,15 +335,14 @@ void spindle_bind_encoder (const spindle_data_ptrs_t *encoder_data)
 {
     uint_fast8_t idx;
     spindle_ptrs_t *spindle;
-    spindle_num_t spindle_num;
 
     encoder = encoder_data;
 
     for(idx = 0; idx < n_spindle; idx++) {
 
-        spindle = spindle_get((spindle_num = spindle_get_num(idx)));
+        spindle = spindle_get(spindle_get_num(idx));
 
-        if(encoder_data && spindle_num == settings.spindle.encoder_spindle) {
+        if(encoder_data && spindles[idx].hal.ref_id == settings.spindle.encoder_spindle) {
             spindles[idx].hal.get_data = encoder_data->get;
             spindles[idx].hal.reset_data = encoder_data->reset;
             spindles[idx].hal.cap.at_speed = spindles[idx].hal.cap.variable;
@@ -762,7 +761,8 @@ static uint_fast16_t spindle_compute_pwm_value (spindle_pwm_t *pwm_data, float r
     uint_fast16_t pwm_value;
 
     if(rpm > pwm_data->rpm_min) {
-      #if ENABLE_SPINDLE_LINEARIZATION
+
+#if ENABLE_SPINDLE_LINEARIZATION
         // Compute intermediate PWM value with linear spindle speed model via piecewise linear fit model.
         uint_fast8_t idx = pwm_data->n_pieces;
 
@@ -775,7 +775,7 @@ static uint_fast16_t spindle_compute_pwm_value (spindle_pwm_t *pwm_data, float r
                 }
             } while(idx);
         } else
-      #endif
+#endif
         // Compute intermediate PWM value with linear spindle speed model.
         pwm_value = (uint_fast16_t)floorf((rpm - pwm_data->rpm_min) * pwm_data->pwm_gradient) + pwm_data->min_value;
 
@@ -784,7 +784,14 @@ static uint_fast16_t spindle_compute_pwm_value (spindle_pwm_t *pwm_data, float r
         else if(pwm_value < pwm_data->min_value)
             pwm_value = pwm_data->min_value;
 
+        if(pwm_data->flags.laser_off_overdrive) {
+            int32_t pwm_overdrive;
+            pwm_overdrive = (uint32_t)pwm_value + (uint32_t)((float)pwm_value * pwm_data->off_overdrive_pct) / 100.0f;
+            pwm_data->pwm_overdrive = invert_pwm(pwm_data, constrain((uint_fast16_t)pwm_overdrive, pwm_data->min_value, pwm_data->max_value));
+        }
+
         pwm_value = invert_pwm(pwm_data, pwm_value);
+
     } else
         pwm_value = rpm == 0.0f ? pwm_data->off_value : invert_pwm(pwm_data, pwm_data->min_value);
 
@@ -802,6 +809,11 @@ static uint_fast16_t compute_dummy_pwm_value (spindle_pwm_t *pwm_data, float rpm
     return pwm_data->off_value;
 }
 
+static void set_laser_overdrive (struct spindle_pwm *pwm_data, float overdrive_pct)
+{
+    pwm_data->flags.laser_off_overdrive = pwm_data->flags.rpm_controlled && (pwm_data->off_overdrive_pct = overdrive_pct) != 0.0f;
+}
+
 /*! \brief Precompute PWM values for faster conversion.
 \param spindle pointer to a \ref spindle_ptrs_t structure.
 \param pwm_data pointer to a \a spindle_pwm_t structure, to hold the precomputed values.
@@ -811,6 +823,9 @@ static uint_fast16_t compute_dummy_pwm_value (spindle_pwm_t *pwm_data, float rpm
 bool spindle_precompute_pwm_values (spindle_ptrs_t *spindle, spindle_pwm_t *pwm_data, spindle_pwm_settings_t *settings, uint32_t clock_hz)
 {
     pwm_data->settings = settings;
+    pwm_data->off_value = pwm_data->pwm_overdrive = 0;
+    pwm_data->set_laser_overdrive = set_laser_overdrive;
+
     spindle->rpm_min = pwm_data->rpm_min = settings->rpm_min;
     spindle->rpm_max = settings->rpm_max;
     spindle->at_speed_tolerance = settings->at_speed_tolerance;
@@ -828,11 +843,15 @@ bool spindle_precompute_pwm_values (spindle_ptrs_t *spindle, spindle_pwm_t *pwm_
             pwm_data->min_value = (uint_fast16_t)((float)pwm_data->max_value * 0.004f);
 
         pwm_data->pwm_gradient = (float)(pwm_data->max_value - pwm_data->min_value) / (spindle->rpm_max - spindle->rpm_min);
+
         pwm_data->flags.always_on = settings->pwm_off_value != 0.0f;
+        pwm_data->flags.invert_pwm = settings->invert.pwm & spindle->cap.pwm_invert;
+        pwm_data->flags.rpm_controlled = settings->flags.enable_rpm_controlled;
+        pwm_data->flags.laser_mode_disable = settings->flags.laser_mode_disable;
+
         pwm_data->compute_value = spindle_compute_pwm_value;
     } else {
-        pwm_data->off_value = 0;
-        pwm_data->flags.always_on = false;
+        pwm_data->flags.value &= ((spindle_pwm_flags_t){ .cloned = pwm_data->flags.cloned }).value;
         pwm_data->compute_value = compute_dummy_pwm_value;
     }
 
@@ -916,11 +935,35 @@ static status_code_t set_spindle_invert (setting_id_t id, uint_fast16_t int_valu
     return Status_OK;
 }
 
+static status_code_t set_pwm_options (setting_id_t id, uint_fast16_t int_value)
+{
+    if(int_value & 0x001) {
+        if(int_value > 0b111)
+            return Status_SettingValueOutOfRange;
+        sp1_settings.cfg.flags.pwm_disable = Off;
+        sp1_settings.cfg.flags.enable_rpm_controlled = !!(int_value & 0b010);
+        sp1_settings.cfg.flags.laser_mode_disable = !!(int_value & 0b100);
+    } else {
+        sp1_settings.cfg.flags.pwm_disable = On;
+        sp1_settings.cfg.flags.enable_rpm_controlled = sp1_settings.cfg.flags.laser_mode_disable = Off;
+    }
+
+    return Status_OK;
+}
+
 static uint32_t get_int (setting_id_t id)
 {
     uint32_t value = 0;
 
     switch(id) {
+
+        case Setting_SpindlePWMOptions1:
+            value = sp1_settings.cfg.flags.pwm_disable
+                     ? 0
+                     : (0b001 |
+                        (sp1_settings.cfg.flags.enable_rpm_controlled ? 0b010 : 0) |
+                         (sp1_settings.cfg.flags.laser_mode_disable ? 0b100 : 0));
+            break;
 
         case Setting_SpindleInvertMask1:
             value = sp1_settings.cfg.invert.value;
@@ -984,10 +1027,11 @@ static bool has_ports (const setting_detail_t *setting, uint_fast16_t offset)
 static const setting_detail_t spindle1_settings[] = {
     { Setting_Spindle_OnPort, Group_AuxPorts, "PWM2 spindle on port", NULL, Format_Int8, "##0", "0", max_dport, Setting_NonCore, &sp1_settings.port_on, NULL, has_ports, { .reboot_required = On } },
     { Setting_Spindle_DirPort, Group_AuxPorts, "PWM2 spindle direction port", NULL, Format_Decimal, "-#0", "-1", max_dport, Setting_NonCoreFn, set_dir_port, get_dir_port, has_ports, { .reboot_required = On } },
-    { Setting_SpindleInvertMask1, Group_Spindle, "Invert PWM2 spindle signals", NULL, Format_Bitfield, spindle_signals, NULL, NULL, Setting_IsExtendedFn, set_spindle_invert, get_int, NULL, { .reboot_required = On } },
+    { Setting_SpindleInvertMask1, Group_Spindle, "PWM2 spindle signals invert", NULL, Format_Bitfield, spindle_signals, NULL, NULL, Setting_IsExtendedFn, set_spindle_invert, get_int, NULL, { .reboot_required = On } },
     { Setting_Spindle_PWMPort, Group_AuxPorts, "PWM2 spindle PWM port", NULL, Format_Int8, "#0", "0", max_aport, Setting_NonCoreFn, set_pwm_port, get_pwm_port, has_ports, { .reboot_required = On } },
-    { Setting_RpmMax1, Group_Spindle, "Maximum PWM2 spindle speed", "RPM", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacy, &sp1_settings.cfg.rpm_max, NULL, has_pwm },
-    { Setting_RpmMin1, Group_Spindle, "Minimum PWM2 spindle speed", "RPM", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacy, &sp1_settings.cfg.rpm_min, NULL, has_pwm },
+    { Setting_SpindlePWMOptions1, Group_Spindle, "PWM2 spindle options", NULL, Format_XBitfield, "Enable,RPM controls spindle enable signal,Disable laser mode capability", NULL, NULL, Setting_IsExtendedFn, set_pwm_options, get_int, has_pwm },
+    { Setting_RpmMax1, Group_Spindle, "PWM2 spindle min speed", "RPM", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacy, &sp1_settings.cfg.rpm_max, NULL, has_pwm },
+    { Setting_RpmMin1, Group_Spindle, "PWM2 spindle max speed", "RPM", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacy, &sp1_settings.cfg.rpm_min, NULL, has_pwm },
     { Setting_PWMFreq1, Group_Spindle, "PWM2 spindle PWM frequency", "Hz", Format_Decimal, "#####0", NULL, NULL, Setting_IsExtended, &sp1_settings.cfg.pwm_freq, NULL, has_freq },
     { Setting_PWMOffValue1, Group_Spindle, "PWM2 spindle PWM off value", "percent", Format_Decimal, "##0.0", NULL, "100", Setting_IsExtended, &sp1_settings.cfg.pwm_off_value, NULL, has_pwm },
     { Setting_PWMMinValue1, Group_Spindle, "PWM2 spindle PWM min value", "percent", Format_Decimal, "##0.0", NULL, "100", Setting_IsExtended, &sp1_settings.cfg.pwm_min_value, NULL, has_pwm },
@@ -1012,6 +1056,9 @@ static const setting_descr_t spindle1_settings_descr[] = {
     { Setting_Spindle_DirPort, "Direction aux port, set to -1 if not required." },
     { Setting_SpindleInvertMask1, "Inverts the spindle on, counterclockwise and PWM signals (active low)." },
     { Setting_Spindle_PWMPort, "Spindle analog aux port. Must be PWM capable!" },
+    { Setting_SpindlePWMOptions1, "Enable controls PWM output availability.\\n"
+                                  "When `RPM controls spindle enable signal` is checked and M3 or M4 is active S0 switches it off and S > 0 switches it on."
+    },
     { Setting_RpmMax1, "Maximum spindle speed." },
     { Setting_RpmMin1, "Minimum spindle speed." },
     { Setting_PWMFreq1, "PWM frequency." },

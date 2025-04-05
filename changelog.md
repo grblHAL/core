@@ -1,5 +1,36 @@
 ## grblHAL changelog
 
+<a name="20250405">Build 20250405
+
+Core:
+
+* Added new mid/low level HAL/API to ioports \(auxiliary ports\), makes it simpler to add ports both for base drivers and "standard"/third party plugins.  
+Ports/pins added via the new HAL/API can be "claimed" by plugin code or used by 'M62' - 'M68' M-codes.
+
+* Added '$709' setting for second PWM spindle when available, same functionality as '$9' - _PWM options_.
+
+* Added properties to PWM spindles to allow "overdriving" PWM output when _RPM controls spindle _enable signal_ is enabled with '$9' or '$709'.
+This may [improve CO2 laser engraving](https://github.com/grblHAL/core/issues/721#issuecomment-2776210888), especially for short "pixels".
+
+* Optimized Modbus CRC calculation, may fix issue with a compiler generating different code compared to most others. Ref. issue [#723](https://github.com/grblHAL/core/issues/723).
+
+Drivers:
+
+* All: Updated to use new low level ioports HAL/API.
+
+* Some: Moved support code for MCP3221 I2C ADC to shared plugin. Updated to support PWM "overdrive" mentioned above.
+
+* STM32F4xx: Fixed bug/regression in the core causing spindle encoder to spindle binding to fail. Ref. STM32F4xx issue [#149](https://github.com/grblHAL/STM32F4xx/issues/149#issuecomment-2777509562).
+
+Plugins:
+
+* Misc: added MCP3221 I2C ADC plugin.
+
+* Laser: added plugin for PWM "overdrive" support, adds 'M129P<n>' M-code where '<n>' is percentage of current 'S'-value to add as overdrive.  
+Fixed minor bug in PPI plugin interfering with the new PWM "overdrive" plugin.
+
+---
+
 <a name="20250329">Build 20250329
 
 Core:

@@ -3818,6 +3818,7 @@ status_code_t gc_execute_block (char *block)
                         FAIL(status);
 
                     plan_data.spindle.state.synchronized = On;
+                    plan_data.overrides.feed_hold_disable = On; // Disable feed hold.
 
                     mc_line(gc_block.values.xyz, &plan_data);
 

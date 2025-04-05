@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2022 Terje Io
+  Copyright (c) 2017-2025 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -30,7 +30,7 @@ PROGMEM static const alarm_detail_t alarm_detail[] = {
 #ifndef NO_SETTINGS_DESCRIPTIONS
     { Alarm_HardLimit, "Hard limit has been triggered. Machine position is likely lost due to sudden halt. Re-homing is highly recommended." },
     { Alarm_SoftLimit, "Soft limit alarm. G-code motion target exceeds machine travel. Machine position retained. Alarm may be safely unlocked." },
-    { Alarm_AbortCycle, "Reset while in motion. Machine position is likely lost due to sudden halt. Re-homing is highly recommended." },
+    { Alarm_AbortCycle, "Reset/E-stop while in motion. Machine position is likely lost due to sudden halt. Re-homing is highly recommended." },
     { Alarm_ProbeFailInitial, "Probe fail. Probe is not in the expected initial state before starting probe cycle when G38.2 and G38.3 is not triggered and G38.4 and G38.5 is triggered." },
     { Alarm_ProbeFailContact, "Probe fail. Probe did not contact the workpiece within the programmed travel for G38.2 and G38.4." },
     { Alarm_HomingFailReset, "Homing fail. The active homing cycle was reset." },

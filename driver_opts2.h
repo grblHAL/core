@@ -39,7 +39,7 @@
 #warning "Selected spindle is not supported!"
 #endif
 
-#if (DRIVER_SPINDLE1_ENABLE & SPINDLE_PWM) && !defined(SPINDLE_PWM_PIN)
+#if (DRIVER_SPINDLE1_ENABLE & SPINDLE_PWM) && !defined(SPINDLE1_PWM_PIN)
 #warning "Selected spindle 1 is not supported!"
 #endif
 
