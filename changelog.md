@@ -16,11 +16,11 @@ This may [improve CO2 laser engraving](https://github.com/grblHAL/core/issues/72
 
 Drivers:
 
-* All: Updated to use new low level ioports HAL/API.
+* All: updated to use new low level ioports HAL/API.
 
-* Some: Moved support code for MCP3221 I2C ADC to shared plugin. Updated to support PWM "overdrive" mentioned above.
+* Some: moved support code for MCP3221 I2C ADC to shared plugin. Updated to support PWM "overdrive" mentioned above.
 
-* STM32F4xx: Fixed bug/regression in the core causing spindle encoder to spindle binding to fail. Ref. STM32F4xx issue [#149](https://github.com/grblHAL/STM32F4xx/issues/149#issuecomment-2777509562).
+* STM32F4xx: fixed bug/regression in the core causing spindle encoder to spindle binding to fail. Ref. STM32F4xx issue [#149](https://github.com/grblHAL/STM32F4xx/issues/149#issuecomment-2777509562).
 
 Plugins:
 
