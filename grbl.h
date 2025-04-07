@@ -42,12 +42,20 @@
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_BUILD 20250405
+#define GRBL_BUILD 20250407
 
 #define GRBL_URL "https://github.com/grblHAL"
 
 // The following symbols are set here if not already set by the compiler or in config.h
 // Do NOT change here!
+
+#ifndef DCRAM
+//#if defined(__IMXRT1062__)
+//#define DCRAM DMAMEM
+//#else
+#define DCRAM
+//#endif
+#endif
 
 #ifdef GRBL_ESP32
 #include "esp_attr.h"

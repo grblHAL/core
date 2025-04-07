@@ -206,6 +206,7 @@ typedef struct {
     user_mcode_execute_ptr execute;     //!< Handler for executing a user defined M-code.
 } user_mcode_ptrs_t;
 
+typedef settings_changed_ptr on_settings_changed_ptr;
 
 typedef struct {
     // report entry points set by core at reset.
@@ -225,8 +226,9 @@ typedef struct {
     on_unknown_accessory_override_ptr on_unknown_accessory_override;
     on_report_options_ptr on_report_options;
     on_report_ngc_parameters_ptr on_report_ngc_parameters;
-    on_report_command_help_ptr on_report_command_help; //!< Deprecated, use system_register_commands() to register new commands.
+    on_report_command_help_ptr on_report_command_help;      //!< Deprecated, use system_register_commands() to register new commands.
     on_rt_reports_added_ptr on_rt_reports_added;
+    on_settings_changed_ptr on_settings_changed;            //!< Called on initial settings load and on setting changes.
     on_global_settings_restore_ptr on_global_settings_restore;
     on_setting_get_description_ptr on_setting_get_description;
     on_get_alarms_ptr on_get_alarms;

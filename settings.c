@@ -3271,6 +3271,9 @@ status_code_t settings_store_setting (setting_id_t id, char *svalue)
         if(set->save)
             set->save();
 
+        if(set == &setting_details)
+            set->on_changed = hal.settings_changed;
+
         if(set->on_changed) {
 
             settings_changed_flags_t changed = {0};

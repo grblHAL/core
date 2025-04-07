@@ -119,7 +119,7 @@ typedef union {
 } ijk_words_t;
 
 // Declare gc extern struct
-parser_state_t gc_state;
+DCRAM parser_state_t gc_state;
 
 #define FAIL(status) return(status);
 
@@ -760,7 +760,7 @@ status_code_t gc_execute_block (char *block)
         .G6 = On
     };
 
-    static parser_block_t gc_block;
+    DCRAM static parser_block_t gc_block;
 
 #if NGC_EXPRESSIONS_ENABLE
 

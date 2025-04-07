@@ -32,7 +32,7 @@
 #include "hal.h"
 #include "settings.h"
 
-#define MAX_PORTS 16
+#define MAX_PORTS (Output_AuxMax - Output_Aux0 + 1)
 
 typedef enum {
     Port_AnalogIn = 0,
@@ -52,6 +52,7 @@ typedef struct {
     int16_t count;
     int16_t free;
     int16_t n_ports;
+    int16_t n_max;
     pin_function_t min_fn;
     pin_function_t max_fn;
     uint8_t map[MAX_PORTS];
@@ -83,14 +84,26 @@ static io_ports_list_t *ports = NULL;
 static driver_settings_load_ptr on_settings_loaded = NULL;
 static setting_changed_ptr on_setting_changed = NULL;
 static io_ports_private_t ports_cfg[] = {
-    { .type = Port_AnalogIn,   .count = -1, .free = -1, .last_claimed = MAX_PORTS - 1, .min_fn = Input_Analog_Aux0,  .max_fn = Input_Analog_AuxMax },
-    { .type = Port_AnalogOut,  .count = -1, .free = -1, .last_claimed = MAX_PORTS - 1, .min_fn = Output_Analog_Aux0, .max_fn = Output_Analog_AuxMax },
-    { .type = Port_DigitalIn,  .count = -1, .free = -1, .last_claimed = MAX_PORTS - 1, .min_fn = Input_Aux0,         .max_fn = Input_AuxMax },
-    { .type = Port_DigitalOut, .count = -1, .free = -1, .last_claimed = MAX_PORTS - 1, .min_fn = Output_Aux0,        .max_fn = Output_AuxMax },
+    {
+         .type = Port_AnalogIn, .count = -1, .free = -1, .min_fn = Input_Analog_Aux0, .max_fn = Input_Analog_AuxMax,
+         .n_max = (Input_Analog_AuxMax - Input_Analog_Aux0 + 1), .last_claimed = (Input_Analog_AuxMax - Input_Analog_Aux0)
+    },
+    {
+         .type = Port_AnalogOut, .count = -1, .free = -1, .min_fn = Output_Analog_Aux0, .max_fn = Output_Analog_AuxMax,
+         .n_max = (Output_Analog_AuxMax - Output_Analog_Aux0 + 1), .last_claimed = (Output_Analog_AuxMax - Output_Analog_Aux0)
+    },
+    {
+        .type = Port_DigitalIn, .count = -1, .free = -1, .min_fn = Input_Aux0, .max_fn = Input_AuxMax,
+        .n_max = (Input_AuxMax - Input_Aux0 + 1), .last_claimed = (Input_AuxMax - Input_Aux0)
+    },
+    {
+        .type = Port_DigitalOut, .count = -1, .free = -1, .min_fn = Output_Aux0, .max_fn = Output_AuxMax,
+        .n_max = (Output_AuxMax - Output_Aux0 + 1), .last_claimed = (Output_AuxMax - Output_Aux0)
+    }
 };
 
 PROGMEM static const char *apnum = "E0\0E1\0E2\0E3\0E4\0E5\0E6\0E7\0E8\0E9\0E10\0E11\0E12\0E13\0E14\0E15";
-PROGMEM static const char *dpnum = "P0\0P1\0P2\0P3\0P4\0P5\0P6\0P7\0P8\0P9\0P10\0P11\0P12\0P13\0P14\0P15";
+PROGMEM static const char *dpnum = "P0\0P1\0P2\0P3\0P4\0P5\0P6\0P7\0P8\0P9\0P10\0P11\0P12\0P13\0P14\0P15\0P16\0P17\0P18\0P19\0P20\0P21\0P22\0P23";
 
 static inline io_ports_private_t *get_port_data (io_port_type_t type, io_port_direction_t dir)
 {
@@ -609,8 +622,8 @@ static uint8_t add_ports (io_ports_detail_t *ports, uint8_t *map, io_port_type_t
 
         ports->n_start = p_data->n_ports;
 
-        if(ports->n_start + n_ports > MAX_PORTS)
-            n_ports = MAX_PORTS - ports->n_start;
+        if(ports->n_start + n_ports > p_data->n_max)
+            n_ports = p_data->n_max - ports->n_start;
 
         ports->idx_last = ports->n_start + n_ports - 1;
         ports->map = map;

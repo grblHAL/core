@@ -87,7 +87,6 @@ typedef void (*set_pin_description_ptr)(io_port_type_t type, io_port_direction_t
 */
 typedef void (*ll_set_pin_description_ptr)(io_port_direction_t dir, uint8_t port, const char *s);
 
-
 /*! \brief Pointer to function for getting information about a digital or analog port.
 <br>__NOTE:__ The port information pointed to will be overwritten by the next call to this function.
 \param type as an \a #io_port_type_t enum value.

@@ -791,7 +791,15 @@ typedef union {
                  bit12 :1,
                  bit13 :1,
                  bit14 :1,
-                 bit15 :1;
+                 bit15 :1,
+                 bit16 :1,
+                 bit17 :1,
+                 bit18 :1,
+                 bit19 :1,
+                 bit20 :1,
+                 bit21 :1,
+                 bit22 :1,
+                 bit23 :1;
     };
 } ioport_bus_t;
 

@@ -86,13 +86,15 @@ typedef struct core_task {
     struct core_task *next;
 } core_task_t;
 
-struct system sys = {0}; //!< System global variable structure.
-grbl_t grbl;
-grbl_hal_t hal;
+DCRAM system_t sys; //!< System global variable structure.
+DCRAM grbl_t grbl;
+DCRAM grbl_hal_t hal;
+
+DCRAM static core_task_t task_pool[CORE_TASK_POOL_SIZE];
 static driver_startup_t driver = { .ok = 0xFF };
-static core_task_t task_pool[CORE_TASK_POOL_SIZE] = {0};
 static core_task_t *next_task = NULL, *immediate_task = NULL, *systick_task = NULL, *last_freed = NULL;
 static on_linestate_changed_ptr on_linestate_changed;
+static settings_changed_ptr hal_settings_changed;
 
 #ifdef KINEMATICS_API
 kinematics_t kinematics;
@@ -181,6 +183,14 @@ static void onLinestateChanged (serial_linestate_t state)
         on_linestate_changed(state);
 }
 
+static void settings_changed (settings_t *settings, settings_changed_flags_t changed)
+{
+    hal_settings_changed(settings, changed);
+
+    if(grbl.on_settings_changed)
+        grbl.on_settings_changed(settings, changed);
+}
+
 // main entry point
 
 int grbl_enter (void)
@@ -189,6 +199,9 @@ int grbl_enter (void)
     assert(NVS_ADDR_STARTUP_BLOCK + N_STARTUP_LINE * (sizeof(stored_line_t) + NVS_CRC_BYTES) < NVS_ADDR_BUILD_INFO);
 
     bool looping = true;
+
+    memset(&sys, 0, sizeof(system_t));
+    memset(&task_pool, 0, sizeof(task_pool));
 
     // Clear all and set some core function pointers
     memset(&grbl, 0, sizeof(grbl_t));
@@ -292,8 +305,13 @@ int grbl_enter (void)
 */
     sys.mpg_mode = false;
 
-    if(driver.ok == 0xFF)
+    if(driver.ok == 0xFF) {
+
+        hal_settings_changed = hal.settings_changed;
+        hal.settings_changed = settings_changed;
+
         driver.setup = hal.driver_setup(&settings);
+    }
 
     spindle_id_t spindle_id, encoder_spindle;
 

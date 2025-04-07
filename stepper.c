@@ -58,13 +58,13 @@ static bool stepping = false;
 // NOTE: This data is copied from the prepped planner blocks so that the planner blocks may be
 // discarded when entirely consumed and completed by the segment buffer. Also, AMASS alters this
 // data for its own use.
-static st_block_t st_block_buffer[SEGMENT_BUFFER_SIZE - 1];
+DCRAM static st_block_t st_block_buffer[SEGMENT_BUFFER_SIZE - 1];
 
 // Primary stepper segment ring buffer. Contains small, short line segments for the stepper
 // algorithm to execute, which are "checked-out" incrementally from the first block in the
 // planner buffer. Once "checked-out", the steps in the segments buffer cannot be modified by
 // the planner, where the remaining planner block steps still can.
-static segment_t segment_buffer[SEGMENT_BUFFER_SIZE];
+DCRAM static segment_t segment_buffer[SEGMENT_BUFFER_SIZE];
 
 // Stepper ISR data struct. Contains the running data for the main stepper ISR.
 static stepper_t st = {};
@@ -134,7 +134,7 @@ typedef struct {
 
 //! \endcond
 
-static st_prep_t prep;
+DCRAM static st_prep_t prep;
 
 extern void gc_output_message (char *message);
 

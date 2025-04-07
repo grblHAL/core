@@ -34,7 +34,7 @@
 #endif
 #endif
 
-static stream_rx_buffer_t rxbackup;
+DCRAM static stream_rx_buffer_t rxbackup;
 
 typedef struct {
     enqueue_realtime_command_ptr enqueue_realtime_command;
@@ -58,7 +58,7 @@ typedef struct stream_connection {
     struct stream_connection *next, *prev;
 } stream_connection_t;
 
-static const io_stream_properties_t null_stream = {
+PROGMEM static const io_stream_properties_t null_stream = {
     .type = StreamType_Null,
     .instance = 0,
     .flags.claimable = On,

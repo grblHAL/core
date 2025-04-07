@@ -1,15 +1,33 @@
 ## grblHAL changelog
 
+<a name="20250407">Build 20250407
+
+Core:
+
+* For developers: increased max number of digital ioports to 24, added some crossbar capabilities \(external, async, entry point for setting pin function\). 
+
+Drivers:
+
+* Web Builder supported: added CO2 laser overdrive plugin.
+
+Plugins:
+
+* Laser, CO2 overdrive: now traps settings changes and reconfigures itself if needed.
+
+* Misc: added generic support for PCA9654E I2C IO expander, currently for output only.
+
+---
+
 <a name="20250405">Build 20250405
 
 Core:
 
 * Added new mid/low level HAL/API to ioports \(auxiliary ports\), makes it simpler to add ports both for base drivers and "standard"/third party plugins.  
-Ports/pins added via the new HAL/API can be "claimed" by plugin code or used by 'M62' - 'M68' M-codes.
+Ports/pins added via the new HAL/API can be "claimed" by plugin code or used by `M62` - `M68` M-codes.
 
-* Added '$709' setting for second PWM spindle when available, same functionality as '$9' - _PWM options_.
+* Added `$709` setting for second PWM spindle when available, same functionality as `$9` - _PWM options_.
 
-* Added properties to PWM spindles to allow "overdriving" PWM output when _RPM controls spindle _enable signal_ is enabled with '$9' or '$709'.
+* Added properties to PWM spindles to allow "overdriving" PWM output when _RPM controls spindle _enable signal_ is enabled with `$9` or `$709`.
 This may [improve CO2 laser engraving](https://github.com/grblHAL/core/issues/721#issuecomment-2776210888), especially for short "pixels".
 
 * Optimized Modbus CRC calculation, may fix issue with a compiler generating different code compared to most others. Ref. issue [#723](https://github.com/grblHAL/core/issues/723).
@@ -26,7 +44,7 @@ Plugins:
 
 * Misc: added MCP3221 I2C ADC plugin.
 
-* Laser: added plugin for PWM "overdrive" support, adds 'M129P<n>' M-code where '<n>' is percentage of current 'S'-value to add as overdrive.  
+* Laser: added plugin for PWM "overdrive" support, adds `M129P<n>` M-code where `<n>` is percentage of current `S`-value to add as overdrive.  
 Fixed minor bug in PPI plugin interfering with the new PWM "overdrive" plugin.
 
 ---
