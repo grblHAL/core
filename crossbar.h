@@ -573,6 +573,20 @@ typedef enum {
     PullMode_UpDown  = 0b11  //!< 0b11 (0x03) - only used to report port capability.
 } pull_mode_t;
 
+//! ADC/DAC resolution or multi pin register width.
+typedef enum {
+    Resolution_4bit = 0, //!< 0 - 4 bit
+    Resolution_8bit,     //!< 1 - 8 bit
+    Resolution_10bit,    //!< 2 - 10 bit
+    Resolution_12bit,    //!< 3 - 12 bit
+    Resolution_14bit,    //!< 4 - 14 bit
+    Resolution_16bit,    //!< 5 - 16 bit
+    Resolution_18bit,    //!< 6 - 18 bit
+    Resolution_20bit,    //!< 7 - 20 bit
+    Resolution_24bit,    //!< 8 - 24 bit
+    Resolution_32bit     //!< 9 - 32 bit, NOTE: "wait for input" can only return 31 bits
+} resolution_t;
+
 #define PINMODE_NONE        (0)
 #define PINMODE_OUTPUT      (1U<<1)
 #ifndef __LPC17XX__
@@ -590,8 +604,8 @@ typedef union {
         uint32_t input      :1,
                  output     :1,
                  open_drain :1,
-                 pull_mode  :2,
-                 irq_mode   :5,
+                 pull_mode  :2, //!< pull_mode_t - pull up/down modes
+                 irq_mode   :5, //!< pin_irq_mode_t - IRQ modes
                  invert     :1,
                  analog     :1,
                  pwm        :1,
@@ -600,7 +614,8 @@ typedef union {
                  debounce   :1,
                  external   :1,
                  async      :1,
-                 unused     :14;
+                 resolution :4, //!< resolution_t - ADC/DAC resolution
+                 unused     :10;
     };
 } pin_cap_t;
 

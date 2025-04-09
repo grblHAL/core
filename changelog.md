@@ -1,5 +1,28 @@
 ## grblHAL changelog
 
+<a name="20250409">Build 20250409
+
+Core:
+
+* For developers: added new ioport capabilities, added optional support for drivers/boards wanting to claim basic pins \(stepper enable, spindle, coolant, ...\) from expander plugins.  
+Added registration scheme for 3rd party I/O expander plugins in [expanders_init.h](https://github.com/grblHAL/core/blob/master/expanders_init.h).
+
+* Fixed minor bug in ioport numbering \(`P<n>`/`E<n>`\) for plugin based ioports.
+
+Drivers:
+
+* iMXRT1062: fixed compilation error when Laser PPI mode was enabled. Ref. issue comment [#645, 12764973](https://github.com/grblHAL/core/discussions/645#discussioncomment-12764973).
+
+* ESP32, iMXRT1062, LPC176x, RP2040, SAMX3X8E, STM32F4xx and STM32F7xx: updated to use new scheme for I/O expander plugin initialization.
+
+* ESP32, RP2040: added initial support for claiming basic pins from IO expanders. CNC BoosterPack board: switched to use the generic PCA9654E I2C IO expander plugin instead of a driver specific plugin.
+
+Plugins:
+
+* Misc: updated MCP3221 I2C ADC and PCA9654E I2C IO expander plugins to match core changes.
+
+---
+
 <a name="20250407">Build 20250407
 
 Core:

@@ -51,6 +51,8 @@
 #error "Encoder select input is not supported in this configuration!"
 #endif
 
+#define EXPANDER_PORT 1
+
 // Control input signals
 
 // Define the CONTROL_PORT symbol as a shorthand in the *_map.h file if all control inputs share the same port.
@@ -410,41 +412,58 @@ static inline control_signals_t aux_ctrl_scan_status (control_signals_t signals)
 
 // The following pins are bound explicitly to aux output pins
 static aux_ctrl_out_t aux_ctrl_out[] = {
+#if defined(ESP_PLATFORM) || defined(RP2040) // for now
+#if defined(STEPPERS_ENABLE_PIN) && STEPPERS_ENABLE_PORT == EXPANDER_PORT
+    { .function = Output_StepperEnable, .aux_port = 0xFF, .pin = STEPPERS_ENABLE_PIN,   .port = (void *)STEPPERS_ENABLE_PORT },
+#endif
+#if defined(X_ENABLE_PIN) && X_ENABLE_PORT == EXPANDER_PORT
+    { .function = Output_StepperEnableX, .aux_port = 0xFF, .pin = X_ENABLE_PIN,   .port = (void *)X_ENABLE_PORT },
+#endif
+#if defined(Y_ENABLE_PIN) && Y_ENABLE_PORT == EXPANDER_PORT
+    { .function = Output_StepperEnableY, .aux_port = 0xFF, .pin = Y_ENABLE_PIN,   .port = (void *)Y_ENABLE_PORT },
+#endif
+#if defined(XY_ENABLE_PIN) && XY_ENABLE_PORT == EXPANDER_PORT
+    { .function = Output_StepperEnableXY, .aux_port = 0xFF, .pin = XY_ENABLE_PIN,   .port = (void *)XY_ENABLE_PORT },
+#endif
+#if defined(Z_ENABLE_PIN) && Z_ENABLE_PORT == EXPANDER_PORT
+    { .function = Output_StepperEnableZ, .aux_port = 0xFF, .pin = Z_ENABLE_PIN,   .port = (void *)Z_ENABLE_PORT },
+#endif
+#endif
 #if AUX_CONTROLS & AUX_CONTROL_SPINDLE
 #ifdef SPINDLE_ENABLE_PIN
  #ifndef SPINDLE_ENABLE_PORT
-  #define SPINDLE_ENABLE_PORT NULL
+  #define SPINDLE_ENABLE_PORT 0
  #endif
     { .function = Output_SpindleOn,    .aux_port = 0xFF, .pin = SPINDLE_ENABLE_PIN,     .port = (void *)SPINDLE_ENABLE_PORT },
 #endif
 #ifdef SPINDLE_PWM_PIN
  #ifndef SPINDLE_PWM_PORT
-  #define SPINDLE_PWM_PORT NULL
+  #define SPINDLE_PWM_PORT 0
  #endif
     { .function = Output_SpindlePWM,   .aux_port = 0xFF, .pin = SPINDLE_PWM_PIN,        .port = (void *)SPINDLE_PWM_PORT },
 #endif
 #ifdef SPINDLE_DIRECTION_PIN
  #ifndef SPINDLE_DIRECTION_PORT
-  #define SPINDLE_DIRECTION_PORT NULL
+  #define SPINDLE_DIRECTION_PORT 0
  #endif
     { .function = Output_SpindleDir,   .aux_port = 0xFF, .pin = SPINDLE_DIRECTION_PIN,  .port = (void *)SPINDLE_DIRECTION_PORT },
 #endif
 
 #ifdef SPINDLE1_ENABLE_PIN
  #ifndef SPINDLE1_ENABLE_PORT
-  #define SPINDLE1_ENABLE_PORT NULL
+  #define SPINDLE1_ENABLE_PORT 0
  #endif
     { .function = Output_Spindle1On,   .aux_port = 0xFF, .pin = SPINDLE1_ENABLE_PIN,    .port = (void *)SPINDLE1_ENABLE_PORT },
 #endif
 #ifdef SPINDLE1_PWM_PIN
  #ifndef SPINDLE1_PWM_PORT
-  #define SPINDLE1_PWM_PORT NULL
+  #define SPINDLE1_PWM_PORT 0
  #endif
     { .function = Output_Spindle1PWM,  .aux_port = 0xFF, .pin = SPINDLE1_PWM_PIN,       .port = (void *)SPINDLE1_PWM_PORT },
 #endif
 #ifdef SPINDLE1_DIRECTION_PIN
  #ifndef SPINDLE1_DIRECTION_PORT
-  #define SPINDLE1_DIRECTION_PORT NULL
+  #define SPINDLE1_DIRECTION_PORT 0
  #endif
     { .function = Output_Spindle1Dir,  .aux_port = 0xFF, .pin = SPINDLE1_DIRECTION_PIN, .port = (void *)SPINDLE1_DIRECTION_PORT },
 #endif
@@ -453,13 +472,13 @@ static aux_ctrl_out_t aux_ctrl_out[] = {
 #if AUX_CONTROLS & AUX_CONTROL_COOLANT
 #ifdef COOLANT_FLOOD_PIN
  #ifndef COOLANT_FLOOD_PORT
-  #define COOLANT_FLOOD_PORT NULL
+  #define COOLANT_FLOOD_PORT 0
  #endif
     { .function = Output_CoolantFlood, .aux_port = 0xFF, .pin = COOLANT_FLOOD_PIN,      .port = (void *)COOLANT_FLOOD_PORT },
 #endif
 #ifdef COOLANT_MIST_PIN
  #ifndef COOLANT_MIST_PORT
-  #define COOLANT_MIST_PORT NULL
+  #define COOLANT_MIST_PORT 0
  #endif
     { .function = Output_CoolantMist,  .aux_port = 0xFF, .pin = COOLANT_MIST_PIN,       .port = (void *)COOLANT_MIST_PORT },
 #endif
@@ -467,13 +486,13 @@ static aux_ctrl_out_t aux_ctrl_out[] = {
 
 #ifdef COPROC_RESET_PIN
  #ifndef COPROC_RESET_PORT
-  #define COPROC_RESET_PORT NULL
+  #define COPROC_RESET_PORT 0
  #endif
     { .function = Output_CoProc_Reset, .aux_port = 0xFF, .pin = COPROC_RESET_PIN,       .port = (void *)COPROC_RESET_PORT },
 #endif
 #ifdef COPROC_BOOT0_PIN
  #ifndef COPROC_BOOT0_PORT
-  #define COPROC_BOOT0_PORT NULL
+  #define COPROC_BOOT0_PORT 0
  #endif
     { .function = Output_CoProc_Boot0, .aux_port = 0xFF, .pin = COPROC_BOOT0_PIN,       .port = (void *)COPROC_BOOT0_PORT },
 #endif
@@ -501,10 +520,13 @@ typedef bool (*aux_claim_explicit_out_ptr)(aux_ctrl_out_t *aux_ctrl);
 
 static bool aux_ctrl_claim_out_port (xbar_t *properties, uint8_t port, void *data)
 {
-    if(ioport_claim(Port_Digital, Port_Output, &port, xbar_fn_to_pinname(((aux_ctrl_t *)data)->function)))
-        ((aux_ctrl_t *)data)->aux_port = port;
+    if(((aux_ctrl_out_t *)data)->port == (void *)EXPANDER_PORT) {
+        if(((aux_ctrl_out_t *)data)->pin == properties->pin && properties->set_value)
+            ((aux_ctrl_out_t *)data)->aux_port = port;
+    } else if(ioport_claim(Port_Digital, Port_Output, &port, xbar_fn_to_pinname(((aux_ctrl_out_t *)data)->function)))
+        ((aux_ctrl_out_t *)data)->aux_port = port;
 
-    return ((aux_ctrl_t *)data)->aux_port != 0xFF;
+    return ((aux_ctrl_out_t *)data)->aux_port != 0xFF;
 }
 
 static inline void aux_ctrl_claim_out_ports (aux_claim_explicit_out_ptr aux_claim_explicit, ioports_enumerate_callback_ptr aux_claim)
@@ -515,9 +537,20 @@ static inline void aux_ctrl_claim_out_ports (aux_claim_explicit_out_ptr aux_clai
         aux_claim = aux_ctrl_claim_out_port;
 
     for(idx = 0; idx < sizeof(aux_ctrl_out) / sizeof(aux_ctrl_out_t); idx++) {
-        if(aux_ctrl_out[idx].pin == 0xFF)
-            ioports_enumerate(Port_Digital, Port_Output, (pin_cap_t){ .claimable = On }, aux_claim, (void *)&aux_ctrl_out[idx]);
-        else if(aux_ctrl_out[idx].aux_port != 0xFF)
+        if(aux_ctrl_out[idx].port == (void *)EXPANDER_PORT) {
+            if(ioports_enumerate(Port_Digital, Port_Output, (pin_cap_t){ .external = On, .claimable = On }, aux_claim, &aux_ctrl_out[idx])) {
+                if(ioport_claim(Port_Digital, Port_Output, &aux_ctrl_out[idx].aux_port, ""/*xbar_fn_to_pinname(aux_ctrl_out[idx].function)*/)) {
+                    aux_ctrl_out[idx].output = hal.port.get_pin_info(Port_Digital, Port_Output, aux_ctrl_out[idx].aux_port);
+                    if(((xbar_t *)aux_ctrl_out[idx].output)->set_function)
+                        ((xbar_t *)aux_ctrl_out[idx].output)->set_function((xbar_t *)aux_ctrl_out[idx].output, aux_ctrl_out[idx].function);
+                        // TODO: else set description?
+                    aux_claim_explicit(&aux_ctrl_out[idx]);
+                }
+            }
+        } else if(aux_ctrl_out[idx].pin == 0xFF) {
+            if(ioports_enumerate(Port_Digital, Port_Output, (pin_cap_t){ .claimable = On }, aux_claim, &aux_ctrl_out[idx]))
+                aux_claim_explicit(&aux_ctrl_out[idx]);
+        } else if(aux_ctrl_out[idx].aux_port != 0xFF)
             aux_claim_explicit(&aux_ctrl_out[idx]);
     }
 }

@@ -480,9 +480,9 @@ static bool io_claim (io_port_type_t type, io_port_direction_t dir, uint8_t *por
                 while(cfg->map[idx] != *port)
                     idx++;
 
-                for(; idx < cfg->last_claimed; idx++) {
-                    if((cfg->map[idx] = cfg->map[idx + 1]) <= io_port->port[cfg->type].n_end)
-                        io_port->hal.set_pin_description(dir, cfg->map[idx], (cfg->pnum + (idx * 3) + (idx > 9 ? idx - 10 : 0)));
+                for(; idx < cfg->last_claimed ; idx++) {
+                    if((cfg->map[idx] = cfg->map[idx + 1]) != 255)
+                        io_set_pin_description(type, dir, idx, (cfg->pnum + (idx * 3) + (idx > 9 ? idx - 10 : 0)));
                 }
 
                 io_port->hal.set_pin_description(dir, *port - io_port->port[cfg->type].n_start, description);

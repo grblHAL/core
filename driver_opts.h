@@ -29,6 +29,7 @@
 
 #include "hal.h"
 #include "nuts_bolts.h"
+#include "expanders_init.h"
 
 #ifdef OPTS_POSTPROCESSING
 #define NO_OPTS_POST 0
