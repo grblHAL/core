@@ -29,7 +29,7 @@
 
 // I2C expanders
 
-#if PCA9654E_ENABLE || MCP3221_ENABLE
+#if PCA9654E_ENABLE || MCP3221_ENABLE || MCP4725_ENABLE
 
 #if defined(I2C_ENABLE) && !I2C_ENABLE
 #undef I2C_ENABLE
@@ -41,6 +41,10 @@
 
 #if MCP3221_ENABLE
 extern void mcp3221_init (void);
+#endif
+
+#if MCP4725_ENABLE
+extern void mcp4725_init (void);
 #endif
 
 #if PCA9654E_ENABLE
@@ -71,6 +75,10 @@ static inline void io_expanders_init (void)
 {
 #if MCP3221_ENABLE
     mcp3221_init();
+#endif
+
+#if MCP4725_ENABLE
+    mcp4725_init();
 #endif
 
 #if PCA9654E_ENABLE

@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+<a name="20250411">20250411
+
+Core:
+
+* Added MCP4725 I2C DAC to IO expander plugins.
+
+Drivers:
+
+* iMXRT1062, STM32F4xx, STM32F7xx, MSP432: fixed regression causing spindle encoder data to be reset shortly before starting spindle synced motion - resulting in error 41.
+
+Plugins:
+
+* Misc: added MCP4725 I2C DAC.
+
+---
+
 <a name="20250409">Build 20250409
 
 Core:
