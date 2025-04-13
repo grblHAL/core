@@ -211,13 +211,6 @@ bool ioport_digital_in_config (uint8_t port, gpio_in_config_t *config);
 bool ioport_enable_irq (uint8_t port, pin_irq_mode_t irq_mode, ioport_interrupt_callback_ptr handler);
 bool ioport_digital_out_config (uint8_t port, gpio_out_config_t *config);
 
-bool ioports_add (io_ports_data_t *ports, io_port_type_t type, uint8_t n_in, uint8_t n_out); //!< Deprecated - use ioports_add_analog() or ioports_add_digital() instead.
-bool ioport_can_claim_explicit (void);                                                       //!< Deprecated - use ioports_can_do() instead.
-void ioport_assign_function (aux_ctrl_t *aux_ctrl, pin_function_t *function);                //!< Deprecated - use ioport_set_function() instead.
-void ioport_assign_out_function (aux_ctrl_out_t *aux_ctrl, pin_function_t *function);        //!< Deprecated - use ioport_set_function() instead.
-
-//
-
 struct io_ports_data;
 
 typedef struct {
@@ -286,5 +279,12 @@ uint_fast16_t ioports_compute_pwm_value (ioports_pwm_t *pwm_data, float value);
 #define iports_get_pnum(type, port) type.get_pnum(&type, port)
 #define ioports_map(type, port) ( type.map ? type.map[port] : port )
 #endif
+
+//
+bool ioports_add (io_ports_data_t *ports, io_port_type_t type, uint8_t n_in, uint8_t n_out); //!< Deprecated - use ioports_add_analog() or ioports_add_digital() instead.
+bool ioport_can_claim_explicit (void);                                                       //!< Deprecated - use ioports_can_do() instead.
+void ioport_assign_function (aux_ctrl_t *aux_ctrl, pin_function_t *function);                //!< Deprecated - use ioport_set_function() instead.
+void ioport_assign_out_function (aux_ctrl_out_t *aux_ctrl, pin_function_t *function);        //!< Deprecated - use ioport_set_function() instead.
+//
 
 /*EOF*/
