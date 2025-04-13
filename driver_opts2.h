@@ -61,6 +61,124 @@
 #define FLASH_ENABLE 0
 #endif
 
+// Expand port shorthand names
+
+#ifdef ENABLE_PORT
+#ifdef STEPPERS_ENABLE_PIN
+#ifndef STEPPERS_ENABLE_PORT
+#define STEPPERS_ENABLE_PORT ENABLE_PORT
+#endif
+#else
+#ifdef XY_ENABLE_PIN
+#ifndef XY_ENABLE_PORT
+#define XY_ENABLE_PORT ENABLE_PORT
+#endif
+#else
+#ifndef X_ENABLE_PORT
+#define X_ENABLE_PORT ENABLE_PORT
+#endif
+#ifndef Y_ENABLE_PORT
+#define Y_ENABLE_PORT ENABLE_PORT
+#endif
+#endif
+#ifndef Z_ENABLE_PORT
+#define Z_ENABLE_PORT ENABLE_PORT
+#endif
+#if defined(M3_ENABLE_PIN) && !defined(M3_ENABLE_PORT)
+#define M3_ENABLE_PORT ENABLE_PORT
+#endif
+#if defined(M4_ENABLE_PIN) && !defined(M4_ENABLE_PORT)
+#define M4_ENABLE_PORT ENABLE_PORT
+#endif
+#if defined(M5_ENABLE_PIN) && !defined(M5_ENABLE_PORT)
+#define M5_ENABLE_PORT ENABLE_PORT
+#endif
+#if defined(M6_ENABLE_PIN) && !defined(M6_ENABLE_PORT)
+#define M6_ENABLE_PORT ENABLE_PORT
+#endif
+#if defined(M7_ENABLE_PIN) && !defined(M7_ENABLE_PORT)
+#define M7_ENABLE_PORT ENABLE_PORT
+#endif
+#endif
+#endif // ENABLE_PORT
+
+#ifdef STEP_PORT
+#ifndef X_STEP_PORT
+#define X_STEP_PORT STEP_PORT
+#endif
+#ifndef Y_STEP_PORT
+#define Y_STEP_PORT STEP_PORT
+#endif
+#ifndef Z_STEP_PORT
+#define Z_STEP_PORT STEP_PORT
+#endif
+#if defined(M3_STEP_PIN) && !defined(M3_STEP_PORT)
+#define M3_STEP_PORT STEP_PORT
+#endif
+#if defined(M4_STEP_PIN) && !defined(M4_STEP_PORT)
+#define M4_STEP_PORT STEP_PORT
+#endif
+#if defined(M5_STEP_PIN) && !defined(M5_STEP_PORT)
+#define M5_STEP_PORT STEP_PORT
+#endif
+#if defined(M6_STEP_PIN) && !defined(M6_STEP_PORT)
+#define M6_STEP_PORT STEP_PORT
+#endif
+#if defined(M7_STEP_PIN) && !defined(M7_STEP_PORT)
+#define M7_STEP_PORT STEP_PORT
+#endif
+#endif // STEP_PORT
+
+#ifdef DIRECTION_PORT
+#ifndef X_DIRECTION_PORT
+#define X_DIRECTION_PORT DIRECTION_PORT
+#endif
+#ifndef Y_DIRECTION_PORT
+#define Y_DIRECTION_PORT DIRECTION_PORT
+#endif
+#ifndef Z_DIRECTION_PORT
+#define Z_DIRECTION_PORT DIRECTION_PORT
+#endif
+#if defined(M3_DIRECTION_PIN) && !defined(M3_DIRECTION_PORT)
+#define M3_DIRECTION_PORT DIRECTION_PORT
+#endif
+#if defined(M4_DIRECTION_PIN) && !defined(M4_DIRECTION_PORT)
+#define M4_DIRECTION_PORT DIRECTION_PORT
+#endif
+#if defined(M5_DIRECTION_PIN) && !defined(M5_DIRECTION_PORT)
+#define M5_DIRECTION_PORT DIRECTION_PORT
+#endif
+#if defined(M6_DIRECTION_PIN) && !defined(M6_DIRECTION_PORT)
+#define M6_DIRECTION_PORT DIRECTION_PORT
+#endif
+#if defined(M7_DIRECTION_PIN) && !defined(M7_DIRECTION_PORT)
+#define M7_DIRECTION_PORT DIRECTION_PORT
+#endif
+#endif // DIRECTION_PORT
+
+#ifdef SPINDLE_PORT
+#ifndef SPINDLE_ENABLE_PORT
+#define SPINDLE_ENABLE_PORT SPINDLE_PORT
+#endif
+#if defined(SPINDLE_PWM_PIN) && !defined(SPINDLE_PWM_PORT)
+#define SPINDLE_PWM_PORT SPINDLE_PORT
+#endif
+#if defined(SPINDLE_DIRECTION_PIN) && !defined(SPINDLE_DIRECTION_PORT)
+#define SPINDLE_DIRECTION_PORT SPINDLE_PORT
+#endif
+#endif // SPINDLE_PORT
+
+#ifdef COOLANT_PORT
+#if defined(COOLANT_FLOOD_PIN) && !defined(COOLANT_FLOOD_PORT)
+#define COOLANT_FLOOD_PORT COOLANT_PORT
+#endif
+#if defined(COOLANT_MIST_PIN) && !defined(COOLANT_MIST_PORT)
+#define COOLANT_MIST_PORT COOLANT_PORT
+#endif
+#endif // COOLANT_PORT
+
+// End expand port shorthand names
+
 #if TRINAMIC_ENABLE
 
 #include "motors/trinamic.h"

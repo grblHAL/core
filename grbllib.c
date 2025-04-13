@@ -100,6 +100,11 @@ static settings_changed_ptr hal_settings_changed;
 kinematics_t kinematics;
 #endif
 
+__attribute__((weak)) void board_ports_init (void)
+{
+    // NOOP
+}
+
 void dummy_bool_handler (bool arg)
 {
     // NOOP

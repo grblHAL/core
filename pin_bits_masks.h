@@ -496,6 +496,9 @@ static aux_ctrl_out_t aux_ctrl_out[] = {
  #endif
     { .function = Output_CoProc_Boot0, .aux_port = 0xFF, .pin = COPROC_BOOT0_PIN,       .port = (void *)COPROC_BOOT0_PORT },
 #endif
+#if defined(SPI_RST_PIN) && SPI_RST_PORT == EXPANDER_PORT &&  defined(RP2040)
+    { .function = Output_SPIRST,       .aux_port = 0xFF, .pin = SPI_RST_PIN,            .port = (void *)SPI_RST_PORT },
+#endif
 };
 
 static inline aux_ctrl_out_t *aux_out_remap_explicit (void *port, uint8_t pin, uint8_t aux_port, void *output)
@@ -539,10 +542,8 @@ static inline void aux_ctrl_claim_out_ports (aux_claim_explicit_out_ptr aux_clai
     for(idx = 0; idx < sizeof(aux_ctrl_out) / sizeof(aux_ctrl_out_t); idx++) {
         if(aux_ctrl_out[idx].port == (void *)EXPANDER_PORT) {
             if(ioports_enumerate(Port_Digital, Port_Output, (pin_cap_t){ .external = On, .claimable = On }, aux_claim, &aux_ctrl_out[idx])) {
-                if(ioport_claim(Port_Digital, Port_Output, &aux_ctrl_out[idx].aux_port, ""/*xbar_fn_to_pinname(aux_ctrl_out[idx].function)*/)) {
-                    aux_ctrl_out[idx].output = hal.port.get_pin_info(Port_Digital, Port_Output, aux_ctrl_out[idx].aux_port);
-                    if(((xbar_t *)aux_ctrl_out[idx].output)->set_function)
-                        ((xbar_t *)aux_ctrl_out[idx].output)->set_function((xbar_t *)aux_ctrl_out[idx].output, aux_ctrl_out[idx].function);
+                if((aux_ctrl_out[idx].output = ioport_claim(Port_Digital, Port_Output, &aux_ctrl_out[idx].aux_port, NULL /*xbar_fn_to_pinname(aux_ctrl_out[idx].function)*/))) {
+                    ioport_set_function((xbar_t *)aux_ctrl_out[idx].output, aux_ctrl_out[idx].function, NULL);
                         // TODO: else set description?
                     aux_claim_explicit(&aux_ctrl_out[idx]);
                 }

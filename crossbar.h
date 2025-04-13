@@ -58,17 +58,20 @@ typedef enum {
     Input_MPGSelect,
     Input_ModeSelect = Input_MPGSelect, // Deprecated
     Input_LimitX,
-    Input_LimitX_2,
+    Input_LimitX2,
+    Input_LimitX_2 = Input_LimitX2, // Deprecated
     Input_LimitX_Max,
     Input_HomeX,
     Input_HomeX_2,
     Input_LimitY,
-    Input_LimitY_2,
+    Input_LimitY2,
+    Input_LimitY_2 = Input_LimitY2, // Deprecated
     Input_LimitY_Max,
     Input_HomeY,
     Input_HomeY_2,
     Input_LimitZ,
-    Input_LimitZ_2,
+    Input_LimitZ2,
+    Input_LimitZ_2 = Input_LimitZ2, // Deprecated
     Input_LimitZ_Max,
     Input_HomeZ,
     Input_HomeZ_2,
@@ -126,22 +129,28 @@ typedef enum {
 // Output pins
     Output_StepX,
     Outputs = Output_StepX,
-    Output_StepX_2,
+    Output_StepX2,
+    Output_StepX_2 = Output_StepX2, // deprecated
     Output_StepY,
-    Output_StepY_2,
+    Output_StepY2,
+    Output_StepY_2 = Output_StepY2, // deprecated
     Output_StepZ,
-    Output_StepZ_2,
+    Output_StepZ2,
+    Output_StepZ_2 = Output_StepZ2, // deprecated
     Output_StepA,
     Output_StepB,
     Output_StepC,
     Output_StepU,
     Output_StepV,
     Output_DirX,
-    Output_DirX_2,
+    Output_DirX2,
+    Output_DirX_2 = Output_DirX2, // deprecated
     Output_DirY,
-    Output_DirY_2,
+    Output_DirY2,
+    Output_DirY_2 = Output_DirY2, // deprecated
     Output_DirZ,
-    Output_DirZ_2,
+    Output_DirZ2,
+    Output_DirZ_2 = Output_DirZ2, // deprecated
     Output_DirA,
     Output_DirB,
     Output_DirC,
@@ -158,9 +167,13 @@ typedef enum {
     Output_MotorChipSelectM7,
     Output_StepperPower,
     Output_StepperEnable,
+    Output_StepperEnableSTEPPERS = Output_StepperEnable,
     Output_StepperEnableX,
+    Output_StepperEnableX2 = Output_StepperEnableX,
     Output_StepperEnableY,
+    Output_StepperEnableY2 = Output_StepperEnableY,
     Output_StepperEnableZ,
+    Output_StepperEnableZ2 = Output_StepperEnableZ,
     Output_StepperEnableA,
     Output_StepperEnableB,
     Output_StepperEnableU,
@@ -342,17 +355,17 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Input_Analog_Aux7,          .name = "Aux analog in 7" },
 #endif
     { .function = Output_StepX,               .name = "X step" },
-    { .function = Output_StepX_2,             .name = "X2 step" },
+    { .function = Output_StepX2,              .name = "X2 step" },
     { .function = Output_StepY,               .name = "Y step" },
-    { .function = Output_StepY_2,             .name = "Y2 step" },
+    { .function = Output_StepY2,              .name = "Y2 step" },
     { .function = Output_StepZ,               .name = "Z step" },
-    { .function = Output_StepZ_2,             .name = "Z2 step" },
+    { .function = Output_StepZ2,              .name = "Z2 step" },
     { .function = Output_DirX,                .name = "X dir" },
-    { .function = Output_DirX_2,              .name = "X2 dir" },
+    { .function = Output_DirX2,               .name = "X2 dir" },
     { .function = Output_DirY,                .name = "Y dir" },
-    { .function = Output_DirY_2,              .name = "Y2 dir" },
+    { .function = Output_DirY2,               .name = "Y2 dir" },
     { .function = Output_DirZ,                .name = "Z dir" },
-    { .function = Output_DirZ_2,              .name = "Z2 dir" },
+    { .function = Output_DirZ2,               .name = "Z2 dir" },
     { .function = Output_StepperPower,        .name = "Stepper power" },
     { .function = Output_StepperEnable,       .name = "Steppers enable" },
     { .function = Output_StepperEnableX,      .name = "X enable" },
@@ -726,6 +739,7 @@ typedef struct {
 } aux_ctrl_out_t;
 
 typedef struct xbar {
+    void *ports_id;
     uint8_t id;                         //!< Pin id.
     pin_function_t function;            //!< Pin function.
     pin_group_t group;                  //!< Pin group.

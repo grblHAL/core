@@ -1073,9 +1073,10 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_foreground_task)(fg_task_ptr fn, void *d
 
     if((ok = bptr != realtime_queue.tail)) {                    // If not buffer full
         realtime_queue.task[realtime_queue.head].data = data;
-        realtime_queue.task[realtime_queue.head].task = fn;       // add function pointer to buffer,
+        realtime_queue.task[realtime_queue.head].task = fn;     // add function pointer to buffer,
         realtime_queue.head = bptr;                             // update pointer and
-        system_set_exec_state_flag(EXEC_RT_COMMAND);            // flag it for execute
+        if(sys.driver_started)
+            system_set_exec_state_flag(EXEC_RT_COMMAND);        // flag it for execute
     }
 
     return ok;

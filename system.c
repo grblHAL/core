@@ -814,7 +814,7 @@ const char *help_pins (const char *cmd)
 
 const char *help_pin_state (const char *cmd)
 {
-    return hal.port.get_pin_info ? "output auxiliary pin states" : NULL;
+    return ioports_can_do().io ? "output auxiliary pin states" : NULL;
 }
 
 #endif

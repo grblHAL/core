@@ -1,5 +1,26 @@
 ## grblHAL changelog
 
+<a name="20250413">20250413
+
+Core:
+
+* For developers: added wrappers/veneers for `hal.port` functions, plugin code should be changed to use these instead of calling via `hal.port` functions or accessing `hal.port` properties.  
+Improved the [ioports API](https://svn.io-engineering.com/grblHAL/html/ioports_8c.html), updated core code to make use of it. Flagged some calls and (part of) some stuctures as deprecated.
+
+Drivers:
+
+* Most: updated to make use of the new ioports API functionality.
+
+* Some: removed references to deleted odometer include. Ref. odometer issue [#2](https://github.com/grblHAL/Plugin_odometer/issues/2).
+
+Plugins:
+
+* Fans: fixed bug preventing selection of ports to use. Possibly related to issue [#242 comment](https://github.com/grblHAL/core/issues/242#issuecomment-2798816316). 
+
+* Many: updated to make use of the new ioports API functionality.
+
+---
+
 <a name="20250411">20250411
 
 Core:

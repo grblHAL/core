@@ -1383,15 +1383,15 @@ status_code_t gc_execute_block (char *block)
                     case 63:
                     case 64:
                     case 65:
-                        if(hal.port.digital_out == NULL || ioports_unclaimed(Port_Digital, Port_Output) == 0)
+                        if(!ioports_can_do().digital_out || ioports_unclaimed(Port_Digital, Port_Output) == 0)
                             FAIL(Status_GcodeUnsupportedCommand); // [Unsupported M command]
                         word_bit.modal_group.M5 = On;
                         port_command = (io_mcode_t)int_value;
                         break;
 
                     case 66:
-                        if(hal.port.wait_on_input == NULL || (ioports_unclaimed(Port_Digital, Port_Input) == 0 &&
-                                                               ioports_unclaimed(Port_Analog, Port_Input) == 0))
+                        if(!ioports_can_do().wait_on_input || (ioports_unclaimed(Port_Digital, Port_Input) == 0 &&
+                                                              ioports_unclaimed(Port_Analog, Port_Input) == 0))
                             FAIL(Status_GcodeUnsupportedCommand); // [Unsupported M command]
                         word_bit.modal_group.M5 = On;
                         port_command = (io_mcode_t)int_value;
@@ -1399,7 +1399,7 @@ status_code_t gc_execute_block (char *block)
 
                     case 67:
                     case 68:
-                        if(hal.port.analog_out == NULL || ioports_unclaimed(Port_Analog, Port_Output) == 0)
+                        if(!ioports_can_do().analog_out || ioports_unclaimed(Port_Analog, Port_Output) == 0)
                             FAIL(Status_GcodeUnsupportedCommand); // [Unsupported M command]
                         word_bit.modal_group.M5 = On;
                         port_command = (io_mcode_t)int_value;
@@ -3307,11 +3307,11 @@ status_code_t gc_execute_block (char *block)
 
             case IoMCode_OutputOnImmediate:
             case IoMCode_OutputOffImmediate:
-                hal.port.digital_out(gc_block.output_command.port, gc_block.output_command.value != 0.0f);
+                ioport_digital_out(gc_block.output_command.port, gc_block.output_command.value != 0.0f);
                 break;
 
             case IoMCode_WaitOnInput:
-                sys.var5399 = hal.port.wait_on_input((io_port_type_t)gc_block.output_command.is_digital, gc_block.output_command.port, (wait_mode_t)gc_block.values.l, gc_block.values.q);
+                sys.var5399 = ioport_wait_on_input((io_port_type_t)gc_block.output_command.is_digital, gc_block.output_command.port, (wait_mode_t)gc_block.values.l, gc_block.values.q);
                 system_add_rt_report(Report_M66Result);
                 break;
 
@@ -3320,7 +3320,7 @@ status_code_t gc_execute_block (char *block)
                 break;
 
             case IoMCode_AnalogOutImmediate:
-                hal.port.analog_out(gc_block.output_command.port, gc_block.output_command.value);
+                ioport_analog_out(gc_block.output_command.port, gc_block.output_command.value);
                 break;
         }
     }

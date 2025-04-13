@@ -27,6 +27,8 @@
 
 #pragma once
 
+extern void board_ports_init (void); // default is a weak function
+
 // I2C expanders
 
 #if PCA9654E_ENABLE || MCP3221_ENABLE || MCP4725_ENABLE
@@ -73,6 +75,8 @@ extern void pca9654e_init(void);
 
 static inline void io_expanders_init (void)
 {
+    board_ports_init(); // can be implemented by board specific code
+
 #if MCP3221_ENABLE
     mcp3221_init();
 #endif
