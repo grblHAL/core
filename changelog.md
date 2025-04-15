@@ -1,5 +1,22 @@
 ## grblHAL changelog
 
+<a name="20250415">20250415
+
+Core:
+
+* Fixed long standing "bug" where settings `$370` and `$372` for auxiliary ports where applied before the underlying GPIO pins were initialized by the driver.  
+Improved handling of same settings for external \(I2C, ModBus, ...\) ports.
+
+Drivers:
+
+* iMXRT1062: removed reference to deleted odometer include. Ref. odometer issue [#2](https://github.com/grblHAL/Plugin_odometer/issues/2).
+
+Plugins:
+
+* Misc: updated PCA9654E driver.
+
+---
+
 <a name="20250413">20250413
 
 Core:

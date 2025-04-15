@@ -310,12 +310,14 @@ int grbl_enter (void)
 */
     sys.mpg_mode = false;
 
-    if(driver.ok == 0xFF) {
+    if((sys.ioinit_pending = driver.ok == 0xFF)) {
 
         hal_settings_changed = hal.settings_changed;
         hal.settings_changed = settings_changed;
 
         driver.setup = hal.driver_setup(&settings);
+
+        sys.ioinit_pending = false;
     }
 
     spindle_id_t spindle_id, encoder_spindle;

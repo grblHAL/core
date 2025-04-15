@@ -496,8 +496,10 @@ static aux_ctrl_out_t aux_ctrl_out[] = {
  #endif
     { .function = Output_CoProc_Boot0, .aux_port = 0xFF, .pin = COPROC_BOOT0_PIN,       .port = (void *)COPROC_BOOT0_PORT },
 #endif
-#if defined(SPI_RST_PIN) && SPI_RST_PORT == EXPANDER_PORT &&  defined(RP2040)
+#if defined(SPI_RST_PIN) && defined(RP2040)
+ #if SPI_RST_PORT == EXPANDER_PORT
     { .function = Output_SPIRST,       .aux_port = 0xFF, .pin = SPI_RST_PIN,            .port = (void *)SPI_RST_PORT },
+ #endif
 #endif
 };
 

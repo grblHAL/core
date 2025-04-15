@@ -221,7 +221,30 @@ typedef struct {
     encoder_settings_t *settings;
 } encoder_t;
 
-// I2C interface
+// DISPLAYS:
+
+// Interfaces
+#define DISPLAY_I2C             (1<<0) //!< 1
+#define DISPLAY_SPI             (1<<1) //!< 2
+#define DISPLAY_UART            (1<<2) //!< 4
+
+// Plugins
+#define DISPLAY_I2C_INTERFACE   ((1<<3)|DISPLAY_I2C) //!< 9  - @grblhal
+#define DISPLAY_I2C_LEDS        ((1<<4)|DISPLAY_I2C) //!< 17 - @grblhal
+#define DISPLAY_I2C_OLED_1      ((1<<5)|DISPLAY_I2C) //!< 33 - @luc-github
+
+// Driver chips
+
+#define DISPLAY_DRIVER_SH1106  1
+#define DISPLAY_DRIVER_SSD1306 2
+#define DISPLAY_DRIVER_SSD1331 3
+#define DISPLAY_DRIVER_ILI9340 4
+#define DISPLAY_DRIVER_ILI9341 5
+#define DISPLAY_DRIVER_ILI9486 6
+
+// I2C interface:
+
+typedef void (*keycode_callback_ptr)(const char c);
 
 typedef uint_fast16_t i2c_address_t;
 
@@ -252,26 +275,41 @@ typedef union {
     };
 } i2c_cap_t;
 
-// DISPLAYS:
+extern i2c_cap_t i2c_start (void);
+extern bool i2c_probe (i2c_address_t i2c_address);
+extern bool i2c_send (i2c_address_t i2c_address, uint8_t *data, size_t size, bool block);
+extern bool i2c_receive (i2c_address_t i2cAddr, uint8_t *buf, size_t size, bool block);
+extern bool i2c_get_keycode (i2c_address_t i2c_address, keycode_callback_ptr callback);
+extern bool i2c_transfer (i2c_transfer_t *i2c, bool read);
 
-// Interfaces
-#define DISPLAY_I2C             (1<<0) //!< 1
-#define DISPLAY_SPI             (1<<1) //!< 2
-#define DISPLAY_UART            (1<<2) //!< 4
+// SPI interface:
 
-// Plugins
-#define DISPLAY_I2C_INTERFACE   ((1<<3)|DISPLAY_I2C) //!< 9  - @grblhal
-#define DISPLAY_I2C_LEDS        ((1<<4)|DISPLAY_I2C) //!< 17 - @grblhal
-#define DISPLAY_I2C_OLED_1      ((1<<5)|DISPLAY_I2C) //!< 33 - @luc-github
+/*
+typedef void (*spi_cs_ptr)(const char c);
 
-// Driver chips
+typedef struct {
+    spi_cs_ptr cs;
+    uint32_t f_clk;
+} spi_cfg_t;
 
-#define DISPLAY_DRIVER_SH1106  1
-#define DISPLAY_DRIVER_SSD1306 2
-#define DISPLAY_DRIVER_SSD1331 3
-#define DISPLAY_DRIVER_ILI9340 4
-#define DISPLAY_DRIVER_ILI9341 5
-#define DISPLAY_DRIVER_ILI9486 6
+typedef union {
+    uint8_t ok;
+    struct {
+        uint8_t started         :1,
+                tx_non_blocking :1,
+                tx_dma          :1,
+                unassigned      :5;
+    };
+} spi_cap_t;
+
+extern spi_cap_t spi_start (spi_cfg_t *cfg);
+extern uint32_t spi_set_speed (uint32_t prescaler);
+extern uint8_t spi_get_byte (void);
+extern uint8_t spi_put_byte (uint8_t byte);
+extern void spi_write (uint8_t *data, size_t size);
+extern void spi_read (uint8_t *data, size_t size);
+extern void spi_write (uint8_t *data, size_t size);
+*/
 
 // EEPROM/FRAM:
 
@@ -280,16 +318,5 @@ typedef i2c_transfer_t nvs_transfer_t;
 
 typedef bool nvs_transfer_result_t;
 #define NVS_TransferResult_OK true
-
-// I2C interface:
-
-typedef void (*keycode_callback_ptr)(const char c);
-
-extern i2c_cap_t i2c_start (void);
-extern bool i2c_probe (i2c_address_t i2c_address);
-extern bool i2c_send (i2c_address_t i2c_address, uint8_t *data, size_t size, bool block);
-extern bool i2c_receive (i2c_address_t i2cAddr, uint8_t *buf, size_t size, bool block);
-extern bool i2c_get_keycode (i2c_address_t i2c_address, keycode_callback_ptr callback);
-extern bool i2c_transfer (i2c_transfer_t *i2c, bool read);
 
 #endif

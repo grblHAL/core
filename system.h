@@ -349,6 +349,7 @@ typedef struct system {
 //@{
     alarm_code_t alarm;                     //!< Current alarm, only valid if system state is STATE_ALARM.
     bool cold_start;                        //!< Set to true on boot, is false on subsequent soft resets.
+    bool ioinit_pending;
     bool driver_started;                    //!< Set to true when driver initialization is completed.
     bool mpg_mode;                          //!< To be moved to system_flags_t
     signal_event_t last_event;              //!< Last signal events (control and limits signal).
