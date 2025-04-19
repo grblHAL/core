@@ -76,7 +76,7 @@ typedef union {
 } driver_startup_t;
 
 #ifndef CORE_TASK_POOL_SIZE
-#define CORE_TASK_POOL_SIZE 30
+#define CORE_TASK_POOL_SIZE 40
 #endif
 
 typedef struct core_task {
@@ -92,7 +92,7 @@ DCRAM grbl_hal_t hal;
 
 DCRAM static core_task_t task_pool[CORE_TASK_POOL_SIZE];
 static driver_startup_t driver = { .ok = 0xFF };
-static core_task_t *next_task = NULL, *immediate_task = NULL, *systick_task = NULL, *last_freed = NULL;
+static core_task_t *next_task = NULL, *immediate_task = NULL, *on_booted = NULL, *systick_task = NULL, *last_freed = NULL;
 static on_linestate_changed_ptr on_linestate_changed;
 static settings_changed_ptr hal_settings_changed;
 
@@ -181,8 +181,10 @@ static void output_welcome_message (void *data)
 
 static void onLinestateChanged (serial_linestate_t state)
 {
-    if(state.dtr)
+    if(state.dtr) {
+        task_delete(output_welcome_message, NULL);
         task_add_delayed(output_welcome_message, NULL, 200);
+    }
 
     if(on_linestate_changed)
         on_linestate_changed(state);
@@ -343,7 +345,7 @@ int grbl_enter (void)
 
     if(driver.ok != 0xFF) {
         sys.alarm = Alarm_SelftestFailed;
-        protocol_enqueue_foreground_task(report_driver_error, NULL);
+        task_run_on_startup(report_driver_error, NULL);
     }
 
     hal.stepper.enable(settings.steppers.energize, true);
@@ -465,6 +467,7 @@ __attribute__((always_inline)) static inline core_task_t *task_alloc (void)
 __attribute__((always_inline)) static inline void task_free (core_task_t *task)
 {
     task->fn = NULL;
+    task->next = NULL;
     if(last_freed == NULL)
         last_freed = task;
 }
@@ -541,7 +544,7 @@ ISR_CODE bool ISR_FUNC(task_add_delayed)(foreground_task_ptr fn, void *data, uin
 
         if(next_task == NULL)
             next_task = task;
-        else if((int32_t)(task->time - next_task->time) < 0) {
+        else if((int32_t)(task->time - next_task->time) <= 0) {
             task->next = next_task;
             next_task = task;
         } else {
@@ -661,4 +664,60 @@ ISR_CODE bool ISR_FUNC(task_add_immediate)(foreground_task_ptr fn, void *data)
     hal.irq_enable();
 
     return task != NULL;
+}
+
+/*! \brief Enqueue a function to be called once by the foreground process after the boot sequence is completed.
+\param fn pointer to a \a foreground_task_ptr type of function.
+\param data pointer to data to be passed to the callee.
+\returns true if successful, false otherwise.
+*/
+ISR_CODE bool ISR_FUNC(task_run_on_startup)(foreground_task_ptr fn, void *data)
+{
+    if(sys.cold_start) {
+
+        core_task_t *task = NULL;
+
+        hal.irq_disable();
+
+        if(fn && (task = task_alloc())) {
+
+            task->fn = fn;
+            task->data = data;
+            task->next = NULL;
+
+            if(on_booted == NULL)
+                on_booted = task;
+            else {
+                core_task_t *t = on_booted;
+                while(t->next)
+                    t = t->next;
+                t->next = task;
+            }
+        }
+
+        hal.irq_enable();
+
+        return task != NULL;
+
+    } else
+        return task_add_immediate(fn, data); // TODO: for now, to be removed...
+}
+
+// for core use only, called once from protocol.c on cold start
+void task_execute_on_startup (void)
+{
+    if(on_booted) do {
+
+        core_task_t *task = on_booted;
+        foreground_task_ptr fn = task->fn;
+        void *data = task->data;
+
+        on_booted = task->next;
+        task_free(task);
+        fn(data);
+
+    } while(on_booted);
+
+    if(!sys.driver_started)
+        while(true);
 }

@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2024 Terje Io
+  Copyright (c) 2017-2025 Terje Io
   Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -286,7 +286,7 @@ bool nvs_buffer_init (void)
                 grbl.report.status_message(Status_SettingReadFail);
         }
     } else
-        protocol_enqueue_foreground_task(report_warning, "Not enough heap for NVS buffer!");
+        task_run_on_startup(report_warning, "Not enough heap for NVS buffer!");
 
     // Clear settings dirty flags
     memset(&settings_dirty, 0, sizeof(settings_dirty_t));

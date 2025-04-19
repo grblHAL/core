@@ -214,7 +214,7 @@ typedef enum {
     Setting_ToolChangeFeedRate = 343,
     Setting_ToolChangeSeekRate = 344,
     Setting_ToolChangePulloffRate = 345,
-    Setting_ToolChangeRestorePosition = 346,
+    Setting_ToolChangeOptions = 346,
 
     Setting_DualAxisLengthFailPercent = 347,
     Setting_DualAxisLengthFailMin = 348,
@@ -592,7 +592,9 @@ typedef union {
                  no_unlock_after_estop           :1,
                  settings_downgrade              :1,
                  keep_offsets_on_reset           :1,
-         		 unassigned                      :14;
+                 tool_change_at_g30              :1,
+                 tool_change_fast_pulloff        :1,
+         		 unassigned                      :12;
     };
 } settingflags_t;
 
@@ -815,8 +817,7 @@ typedef enum {
     ToolChange_Manual,
     ToolChange_Manual_G59_3,
     ToolChange_SemiAutomatic,
-    ToolChange_Ignore,
-	ToolChange_FastSemiAutomatic
+    ToolChange_Ignore
 } toolchange_mode_t;
 
 typedef struct {

@@ -37,27 +37,36 @@
 #define TOOL_CHANGE_PROBE_RETRACT_DISTANCE 2.0f
 #endif
 
-static bool block_cycle_start, probe_toolsetter;
+static bool block_cycle_start, probe_toolsetter, change_at_g30;
 static volatile bool execute_posted = false;
 static volatile uint32_t spin_lock = 0;
-static float tool_change_position;
-static tool_data_t current_tool = {0}, *next_tool = NULL;
+static tool_data_t current_tool = {}, *next_tool = NULL;
 static plane_t plane;
-static coord_data_t target = {0}, previous;
+static coord_data_t target = {}, previous;
 static driver_reset_ptr driver_reset = NULL;
 static enqueue_realtime_command_ptr enqueue_realtime_command = NULL;
 static control_signals_callback_ptr control_interrupt_callback = NULL;
 static on_homing_completed_ptr on_homing_completed = NULL;
 static on_probe_completed_ptr on_probe_completed;
+static on_wco_saved_ptr on_wco_saved;
 
 // Clear tool length offset on homing
-static void tc_on_homing_complete (axes_signals_t homing_cycle, bool success)
+static void onHomingComplete (axes_signals_t homing_cycle, bool success)
 {
     if(on_homing_completed)
         on_homing_completed(homing_cycle, success);
 
     if(settings.tool_change.mode != ToolChange_Disabled)
         system_clear_tlo_reference(homing_cycle);
+}
+
+static void onWcoSaved (coord_system_id_t id, coord_data_t *offset)
+{
+    if(on_wco_saved)
+        on_wco_saved(id, offset);
+
+    if(id == gc_state.modal.coord_system.id && block_cycle_start)
+        block_cycle_start = change_at_g30;
 }
 
 // Set tool offset on successful $TPW probe, prompt for retry on failure.
@@ -128,21 +137,25 @@ static void reset (void)
 // Restore coolant and spindle status, return controlled point to original position.
 static bool restore (void)
 {
+    bool ok;
     plan_line_data_t plan_data;
 
     plan_data_init(&plan_data);
     plan_data.condition.rapid_motion = On;
 
-    target.values[plane.axis_linear] = tool_change_position;
-    mc_line(target.values, &plan_data);
+    if(!(ok = (target.values[plane.axis_0] == previous.values[plane.axis_0] &&
+                target.values[plane.axis_1] == previous.values[plane.axis_1]))) {
 
-    if(!settings.flags.no_restore_position_after_M6) {
-        memcpy(&target, &previous, sizeof(coord_data_t));
-        target.values[plane.axis_linear] = tool_change_position;
-        mc_line(target.values, &plan_data);
+        target.values[plane.axis_linear] = sys.home_position[plane.axis_linear];
+
+        if((ok = mc_line(target.values, &plan_data)) && !settings.flags.no_restore_position_after_M6) {
+            memcpy(&target, &previous, sizeof(coord_data_t));
+            target.values[plane.axis_linear] = sys.home_position[plane.axis_linear];
+            ok = mc_line(target.values, &plan_data);
+        }
     }
 
-    if(protocol_buffer_synchronize()) {
+    if(ok && protocol_buffer_synchronize()) {
 
         sync_position();
 
@@ -164,11 +177,85 @@ static bool restore (void)
     return !ABORTED;
 }
 
+static bool go_linear_home (plan_line_data_t *pl_data)
+{
+    system_convert_array_steps_to_mpos(target.values, sys.position);
+
+    if(target.values[plane.axis_linear] != sys.home_position[plane.axis_linear]) {
+
+        target.values[plane.axis_linear] = sys.home_position[plane.axis_linear];
+        if(!mc_line(target.values, pl_data))
+            return false;
+    }
+
+    return true;
+}
+#if COMPATIBILITY_LEVEL <= 1
+
+static bool go_toolsetter (plan_line_data_t *pl_data)
+{
+    // G59.3 contains offsets to toolsetter.
+    settings_read_coord_data(CoordinateSystem_G59_3, &target.values);
+
+    float tmp_pos = target.values[plane.axis_linear];
+
+    target.values[plane.axis_linear] = sys.home_position[plane.axis_linear];
+
+    if(probe_toolsetter)
+        grbl.on_probe_toolsetter(next_tool, &target, false, true);
+
+    if(!mc_line(target.values, pl_data))
+        return false;
+
+    target.values[plane.axis_linear] = tmp_pos;
+    if(!mc_line(target.values, pl_data))
+        return false;
+
+    if(probe_toolsetter)
+        grbl.on_probe_toolsetter(next_tool, NULL, true, true);
+
+    return true;
+}
+
+#endif
+
 // Issue warning on cycle start event if touch off by $TPW is pending.
 // Used in Manual and Manual_G59_3 modes ($341=1 or $341=2). Called from the foreground process.
 static void execute_warning (void *data)
 {
     grbl.report.feedback_message(Message_ExecuteTPW);
+}
+
+// Execute restore position after tool change, either back to original or to toolsetter for touch off.
+// Used when G30 position is used for changing the tool. Called from the foreground process.
+static void execute_return_from_g30 (void *data)
+{
+    bool ok;
+    plan_line_data_t plan_data;
+
+    plan_data_init(&plan_data);
+    plan_data.condition.rapid_motion = On;
+
+    if((ok = go_linear_home(&plan_data))) {
+#if COMPATIBILITY_LEVEL <= 1
+        if(settings.tool_change.mode == ToolChange_Manual_G59_3)
+            ok = go_toolsetter(&plan_data);
+        else
+#endif
+        {
+            // Rapid to original XY position.
+            target.values[plane.axis_0] = previous.values[plane.axis_0];
+            target.values[plane.axis_1] = previous.values[plane.axis_1];
+            ok = mc_line(target.values, &plan_data);
+        }
+    }
+
+    if(ok) {
+        protocol_buffer_synchronize();
+        sync_position();
+    }
+
+    change_at_g30 = execute_posted = false;
 }
 
 // Execute restore position after touch off (on cycle start event).
@@ -205,7 +292,7 @@ static void execute_probe (void *data)
     bool ok;
     coord_data_t offset;
     plan_line_data_t plan_data;
-    gc_parser_flags_t flags = {0};
+    gc_parser_flags_t flags = {};
 
     // G59.3 contains offsets to position of TLS.
     settings_read_coord_data(CoordinateSystem_G59_3, &offset.values);
@@ -213,13 +300,15 @@ static void execute_probe (void *data)
     plan_data_init(&plan_data);
     plan_data.condition.rapid_motion = On;
 
+    ok = !change_at_g30 || go_linear_home(&plan_data);
+
     target.values[plane.axis_0] = offset.values[plane.axis_0];
     target.values[plane.axis_1] = offset.values[plane.axis_1];
 
     if(probe_toolsetter)
         grbl.on_probe_toolsetter(next_tool, &target, false, true);
 
-    if((ok = mc_line(target.values, &plan_data))) {
+    if((ok = ok && mc_line(target.values, &plan_data))) {
 
         target.values[plane.axis_linear] = offset.values[plane.axis_linear];
         ok = mc_line(target.values, &plan_data);
@@ -233,29 +322,24 @@ static void execute_probe (void *data)
 
         set_probe_target(&target, plane.axis_linear);
 
-        if((ok = ok && mc_probe_cycle(target.values, &plan_data, flags) == GCProbe_Found))
-        {
+        if((ok = ok && mc_probe_cycle(target.values, &plan_data, flags) == GCProbe_Found)) {
+
             system_convert_array_steps_to_mpos(target.values, sys.probe_position);
 
-        if(settings.tool_change.mode == ToolChange_FastSemiAutomatic){
-
-            // Retract slowly until contact lost.
-            plan_data.feed_rate = settings.tool_change.feed_rate;
             target.values[plane.axis_linear] += TOOL_CHANGE_PROBE_RETRACT_DISTANCE;
-            flags.probe_is_away = true;
-            ok = mc_probe_cycle(target.values, &plan_data, flags) == GCProbe_Found;
-        } else {
 
-            // Retract a bit and perform slow probe.
-            plan_data.feed_rate = settings.tool_change.pulloff_rate;
-            target.values[plane.axis_linear] += TOOL_CHANGE_PROBE_RETRACT_DISTANCE;
-            if((ok = mc_line(target.values, &plan_data))) {
-                plan_data.feed_rate = settings.tool_change.feed_rate;
-                target.values[plane.axis_linear] -= (TOOL_CHANGE_PROBE_RETRACT_DISTANCE + 2.0f);
-                ok = mc_probe_cycle(target.values, &plan_data, flags) == GCProbe_Found;
+            if((flags.probe_is_away = settings.flags.tool_change_fast_pulloff))
+                plan_data.feed_rate = settings.tool_change.feed_rate; // Retract slowly until contact lost.
+            else {
+                // Retract a bit and perform slow probe.
+                plan_data.feed_rate = settings.tool_change.pulloff_rate;
+                if((ok = mc_line(target.values, &plan_data))) {
+                    plan_data.feed_rate = settings.tool_change.feed_rate;
+                    target.values[plane.axis_linear] -= (TOOL_CHANGE_PROBE_RETRACT_DISTANCE + 2.0f);
+                }
             }
+            ok = ok && mc_probe_cycle(target.values, &plan_data, flags) == GCProbe_Found;
         }
-    }
 
         if(ok) {
             if(!(sys.tlo_reference_set.mask & bit(plane.axis_linear))) {
@@ -287,14 +371,13 @@ ISR_CODE static void ISR_FUNC(trap_control_cycle_start)(control_signals_t signal
     if(signals.cycle_start) {
         if(!execute_posted) {
             if(!block_cycle_start)
-                execute_posted = protocol_enqueue_foreground_task(
-                (settings.tool_change.mode == ToolChange_SemiAutomatic || 
-                settings.tool_change.mode == ToolChange_FastSemiAutomatic) 
-                ? execute_probe 
-                : execute_restore, 
-                NULL);
+                execute_posted = task_add_immediate(settings.tool_change.mode == ToolChange_SemiAutomatic
+                                                     ? execute_probe
+                                                     : execute_restore, NULL);
+            else if(change_at_g30)
+                execute_posted = task_add_immediate(execute_return_from_g30, NULL);
             else
-                protocol_enqueue_foreground_task(execute_warning, NULL);
+                task_add_immediate(execute_warning, NULL);
         }
         signals.cycle_start = Off;
     } else
@@ -312,14 +395,13 @@ ISR_CODE static bool ISR_FUNC(trap_stream_cycle_start)(char c)
     if((drop = (c == CMD_CYCLE_START || c == CMD_CYCLE_START_LEGACY))) {
         if(!execute_posted) {
             if(!block_cycle_start)
-                execute_posted = protocol_enqueue_foreground_task(
-                (settings.tool_change.mode == ToolChange_SemiAutomatic || 
-                settings.tool_change.mode == ToolChange_FastSemiAutomatic) 
-                ? execute_probe 
-                : execute_restore, 
-                NULL);
+                execute_posted = task_add_immediate(settings.tool_change.mode == ToolChange_SemiAutomatic
+                                                     ? execute_probe
+                                                     : execute_restore, NULL);
+            else if(change_at_g30)
+                execute_posted = task_add_immediate(execute_return_from_g30, NULL);
             else
-                protocol_enqueue_foreground_task(execute_warning, NULL);
+                task_add_immediate(execute_warning, NULL);
         }
     } else
         drop = enqueue_realtime_command(c);
@@ -356,7 +438,7 @@ static status_code_t tool_change (parser_state_t *parser_state)
         return Status_OK;
 
 #if COMPATIBILITY_LEVEL > 1
-    if(settings.tool_change.mode == ToolChange_Manual_G59_3 || settings.tool_change.mode == ToolChange_SemiAutomatic || settings.tool_change.mode == ToolChange_FastSemiAutomatic)
+    if(settings.tool_change.mode == ToolChange_Manual_G59_3 || settings.tool_change.mode == ToolChange_SemiAutomatic)
         return Status_GcodeUnsupportedCommand;
 #endif
 
@@ -381,12 +463,15 @@ static status_code_t tool_change (parser_state_t *parser_state)
     if((sys.homed.mask & homed_req) != homed_req)
         return Status_HomingRequired;
 
-    if(settings.tool_change.mode != ToolChange_SemiAutomatic && 
-        settings.tool_change.mode != ToolChange_FastSemiAutomatic)
-        grbl.on_probe_completed = on_probe_completed;
+    plan_line_data_t plan_data;
+    coord_data_t change_position;
 
-    block_cycle_start = (settings.tool_change.mode != ToolChange_SemiAutomatic && 
-                         settings.tool_change.mode != ToolChange_FastSemiAutomatic);
+    if(settings.tool_change.mode != ToolChange_SemiAutomatic && grbl.on_probe_completed != onProbeCompleted) {
+        on_probe_completed = grbl.on_probe_completed;
+        grbl.on_probe_completed = onProbeCompleted;
+    }
+
+    block_cycle_start = settings.tool_change.mode != ToolChange_SemiAutomatic;
 
     // Stop spindle and coolant.
     spindle_all_off();
@@ -396,8 +481,7 @@ static status_code_t tool_change (parser_state_t *parser_state)
     probe_toolsetter = grbl.on_probe_toolsetter != NULL &&
                        (settings.tool_change.mode == ToolChange_Manual ||
                          settings.tool_change.mode == ToolChange_Manual_G59_3 ||
-                          settings.tool_change.mode == ToolChange_SemiAutomatic ||
-                           settings.tool_change.mode == ToolChange_FastSemiAutomatic);
+                          settings.tool_change.mode == ToolChange_SemiAutomatic);
 
     // Save current position.
     system_convert_array_steps_to_mpos(previous.values, sys.position);
@@ -406,7 +490,7 @@ static status_code_t tool_change (parser_state_t *parser_state)
 
     previous.values[plane.axis_linear] -= gc_get_offset(plane.axis_linear, false);
 
-    plan_line_data_t plan_data;
+    memcpy(&change_position, &previous, sizeof(coord_data_t));
 
     plan_data_init(&plan_data);
     plan_data.condition.rapid_motion = On;
@@ -416,36 +500,39 @@ static status_code_t tool_change (parser_state_t *parser_state)
     //    tool_change_position = ?
     //else
 
-    tool_change_position = sys.home_position[plane.axis_linear]; // - settings.homing.flags.force_set_origin ? LINEAR_AXIS_HOME_OFFSET : 0.0f;
+    if((change_at_g30 = (settings.flags.tool_change_at_g30) && (sys.homed.mask & (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT)) == (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT)))
+        settings_read_coord_data(CoordinateSystem_G30, &change_position.values);
+    else
+        change_position.values[plane.axis_linear] = sys.home_position[plane.axis_linear]; // - settings.homing.flags.force_set_origin ? LINEAR_AXIS_HOME_OFFSET : 0.0f;
 
     // Rapid to home position of linear axis.
-    memcpy(&target, &previous, sizeof(coord_data_t));
-    target.values[plane.axis_linear] = tool_change_position;
-    if(!mc_line(target.values, &plan_data))
+    if(!go_linear_home(&plan_data))
         return Status_Reset;
 
+    if(change_at_g30) {
+
+        // Rapid to G30 position.
+        if(!(target.values[plane.axis_0] == change_position.values[plane.axis_0] &&
+              target.values[plane.axis_1] == change_position.values[plane.axis_1])) {
+
+            target.values[plane.axis_0] = change_position.values[plane.axis_0];
+            target.values[plane.axis_1] = change_position.values[plane.axis_1];
+            if(!mc_line(target.values, &plan_data))
+                return Status_Reset;
+        }
+
+        if(target.values[plane.axis_linear] != change_position.values[plane.axis_linear]) {
+
+            target.values[plane.axis_linear] = change_position.values[plane.axis_linear];
+            if(!mc_line(target.values, &plan_data))
+                return Status_Reset;
+        }
+    }
+
 #if COMPATIBILITY_LEVEL <= 1
-    if(settings.tool_change.mode == ToolChange_Manual_G59_3) {
-
-        // G59.3 contains offsets to tool change position.
-        settings_read_coord_data(CoordinateSystem_G59_3, &target.values);
-
-        float tmp_pos = target.values[plane.axis_linear];
-
-        target.values[plane.axis_linear] = tool_change_position;
-
-        if(probe_toolsetter)
-            grbl.on_probe_toolsetter(next_tool, &target, false, true);
-
-        if(!mc_line(target.values, &plan_data))
+    else if(settings.tool_change.mode == ToolChange_Manual_G59_3) {
+        if(!go_toolsetter(&plan_data))
             return Status_Reset;
-
-        target.values[plane.axis_linear] = tmp_pos;
-        if(!mc_line(target.values, &plan_data))
-            return Status_Reset;
-
-        if(probe_toolsetter)
-            grbl.on_probe_toolsetter(next_tool, NULL, true, true);
     }
 #endif
 
@@ -483,9 +570,14 @@ void tc_init (void)
         hal.tool.change = tool_change;
         grbl.on_toolchange_ack = on_toolchange_ack;
         if(!on_homing_subscribed) {
+
             on_homing_subscribed = true;
+
             on_homing_completed = grbl.on_homing_completed;
-            grbl.on_homing_completed = tc_on_homing_complete;
+            grbl.on_homing_completed = onHomingComplete;
+
+            on_wco_saved = grbl.on_wco_saved;
+            grbl.on_wco_saved = onWcoSaved;
         }
         if(driver_reset == NULL) {
             driver_reset = hal.driver_reset;
@@ -501,6 +593,11 @@ status_code_t tc_probe_workpiece (void)
 {
     if(!(settings.tool_change.mode == ToolChange_Manual || settings.tool_change.mode == ToolChange_Manual_G59_3) || enqueue_realtime_command == NULL)
         return Status_InvalidStatement;
+
+    if(change_at_g30) {
+        grbl.report.feedback_message(Message_CycleStart2TouchOff);
+        return Status_OK;
+    }
 
     // TODO: add check for reference offset set?
 
@@ -527,22 +624,27 @@ status_code_t tc_probe_workpiece (void)
     {
         system_convert_array_steps_to_mpos(target.values, sys.probe_position);
 
-        // Retract a bit and perform slow probe.
-        plan_data.feed_rate = settings.tool_change.pulloff_rate;
         target.values[plane.axis_linear] += TOOL_CHANGE_PROBE_RETRACT_DISTANCE;
-        if((ok = mc_line(target.values, &plan_data))) {
 
-            plan_data.feed_rate = settings.tool_change.feed_rate;
-            target.values[plane.axis_linear] -= (TOOL_CHANGE_PROBE_RETRACT_DISTANCE + 2.0f);
-            if((ok = mc_probe_cycle(target.values, &plan_data, flags) == GCProbe_Found)) {
-                // Retract a bit again so that any touch plate can be removed
-                system_convert_array_steps_to_mpos(target.values, sys.probe_position);
-                plan_data.feed_rate = settings.tool_change.seek_rate;
-                target.values[plane.axis_linear] += TOOL_CHANGE_PROBE_RETRACT_DISTANCE * 2.0f;
-                if(target.values[plane.axis_linear] > tool_change_position)
-                    target.values[plane.axis_linear] = tool_change_position;
-                ok = mc_line(target.values, &plan_data);
+        if((flags.probe_is_away = settings.flags.tool_change_fast_pulloff))
+            plan_data.feed_rate = settings.tool_change.feed_rate; // Retract slowly until contact lost.
+        else {
+            // Retract a bit before performing slow probe.
+            plan_data.feed_rate = settings.tool_change.pulloff_rate;
+            if((ok = mc_line(target.values, &plan_data))) {
+                plan_data.feed_rate = settings.tool_change.feed_rate;
+                target.values[plane.axis_linear] -= (TOOL_CHANGE_PROBE_RETRACT_DISTANCE + 2.0f);
             }
+        }
+
+        if((ok = ok && mc_probe_cycle(target.values, &plan_data, flags) == GCProbe_Found)) {
+            // Retract a bit again so that any touch plate can be removed
+            system_convert_array_steps_to_mpos(target.values, sys.probe_position);
+            plan_data.feed_rate = settings.tool_change.seek_rate;
+            target.values[plane.axis_linear] += TOOL_CHANGE_PROBE_RETRACT_DISTANCE * 2.0f;
+            if(target.values[plane.axis_linear] > sys.home_position[plane.axis_linear])
+                target.values[plane.axis_linear] = sys.home_position[plane.axis_linear];
+            ok = mc_line(target.values, &plan_data);
         }
     }
 

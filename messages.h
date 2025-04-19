@@ -47,7 +47,8 @@ typedef enum {
     Message_ExecuteTPW = 20,                //!< 20
     Message_ProbeProtected = 21,            //!< 21
     Message_Stop = 22,                      //!< 22
-    Message_NextMessage                     //!< 23 - next unassigned message number.
+    Message_CycleStart2TouchOff = 23,       //!< 23
+    Message_NextMessage                     //!< 24 - next unassigned message number.
 } message_code_t;
 
 typedef enum {

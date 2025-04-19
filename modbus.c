@@ -4,20 +4,20 @@
 
   Part of grblHAL
 
-  Copyright (c) 2023 Terje Io
+  Copyright (c) 2023-2025 Terje Io
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
@@ -25,21 +25,37 @@
 
 #include <string.h>
 
+#include "nuts_bolts.h"
+
 #define N_MODBUS_API 2
 
 static uint_fast16_t n_api = 0, tcp_api = N_MODBUS_API, rtu_api = N_MODBUS_API;
 static modbus_api_t modbus[N_MODBUS_API] = {0};
 
-bool modbus_isup (void)
+modbus_cap_t modbus_isup (void)
 {
-    bool ok = n_api > 0;
     uint_fast16_t idx = n_api;
+    modbus_cap_t cap = {};
 
     if(idx) do {
-        ok &= modbus[--idx].is_up();
+        idx--;
+        if(modbus[idx].is_up()) switch(modbus[idx].interface) {
+
+            case Modbus_InterfaceRTU:
+                cap.rtu = On;
+                break;
+
+            case Modbus_InterfaceASCII:
+                cap.ascii = On;
+                break;
+
+            case Modbus_InterfaceTCP:
+                cap.tcp = On;
+                break;
+        }
     } while(idx);
 
-    return ok;
+    return cap;
 }
 
 bool modbus_enabled (void)

@@ -1351,7 +1351,7 @@ and less range over the total 255 PWM levels to signal different spindle speeds.
 // Tool change settings (Group_Toolchange)
 
 /*! @name $341 - Setting_ToolChangeMode
-0 = Normal mode, 1 = Manual change, 2 = Manual change @ G59.3,  3 = Manual change and probe sensor @ G59.3 - sets TLO
+0 = Normal mode, 1 = Manual change, 2 = Manual change @ G59.3,  3 = Manual change and probe tolsetter @ G59.3, 4 = Ignore M6
 */
 ///@{
 #if !defined DEFAULT_TOOLCHANGE_MODE || defined __DOXYGEN__
@@ -1392,11 +1392,17 @@ and less range over the total 255 PWM levels to signal different spindle speeds.
 #endif
 ///@}
 
-/*! @name $346 - Setting_ToolChangeRestorePosition
+/*! @name $346 - Setting_ToolChangeOptions
 */
 ///@{
 #if !defined DEFAULT_TOOLCHANGE_NO_RESTORE_POSITION || defined __DOXYGEN__
 #define DEFAULT_TOOLCHANGE_NO_RESTORE_POSITION Off
+#endif
+#if !defined DEFAULT_TOOLCHANGE_AT_G30 || defined __DOXYGEN__
+#define DEFAULT_TOOLCHANGE_AT_G30 Off
+#endif
+#if !defined DEFAULT_TOOLCHANGE_FAST_PROBE_PULLOFF || defined __DOXYGEN__
+#define DEFAULT_TOOLCHANGE_FAST_PROBE_PULLOFF Off
 #endif
 ///@}
 

@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2016-2024 Terje Io
+  Copyright (c) 2016-2025 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -49,8 +49,9 @@ bool protocol_main_loop (void);
 bool protocol_execute_realtime (void);
 bool protocol_exec_rt_system (void);
 void protocol_execute_noop (uint_fast16_t state);
-bool protocol_enqueue_rt_command (on_execute_realtime_ptr fn);
-bool protocol_enqueue_foreground_task (fg_task_ptr fn, void *data);
+
+// Deprecated, to be deleted
+#define protocol_enqueue_foreground_task(fn, data) task_run_on_startup(fn, data)
 
 // Executes the auto cycle feature, if enabled.
 void protocol_auto_cycle_start (void);

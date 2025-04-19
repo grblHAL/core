@@ -232,7 +232,7 @@ bool plan_reset (void)
         }
 
         if(block_buffer_size != settings.planner_buffer_blocks)
-            protocol_enqueue_foreground_task(report_plain, "Planner buffer size was reduced!");
+            task_run_on_startup(report_plain, "Planner buffer size was reduced!");
     }
 
     if(block_buffer == NULL)

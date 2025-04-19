@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2023-2024 Terje Io
+  Copyright (c) 2023-2025 Terje Io
   Transforms derived from mzavatsky at Trossen Robotics
     https://hypertriangle.com/~alex/delta-robot-tutorial/
   get_cuboid_envelope() derived from javascript code in
@@ -541,7 +541,7 @@ static void delta_homing_complete (axes_signals_t cycle, bool success)
                                 : machine.home_z - settings.homing.pulloff;
 
         if(machine.cfg.flags.home_to_cuboid_top)
-            protocol_enqueue_foreground_task(delta_go_home, NULL);
+            task_add_immediate(delta_go_home, NULL);
     }
 
     if(on_homing_completed)

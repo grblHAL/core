@@ -1,5 +1,26 @@
 ## grblHAL changelog
 
+<a name="20250419">20250419
+
+Core:
+
+* Fixed regression introduced with [PR#673](https://github.com/grblHAL/core/pull/673), added G30 as optional position for tool change and moved new tool change mode from PR#673 to `$346` - _Tool change options_.
+
+* Moved Modbus RTU code from spindle plugin to the core.
+
+* For developers: deprecated `protocol_enqueue_foreground_task()`, replaced by `task_run_on_startup()` - added alias for the deprecated version.  
+Changed signature of `modbus_isup()` to return capabilities flag instead of boolean.
+
+* Fixed bug in delayed task handler, might occasionally hang the controller. May be part of keypad issue [#17](https://github.com/grblHAL/Plugin_keypad/issues/17).
+
+Plugins:
+
+Keypad and spindle: updated for core changes.
+
+Keypad, I2C display interface: fixed alignment issue that caused hardfault on WCO changes on some platforms. May resolve issue [#17](https://github.com/grblHAL/Plugin_keypad/issues/17).
+
+---
+
 <a name="20250415">20250415
 
 Core:

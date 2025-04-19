@@ -168,7 +168,7 @@ void stream_passthru_init (uint8_t instance, uint32_t baud_rate, bool start)
 
             if((hal.stream.state.passthru = stream != NULL)) {
 
-                protocol_enqueue_foreground_task(passthru_start1, NULL); // enter passthrouh mode after finished booting grblHAL
+                task_run_on_startup(passthru_start1, NULL); // enter passthrouh mode after finished booting grblHAL
 
                 memcpy(&dest, stream, sizeof(io_stream_t));
                 dest.set_enqueue_rt_handler(sink_uart_rx);

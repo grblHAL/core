@@ -339,7 +339,7 @@ static bool stream_select (const io_stream_t *stream, bool add)
         stream_mpg_enable(false);
         mpg.flags.mpg_control = On;
     } else if(mpg_enable)
-		protocol_enqueue_foreground_task(stream_mpg_set_mode, (void *)1);
+		task_add_immediate(stream_mpg_set_mode, (void *)1);
 
     memcpy(&hal.stream, stream, sizeof(io_stream_t));
 
@@ -750,7 +750,7 @@ bool debug_stream_init (void)
     if(stream_enumerate_streams(debug_claim_stream))
         hal.debug.write(ASCII_EOL "UART debug active:" ASCII_EOL);
     else
-        protocol_enqueue_foreground_task(report_warning, "Failed to initialize debug stream!");
+        task_run_on_startup(report_warning, "Failed to initialize debug stream!");
 
     return hal.debug.write == debug_write;
 }

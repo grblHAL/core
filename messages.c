@@ -44,9 +44,10 @@ PROGMEM static const message_t messages[] = {
     { .id = Message_CycleStart2Continue, .text = "Press cycle start to continue." },
     { .id = Message_TPCycleStart2Continue, .text = "Remove any touch plate and press cycle start to continue." },
     { .id = Message_ProbeFailedRetry, .text = "Probe failed, try again." },
-    { .id = Message_ExecuteTPW, .text = "Perform a probe with $TPW first!", .type = Message_Warning},
-    { .id = Message_ProbeProtected, .text = "Probe protection activated."},
-    { .id = Message_Stop, .text = "Stop"}
+    { .id = Message_ExecuteTPW, .text = "Perform a probe with $TPW first!", .type = Message_Warning },
+    { .id = Message_ProbeProtected, .text = "Probe protection activated." },
+    { .id = Message_Stop, .text = "Stop" },
+    { .id = Message_CycleStart2TouchOff, .text = "Press cycle start to position for touch-off." }
 };
 
 const message_t *message_get (message_code_t id)
