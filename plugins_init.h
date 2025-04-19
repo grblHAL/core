@@ -38,10 +38,33 @@
     plasma_init();
 #endif
 
-#if MODBUS_ENABLE && (MODBUS_ENABLE & 0x01)
-    extern void modbus_rtu_init (void);
-    modbus_rtu_init();
-#endif
+#if MODBUS_ENABLE && (MODBUS_ENABLE & MODBUS_RTU_ENABLED)
+
+    extern void modbus_rtu_init (int8_t stream, int8_t dir_aux);
+
+    int8_t stream, dir_aux;
+
+ #ifdef MODBUS_RTU_STREAM
+    stream = MODBUS_RTU_STREAM;
+ #elif defined(MODBUS_SERIAL_PORT)
+    stream = MODBUS_SERIAL_PORT; // Use deprecated definition
+ #else
+    stream = -1;
+ #endif
+
+ #if MODBUS_ENABLE && (MODBUS_ENABLE & MODBUS_RTU_DIR_ENABLED)
+  #ifdef MODBUS_DIR_AUX
+    dir_aux = MODBUS_DIR_AUX;
+  #else
+    dir_aux = -1;
+  #endif
+ #else
+    dir_aux = -2;
+ #endif
+
+    modbus_rtu_init(stream, dir_aux);
+
+#endif // MODBUS_ENABLE (RTU)
 
 #if CANBUS_ENABLE
     extern void canbus_init (void);

@@ -21,12 +21,9 @@
 
 */
 
-#include "driver.h"
-
-#if MODBUS_ENABLE & MODBUS_RTU_ENABLED
-
 #include <string.h>
 
+#include "hal.h"
 #include "protocol.h"
 #include "settings.h"
 #include "crc.h"
@@ -36,16 +33,6 @@
 
 #ifndef MODBUS_BAUDRATE
 #define MODBUS_BAUDRATE 3 // 19200
-#endif
-#ifndef MODBUS_RTU_STREAM
-#ifdef MODBUS_SERIAL_PORT
-#define MODBUS_RTU_STREAM MODBUS_SERIAL_PORT // Use deprecated definition
-#else
-#define MODBUS_RTU_STREAM -1
-#endif
-#endif
-#ifndef MODBUS_DIR_AUX
-#define MODBUS_DIR_AUX    -1
 #endif
 
 typedef enum {
@@ -91,6 +78,7 @@ static const modbus_silence_timeout_t dflt_timeout =
 };
 
 static modbus_stream_t stream;
+static int8_t stream_instance = -1;
 static uint32_t rx_timeout = 0, silence_until = 0, silence_timeout;
 static int16_t exception_code = 0;
 static modbus_silence_timeout_t silence;
@@ -99,9 +87,7 @@ static modbus_settings_t modbus;
 static volatile bool spin_lock = false, is_up = false;
 static volatile queue_entry_t *tail, *head, *packet = NULL;
 static volatile modbus_state_t state = ModBus_Idle;
-#if MODBUS_ENABLE & MODBUS_RTU_DIR_ENABLED
-static uint8_t dir_port;
-#endif
+static uint8_t dir_port = IOPORT_UNASSIGNED;
 
 static driver_reset_ptr driver_reset;
 static on_report_options_ptr on_report_options;
@@ -478,22 +464,18 @@ static bool stream_is_valid (const io_stream_t *stream)
                      stream->set_enqueue_rt_handler == NULL);
 }
 
-#if MODBUS_ENABLE & MODBUS_RTU_DIR_ENABLED
 static void modbus_set_direction (bool tx)
 {
     ioport_digital_out(dir_port, tx);
 }
-#endif
 
 static bool claim_stream (io_stream_properties_t const *sstream)
 {
     io_stream_t const *claimed = NULL;
 
-#if MODBUS_RTU_STREAM >= 0
-    if(sstream->type == StreamType_Serial && sstream->instance == MODBUS_RTU_STREAM) {
-#else
-    if(sstream->type == StreamType_Serial && sstream->flags.modbus_ready && !sstream->flags.claimed) {
-#endif
+    if(sstream->type == StreamType_Serial && (stream_instance >= 0
+                                               ? sstream->instance == (uint8_t)stream_instance
+                                               : sstream->flags.modbus_ready && !sstream->flags.claimed)) {
         if((claimed = sstream->claim(baud[MODBUS_BAUDRATE])) && stream_is_valid(claimed)) {
 
             claimed->set_enqueue_rt_handler(stream_buffer_all);
@@ -505,9 +487,8 @@ static bool claim_stream (io_stream_properties_t const *sstream)
             stream.read = claimed->read;
             stream.flush_tx_buffer = claimed->reset_write_buffer;
             stream.flush_rx_buffer = claimed->reset_read_buffer;
-#if MODBUS_ENABLE & MODBUS_RTU_DIR_ENABLED
-            stream.set_direction = modbus_set_direction;
-#endif
+            stream.set_direction = dir_port != IOPORT_UNASSIGNED ? modbus_set_direction : NULL;
+
             if(hal.periph_port.set_pin_description) {
                 hal.periph_port.set_pin_description(Output_TX, (pin_group_t)(PinGroup_UART + claimed->instance), "Modbus");
                 hal.periph_port.set_pin_description(Input_RX, (pin_group_t)(PinGroup_UART + claimed->instance), "Modbus");
@@ -519,7 +500,7 @@ static bool claim_stream (io_stream_properties_t const *sstream)
     return claimed != NULL;
 }
 
-void modbus_rtu_init (void)
+void modbus_rtu_init (int8_t stream, int8_t dir_aux)
 {
     static const modbus_api_t api = {
         .interface = Modbus_InterfaceRTU,
@@ -539,23 +520,20 @@ void modbus_rtu_init (void)
         .restore = modbus_settings_restore
     };
 
-#if MODBUS_ENABLE & MODBUS_RTU_DIR_ENABLED
+    if(dir_aux != -2) {
 
-    uint8_t n_out = ioports_available(Port_Digital, Port_Output);
+        int8_t n_out = ioports_available(Port_Digital, Port_Output);
 
-  #if MODBUS_DIR_AUX >= 0
-    dir_port = MODBUS_DIR_AUX;
-  #else
-    dir_port = n_out - 1;
-  #endif
+        dir_port = dir_aux != -1 ? dir_aux : (n_out ? n_out - 1 : IOPORT_UNASSIGNED);
 
-    if(!(n_out > dir_port && ioport_claim(Port_Digital, Port_Output, &dir_port, "Modbus RX/TX direction"))) {
-        task_run_on_startup(report_warning, "Modbus failed to initialize!");
-        system_raise_alarm(Alarm_SelftestFailed);
-        return;
+        if(!(dir_port != IOPORT_UNASSIGNED && ioport_claim(Port_Digital, Port_Output, &dir_port, "Modbus RX/TX direction"))) {
+            task_run_on_startup(report_warning, "Modbus failed to initialize!");
+            system_raise_alarm(Alarm_SelftestFailed);
+            return;
+        }
     }
 
-#endif
+    stream_instance = stream;
 
     if(stream_enumerate_streams(claim_stream) && (nvs_address = nvs_alloc(sizeof(modbus_settings_t)))) {
 
@@ -586,5 +564,3 @@ void modbus_rtu_init (void)
         system_raise_alarm(Alarm_SelftestFailed);
     }
 }
-
-#endif // MODBUS_ENABLE & MODBUS_RTU_ENABLED
