@@ -472,6 +472,19 @@ __attribute__((always_inline)) static inline void task_free (core_task_t *task)
         last_freed = task;
 }
 
+__attribute__((always_inline)) static inline core_task_t *task_run (core_task_t *task)
+{
+    core_task_t *t = task;
+    foreground_task_ptr fn = task->fn;
+    void *data = task->data;
+
+    task = task->next;
+    task_free(t);
+    fn(data);
+
+    return task;
+}
+
 static void task_execute (sys_state_t state)
 {
     static uint32_t last_ms = 0;
@@ -486,11 +499,7 @@ static void task_execute (sys_state_t state)
         hal.irq_enable();
 
         if(task) do {
-            void *data = task->data;
-            foreground_task_ptr fn = task->fn;
-            task_free(task);
-            fn(data);
-        } while((task = task->next));
+        } while((task = task_run(task)));
     }
 
     uint32_t now = hal.get_elapsed_ticks();
@@ -707,16 +716,7 @@ ISR_CODE bool ISR_FUNC(task_run_on_startup)(foreground_task_ptr fn, void *data)
 void task_execute_on_startup (void)
 {
     if(on_booted) do {
-
-        core_task_t *task = on_booted;
-        foreground_task_ptr fn = task->fn;
-        void *data = task->data;
-
-        on_booted = task->next;
-        task_free(task);
-        fn(data);
-
-    } while(on_booted);
+    } while((on_booted = task_run(on_booted)));
 
     if(!sys.driver_started)
         while(true);
