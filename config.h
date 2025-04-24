@@ -523,6 +523,16 @@ Number of tools in tool table, edit to enable (max. 32 allowed)
 #endif
 #endif
 
+/*! \def SPINDLE_SYNC_ENABLE
+\brief
+Set to \ref On or 1 to enable experimental support for spindle synced motion, G33 and G76.
+
+_NOTE:_ require driver and board support for spindle encoder input.
+*/
+#if !defined SPINDLE_SYNC_ENABLE || defined __DOXYGEN__
+#define SPINDLE_SYNC_ENABLE Off
+#endif
+
 /*! \def NGC_EXPRESSIONS_ENABLE
 \brief
 Set to \ref On or 1 to enable experimental support for expressions.

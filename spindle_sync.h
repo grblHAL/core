@@ -3,24 +3,24 @@
 
   Spindle sync data structures
 
-  NOTE: not referenced in the core grbl code
+  NOTE: not referenced in the core
 
   Part of grblHAL
 
-  Copyright (c) 2020-2021 Terje Io
+  Copyright (c) 2020-2025 Terje Io
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef _SPINDLE_SYNC_H_
@@ -60,19 +60,5 @@ typedef struct {
     uint32_t tics_per_irq;              // Counts per interrupt generated (prescaler value)
     volatile bool spin_lock;
 } spindle_encoder_t;
-
-typedef struct {
-    float prev_pos;                 // Target position of previous segment
-    float steps_per_mm;             // Steps per mm for current block
-    float programmed_rate;          // Programmed feed in mm/rev for current block
-    int32_t min_cycles_per_tick;    // Minimum cycles per tick for PID loop
-    uint_fast8_t segment_id;        // Used for detecting start of new segment
-    pidf_t pid;                     // PID data for position
-    stepper_pulse_start_ptr stepper_pulse_start_normal; // Driver pulse function to restore after spindle sync move is completed
-#ifdef PID_LOG
-    int32_t log[PID_LOG];
-    int32_t pos[PID_LOG];
-#endif
-} spindle_sync_t;
 
 #endif

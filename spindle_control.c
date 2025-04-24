@@ -744,7 +744,7 @@ bool spindle_is_on (void)
 */
 static inline uint_fast16_t invert_pwm (spindle_pwm_t *pwm_data, uint_fast16_t pwm_value)
 {
-    return pwm_data->flags.invert_pwm ? pwm_data->period - pwm_value - 1 : pwm_value;
+    return pwm_data->flags.invert_pwm ? pwm_data->period - pwm_value : pwm_value;
 }
 
 /*! \brief Spindle RPM to PWM conversion.
@@ -834,6 +834,10 @@ bool spindle_precompute_pwm_values (spindle_ptrs_t *spindle, spindle_pwm_t *pwm_
     if((spindle->cap.variable = !settings->flags.pwm_disable && spindle->rpm_max > spindle->rpm_min)) {
         pwm_data->f_clock = clock_hz;
         pwm_data->period = (uint_fast16_t)((float)clock_hz / settings->pwm_freq);
+        pwm_data->flags.always_on = settings->pwm_off_value != 0.0f;
+        pwm_data->flags.invert_pwm = settings->invert.pwm & spindle->cap.pwm_invert;
+        pwm_data->flags.rpm_controlled = settings->flags.enable_rpm_controlled;
+        pwm_data->flags.laser_mode_disable = settings->flags.laser_mode_disable;
         if(settings->pwm_off_value == 0.0f)
             pwm_data->off_value = pwm_data->flags.invert_pwm ? pwm_data->period : 0;
         else
@@ -843,12 +847,6 @@ bool spindle_precompute_pwm_values (spindle_ptrs_t *spindle, spindle_pwm_t *pwm_
             pwm_data->min_value = (uint_fast16_t)((float)pwm_data->max_value * 0.004f);
 
         pwm_data->pwm_gradient = (float)(pwm_data->max_value - pwm_data->min_value) / (spindle->rpm_max - spindle->rpm_min);
-
-        pwm_data->flags.always_on = settings->pwm_off_value != 0.0f;
-        pwm_data->flags.invert_pwm = settings->invert.pwm & spindle->cap.pwm_invert;
-        pwm_data->flags.rpm_controlled = settings->flags.enable_rpm_controlled;
-        pwm_data->flags.laser_mode_disable = settings->flags.laser_mode_disable;
-
         pwm_data->compute_value = spindle_compute_pwm_value;
     } else {
         pwm_data->flags.value &= ((spindle_pwm_flags_t){ .cloned = pwm_data->flags.cloned }).value;

@@ -1,5 +1,26 @@
 ## grblHAL changelog
 
+<a name="20250424">20250424
+
+Core:
+
+* Moved part of the driver based spindle sync code to the core. Spindle sync now has to be enabled in _grbl/config.h_.
+
+Drivers:
+
+* iMXRT1062, MSP432P401R, STM32F4xx, STM32F7xx: removed spindle sync code now in the core.
+
+* RP2040: Added tentative support for spindle sync, board maps has to be updated for spindle encoder inputs - not all can be due to pin restrictions.  
+Fixed regression causing the Pico CNC board to lose spindle PWM output.
+
+* LPC176x, ESP32, TM4C123, STM32F1xx: replaced deprecated code.
+
+Plugins:
+
+* Some: replaced deprecated code.
+
+---
+
 <a name="20250419">20250419
 
 Core:

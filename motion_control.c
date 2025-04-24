@@ -42,18 +42,22 @@
 
 #if ENABLE_BACKLASH_COMPENSATION
 
-static float target_prev[N_AXIS] = {0};
+static coord_data_t target_prev = {}, backlash_comp = {};
 static axes_signals_t dir_negative = {0}, backlash_enabled = {0};
 
 void mc_backlash_init (axes_signals_t axes)
 {
     uint_fast8_t idx = N_AXIS;
+    uint_fast8_t steps;
 
     do {
         idx--;
         if(bit_istrue(axes.mask, bit(idx))) {
-            BIT_SET(backlash_enabled.mask, bit(idx), settings.axis[idx].backlash > 0.0001f);
-            BIT_SET(dir_negative.mask, bit(idx), bit_isfalse(settings.homing.dir_mask.mask, bit(idx)));
+            if((steps = lroundf(settings.axis[idx].backlash * settings.axis[idx].steps_per_mm))) {
+                backlash_comp.values[idx] = (float)steps / settings.axis[idx].steps_per_mm;
+                BIT_SET(backlash_enabled.mask, bit(idx), settings.axis[idx].backlash > 0.0001f);
+                BIT_SET(dir_negative.mask, bit(idx), bit_isfalse(settings.homing.dir_mask.mask, bit(idx)));
+            }
         }
     } while(idx);
 
@@ -63,7 +67,7 @@ void mc_backlash_init (axes_signals_t axes)
 void mc_sync_backlash_position (void)
 {
     // Update target_prev
-    system_convert_array_steps_to_mpos(target_prev, sys.position);
+    system_convert_array_steps_to_mpos(target_prev.values, sys.position);
 }
 
 #endif
@@ -113,28 +117,28 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
 
         if(backlash_enabled.mask) {
 
-            bool backlash_comp = false;
+            bool add_comp = false;
             uint_fast8_t idx = N_AXIS, axismask = bit(N_AXIS - 1);
 
             do {
                 idx--;
                 if(backlash_enabled.mask & axismask) {
-                    if(target[idx] > target_prev[idx]) {
+                    if(target[idx] > target_prev.values[idx]) {
                         if (dir_negative.value & axismask) {
                             dir_negative.value &= ~axismask;
-                            target_prev[idx] += settings.axis[idx].backlash;
-                            backlash_comp = true;
+                            target_prev.values[idx] += backlash_comp.values[idx];
+                            add_comp = true;
                         }
-                    } else if(target[idx] < target_prev[idx] && !(dir_negative.value & axismask)) {
+                    } else if(target[idx] < target_prev.values[idx] && !(dir_negative.value & axismask)) {
                         dir_negative.value |= axismask;
-                        target_prev[idx] -= settings.axis[idx].backlash;
-                        backlash_comp = true;
+                        target_prev.values[idx] -= backlash_comp.values[idx];
+                        add_comp = true;
                     }
                 }
                 axismask >>= 1;
             } while(idx);
 
-            if(backlash_comp) {
+            if(add_comp) {
 
                 plan_line_data_t pl_backlash;
 
@@ -152,10 +156,10 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
                         return false;                // Bail, if system abort.
                 }
 
-                plan_buffer_line(target_prev, &pl_backlash);
+                plan_buffer_line(target_prev.values, &pl_backlash);
             }
 
-            memcpy(target_prev, target, sizeof(float) * N_AXIS);
+            memcpy(target_prev.values, target, sizeof(coord_data_t));
         }
 
 #endif // Backlash comp

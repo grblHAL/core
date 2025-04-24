@@ -178,6 +178,7 @@ extern void gc_output_message (char *message);
 
 //
 
+
 // Callback from delay to deenergize steppers after movement, might been cancelled
 void st_deenergize (void *data)
 {
@@ -230,6 +231,124 @@ bool st_is_stepping (void)
 {
     return stepping && st.exec_block;
 }
+
+#if SPINDLE_SYNC_ENABLE
+
+typedef struct {
+    float prev_pos;                 // Target position of previous segment
+    float steps_per_mm;             // Steps per mm for current block
+    float programmed_rate;          // Programmed feed in mm/rev for current block
+    int32_t min_cycles_per_tick;    // Minimum cycles per tick for PID loop
+    uint_fast8_t segment_id;        // Used for detecting start of new segment
+    pidf_t pid;                     // PID data for position
+    stepper_pulse_start_ptr stepper_pulse_start; // Driver pulse function to restore after spindle sync move is completed
+#ifdef PID_LOG
+//    int32_t log[PID_LOG];
+//    int32_t pos[PID_LOG];
+#endif
+} spindle_sync_t;
+
+static spindle_sync_t spindle_tracker;
+static on_settings_changed_ptr on_settings_changed = NULL;
+
+void st_spindle_sync_cfg (settings_t *settings, settings_changed_flags_t changed)
+{
+    if(!on_settings_changed) {
+        on_settings_changed = grbl.on_settings_changed;
+        grbl.on_settings_changed = st_spindle_sync_cfg;
+    } else
+        on_settings_changed(settings, changed);
+
+    spindle_tracker.min_cycles_per_tick = hal.f_step_timer / (uint32_t)(settings->axis[Z_AXIS].max_rate * settings->axis[Z_AXIS].steps_per_mm / 60.0f);
+
+    // hal.driver_cap.spindle_encoder ?? check?
+    if((hal.driver_cap.spindle_sync = hal.spindle_data.get && settings->spindle.ppr) && pidf_config_changed(&spindle_tracker.pid, &settings->position.pid))
+        pidf_init(&spindle_tracker.pid, &settings->position.pid);
+}
+
+// Spindle sync version of pulse_start: inserted in front of driver version during synced motion.
+// Reverts back to driver version when spindle synchronized motion is finished.
+// Adjusts segment time based on difference between the actual and calculated position.
+ISR_CODE static void st_spindle_sync_out (stepper_t *stepper)
+{
+    static bool sync = false;
+    static float block_start;
+
+    if(stepper->new_block) {
+        if(!stepper->exec_segment->spindle_sync) {
+            hal.stepper.pulse_start = spindle_tracker.stepper_pulse_start;
+            hal.stepper.pulse_start(stepper);
+            return;
+        }
+        sync = true;
+        spindle_tracker.programmed_rate = stepper->exec_block->programmed_rate;
+        spindle_tracker.steps_per_mm = stepper->exec_block->steps_per_mm;
+        spindle_tracker.segment_id = 0;
+        spindle_tracker.prev_pos = 0.0f;
+        block_start = stepper->exec_block->spindle->get_data(SpindleData_AngularPosition)->angular_position * spindle_tracker.programmed_rate;
+        pidf_reset(&spindle_tracker.pid);
+#ifdef PID_LOG
+        sys.pid_log.idx = 0;
+        sys.pid_log.setpoint = 100.0f;
+#endif
+    }
+
+    if(stepper->step_out.bits || stepper->new_block)
+        spindle_tracker.stepper_pulse_start(stepper);
+
+    if(spindle_tracker.segment_id != stepper->exec_segment->id) {
+
+        spindle_tracker.segment_id = stepper->exec_segment->id;
+
+        if(!stepper->new_block) {  // adjust this segments total time for any positional error since last segment
+
+            float actual_pos;
+
+            if(stepper->exec_segment->cruising) {
+
+                float dt = (float)hal.f_step_timer / (float)(stepper->exec_segment->cycles_per_tick * stepper->exec_segment->n_step);
+                actual_pos = stepper->exec_block->spindle->get_data(SpindleData_AngularPosition)->angular_position * spindle_tracker.programmed_rate;
+
+                if(sync) {
+                    spindle_tracker.pid.sample_rate_prev = dt;
+//                    spindle_tracker.block_start += (actual_pos - spindle_tracker.block_start) - spindle_tracker.prev_pos;
+//                    spindle_tracker.block_start += spindle_tracker.prev_pos;
+                    sync = false;
+                }
+
+                actual_pos -= block_start;
+                int32_t step_delta = (int32_t)(pidf(&spindle_tracker.pid, spindle_tracker.prev_pos, actual_pos, dt) * spindle_tracker.steps_per_mm);
+                int32_t ticks = (((int32_t)stepper->step_count + step_delta) * (int32_t)stepper->exec_segment->cycles_per_tick) / (int32_t)stepper->step_count;
+
+                stepper->exec_segment->cycles_per_tick = (uint32_t)max(ticks, spindle_tracker.min_cycles_per_tick >> stepper->amass_level);
+
+                hal.stepper.cycles_per_tick(stepper->exec_segment->cycles_per_tick);
+           } else
+                actual_pos = spindle_tracker.prev_pos;
+
+#ifdef PID_LOG
+            if(sys.pid_log.idx < PID_LOG) {
+
+                sys.pid_log.target[sys.pid_log.idx] = spindle_tracker.prev_pos;
+                sys.pid_log.actual[sys.pid_log.idx] = actual_pos; // - spindle_tracker.prev_pos;
+
+            //    spindle_tracker.log[sys.pid_log.idx] = STEPPER_TIMER->BGLOAD << stepper->amass_level;
+            //    spindle_tracker.pos[sys.pid_log.idx] = stepper->exec_segment->cycles_per_tick  stepper->amass_level;
+            //    spindle_tracker.pos[sys.pid_log.idx] = stepper->exec_segment->cycles_per_tick * stepper->step_count;
+            //    STEPPER_TIMER->BGLOAD = STEPPER_TIMER->LOAD;
+
+             //   spindle_tracker.pos[sys.pid_log.idx] = spindle_tracker.prev_pos;
+
+                sys.pid_log.idx++;
+            }
+#endif
+        }
+
+        spindle_tracker.prev_pos = stepper->exec_segment->target_position;
+    }
+}
+
+#endif // SPINDLE_SYNC_ENABLE
 
 /* "The Stepper Driver Interrupt" - This timer interrupt is the workhorse of grblHAL. grblHAL employs
    the venerable Bresenham line algorithm to manage and exactly synchronize multi-axis moves.
@@ -287,6 +406,12 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
     // Start a step pulse when there is a block to execute.
     if(st.exec_block) {
 
+#if SPINDLE_SYNC_ENABLE
+        if(st.new_block && st.exec_segment->spindle_sync) {
+            spindle_tracker.stepper_pulse_start = hal.stepper.pulse_start;
+            hal.stepper.pulse_start = st_spindle_sync_out;
+        }
+#endif
         hal.stepper.pulse_start(&st);
 
         st.new_block = false;
@@ -533,6 +658,11 @@ void st_reset (void)
         hal.probe.configure(false, false);
 
     st_go_idle(); // Initialize stepper driver idle state.
+
+#if SPINDLE_SYNC_ENABLE
+    if(hal.stepper.pulse_start == st_spindle_sync_out)
+        hal.stepper.pulse_start = spindle_tracker.stepper_pulse_start;
+#endif
 
     // NOTE: buffer indices starts from 1 for simpler driver coding!
 

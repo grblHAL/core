@@ -39,6 +39,9 @@
 #if ENABLE_SPINDLE_LINEARIZATION
 #include <stdio.h>
 #endif
+#if SPINDLE_SYNC_ENABLE
+extern void st_spindle_sync_cfg (settings_t *settings, settings_changed_flags_t changed);
+#endif
 
 settings_t settings;
 
@@ -3406,6 +3409,10 @@ void settings_init (void)
         if(hal.probe.configure) // Initialize probe invert mask.
             hal.probe.configure(false, false);
     }
+
+#if SPINDLE_SYNC_ENABLE
+    st_spindle_sync_cfg(&settings, changed);
+#endif
 
     xbar_set_homing_source();
 
