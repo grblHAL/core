@@ -55,7 +55,7 @@ void mc_backlash_init (axes_signals_t axes)
         if(bit_istrue(axes.mask, bit(idx))) {
             if((steps = lroundf(settings.axis[idx].backlash * settings.axis[idx].steps_per_mm))) {
                 backlash_comp.values[idx] = (float)steps / settings.axis[idx].steps_per_mm;
-                BIT_SET(backlash_enabled.mask, bit(idx), settings.axis[idx].backlash > 0.0001f);
+                bit_true(backlash_enabled.mask, bit(idx));
                 BIT_SET(dir_negative.mask, bit(idx), bit_isfalse(settings.homing.dir_mask.mask, bit(idx)));
             }
         }

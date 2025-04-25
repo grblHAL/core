@@ -351,7 +351,7 @@ bool ioport_set_function (xbar_t *pin, pin_function_t function, driver_caps_t ca
 {
     bool ok = false;
     io_ports_list_t *io_port = ports;
-    io_ports_private_t *cfg = get_port_data(!pin->mode.analog, pin->mode.output);
+    io_ports_private_t *cfg = get_port_data((io_port_type_t)!pin->mode.analog, (io_port_direction_t)pin->mode.output);
 
     if(io_port) do {
         if(io_port->ports_id == pin->ports_id && (ok = pin->set_function && pin->set_function(pin, function))) {
@@ -1382,13 +1382,13 @@ static void ioports_configure (settings_t *settings)
 
     if(cfg->ports && (port = cfg->n_ports)) do {
         if((xbar = hal.port.get_pin_info(Port_Digital, Port_Output, map_reverse(cfg, --port)))) {
-            if(xbar->config && !(xbar->mode.pwm || xbar->mode.servo_pwm)) {
+            if(xbar->config && (cfg->bus.mask & (1 << port)) && !(xbar->mode.pwm || xbar->mode.servo_pwm)) {
                 out_config.inverted = (settings->ioport.invert_out.mask & (1 << port)) && is_aux(cfg, xbar->function);
                 out_config.open_drain = !!(settings->ioport.od_enable_out.mask & (1 << port));
                 xbar->config(xbar, &out_config, false);
             } else { // TODO: same for inputs?
                 ioport_bus_t bus;
-                bus.mask = cfg->bus.mask & ~(1 << port);
+                bus.mask = cfg->bus.mask & (1 << port);
                 setting_remove_elements(Settings_IoPort_InvertOut, bus.mask);
             }
         }

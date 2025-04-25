@@ -1,17 +1,32 @@
 ## grblHAL changelog
 
+<a name="20250425">20250425
+
+Core:
+
+* Updated `$N0` and `$N1` startup commands to allow multi-block \(line\) gcode commands by using `|` \(vertical bar\) as the separator.
+
+* No longer configures auxiliary output pins claimed for basic functions in order to avoid affecting any previously set alternate pin function.
+
+Drivers:
+
+* iMXRT1062: fix for issue [#95](https://github.com/grblHAL/iMXRT1062/issues/95), spindle PWM output missing.
+
+---
+
 <a name="20250424">20250424
 
 Core:
 
-* Moved part of the driver based spindle sync code to the core. Spindle sync now has to be enabled in _grbl/config.h_.
+* Moved part of the driver based spindle sync code to the core.
+Spindle sync now has to be enabled in [grbl/config.h}(https://github.com/grblHAL/core/blob/b41018543b35b0f14f9ab29d9ccc43bd0e4045dc/config.h#L526-L534).
 
 Drivers:
 
 * iMXRT1062, MSP432P401R, STM32F4xx, STM32F7xx: removed spindle sync code now in the core.
 
 * RP2040: Added tentative support for spindle sync, board maps has to be updated for spindle encoder inputs - not all can be due to pin restrictions.  
-Fixed regression causing the Pico CNC board to lose spindle PWM output.
+Fixed regression causing the PicoCNC board to lose spindle PWM output.
 
 * LPC176x, ESP32, TM4C123, STM32F1xx: replaced deprecated code.
 
