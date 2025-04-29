@@ -57,7 +57,15 @@ extern void pca9654e_init(void);
 
 // ModBus expanders
 
+
+
 #if PICOHAL_IO_ENABLE
+
+#ifndef MODBUS_ENABLE
+#error "Modbus must be enabled to use the Picohal IO expander!"
+#undef PICOHAL_IO_ENABLE
+#endif
+
 extern void picohal_io_init (void);
 #endif
 
