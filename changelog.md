@@ -1,6 +1,22 @@
 ## grblHAL changelog
 
-<a name="20250425">20250425
+<a name="20250502">20250502
+
+Drivers:
+
+* iMXRT1062, MSP432E401Y, STM32F4xx, STM32F7xx: improved handling of ethernet link up/down events.
+
+* ESP32: updated ethernet code to match latest networking plugin. Untested!
+
+Plugins:
+
+* Networking, Wiznet: improved handling of ethernet link up/down events.
+
+* Networking, telnet protocol: improved handling of ethernet link up/down events - now disconnect any connected client on link down allowing a clean reconnect after link up.
+
+---
+
+<a name="20250425">Build 20250425
 
 Core:
 
@@ -14,12 +30,12 @@ Drivers:
 
 ---
 
-<a name="20250424">20250424
+<a name="20250424">Build 20250424
 
 Core:
 
 * Moved part of the driver based spindle sync code to the core.
-Spindle sync now has to be enabled in [grbl/config.h}(https://github.com/grblHAL/core/blob/b41018543b35b0f14f9ab29d9ccc43bd0e4045dc/config.h#L526-L534).
+Spindle sync now has to be enabled in [grbl/config.h](https://github.com/grblHAL/core/blob/b41018543b35b0f14f9ab29d9ccc43bd0e4045dc/config.h#L526-L534).
 
 Drivers:
 
@@ -36,7 +52,7 @@ Plugins:
 
 ---
 
-<a name="20250419">20250419
+<a name="20250419">Build 20250419
 
 Core:
 
@@ -57,7 +73,7 @@ Keypad, I2C display interface: fixed alignment issue that caused hardfault on WC
 
 ---
 
-<a name="20250415">20250415
+<a name="20250415">Build 20250415
 
 Core:
 
@@ -74,7 +90,7 @@ Plugins:
 
 ---
 
-<a name="20250413">20250413
+<a name="20250413">Build 20250413
 
 Core:
 
