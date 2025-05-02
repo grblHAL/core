@@ -63,7 +63,16 @@ extern void pca9654e_init(void);
 
 // ModBus expanders
 
-//
+
+
+#if PICOHAL_IO_ENABLE
+
+#if !MODBUS_ENABLE
+#error "Modbus must be enabled to use the Picohal IO expander!"
+#endif
+
+extern void picohal_io_init (void);
+#endif
 
 // CANBus expanders
 
@@ -88,4 +97,9 @@ static inline void io_expanders_init (void)
 #if PCA9654E_ENABLE
     pca9654e_init();
 #endif
+
+#if PICOHAL_IO_ENABLE
+    picohal_io_init();
+#endif
+
 }
