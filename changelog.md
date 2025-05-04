@@ -1,5 +1,13 @@
 ## grblHAL changelog
 
+<a name="20250504">20250504
+
+Plugins:
+
+* Networking: removed stray debug message, added listening ports to `$netif` output.
+
+---
+
 <a name="20250502">20250502
 
 Drivers:
