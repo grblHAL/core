@@ -303,8 +303,10 @@ xbar_t *ioport_claim (io_port_type_t type, io_port_direction_t dir, uint8_t *por
 
             if(get_hcount(type, dir) == hcnt)
                 dec_hcount(type, dir);
-        } else
+        } else {
             portinfo = NULL;
+            *port = IOPORT_UNASSIGNED;
+        }
     }
 
     return portinfo;
@@ -1386,11 +1388,8 @@ static void ioports_configure (settings_t *settings)
                 out_config.inverted = (settings->ioport.invert_out.mask & (1 << port)) && is_aux(cfg, xbar->function);
                 out_config.open_drain = !!(settings->ioport.od_enable_out.mask & (1 << port));
                 xbar->config(xbar, &out_config, false);
-            } else { // TODO: same for inputs?
-                ioport_bus_t bus;
-                bus.mask = cfg->bus.mask & (1 << port);
-                setting_remove_elements(Settings_IoPort_InvertOut, bus.mask);
-            }
+            } else // TODO: same for inputs?
+                setting_remove_elements(Settings_IoPort_InvertOut, cfg->bus.mask & ~(1 << port));
         }
     } while(port);
 

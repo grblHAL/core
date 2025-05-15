@@ -63,16 +63,23 @@ extern void pca9654e_init(void);
 
 // ModBus expanders
 
+#if PICOHAL_IO_ENABLE || R4SLS08_ENABLE
 
+#if !defined(MODBUS_ENABLE) || !(MODBUS_ENABLE & MODBUS_RTU_ENABLED)
+#error "Enabled IO expander(s) require Modbus RTU!"
+#endif
+
+#if R4SLS08_ENABLE
+extern void r4sls08_init (void);
+#endif
+
+// Third party Modbus expander plugins goes after this line
 
 #if PICOHAL_IO_ENABLE
-
-#if !MODBUS_ENABLE
-#error "Modbus must be enabled to use the Picohal IO expander!"
-#endif
-
 extern void picohal_io_init (void);
 #endif
+
+#endif // ModBus expanders
 
 // CANBus expanders
 
@@ -94,6 +101,10 @@ static inline void io_expanders_init (void)
     mcp4725_init();
 #endif
 
+#if R4SLS08_ENABLE
+    r4sls08_init();
+#endif
+
 #if PCA9654E_ENABLE
     pca9654e_init();
 #endif
@@ -101,5 +112,4 @@ static inline void io_expanders_init (void)
 #if PICOHAL_IO_ENABLE
     picohal_io_init();
 #endif
-
 }

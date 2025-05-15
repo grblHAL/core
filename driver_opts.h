@@ -29,6 +29,11 @@
 
 #include "hal.h"
 #include "nuts_bolts.h"
+
+#define MODBUS_RTU_ENABLED     0b001
+#define MODBUS_RTU_DIR_ENABLED 0b010
+#define MODBUS_TCP_ENABLED     0b100
+
 #include "expanders_init.h"
 
 #ifdef OPTS_POSTPROCESSING
@@ -393,10 +398,6 @@
   #endif
 #endif
 
-#define MODBUS_RTU_ENABLED     0b001
-#define MODBUS_RTU_DIR_ENABLED 0b010
-#define MODBUS_TCP_ENABLED     0b100
-
 #if MODBUS_ENABLE == 2
 #undef MODBUS_ENABLE
 #define MODBUS_ENABLE 0b011
@@ -474,6 +475,14 @@
 #endif
 #ifndef LIMITS_OVERRIDE_ENABLE
 #define LIMITS_OVERRIDE_ENABLE 0
+#endif
+
+#ifndef PROBE2_ENABLE
+#define PROBE2_ENABLE       0
+#endif
+
+#ifndef TOOLSETTER_ENABLE
+#define TOOLSETTER_ENABLE   0
 #endif
 
 #if SAFETY_DOOR_ENABLE && defined(NO_SAFETY_DOOR_SUPPORT)

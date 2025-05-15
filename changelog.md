@@ -1,5 +1,35 @@
 ## grblHAL changelog
 
+<a name="20250514">Build 20250514
+
+Core:
+
+* Added initial/enhanced support for toolsetter and second probe input.
+When more than one probe is available `PROBES:<bits>` is added to the `NEWOPTS` element in the `$I` report. `<bits>` is a bitfield where each bit set represents an available probe.
+
+* Moved inbuilt G65 macros to the core and added macro `G65P5Q<n>` for selecting probe. `<n>` is the probe id: `0` - primary probe, `1` - toolsetter, `2` - secondary probe.
+
+* Added probe id to real time report: `|P:<n>` will be reported on probe select when more than one probe is available.
+
+* Fix for `WCO` and `Ov` real time status report elements not beeing reported as they should in some circumstances.
+
+Drivers:
+
+* All: fix for potential/actual hard fault when a basic on/off spindle is configured. Ref. ESP32 issue [#164](https://github.com/grblHAL/ESP32/issues/164).
+
+* STM32 drivers: fix for incorrect PWM output at max RPM when PWM output is inverted.
+
+Plugins:
+
+* Misc, probe relays: new plugin, can be configured to share the \(single\) probe input between up to three probes.
+Probe switching is by the inbuilt `G65P5Q<n>` macro or automatically on "@G59.3" tool changes for a toolsetter. One or two free auxiliary output ports required.
+
+* Misc, BLTouch: improved auto deploy capability.
+
+* SDCard, macros: moved inbuilt G65 macros to the core.
+
+---
+
 <a name="20250504">20250504
 
 Plugins:

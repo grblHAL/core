@@ -226,6 +226,18 @@ static aux_ctrl_t aux_ctrl[] = {
     { .function = Input_Probe, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .value = 0 }, .pin = PROBE_PIN, .port = NULL },
 #endif
 #endif
+#if PROBE2_ENABLE && defined(PROBE2_PIN)
+#ifndef PROBE2_PORT
+#define PROBE2_PORT 0
+#endif
+    { .function = Input_Probe2, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .value = 0 }, .pin = PROBE2_PIN, .port = (void *)PROBE2_PORT },
+#endif
+#if TOOLSETTER_ENABLE && defined(TOOLSETTER_PIN)
+#ifndef TOOLSETTER_PORT
+#define TOOLSETTER_PORT 0
+#endif
+    { .function = Input_Toolsetter, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .value = 0 }, .pin = TOOLSETTER_PIN, .port = (void *)TOOLSETTER_PORT },
+#endif
 #if SAFETY_DOOR_ENABLE && defined(SAFETY_DOOR_PIN)
 #ifdef SAFETY_DOOR_PORT
     { .function = Input_SafetyDoor, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .safety_door_ajar = On }, .pin = SAFETY_DOOR_PIN, .port = (void *)SAFETY_DOOR_PORT },

@@ -393,7 +393,7 @@ void gc_init (bool stop)
     ngc_flowctrl_init();
 #endif
 #if NGC_PARAMETERS_ENABLE
-    ngc_modal_state_invalidate();
+    ngc_params_init();
 #endif
 #if ENABLE_ACCELERATION_PROFILES
     gc_state.modal.acceleration_factor = gc_get_accel_factor(0); // Initialize machine with default
@@ -762,15 +762,7 @@ status_code_t gc_execute_block (char *block)
 
     DCRAM static parser_block_t gc_block;
 
-#if NGC_EXPRESSIONS_ENABLE
-
-    static const parameter_words_t o_label = {
-        .o = On
-    };
-
-    static ngc_param_t ngc_params[NGC_N_ASSIGN_PARAMETERS_PER_BLOCK];
-
-    uint_fast8_t ngc_param_count = 0;
+#if NGC_PARAMETERS_ENABLE
 
     // NOTE: this array has to match the parameter_words_t order!
     PROGMEM static const gc_value_ptr_t gc_value_ptr[] = {
@@ -823,7 +815,19 @@ status_code_t gc_execute_block (char *block)
        { &gc_block.values.xyz[Z_AXIS], ValueType_Float }
     };
 
-#endif
+#endif // NGC_PARAMETERS_ENABLE
+
+#if NGC_EXPRESSIONS_ENABLE
+
+    static const parameter_words_t o_label = {
+        .o = On
+    };
+
+    static ngc_param_t ngc_params[NGC_N_ASSIGN_PARAMETERS_PER_BLOCK];
+
+    uint_fast8_t ngc_param_count = 0;
+
+#endif // NGC_EXPRESSIONS_ENABLE
 
     char *message = NULL;
     status_code_t status = Status_OK;
@@ -2530,8 +2534,7 @@ status_code_t gc_execute_block (char *block)
 #if NGC_PARAMETERS_ENABLE
                     if(!ngc_call_push(&gc_state + ngc_call_level()))
                         FAIL(Status_FlowControlStackOverflow); // [Call level too deep]
-#endif
-#if NGC_EXPRESSIONS_ENABLE
+
                     // TODO: add context for local storage?
                     {
                         uint_fast8_t idx = 1;

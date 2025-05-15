@@ -37,6 +37,7 @@
 #include "system.h"
 #include "settings.h"
 #include "ngc_params.h"
+#include "state_machine.h"
 
 #ifndef NGC_MAX_CALL_LEVEL
 #define NGC_MAX_CALL_LEVEL 10
@@ -92,6 +93,7 @@ static ngc_rw_param_t *rw_params = NULL;
 static ngc_named_rw_param_t *rw_global_params = NULL;
 static ngc_string_id_t ref_id = (uint32_t)-1;
 static ngc_string_param_t *ngc_string_params = NULL;
+static on_macro_execute_ptr on_macro_execute;
 
 static float _absolute_pos (uint_fast8_t axis)
 {
@@ -961,6 +963,151 @@ uint_fast8_t ngc_call_level (void)
 uint8_t ngc_float_decimals (void)
 {
 	return settings.flags.report_inches ? N_DECIMAL_COORDVALUE_INCH : N_DECIMAL_COORDVALUE_MM;
+}
+
+static status_code_t macro_get_setting (void)
+{
+    float setting_id;
+    status_code_t status = Status_OK;
+    const setting_detail_t *setting;
+    parameter_words_t args = gc_get_g65_arguments();
+
+    if(!args.q)
+        status = Status_GcodeValueWordMissing;
+    if(ngc_param_get(17 /* Q word */, &setting_id) && (setting = setting_get_details((setting_id_t)setting_id, NULL))) {
+
+        uint_fast8_t offset = (setting_id_t)setting_id - setting->id;
+
+        if(setting->datatype == Format_Decimal) {
+            ngc_named_param_set("_value", setting_get_float_value(setting, offset));
+            ngc_named_param_set("_value_returned", 1.0f);
+        } else if(setting_is_integer(setting) || setting_is_list(setting)) {
+            ngc_named_param_set("_value", (float)setting_get_int_value(setting, offset));
+            ngc_named_param_set("_value_returned", 1.0f);
+        }
+    } else
+        status = Status_GcodeValueOutOfRange;
+
+    return status;
+}
+
+static status_code_t macro_ngc_parameter_rw (void)
+{
+    float idx, value;
+    status_code_t status = Status_OK;
+    parameter_words_t args = gc_get_g65_arguments();
+
+    if(!args.i)
+        status = Status_GcodeValueWordMissing;
+    else if(ngc_param_get(4 /* I word */, &idx)) {
+        if(args.q) {
+            if(!(ngc_param_get(17 /* Q word */, &value) && ngc_param_set((ngc_param_id_t)idx, value)))
+                status = Status_GcodeValueOutOfRange;
+        } else if(ngc_param_get((ngc_param_id_t)idx, &value)) {
+            if(args.s) {
+                if(!(ngc_param_get(19 /* S word */, &idx) && ngc_param_set((ngc_param_id_t)idx, value)))
+                    status = Status_GcodeValueOutOfRange;
+            } else {
+                ngc_named_param_set("_value", value);
+                ngc_named_param_set("_value_returned", 1.0f);
+            }
+        } else
+            status = Status_GcodeValueOutOfRange;
+    } else
+        status = Status_GcodeValueOutOfRange;
+
+    return status;
+}
+
+static status_code_t macro_get_machine_state (void)
+{
+    ngc_named_param_set("_value", (float)ffs(state_get()));
+    ngc_named_param_set("_value_returned", 1.0f);
+
+    return Status_OK;
+}
+
+static status_code_t macro_select_probe (void)
+{
+    float probe_id;
+    status_code_t status = Status_OK;
+    parameter_words_t args = gc_get_g65_arguments();
+
+    if(!args.q)
+        status = Status_GcodeValueWordMissing;
+    else if(ngc_param_get(17 /* Q word */, &probe_id) && (hal.probe.select ? hal.probe.select((probe_id_t)probe_id) : probe_id == 0.0f))
+        system_add_rt_report(Report_ProbeId);
+    else
+        status = Status_GcodeValueOutOfRange;
+
+    return status;
+}
+
+#if N_TOOLS
+
+static status_code_t macro_get_tool_offset (void)
+{
+    float tool_id, axis_id;
+    status_code_t status = Status_OK;
+    parameter_words_t args = gc_get_g65_arguments();
+
+    if(!(args.q && args.r))
+        status = Status_GcodeValueWordMissing;
+    else if(ngc_param_get(17 /* Q word */, &tool_id) && ngc_param_get(18 /* R word */, &axis_id)) {
+        if((uint32_t)tool_id <= grbl.tool_table.n_tools && (uint8_t)axis_id < N_AXIS) {
+            ngc_named_param_set("_value", grbl.tool_table.tool[(uint32_t)tool_id].offset[(uint8_t)axis_id]);
+            ngc_named_param_set("_value_returned", 1.0f);
+        } else
+            status = Status_GcodeIllegalToolTableEntry;
+    } else
+        status = Status_GcodeIllegalToolTableEntry;
+
+    return status;
+}
+
+#endif // N_TOOLS
+
+static status_code_t onMacroExecute (macro_id_t macro_id)
+{
+    status_code_t status = Status_Unhandled;
+
+    switch((g65_inbuilt_t)macro_id) {
+
+        case G65Macro_GetSetting:
+            status = macro_get_setting();
+            break;
+#if N_TOOLS
+       case G65Macro_GetToolOffset:
+            status = macro_get_tool_offset();
+            break;
+#endif
+        case G65Macro_ParameterRW:
+            status = macro_ngc_parameter_rw();
+            break;
+
+        case G65Macro_GetMachineState:
+            status = macro_get_machine_state();
+            break;
+
+        case G65Macro_SelectProbe:
+            status = macro_select_probe();
+            break;
+    }
+
+    return status == Status_Unhandled && on_macro_execute ? on_macro_execute(macro_id) : status;
+}
+
+void ngc_params_init (void)
+{
+    static bool init_ok = false;
+
+    if(!init_ok) {
+        init_ok = true;
+        on_macro_execute = grbl.on_macro_execute;
+        grbl.on_macro_execute = onMacroExecute;
+    }
+
+    ngc_modal_state_invalidate();
 }
 
 #endif // NGC_PARAMETERS_ENABLE

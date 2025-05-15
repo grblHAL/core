@@ -456,6 +456,8 @@ typedef enum {
     Setting_MacroATC_Options = 675,
     Setting_ResetActions = 676,
     Setting_StepperSpindle_Options = 677,
+    Setting_RelayPortToolsetter = 678,
+    Setting_RelayPortProbe2 = 679,
 
     Setting_SpindlePWMOptions1 = 709,
 
@@ -610,7 +612,10 @@ typedef union {
                  invert_toolsetter_input   :1,
                  disable_toolsetter_pullup :1,
                  soft_limited              :1,
-                 unassigned                :7;
+                 toolsetter_auto_select    :1,
+                 invert_probe2_input       :1,
+                 probe2_auto_select        :1,
+                 unassigned                :4;
     };
 } probeflags_t;
 

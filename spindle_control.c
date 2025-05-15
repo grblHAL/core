@@ -839,7 +839,7 @@ bool spindle_precompute_pwm_values (spindle_ptrs_t *spindle, spindle_pwm_t *pwm_
         pwm_data->flags.rpm_controlled = settings->flags.enable_rpm_controlled;
         pwm_data->flags.laser_mode_disable = settings->flags.laser_mode_disable;
         if(settings->pwm_off_value == 0.0f)
-            pwm_data->off_value = pwm_data->flags.invert_pwm ? pwm_data->period : 0;
+            pwm_data->off_value = pwm_data->flags.invert_pwm ? pwm_data->period - pwm_data->offset : 0;
         else
             pwm_data->off_value = invert_pwm(pwm_data, (uint_fast16_t)(pwm_data->period * settings->pwm_off_value / 100.0f));
         pwm_data->max_value = (uint_fast16_t)(pwm_data->period * settings->pwm_max_value / 100.0f) + pwm_data->offset;

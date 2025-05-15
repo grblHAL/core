@@ -96,6 +96,11 @@
     vfd_init();
 #endif
 
+#if PROBE_ENABLE > 1
+    extern void probe_select_init (void);
+    probe_select_init();
+#endif
+
 #if BLUETOOTH_ENABLE > 1
     extern void bluetooth_init (void);
     bluetooth_init();

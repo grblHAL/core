@@ -38,7 +38,8 @@ typedef union {
                  is_laser_ppi_mode    :1,
                  target_valid         :1,
                  target_validated     :1,
-                 unassigned           :5;
+                 probing_toolsetter   :1,
+                 unassigned           :4;
         coolant_state_t coolant;
     };
 } planner_cond_t;

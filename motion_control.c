@@ -999,26 +999,12 @@ gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_f
     if (!protocol_buffer_synchronize())
         return GCProbe_Abort; // Return if system reset has been issued.
 
-    // Initialize probing control variables
-    sys.flags.probe_succeeded = Off; // Re-initialize probe history before beginning cycle.
-    hal.probe.configure(parser_flags.probe_is_away, true);
-
 #if COMPATIBILITY_LEVEL <= 1
     bool at_g59_3 = false, probe_toolsetter = grbl.on_probe_toolsetter != NULL && state_get() != STATE_TOOL_CHANGE && (sys.homed.mask & (X_AXIS_BIT|Y_AXIS_BIT));
 
     if(probe_toolsetter)
-        grbl.on_probe_toolsetter(NULL, NULL, at_g59_3 = system_xy_at_fixture(CoordinateSystem_G59_3, TOOLSETTER_RADIUS), true);
+        pl_data->condition.probing_toolsetter = grbl.on_probe_toolsetter(NULL, NULL, at_g59_3 = system_xy_at_fixture(CoordinateSystem_G59_3, TOOLSETTER_RADIUS), true);
 #endif
-
-    // After syncing, check if probe is already triggered or not connected. If so, halt and issue alarm.
-    // NOTE: This probe initialization error applies to all probing cycles.
-    probe_state_t probe = hal.probe.get_state();
-    if (probe.triggered || !probe.connected) { // Check probe state.
-        system_set_exec_alarm(Alarm_ProbeFailInitial);
-        protocol_execute_realtime();
-        hal.probe.configure(false, false); // Re-initialize invert mask before returning.
-        return GCProbe_FailInit; // Nothing else to do but bail.
-    }
 
     if(grbl.on_probe_start) {
 
@@ -1035,6 +1021,31 @@ gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_f
         } while(idx);
 
         grbl.on_probe_start(axes, target, pl_data);
+    }
+
+    // Initialize probing control variables
+    sys.flags.probe_succeeded = Off; // Re-initialize probe history before beginning cycle.
+    hal.probe.configure(parser_flags.probe_is_away, true);
+
+    // After syncing, check if probe is already triggered or not connected. If so, halt and issue alarm.
+    // NOTE: This probe initialization error applies to all probing cycles.
+    probe_state_t probe = hal.probe.get_state();
+    if (probe.triggered || !probe.connected) { // Check probe state.
+
+        system_set_exec_alarm(Alarm_ProbeFailInitial);
+        protocol_execute_realtime();
+
+        hal.probe.configure(false, false); // Re-initialize invert mask before returning.
+
+#if COMPATIBILITY_LEVEL <= 1
+        if(probe_toolsetter)
+            grbl.on_probe_toolsetter(NULL, NULL, at_g59_3, false);
+#endif
+
+        if(grbl.on_probe_completed)
+            grbl.on_probe_completed();
+
+        return GCProbe_FailInit; // Nothing else to do but bail.
     }
 
     // Setup and queue probing motion. Auto cycle-start should not start the cycle.

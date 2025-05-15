@@ -955,10 +955,17 @@ void report_build_info (char *line, bool extended)
         if(settings.homing.flags.enabled)
             strcat(buf, "HOME,");
 
-        if(!hal.probe.get_state)
+        if(hal.probe.get_state == NULL)
             strcat(buf, "NOPROBE,");
-        else if(hal.signals_cap.probe_disconnected)
-            strcat(buf, "PC,");
+        else {
+            if(hal.probe.select) {
+                strcat(buf, "PROBES=");
+                strcat(buf, uitoa(0b001 | (hal.driver_cap.toolsetter << 1) | (hal.driver_cap.probe2 << 2)));
+                strcat(buf, ",");
+            }
+            if(hal.signals_cap.probe_disconnected)
+                strcat(buf, "PC,");
+        }
 
         if(hal.signals_cap.stop_disable)
             strcat(buf, "OS,");
@@ -1140,8 +1147,9 @@ void report_realtime_status (void)
 {
     static bool probing = false;
 
-    float print_position[N_AXIS];
-    report_tracking_flags_t report = system_get_rt_report_flags();
+    uint_fast8_t idx;
+    float print_position[N_AXIS], wco[N_AXIS];
+    report_tracking_flags_t report = system_get_rt_report_flags(), delayed_report = {};
     probe_state_t probe_state = {
         .connected = On,
         .triggered = Off
@@ -1212,14 +1220,11 @@ void report_realtime_status (void)
             break;
     }
 
-    uint_fast8_t idx;
-    float wco[N_AXIS];
-    if(!settings.status_report.machine_position || report.wco) {
+    if(!settings.status_report.machine_position) {
+        // Apply work coordinate offsets and tool length offset to current position.
         for(idx = 0; idx < N_AXIS; idx++) {
-            // Apply work coordinate offsets and tool length offset to current position.
             wco[idx] = gc_get_offset(idx, true);
-            if(!settings.status_report.machine_position)
-                print_position[idx] -= wco[idx];
+            print_position[idx] -= wco[idx];
         }
     }
 
@@ -1321,46 +1326,58 @@ void report_realtime_status (void)
         }
     }
 
-    if(settings.status_report.work_coord_offset) {
-
-        if(wco_counter > 0 && !report.wco) {
-            if(wco_counter > (REPORT_WCO_REFRESH_IDLE_COUNT - 1) && state == STATE_IDLE)
-                wco_counter = REPORT_WCO_REFRESH_IDLE_COUNT - 1;
-            wco_counter--;
-        } else
-            wco_counter = state & (STATE_HOMING|STATE_CYCLE|STATE_HOLD|STATE_JOG|STATE_SAFETY_DOOR)
-                           ? (REPORT_WCO_REFRESH_BUSY_COUNT - 1) // Reset counter for slow refresh
-                           : (REPORT_WCO_REFRESH_IDLE_COUNT - 1);
-    } else
-        report.wco = Off;
-
     if(settings.status_report.overrides) {
 
-        if (override_counter > 0 && !report.overrides)
-            override_counter--;
-        else {
-            if((report.overrides = !report.wco)) {
-                report.spindle = report.spindle || spindle_0_state.on;
-                report.coolant = report.coolant || hal.coolant.get_state().value != 0;
-            }
+        if((report.overrides = override_counter == 0 || report.overrides)) {
+
             override_counter = state & (STATE_HOMING|STATE_CYCLE|STATE_HOLD|STATE_JOG|STATE_SAFETY_DOOR)
                                 ? (REPORT_OVERRIDE_REFRESH_BUSY_COUNT - 1) // Reset counter for slow refresh
                                 : (REPORT_OVERRIDE_REFRESH_IDLE_COUNT - 1);
-        }
+
+            if(!report.all) {
+                report.spindle = report.spindle || spindle_0_state.on;
+                report.coolant = report.coolant || hal.coolant.get_state().value != 0;
+            }
+        } else
+            override_counter--;
+
+        if(override_counter > (REPORT_OVERRIDE_REFRESH_IDLE_COUNT - 1) && state == STATE_IDLE)
+            override_counter = REPORT_OVERRIDE_REFRESH_IDLE_COUNT - 1;
     } else
         report.overrides = Off;
+
+    if(settings.status_report.work_coord_offset) {
+
+        if((report.wco = wco_counter == 0 || report.wco)) {
+
+            wco_counter = state & (STATE_HOMING|STATE_CYCLE|STATE_HOLD|STATE_JOG|STATE_SAFETY_DOOR)
+                           ? (REPORT_WCO_REFRESH_BUSY_COUNT - 1) // Reset counter for slow refresh
+                           : (REPORT_WCO_REFRESH_IDLE_COUNT - 1);
+
+            // If protocol_buffer_synchronize() is running
+            // delay outputting WCO until sync is completed
+            // unless requested from stepper_driver_interrupt_handler.
+            if(!report.all && (report.overrides || (sys.flags.synchronizing && !report.force_wco))) {
+                report.wco = Off;
+                delayed_report.wco = On;
+            }
+        } else
+            wco_counter--;
+
+        if(wco_counter > (REPORT_WCO_REFRESH_IDLE_COUNT - 1) && state == STATE_IDLE)
+            wco_counter = REPORT_WCO_REFRESH_IDLE_COUNT - 1;
+    } else
+        report.wco = Off;
 
     if(report.value || gc_state.tool_change) {
 
         if(report.wco) {
-            // If protocol_buffer_synchronize() is running
-            // delay outputting WCO until sync is completed
-            // unless requested from stepper_driver_interrupt_handler.
-            if(report.force_wco || !sys.flags.synchronizing) {
-                hal.stream.write_all("|WCO:");
-                hal.stream.write_all(get_axis_values(wco));
-            } else
-                wco_counter = 0;
+            if(settings.status_report.machine_position) {
+                for(idx = 0; idx < N_AXIS; idx++)
+                    wco[idx] = gc_get_offset(idx, true);
+            }
+            hal.stream.write_all("|WCO:");
+            hal.stream.write_all(get_axis_values(wco));
         }
 
         if(report.gwco) {
@@ -1434,6 +1451,9 @@ void report_realtime_status (void)
         if(report.tool)
             hal.stream.write_all(appendbuf(2, "|T:", uitoa((uint32_t)gc_state.tool->tool_id)));
 
+        if(report.probe_id)
+            hal.stream.write_all(appendbuf(2, "|P:", uitoa((uint32_t)probe_state.probe_id)));
+
         if(report.tlo_reference)
             hal.stream.write_all(appendbuf(2, "|TLR:", uitoa(sys.tlo_reference_set.mask != 0)));
 
@@ -1487,7 +1507,8 @@ void report_realtime_status (void)
     hal.stream.write_all(">" ASCII_EOL);
 
     system_add_rt_report(Report_ClearAll);
-    if(settings.status_report.work_coord_offset && wco_counter == 0)
+
+    if(delayed_report.wco)
         system_add_rt_report(Report_WCO); // Set to report on next request
 }
 

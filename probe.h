@@ -29,6 +29,12 @@ typedef enum {
     Probing_Active   //!< 1
 } probing_state_t;
 
+typedef enum {
+    Probe_Default = 0, //!< 0
+    Probe_Toolsetter,  //!< 1
+    Probe_2            //!< 2
+} probe_id_t;
+
 typedef union {
     uint8_t value;
     struct {
@@ -38,8 +44,13 @@ typedef union {
                 is_probing    :1, //!< For driver use
                 irq_enabled   :1, //!< For driver use
                 tls_triggered :1, //!< Set to true when toolsetter is triggered.
-                unassigned    :2;
+                probe_id      :2; //!< Id of active probe (for now).
     };
 } probe_state_t;
+
+typedef struct {
+    uint8_t port;
+    bool latchable;
+} probe_t;
 
 #endif

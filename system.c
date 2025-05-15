@@ -1290,6 +1290,11 @@ ISR_CODE void system_add_rt_report (report_tracking_t report)
             sys.report.wco = settings.status_report.work_coord_offset;
             break;
 
+        case Report_ProbeId:
+            if(hal.probe.select == NULL)
+                return;
+            break;
+
         default:
             break;
     }

@@ -412,8 +412,12 @@ PROGMEM static const setting_group_detail_t setting_group_detail [] = {
 
 static bool machine_mode_changed = false;
 #if COMPATIBILITY_LEVEL <= 1
+static char probe_signals[] = "Probe,Toolsetter,Probe 2";
 static char homing_options[] = "Enable,Enable single axis commands,Homing on startup required,Set machine origin to 0,Two switches shares one input,Allow manual,Override locks,N/A,Use limit switches,Per axis feedrates";
+#else
+static char probe_signals[] = "Probe";
 #endif
+static char probing_options[] = "Allow feed override,Apply soft limits,N/A,Auto select toolsetter,Auto select probe 2";
 static char control_signals[] = "Reset,Feed hold,Cycle start,Safety door,Block delete,Optional stop,EStop,Probe connected,Motor fault,Motor warning,Limits override,Single step blocks";
 static char spindle_signals[] = "Spindle enable,Spindle direction,PWM";
 static char coolant_signals[] = "Flood,Mist";
@@ -611,10 +615,13 @@ static status_code_t set_probe_invert (setting_id_t id, uint_fast16_t int_value)
     if(!hal.probe.configure)
         return Status_SettingDisabled;
 
-    settings.probe.invert_probe_pin = (int_value & 0b01);
+    settings.probe.invert_probe_pin = (int_value & 0b001);
 
     if(hal.driver_cap.toolsetter)
-        settings.probe.invert_toolsetter_input = !!(int_value & 0b10);
+        settings.probe.invert_toolsetter_input = !!(int_value & 0b010);
+
+    if(hal.driver_cap.probe2)
+        settings.probe.invert_probe2_input = !!(int_value & 0b100);
 
     ioport_setting_changed(id);
 
@@ -783,10 +790,13 @@ static status_code_t set_probe_disable_pullup (setting_id_t id, uint_fast16_t in
     if(!hal.probe.configure)
         return Status_SettingDisabled;
 
-    settings.probe.disable_probe_pullup = (int_value & 0b01);
+    settings.probe.disable_probe_pullup = (int_value & 0b001);
 
     if(hal.driver_cap.toolsetter)
-        settings.probe.disable_toolsetter_pullup = !!(int_value & 0b10);
+        settings.probe.disable_toolsetter_pullup = !!(int_value & 0b010);
+
+ //   if(hal.driver_cap.probe2)
+ //       settings.probe.disable_probe2_pullup = !!(int_value & 0b100);
 
     ioport_setting_changed(id);
 
@@ -1046,6 +1056,8 @@ static status_code_t set_probe_flags (setting_id_t id, uint_fast16_t int_value)
     settings.probe.allow_feed_override = bit_istrue(int_value, bit(0));
     settings.probe.soft_limited = bit_istrue(int_value, bit(1));
     settings.probe.enable_protection = bit_istrue(int_value, bit(2));
+    settings.probe.toolsetter_auto_select = bit_istrue(int_value, bit(3)) && hal.driver_cap.toolsetter && hal.probe.select;
+    settings.probe.probe2_auto_select = bit_istrue(int_value, bit(4)) && hal.driver_cap.probe2 && hal.probe.select;
 
     return Status_OK;
 }
@@ -1471,7 +1483,9 @@ static uint32_t get_int (setting_id_t id)
         case Setting_InvertProbePin:
             value = settings.probe.invert_probe_pin;
             if(hal.driver_cap.toolsetter && settings.probe.invert_toolsetter_input)
-                value |= 0b10;
+                value |= 0b010;
+            if(hal.driver_cap.probe2 && settings.probe.invert_probe2_input)
+                value |= 0b100;
             break;
 
         case Setting_GangedDirInvertMask:
@@ -1570,7 +1584,11 @@ static uint32_t get_int (setting_id_t id)
             break;
 
         case Setting_ProbingFlags:
-            value = settings.probe.allow_feed_override | (settings.probe.soft_limited << 1) | (settings.probe.enable_protection << 2);
+            value = settings.probe.allow_feed_override |
+                    (settings.probe.soft_limited << 1) |
+                     (settings.probe.enable_protection << 2) |
+                      (settings.probe.toolsetter_auto_select << 3) |
+                       (settings.probe.probe2_auto_select << 4);
             break;
 
         case Setting_ToolChangeMode:
@@ -1824,10 +1842,9 @@ static bool is_setting_available (const setting_detail_t *setting, uint_fast16_t
             available = hal.stepper.get_ganged && hal.stepper.get_ganged(false).mask != 0;
             break;
 
+        case Setting_InvertProbePin:
+        case Setting_ProbePullUpDisable:
         case Setting_ProbingFlags:
-//        case Setting_ToolChangeProbingDistance:
-//        case Setting_ToolChangeFeedRate:
-//        case Setting_ToolChangeSeekRate:
             available = hal.probe.get_state != NULL;
             break;
 
@@ -1965,60 +1982,6 @@ static bool is_setting_available (const setting_detail_t *setting, uint_fast16_t
     return available;
 }
 
-static bool toolsetter_available (const setting_detail_t *setting, uint_fast16_t offset)
-{
-    bool available = false;
-
-#if COMPATIBILITY_LEVEL <= 1
-
-    if(hal.probe.get_state && hal.driver_cap.toolsetter) switch(setting->id) {
-
-        case Setting_InvertProbePin:
-            available = true;
-            break;
-
-        case Setting_ProbePullUpDisable:
-            available = hal.signals_pullup_disable_cap.probe_triggered;
-            break;
-
-        default:
-            break;
-    }
-
-#endif
-
-    return available;
-}
-
-static bool no_toolsetter_available (const setting_detail_t *setting, uint_fast16_t offset)
-{
-#if COMPATIBILITY_LEVEL <= 1
-
-    bool available = false;
-
-    if(hal.probe.get_state && !hal.driver_cap.toolsetter) switch(setting->id) {
-
-        case Setting_InvertProbePin:
-            available = true;
-            break;
-
-        case Setting_ProbePullUpDisable:
-            available = hal.signals_pullup_disable_cap.probe_triggered;
-            break;
-
-        default:
-            break;
-    }
-
-    return available;
-
-#else
-
-    return !!hal.probe.get_state;
-
-#endif
-}
-
 PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_PulseMicroseconds, Group_Stepper, "Step pulse time", "microseconds", Format_Decimal, "#0.0", step_us_min, NULL, Setting_IsLegacyFn, set_pulse_width, get_float, NULL },
      { Setting_StepperIdleLockTime, Group_Stepper, "Step idle delay", "milliseconds", Format_Int16, "####0", NULL, "65535", Setting_IsLegacy, &settings.steppers.idle_lock_time, NULL, NULL },
@@ -2034,8 +1997,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
 #else
      { Setting_LimitPinsInvertMask, Group_Limits, "Invert limit inputs", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsLegacyFn, set_limits_invert_mask, get_int, NULL },
 #endif
-     { Setting_InvertProbePin, Group_Probing, "Invert probe input", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsLegacyFn, set_probe_invert, get_int, no_toolsetter_available },
-     { Setting_InvertProbePin, Group_Probing, "Invert probe inputs", NULL, Format_Bitfield, "Probe,Toolsetter", NULL, NULL, Setting_IsLegacyFn, set_probe_invert, get_int, toolsetter_available },
+     { Setting_InvertProbePin, Group_Probing, "Invert probe inputs", NULL, Format_Bitfield, probe_signals, NULL, NULL, Setting_IsLegacyFn, set_probe_invert, get_int, is_setting_available },
      { Setting_SpindlePWMBehaviour, Group_Spindle, "Deprecated", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsLegacyFn, set_pwm_mode, get_int, is_setting_available },
      { Setting_GangedDirInvertMask, Group_Stepper, "Ganged axes direction invert", NULL, Format_Bitfield, ganged_axes, NULL, NULL, Setting_IsExtendedFn, set_ganged_dir_invert, get_int, is_setting_available },
      { Setting_SpindlePWMOptions, Group_Spindle, "PWM spindle options", NULL, Format_XBitfield, "Enable,RPM controls spindle enable signal,Disable laser mode capability", NULL, NULL, Setting_IsExtendedFn, set_pwm_options, get_int, is_setting_available },
@@ -2052,8 +2014,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_SpindleInvertMask, Group_Spindle, "Invert spindle signals", NULL, Format_Bitfield, spindle_signals, NULL, NULL, Setting_IsExtendedFn, set_spindle_invert, get_int, is_setting_available, { .reboot_required = On } },
      { Setting_ControlPullUpDisableMask, Group_ControlSignals, "Pullup disable control inputs", NULL, Format_Bitfield, control_signals, NULL, NULL, Setting_IsExtendedFn, set_control_disable_pullup, get_int, NULL },
      { Setting_LimitPullUpDisableMask, Group_Limits, "Pullup disable limit inputs", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.limits.disable_pullup.mask, NULL, NULL },
-     { Setting_ProbePullUpDisable, Group_Probing, "Pullup disable probe input", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_probe_disable_pullup, get_int, no_toolsetter_available },
-     { Setting_ProbePullUpDisable, Group_Probing, "Pullup disable probe inputs", NULL, Format_Bitfield, "Probe,Toolsetter", NULL, NULL, Setting_IsLegacyFn, set_probe_disable_pullup, get_int, toolsetter_available },
+     { Setting_ProbePullUpDisable, Group_Probing, "Pullup disable probe inputs", NULL, Format_Bitfield, probe_signals, NULL, NULL, Setting_IsLegacyFn, set_probe_disable_pullup, get_int, is_setting_available },
      { Setting_SoftLimitsEnable, Group_Limits, "Soft limits enable", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsLegacyFn, set_soft_limits_enable, get_int, NULL },
 #if COMPATIBILITY_LEVEL <= 1
   #if N_AXIS > 3
@@ -2117,7 +2078,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_SleepEnable, Group_General, "Sleep enable", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_sleep_enable, get_int, is_setting_available },
      { Setting_HoldActions, Group_General, "Feed hold actions", NULL, Format_Bitfield, "Disable laser during hold,Restore spindle and coolant state on resume", NULL, NULL, Setting_IsExtendedFn, set_hold_actions, get_int, NULL },
      { Setting_ForceInitAlarm, Group_General, "Force init alarm", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_force_initialization_alarm, get_int, NULL },
-     { Setting_ProbingFlags, Group_Probing, "Probing flags", NULL, Format_Bitfield, "Allow feed override,Apply soft limits", NULL, NULL, Setting_IsExtendedFn, set_probe_flags, get_int, is_setting_available },
+     { Setting_ProbingFlags, Group_Probing, "Probing options", NULL, Format_Bitfield, probing_options, NULL, NULL, Setting_IsExtendedFn, set_probe_flags, get_int, is_setting_available },
 #if ENABLE_SPINDLE_LINEARIZATION
      { Setting_LinearSpindlePiece1, Group_Spindle, "Spindle linearisation, 1st point", NULL, Format_String, "x(39)", NULL, "39", Setting_IsExtendedFn, set_linear_piece, get_linear_piece, NULL },
   #if SPINDLE_NPWM_PIECES > 1
@@ -2592,6 +2553,9 @@ static void sanity_check (void)
         settings.tool_change.mode = ToolChange_SemiAutomatic;
         settings.flags.tool_change_fast_pulloff = On;
     }
+
+    settings.probe.probe2_auto_select &= hal.driver_cap.probe2 && hal.probe.select;
+    settings.probe.toolsetter_auto_select &= hal.driver_cap.toolsetter && hal.probe.select;
 
     if(SLEEP_DURATION <= 0.0f)
         settings.flags.sleep_enable = Off;
@@ -3465,6 +3429,13 @@ void settings_init (void)
         if(details->on_changed)
             details->on_changed(&settings, changed);
     } while((details = details->next));
+
+    uint32_t mask = 0b001 | (hal.driver_cap.toolsetter << 1) | (hal.driver_cap.probe2 << 2);
+    setting_remove_elements(Setting_InvertProbePin, mask);
+    setting_remove_elements(Setting_ProbePullUpDisable, mask);
+
+    mask = 0b00011 | (hal.probe.select ? ((hal.driver_cap.toolsetter << 3) | (hal.driver_cap.probe2 << 4)) : 0);
+    setting_remove_elements(Setting_ProbingFlags, mask);
 
     if(!settings.flags.settings_downgrade && settings.version.build != (GRBL_BUILD - 20000000UL)) {
 

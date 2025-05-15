@@ -190,6 +190,16 @@ static void onLinestateChanged (serial_linestate_t state)
         on_linestate_changed(state);
 }
 
+static bool onProbeToolsetter (tool_data_t *tool, coord_data_t *position, bool at_g59_3, bool on)
+{
+    bool ok = false;
+
+    if(at_g59_3 && settings.probe.toolsetter_auto_select)
+        ok = hal.probe.select(on ? Probe_Toolsetter : Probe_Default);
+
+    return ok;
+}
+
 static void settings_changed (settings_t *settings, settings_changed_flags_t changed)
 {
     hal_settings_changed(settings, changed);
@@ -380,6 +390,9 @@ int grbl_enter (void)
         on_linestate_changed = hal.stream.on_linestate_changed;
         hal.stream.on_linestate_changed = onLinestateChanged;
     }
+
+    if(grbl.on_probe_toolsetter == NULL && hal.driver_cap.toolsetter && hal.probe.select)
+        grbl.on_probe_toolsetter = onProbeToolsetter;
 
     // Initialization loop upon power-up or a system abort. For the latter, all processes
     // will return to this loop to be cleanly re-initialized.

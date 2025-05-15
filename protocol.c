@@ -869,6 +869,7 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(char c)
                 report.value = (uint32_t)Report_All;
                 report.tool_offset = sys.report.tool_offset;
                 report.m66result = sys.var5399 > -2;
+                report.probe_id = !!hal.probe.select;
 
                 system_add_rt_report((report_tracking_t)report.value);
             }

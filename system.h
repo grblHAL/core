@@ -227,6 +227,7 @@ typedef enum {
     Report_TLOReference = (1 << 15),
     Report_Fan = (1 << 16),
     Report_SpindleId = (1 << 17),
+    Report_ProbeId = (1 << 18),
     Report_ForceWCO = (1 << 29),
     Report_CycleStart = (1 << 30),
     Report_All = 0x8003FFFF
@@ -246,14 +247,15 @@ typedef union {
                  wco           :1, //!< Add work coordinates.
                  gwco          :1, //!< Add work coordinate.
                  tool_offset   :1, //!< Tool offsets changed.
-                 m66result     :1, //!< M66 result updated
+                 m66result     :1, //!< M66 result updated.
                  pwm           :1, //!< Add PWM information (optional: to be added by driver).
                  motor         :1, //!< Add motor information (optional: to be added by driver).
                  encoder       :1, //!< Add encoder information (optional: to be added by driver).
                  tlo_reference :1, //!< Tool length offset reference changed.
                  fan           :1, //!< Fan on/off changed.
-                 spindle_id    :1, //!< Spindle changed
-                 unassigned   :11, //
+                 spindle_id    :1, //!< Spindle changed.
+                 probe_id      :1, //!< Probe changed.
+                 unassigned   :10, //
                  force_wco     :1, //!< Add work coordinates (due to WCO changed during motion).
                  cycle_start   :1, //!< Cycle start signal triggered. __NOTE:__ do __NOT__ add to Report_All enum above!
                  all           :1; //!< Set when CMD_STATUS_REPORT_ALL is requested, may be used by user code.

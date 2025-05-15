@@ -313,12 +313,12 @@ static void execute_probe (void *data)
         target.values[plane.axis_linear] = offset.values[plane.axis_linear];
         ok = mc_line(target.values, &plan_data);
 
-        if(ok && probe_toolsetter)
-            grbl.on_probe_toolsetter(next_tool, NULL, true, true);
-
         plan_data.feed_rate = settings.tool_change.seek_rate;
         plan_data.condition.value = 0;
         plan_data.spindle.state.value = 0;
+
+        if(ok && probe_toolsetter)
+            plan_data.condition.probing_toolsetter = grbl.on_probe_toolsetter(next_tool, NULL, true, true);
 
         set_probe_target(&target, plane.axis_linear);
 
@@ -602,12 +602,12 @@ status_code_t tc_probe_workpiece (void)
     // TODO: add check for reference offset set?
 
     bool ok;
-    gc_parser_flags_t flags = {0};
+    gc_parser_flags_t flags = {};
     plan_line_data_t plan_data;
 
 #if COMPATIBILITY_LEVEL <= 1
     if(probe_toolsetter)
-        grbl.on_probe_toolsetter(next_tool, NULL, system_xy_at_fixture(CoordinateSystem_G59_3, TOOLSETTER_RADIUS), true);
+        plan_data.condition.probing_toolsetter = grbl.on_probe_toolsetter(next_tool, NULL, system_xy_at_fixture(CoordinateSystem_G59_3, TOOLSETTER_RADIUS), true);
 #endif
 
     // Get current position.

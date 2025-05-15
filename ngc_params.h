@@ -105,6 +105,17 @@ typedef enum {
     NGCParam_Last
 } ncg_name_param_id_t;
 
+typedef enum {
+    G65Macro_GetSetting      = 1,
+#if N_TOOLS || defined __DOXYGEN__
+    G65Macro_GetToolOffset   = 2,
+#endif
+    G65Macro_ParameterRW     = 3,
+    G65Macro_GetMachineState = 4,
+    G65Macro_SelectProbe     = 5
+} g65_inbuilt_t;
+
+void ngc_params_init (void);
 uint8_t ngc_float_decimals (void);
 bool ngc_param_get (ngc_param_id_t id, float *value);
 bool ngc_param_set (ngc_param_id_t id, float value);
