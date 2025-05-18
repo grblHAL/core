@@ -1776,14 +1776,16 @@ status_code_t gc_execute_block (char *block)
         user_words.mask = gc_block.words.mask;
         if((int_value = (uint_fast16_t)grbl.user_mcode.validate(&gc_block)))
             FAIL((status_code_t)int_value);
-        user_words.mask ^= gc_block.words.mask; // Flag "taken" words for execution
 
-        if(user_words.i)
-            ijk_words.i = Off;
-        if(user_words.j)
-            ijk_words.j = Off;
-        if(user_words.k)
-            ijk_words.k = Off;
+        parameter_words_t taken_words;
+
+        user_words.mask ^= gc_block.words.mask; // Flag "taken" words for user M-code execution
+
+        if((taken_words.mask = user_words.mask & axis_words_mask.mask))
+            axis_words.mask &= ~gc_paramwords_to_axes(taken_words).mask;
+
+        ijk_words.mask &= ~(uint8_t)((user_words.mask >> 4) & 0b111);
+
         if(user_words.f) {
             single_meaning_value.f = gc_block.values.f;
             gc_block.values.f = 0.0f;
@@ -1800,7 +1802,6 @@ status_code_t gc_execute_block (char *block)
             single_meaning_value.t = gc_block.values.t;
             gc_block.values.t = (tool_id_t)0;
         }
-        axis_words.mask = 0;
     }
 
     // [1. Comments ]: MSG's may be supported by driver layer. Comment handling performed by protocol.

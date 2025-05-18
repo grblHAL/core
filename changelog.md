@@ -1,5 +1,27 @@
 ## grblHAL changelog
 
+<a name="20250518">Build 20250518
+
+Core:
+
+* Fix for custom M-code commands claiming all axis words even when not using any.
+
+* Added setting `$680` for configuring delay from stepper enable to first dir/step pulse. Added to fixed ~2ms delay provided by most drivers.
+
+Drivers:
+
+* STM32F4xx: added OpenPNP plugin.
+
+* STM32F4xx, STM32F7xx: fix for second PWM spindle failing to compile and reading analog inputs returning the value from the last configured.
+
+Plugins:
+
+* OpenPNP: added support for reading/scaling analog inputs via `M123`, `M124` and `M125` custom M-codes.
+
+* Keypad: changed to report itself even if no keypad is connected, added delay before probing the I2C bus to allow the keypad time to boot.
+
+--- 
+
 <a name="20250514">Build 20250514
 
 Core:
@@ -14,6 +36,8 @@ When more than one probe is available `PROBES:<bits>` is added to the `NEWOPTS` 
 * Fix for `WCO` and `Ov` real time status report elements not beeing reported as they should in some circumstances.
 
 Drivers:
+
+* iMXRT1062: added `$BL` command for entering bootloader mode, allows use of the _Teensy Loader_ when access to the programming button is restricted.
 
 * All: fix for potential/actual hard fault when a basic on/off spindle is configured. Ref. ESP32 issue [#164](https://github.com/grblHAL/ESP32/issues/164).
 

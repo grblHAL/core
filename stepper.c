@@ -201,6 +201,9 @@ void st_wake_up (void)
 
     hal.stepper.go_idle(true); // Reset step & dir outputs
     hal.stepper.wake_up();
+
+    if(settings.stepper_enable_delay) // TODO: do not add delay if deenergize is pending?
+        hal.delay_ms(settings.stepper_enable_delay, NULL);
 }
 
 // Stepper shutdown

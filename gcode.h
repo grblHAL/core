@@ -242,7 +242,6 @@ typedef enum {
     UserMCode_Generic2 = 102,           //!< 102 - For private use only
     UserMCode_Generic3 = 103,           //!< 103 - For private use only
     UserMCode_Generic4 = 104,           //!< 104 - For private use only
-    OpenPNP_GetADCReading = 105,        //!< 105 - M105
     Fan_On = 106,                       //!< 106 - M106, Marlin format
     Fan_Off = 107,                      //!< 107 - M107, Marlin format
     OpenPNP_GetCurrentPosition = 114,   //!< 114 - M114
@@ -254,6 +253,9 @@ typedef enum {
     LaserPPI_Rate = 127,                //!< 127 - M127
     LaserPPI_PulseLength = 128,         //!< 128 - M128
     Laser_Overdrive = 129,              //!< 129 - M129
+    OpenPNP_GetADCRaw = 143,            //!< 143 - M143
+    OpenPNP_GetADCScaled = 144,         //!< 144 - M144
+    OpenPNP_SetADCScaling = 145,        //!< 145 - M145
     RGB_WriteLEDs = 150,                //!< 150 - M150, Marlin format
     Plasma_SelectMaterial = 190,        //!< 150 - M190, LinuxCNC format
     OpenPNP_SetJerk = 20130,            //!< 20130 - M201.3
@@ -457,7 +459,7 @@ typedef struct {
     uint8_t l;                 //!< G10 or canned cycles parameters
 } gc_values_t;
 
-//! Parameter words found by parser - do not change order!
+//! Parameter words found by parser - do NOT change order!
 typedef union {
     uint32_t mask;      //!< All flags as a bitmap.
     uint32_t value;     //!< Synonymous with \a mask.
@@ -675,6 +677,16 @@ typedef struct {
     axes_signals_t rotary_wrap;
 #endif
 } parser_block_t;
+
+
+static inline axes_signals_t gc_paramwords_to_axes (parameter_words_t p_words)
+{
+#if N_AXIS == 3
+    return (axes_signals_t){ (uint8_t)(p_words.mask >> 24) };
+#else
+    return (axes_signals_t){ (uint8_t)(((p_words.mask >> 24) | ((p_words.mask << 2) & 0b00111000) | ((p_words.mask >> (21 - 6)) & 0b11000000)) & AXES_BITMASK) };
+#endif
+}
 
 // Initialize the parser
 void gc_init (bool stop);

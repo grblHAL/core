@@ -1925,14 +1925,23 @@ Specify at least \ref X_AXIS_BIT if a common enable signal is used.
 #endif
 ///@}
 
-/*! @name $376 - Settings_Axis_Rotational
-Designate ABC axes as rotational by \ref axismask. This will disable scaling (to mm) in inches mode.
+/*! @name $376 - Settings_RotaryAxes
+Designate ABC axes as rotary by \ref axismask. This will disable scaling (to mm) in inches mode.
 Set steps/mm for the axes to the value that represent the desired movement per unit.
 For the controller the distance is unitless and and can be in degrees, radians, rotations, ...
 */
 ///@{
 #if !defined DEFAULT_AXIS_ROTATIONAL_MASK || defined __DOXYGEN__
 #define DEFAULT_AXIS_ROTATIONAL_MASK 0
+#endif
+///@}
+
+/*! @name $680 - Setting_StepperEnableDelay
+Allowed range 0 - 250 milliseconds. Driver adds ~2 milliseconds.
+*/
+///@{
+#if !defined DEFAULT_STEPPER_ENABLE_DELAY || defined __DOXYGEN__
+#define DEFAULT_STEPPER_ENABLE_DELAY 0
 #endif
 ///@}
 

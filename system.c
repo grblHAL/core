@@ -762,7 +762,7 @@ static status_code_t rtc_action (sys_state_t state, char *args)
     return retval;
 }
 
-#ifdef DEBUGOUT
+#ifdef DEBUG
 
 #include "nvs_buffer.h"
 
@@ -772,6 +772,7 @@ static status_code_t output_memmap (sys_state_t state, char *args)
 
     return Status_OK;
 }
+
 #endif
 
 const char *help_rst (const char *cmd)
@@ -972,7 +973,7 @@ PROGMEM static const sys_command_t sys_commands[] = {
     { "SDS", report_stepper_status, { .noargs = On, .allow_blocking = On, .help_fn = On }, { .fn = help_steppers } },
     { "RTC", rtc_action, { .allow_blocking = On, .help_fn = On }, { .fn = help_rtc } },
     { "DWNGRD", settings_downgrade, { .noargs = On, .allow_blocking = On }, { .str = "toggle setting flags for downgrade" } },
-#ifdef DEBUGOUT
+#ifdef DEBUG
     { "Q", output_memmap, { .noargs = On }, { .str = "output NVS memory allocation" } },
 #endif
 };

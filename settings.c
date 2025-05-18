@@ -99,6 +99,7 @@ PROGMEM const settings_t defaults = {
     .probe.invert_toolsetter_input = DEFAULT_TOOLSETTER_SIGNAL_INVERT,
     .probe.disable_toolsetter_pullup = DEFAULT_TOOLSETTER_SIGNAL_DISABLE_PULLUP,
 
+    .stepper_enable_delay = DEFAULT_STEPPER_ENABLE_DELAY,
     .steppers.pulse_microseconds = DEFAULT_STEP_PULSE_MICROSECONDS,
     .steppers.pulse_delay_microseconds = DEFAULT_STEP_PULSE_DELAY,
     .steppers.idle_lock_time = DEFAULT_STEPPER_IDLE_LOCK_TIME,
@@ -2152,7 +2153,8 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_MotorWarningsInvert, Group_Stepper, "Invert motor warning inputs", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.motor_warning_invert, NULL, is_setting_available },
      { Setting_MotorFaultsEnable, Group_Stepper, "Motor fault inputs enable", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.motor_fault_enable, NULL, is_setting_available },
      { Setting_MotorFaultsInvert, Group_Stepper, "Invert motor fault inputs", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.motor_fault_invert, NULL, is_setting_available },
-     { Setting_ResetActions, Group_General, "Reset actions", NULL, Format_Bitfield, "Clear homed status if position was lost,Clear offsets (except G92)", NULL, NULL, Setting_IsExtendedFn, set_reset_actions, get_int, NULL }
+     { Setting_ResetActions, Group_General, "Reset actions", NULL, Format_Bitfield, "Clear homed status if position was lost,Clear offsets (except G92)", NULL, NULL, Setting_IsExtendedFn, set_reset_actions, get_int, NULL },
+     { Setting_StepperEnableDelay, Group_Stepper, "Stepper enable delay", "ms", Format_Int16, "##0", NULL, "250", Setting_IsExtended, &settings.stepper_enable_delay, NULL, NULL },
 };
 
 #ifndef NO_SETTINGS_DESCRIPTIONS
@@ -2357,7 +2359,8 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_FSOptions, "Auto mount SD card on startup." },
     { Setting_HomePinsInvertMask, "Inverts the axis home input signals." },
     { Setting_CoolantOnDelay, "Delay to allow coolant to start. 0 or 0.5 - 20s." },
-    { Setting_ResetActions, "Controls actions taken on a soft reset." }
+    { Setting_ResetActions, "Controls actions taken on a soft reset." },
+    { Setting_StepperEnableDelay, "Delay from stepper enable to first step output. The driver typically adds ~2ms to this." }
 /*
     { Setting_MotorWarningsEnable, "Motor warning enable" },
     { Setting_MotorWarningsInvert, "Invert motor warning inputs" },

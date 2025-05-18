@@ -404,7 +404,7 @@ nvs_io_t *nvs_buffer_get_physical (void)
     return hal.nvs.type == NVS_Emulated ? &physical_nvs : &hal.nvs;
 }
 
-#ifdef DEBUGOUT
+#ifdef DEBUG
 
 #include "report.h"
 

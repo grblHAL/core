@@ -458,6 +458,7 @@ typedef enum {
     Setting_StepperSpindle_Options = 677,
     Setting_RelayPortToolsetter = 678,
     Setting_RelayPortProbe2 = 679,
+    Setting_StepperEnableDelay = 680,
 
     Setting_SpindlePWMOptions1 = 709,
 
@@ -895,7 +896,8 @@ typedef struct {
     axes_signals_t motor_fault_invert;
     macro_atc_flags_t macro_atc_flags;
     stepper_spindle_settings_flags_t stepper_spindle_flags;
-    char reserved[18];          // Reserved For future expansion
+    uint16_t stepper_enable_delay; // Move to stepper_settings_t
+    char reserved[16];          // Reserved For future expansion
 } settings_t;
 
 typedef enum {
