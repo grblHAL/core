@@ -1,5 +1,15 @@
 ## grblHAL changelog
 
+<a name="20250519">20250519
+
+Plugins:
+
+* OpenPNP: changed command letter(s) for `M143`, `M144` and `M145` custom M-codes, `M143` can now be used to read both analog and digital inputs.
+
+* Misc, event out: added alarm state to supported events. Ref. issue [#1](https://github.com/grblHAL/Plugins_misc/issues/1).
+
+---
+
 <a name="20250518">Build 20250518
 
 Core:
@@ -16,7 +26,7 @@ Drivers:
 
 Plugins:
 
-* OpenPNP: added support for reading/scaling analog inputs via `M123`, `M124` and `M125` custom M-codes.
+* OpenPNP: added support for reading/scaling analog inputs via `M143`, `M144` and `M145` custom M-codes.
 
 * Keypad: changed to report itself even if no keypad is connected, added delay before probing the I2C bus to allow the keypad time to boot.
 
