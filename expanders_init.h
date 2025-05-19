@@ -56,7 +56,7 @@ extern void pca9654e_init(void);
 // Third party I2C expander plugins goes after this line
 
 #if FLEXGPIO_ENABLE
-extern void flexgpio_io_init (void);
+extern void flexgpio_init (void);
 #endif
 
 #endif // I2C expanders
@@ -118,6 +118,6 @@ static inline void io_expanders_init (void)
 #endif
 
 #if FLEXGPIO_ENABLE
-    flexgpio_io_init ();
+    flexgpio_init ();
 #endif
 }
