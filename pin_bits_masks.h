@@ -440,6 +440,24 @@ static aux_ctrl_out_t aux_ctrl_out[] = {
 #if defined(Z_ENABLE_PIN) && Z_ENABLE_PORT == EXPANDER_PORT
     { .function = Output_StepperEnableZ, .aux_port = 0xFF, .pin = Z_ENABLE_PIN,   .port = (void *)Z_ENABLE_PORT },
 #endif
+#if defined(Z_ENABLE_PIN) && A_ENABLE_PORT == EXPANDER_PORT
+    { .function = Output_StepperEnableA, .aux_port = 0xFF, .pin = A_ENABLE_PIN,   .port = (void *)A_ENABLE_PORT },
+#endif
+#if defined(B_ENABLE_PIN) && B_ENABLE_PORT == EXPANDER_PORT
+    { .function = Output_StepperEnableB, .aux_port = 0xFF, .pin = B_ENABLE_PIN,   .port = (void *)B_ENABLE_PORT },
+#endif
+#if defined(C_ENABLE_PIN) && C_ENABLE_PORT == EXPANDER_PORT
+    { .function = Output_StepperEnableC, .aux_port = 0xFF, .pin = C_ENABLE_PIN,   .port = (void *)C_ENABLE_PORT },
+#endif
+#if defined(X2_ENABLE_PIN) && X2_ENABLE_PORT == EXPANDER_PORT
+    { .function = Output_StepperEnableX2, .aux_port = 0xFF, .pin = X2_ENABLE_PIN,   .port = (void *)X2_ENABLE_PORT },
+#endif
+#if defined(Y2_ENABLE_PIN) && Y2_ENABLE_PORT == EXPANDER_PORT
+    { .function = Output_StepperEnableY2, .aux_port = 0xFF, .pin = Y2_ENABLE_PIN,   .port = (void *)Y2_ENABLE_PORT },
+#endif
+#if defined(Z2_ENABLE_PIN) && Z2_ENABLE_PORT == EXPANDER_PORT
+    { .function = Output_StepperEnableZ2, .aux_port = 0xFF, .pin = Z2_ENABLE_PIN,   .port = (void *)Z2_ENABLE_PORT },
+#endif
 #endif
 #if AUX_CONTROLS & AUX_CONTROL_SPINDLE
 #ifdef SPINDLE_ENABLE_PIN
