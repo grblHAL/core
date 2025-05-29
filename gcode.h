@@ -253,7 +253,7 @@ typedef enum {
     LaserPPI_Rate = 127,                //!< 127 - M127
     LaserPPI_PulseLength = 128,         //!< 128 - M128
     Laser_Overdrive = 129,              //!< 129 - M129
-    OpenPNP_GetADCRaw = 143,            //!< 143 - M143
+    OpenPNP_GetPinState = 143,          //!< 143 - M143
     OpenPNP_GetADCScaled = 144,         //!< 144 - M144
     OpenPNP_SetADCScaling = 145,        //!< 145 - M145
     RGB_WriteLEDs = 150,                //!< 150 - M150, Marlin format
