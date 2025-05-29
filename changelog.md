@@ -1,5 +1,33 @@
 ## grblHAL changelog
 
+<a name="20250526">Build 20250526
+
+Core:
+
+* Completed core support for additional probes \(toolsetter, probe 2\).
+
+* Switched to universal use of aux I/O for many signals, includes reset/ESTop, feed hold and cycle start.  
+> [!NOTE]
+> The board map syntax for assigning reset/ESTop, feed hold and cycle start inputs has changed and any custom map files has to be updated.
+Please refer to an existing _\*\_map.h_ file for how to do this.
+
+Drivers:
+
+* STM32F1xx: removed support for 128K flash devices.
+
+* SAMD21, PSoC5, TM4C1294 and MSP432E401Y: no longer updated for new core builds, latest supported core is build 20250518.
+
+* All but SAMD21, PSoC5, TM4C1294 and MSP432E401Y: added driver support for additional probes, updated to use universal aux I/O.  
+Additional probe input pins can either be explicitly mapped in the board map file or claimed from the pool of unassigned auxiliary inputs.
+> [!NOTE]
+> I do not have access to all the different boards supported nor the time to verify all so please carefully verify correct operation of at least probe and reset/EStop inputs after upgrading.
+
+Plugins:
+
+* Misc, BLTouch: fixed typo.
+
+---
+
 <a name="20250519">20250519
 
 Plugins:

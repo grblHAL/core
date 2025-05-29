@@ -87,10 +87,6 @@
 #define N_AUTO_SQUARED (X_AUTO_SQUARE + Y_AUTO_SQUARE + Z_AUTO_SQUARE)
 #define N_ABC_MOTORS (N_ABC_AXIS + N_GANGED)
 
-#ifndef PROBE_ENABLE
-#define PROBE_ENABLE        1
-#endif
-
 #ifndef NEOPIXELS_ENABLE
 #define NEOPIXELS_ENABLE    0
 #endif
@@ -251,26 +247,29 @@
   #warning "Enabling ESTOP may not work with all senders!"
 #endif
 
-#define AUX_CONTROL_SPINDLE 0b0001
-#define AUX_CONTROL_COOLANT 0b0010
-#define AUX_CONTROL_DEVICES 0b0100
-#define AUX_CONTROL_INPUTS  0b1000
-
-// Control signals, keep in sync with control_signals_t
-#define CONTROL_RESET       0b0000001
-#define CONTROL_FEEDHOLD    0b0000010
-#define CONTROL_CYCLESTART  0b0000100
-#define CONTROL_SAFETYDOOR  0b0001000
-#define CONTROL_BLOCKDELETE 0b0010000
-#define CONTROL_STOPDISABLE 0b0100000
-#define CONTROL_ESTOP       0b1000000
-
-#ifndef CONTROL_ENABLE
+// Control signals, keep in sync with control_signals_t bit order
+#define CONTROL_RESET       (1<<0)
+#define CONTROL_FEED_HOLD   (1<<1)
+#define CONTROL_CYCLE_START (1<<2)
+#define CONTROL_ESTOP       (1<<6)
 #if ESTOP_ENABLE
-#define CONTROL_ENABLE      (CONTROL_FEEDHOLD|CONTROL_CYCLESTART|CONTROL_ESTOP)
+#define CONTROL_HALT CONTROL_ESTOP
 #else
-#define CONTROL_ENABLE      (CONTROL_RESET|CONTROL_FEEDHOLD|CONTROL_CYCLESTART)
+#define CONTROL_HALT CONTROL_RESET
 #endif
+
+// Probe signals
+
+#ifndef PROBE_ENABLE
+#define PROBE_ENABLE        1
+#endif
+
+#ifndef PROBE2_ENABLE
+#define PROBE2_ENABLE       0
+#endif
+
+#ifndef TOOLSETTER_ENABLE
+#define TOOLSETTER_ENABLE   0
 #endif
 
 // Coolant signals, keep in sync with coolant_state_t
@@ -475,14 +474,6 @@
 #endif
 #ifndef LIMITS_OVERRIDE_ENABLE
 #define LIMITS_OVERRIDE_ENABLE 0
-#endif
-
-#ifndef PROBE2_ENABLE
-#define PROBE2_ENABLE       0
-#endif
-
-#ifndef TOOLSETTER_ENABLE
-#define TOOLSETTER_ENABLE   0
 #endif
 
 #if SAFETY_DOOR_ENABLE && defined(NO_SAFETY_DOOR_SUPPORT)

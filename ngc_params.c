@@ -620,11 +620,40 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
      // grblHAL extensions
 
         case NGCParam_probe_state:
-            value = hal.probe.get_state ? (float)hal.probe.get_state().triggered : -1.0f;
+            value = -1.0f;
+            if(hal.probe.get_state /*&& hal.driver_cap.probe*/) {
+
+                probe_state_t probe_state = hal.probe.get_state();
+
+                if((probe_id_t)probe_state.probe_id == Probe_Default)
+                    value = (float)probe_state.triggered;
+                else if(hal.probe.select) {
+
+                    if(hal.probe.select(Probe_Default))
+                        value = (float)hal.probe.get_state().triggered;
+
+                    hal.probe.select((probe_id_t)probe_state.probe_id);
+                }
+            }
             break;
 
         case NGCParam_toolsetter_state:
-            value = hal.probe.get_state && hal.driver_cap.toolsetter ? (float)hal.probe.get_state().tls_triggered : -1.0f;
+            value = -1.0f;
+            if(hal.probe.get_state && hal.driver_cap.toolsetter) {
+
+                probe_state_t probe_state = hal.probe.get_state();
+
+                if((probe_id_t)probe_state.probe_id == Probe_Toolsetter)
+                    value = (float)probe_state.triggered;
+                else if(hal.probe.select) {
+
+                    if(hal.probe.select(Probe_Toolsetter))
+                        value = (float)hal.probe.get_state().triggered;
+
+                    hal.probe.select((probe_id_t)probe_state.probe_id);
+                } else
+                    value = (float)probe_state.tls_triggered;
+            }
             break;
 
         default:

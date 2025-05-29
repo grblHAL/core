@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2024 Terje Io
+  Copyright (c) 2021-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -20,6 +20,8 @@
   You should have received a copy of the GNU General Public License
   along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
+
+#include "platform.h"
 
 // Sanity checks
 
@@ -97,38 +99,6 @@
 
 #endif // CONTROL_PORT
 
-#ifndef RESET_BIT
-#ifdef RESET_PIN
-#define RESET_BIT       (1<<RESET_PIN)
-#else
-#define RESET_BIT       0
-#endif
-#endif
-
-#ifndef FEED_HOLD_BIT
-#ifdef FEED_HOLD_PIN
-#define FEED_HOLD_BIT   (1<<FEED_HOLD_PIN)
-#else
-#define FEED_HOLD_BIT   0
-#endif
-#endif
-
-#ifndef CYCLE_START_BIT
-#ifdef CYCLE_START_PIN
-#define CYCLE_START_BIT (1<<CYCLE_START_PIN)
-#else
-#define CYCLE_START_BIT 0
-#endif
-#endif
-
-#ifndef ESTOP_BIT
-#ifdef ESTOP_PIN
-#define ESTOP_BIT (1<<ESTOP_PIN)
-#else
-#define ESTOP_BIT 0
-#endif
-#endif
-
 #ifndef SD_DETECT_BIT
 #ifdef SD_DETECT_PIN
 #define SD_DETECT_BIT (1<<SD_DETECT_PIN)
@@ -137,164 +107,112 @@
 #endif
 #endif
 
-// Optional control signals
-
-#ifndef SAFETY_DOOR_BIT
-#if defined(SAFETY_DOOR_PIN) && !defined(AUX_DEVICES)
-#define SAFETY_DOOR_BIT (1<<SAFETY_DOOR_PIN)
-#else
-#define SAFETY_DOOR_BIT 0
-#endif
-#endif
-
-// Optional control signals, assigned to auxiliary input pins
-
-#ifndef MOTOR_FAULT_BIT
-#if defined(MOTOR_FAULT_PIN) && !MOTOR_FAULT_ENABLE
-#define MOTOR_FAULT_BIT (1<<MOTOR_FAULT_PIN)
-#else
-#define MOTOR_FAULT_BIT 0
-#endif
-#endif
-
-#ifndef MOTOR_WARNING_BIT
-#if defined(MOTOR_WARNING_PIN) && !MOTOR_WARNING_ENABLE
-#define MOTOR_WARNING_BIT (1<<MOTOR_WARNING_PIN)
-#else
-#define MOTOR_WARNING_BIT 0
-#endif
-#endif
-
-#ifndef PROBE_DISCONNECT_BIT
-#if defined(PROBE_DISCONNECT_PIN) && !PROBE_DISCONNECT_ENABLE
-#define PROBE_DISCONNECT_BIT (1<<PROBE_DISCONNECT_PIN)
-#else
-#define PROBE_DISCONNECT_BIT 0
-#endif
-#endif
-
-#ifndef STOP_DISABLE_BIT
-#if defined(STOP_DISABLE_PIN) && !STOP_DISABLE_ENABLE
-#define STOP_DISABLE_BIT (1<<STOP_DISABLE_PIN)
-#else
-#define STOP_DISABLE_BIT 0
-#endif
-#endif
-
-#ifndef BLOCK_DELETE_BIT
-#if defined(BLOCK_DELETE_PIN) && !BLOCK_DELETE_ENABLE
-#define BLOCK_DELETE_BIT (1<<BLOCK_DELETE_PIN)
-#else
-#define BLOCK_DELETE_BIT 0
-#endif
-#endif
-
-#ifndef SINGLE_BLOCK_BIT
-#if defined(SINGLE_BLOCK_PIN) && !SINGLE_BLOCK_ENABLE
-#define SINGLE_BLOCK_BIT (1<<SINGLE_BLOCK_PIN)
-#else
-#define SINGLE_BLOCK_BIT 0
-#endif
-#endif
-
-#ifndef LIMITS_OVERRIDE_BIT
-#if defined(LIMITS_OVERRIDE_PIN) && !LIMITS_OVERRIDE_ENABLE
-#define LIMITS_OVERRIDE_BIT (1<<LIMITS_OVERRIDE_PIN)
-#else
-#define LIMITS_OVERRIDE_BIT 0
-#endif
-#endif
-
-#if SAFETY_DOOR_ENABLE || MOTOR_FAULT_ENABLE || MOTOR_WARNING_ENABLE || PROBE_DISCONNECT_ENABLE || \
-    STOP_DISABLE_ENABLE || BLOCK_DELETE_ENABLE || SINGLE_BLOCK_ENABLE || LIMITS_OVERRIDE_ENABLE || \
-    (defined(AUX_DEVICES) && (PROBE_ENABLE || I2C_STROBE_ENABLE || MPG_ENABLE == 1 || QEI_SELECT_ENABLE)) || defined __DOXYGEN__
-
-#define AUX_CONTROLS_ENABLED 1
-
-#if PROBE_DISCONNECT_ENABLE || STOP_DISABLE_ENABLE || BLOCK_DELETE_ENABLE || SINGLE_BLOCK_ENABLE || LIMITS_OVERRIDE_ENABLE
-#define AUX_CONTROLS_SCAN    1
-#else
-#define AUX_CONTROLS_SCAN    0
+#ifndef CONTROL_ENABLE
+#define CONTROL_ENABLE 0
 #endif
 
 static aux_ctrl_t aux_ctrl[] = {
 // The following pins are bound explicitly to aux input pins
-#if PROBE_ENABLE && defined(PROBE_PIN) && defined(AUX_DEVICES)
-#ifdef PROBE_PORT
-    { .function = Input_Probe, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .value = 0 }, .pin = PROBE_PIN, .port = (void *)PROBE_PORT },
-#else
-    { .function = Input_Probe, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .value = 0 }, .pin = PROBE_PIN, .port = NULL },
+#if (CONTROL_ENABLE & CONTROL_ESTOP) && defined(RESET_PIN)
+ #ifndef RESET_PORT
+  #define RESET_PORT 0
+ #endif
+    { .function = Input_EStop,           .aux_port = 0xFF, .irq_mode = IRQ_Mode_RisingFalling, .cap = { .e_stop = On }, .pin = RESET_PIN, .port = (void *)RESET_PORT },
+#elif (CONTROL_ENABLE & CONTROL_RESET) && defined(RESET_PIN)
+ #ifndef RESET_PORT
+  #define RESET_PORT 0
+ #endif
+    { .function = Input_Reset,           .aux_port = 0xFF, .irq_mode = IRQ_Mode_RisingFalling, .cap = { .reset = On }, .pin = RESET_PIN, .port = (void *)RESET_PORT },
 #endif
+#if (CONTROL_ENABLE & CONTROL_FEED_HOLD) && defined(FEED_HOLD_PIN)
+ #ifndef FEED_HOLD_PORT
+  #define FEED_HOLD_PORT 0
+ #endif
+    { .function = Input_FeedHold,        .aux_port = 0xFF, .irq_mode = IRQ_Mode_RisingFalling, .cap = { .feed_hold = On }, .pin = FEED_HOLD_PIN, .port = (void *)FEED_HOLD_PORT },
 #endif
-#if PROBE2_ENABLE && defined(PROBE2_PIN)
-#ifndef PROBE2_PORT
-#define PROBE2_PORT 0
-#endif
-    { .function = Input_Probe2, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .value = 0 }, .pin = PROBE2_PIN, .port = (void *)PROBE2_PORT },
-#endif
-#if TOOLSETTER_ENABLE && defined(TOOLSETTER_PIN)
-#ifndef TOOLSETTER_PORT
-#define TOOLSETTER_PORT 0
-#endif
-    { .function = Input_Toolsetter, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .value = 0 }, .pin = TOOLSETTER_PIN, .port = (void *)TOOLSETTER_PORT },
+#if (CONTROL_ENABLE & CONTROL_CYCLE_START) && defined(CYCLE_START_PIN)
+ #ifndef CYCLE_START_PORT
+  #define CYCLE_START_PORT 0
+ #endif
+    { .function = Input_CycleStart,      .aux_port = 0xFF, .irq_mode = IRQ_Mode_RisingFalling, .cap = { .cycle_start = On }, .pin = CYCLE_START_PIN, .port = (void *)CYCLE_START_PORT },
 #endif
 #if SAFETY_DOOR_ENABLE && defined(SAFETY_DOOR_PIN)
-#ifdef SAFETY_DOOR_PORT
-    { .function = Input_SafetyDoor, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .safety_door_ajar = On }, .pin = SAFETY_DOOR_PIN, .port = (void *)SAFETY_DOOR_PORT },
-#else
-    { .function = Input_SafetyDoor, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .safety_door_ajar = On }, .pin = SAFETY_DOOR_PIN, .port = NULL },
-#endif
+ #ifndef SAFETY_DOOR_PORT
+  #define SAFETY_DOOR_PORT 0
+ #endif
+    { .function = Input_SafetyDoor,      .aux_port = 0xFF, .irq_mode = IRQ_Mode_RisingFalling, .cap = { .safety_door_ajar = On }, .pin = SAFETY_DOOR_PIN, .port = (void *)SAFETY_DOOR_PORT },
 #endif
 #if MOTOR_FAULT_ENABLE && defined(MOTOR_FAULT_PIN)
-#ifdef MOTOR_FAULT_PORT
-    { .function = Input_MotorFault, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .motor_fault = On }, .pin = MOTOR_FAULT_PIN, .port = (void *)MOTOR_FAULT_PORT },
-#else
-    { .function = Input_MotorFault, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .motor_fault = On }, .pin = MOTOR_FAULT_PIN, .port = NULL },
+ #ifndef MOTOR_FAULT_PORT
+  #define MOTOR_FAULT_PORT 0
+ #endif
+    { .function = Input_MotorFault,      .aux_port = 0xFF, .irq_mode = IRQ_Mode_RisingFalling, .cap = { .motor_fault = On }, .pin = MOTOR_FAULT_PIN, .port = (void *)MOTOR_FAULT_PORT },
 #endif
 #if MOTOR_WARNING_ENABLE && defined(MOTOR_WARNING_PIN)
-#ifdef MOTOR_WARNING_PORT
-    { .function = Input_MotorWarning, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .motor_fault = On }, .pin = MOTOR_WARNING_PIN, .port = (void *)MOTOR_WARNING_PORT },
-#else
-    { .function = Input_MotorWarning, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .motor_warning = On }, .pin = MOTOR_WARNING_PIN, .port = NULL },
+ #ifndef MOTOR_WARNING_PORT
+  #define MOTOR_WARNING_PORT 0
+ #endif
+    { .function = Input_MotorWarning,    .aux_port = 0xFF, .irq_mode = IRQ_Mode_RisingFalling, .cap = { .motor_fault = On }, .pin = MOTOR_WARNING_PIN, .port = (void *)MOTOR_WARNING_PORT },
 #endif
+
+#if PROBE_ENABLE && defined(PROBE_PIN)
+ #ifndef PROBE_PORT
+  #define PROBE_PORT 0
+ #endif
+    { .function = Input_Probe,           .aux_port = 0xFF, .irq_mode = IRQ_Mode_RisingFalling, .cap = { .value = 0 }, .pin = PROBE_PIN, .port = (void *)PROBE_PORT },
 #endif
+#if PROBE2_ENABLE && defined(PROBE2_PIN)
+ #ifndef PROBE2_PORT
+  #define PROBE2_PORT 0
+ #endif
+    { .function = Input_Probe2,          .aux_port = 0xFF, .irq_mode = IRQ_Mode_RisingFalling, .cap = { .value = 0 }, .pin = PROBE2_PIN, .port = (void *)PROBE2_PORT },
 #endif
-#if I2C_STROBE_ENABLE && defined(I2C_STROBE_PIN) && defined(AUX_DEVICES)
-#ifdef I2C_STROBE_PORT
-    { .function = Input_I2CStrobe, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Change), .cap = { .value = 0 }, .pin = I2C_STROBE_PIN, .port = (void *)I2C_STROBE_PORT },
-#else
-    { .function = Input_I2CStrobe, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Change), .cap = { .value = 0 }, .pin = I2C_STROBE_PIN, .port = NULL },
+#if TOOLSETTER_ENABLE && defined(TOOLSETTER_PIN)
+ #ifndef TOOLSETTER_PORT
+  #define TOOLSETTER_PORT 0
+ #endif
+    { .function = Input_Toolsetter,      .aux_port = 0xFF, .irq_mode = IRQ_Mode_RisingFalling, .cap = { .value = 0 }, .pin = TOOLSETTER_PIN, .port = (void *)TOOLSETTER_PORT },
 #endif
+
+#if I2C_STROBE_ENABLE && defined(I2C_STROBE_PIN)
+ #ifndef I2C_STROBE_PORT
+  #define I2C_STROBE_PORT 0
+ #endif
+    { .function = Input_I2CStrobe,       .aux_port = 0xFF, .irq_mode = IRQ_Mode_Change,        .cap = { .value = 0 }, .pin = I2C_STROBE_PIN, .port = (void *)I2C_STROBE_PORT },
 #endif
-#if MPG_ENABLE == 1 && defined(MPG_MODE_PIN) && defined(AUX_DEVICES)
-#ifdef MPG_MODE_PORT
-    { .function = Input_MPGSelect, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Change), .cap = { .value = 0 }, .pin = MPG_MODE_PIN, .port = (void *)MPG_MODE_PORT },
-#else
-    { .function = Input_MPGSelect, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Change), .cap = { .value = 0 }, .pin = MPG_MODE_PIN, .port = NULL },
+#if MPG_ENABLE == 1 && defined(MPG_MODE_PIN)
+ #ifndef MPG_MODE_PORT
+  #define MPG_MODE_PORT 0
+ #endif
+     { .function = Input_MPGSelect,      .aux_port = 0xFF, .irq_mode = IRQ_Mode_Change,        .cap = { .value = 0 }, .pin = MPG_MODE_PIN, .port = (void *)MPG_MODE_PORT },
 #endif
-#endif
-#if QEI_SELECT_ENABLE && defined(QEI_SELECT_PIN) && defined(AUX_DEVICES)
-#ifdef QEI_SELECT_PORT
-    { .function = Input_QEI_Select, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .value = 0 }, .pin = QEI_SELECT_PIN, .port = (void *)QEI_SELECT_PORT },
-#else
-    { .function = Input_QEI_Select, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .value = 0 }, .pin = QEI_SELECT_PIN, .port = NULL },
-#endif
+#if QEI_SELECT_ENABLE && defined(QEI_SELECT_PIN)
+ #ifndef QEI_SELECT_PORT
+  #define QEI_SELECT_PORT 0
+ #endif
+    { .function = Input_QEI_Select,      .aux_port = 0xFF, .irq_mode = IRQ_Mode_RisingFalling, .cap = { .value = 0 }, .pin = QEI_SELECT_PIN, .port = (void *)QEI_SELECT_PORT },
 #endif
 // The following pins are allocated from remaining aux inputs pool
+#if TOOLSETTER_ENABLE && !defined(TOOLSETTER_PIN)
+    { .function = Input_Toolsetter,      .aux_port = 0xFF, .irq_mode = IRQ_Mode_RisingFalling, .cap = { .value = 0 }, .pin = 0xFE, .port = NULL },
+#endif
+#if PROBE2_ENABLE && !defined(PROBE2_PIN)
+    { .function = Input_Probe2,          .aux_port = 0xFF, .irq_mode = IRQ_Mode_RisingFalling, .cap = { .value = 0 }, .pin = 0xFE, .port = NULL },
+#endif
 #if LIMITS_OVERRIDE_ENABLE
-    { .function = Input_LimitsOverride, .aux_port = 0xFF, .irq_mode = IRQ_Mode_None, .cap = { .limits_override = On }, .pin = 0xFF, .port = NULL },
+    { .function = Input_LimitsOverride,  .aux_port = 0xFF, .irq_mode = IRQ_Mode_None,          .cap = { .limits_override = On }, .pin = 0xFF, .port = NULL },
 #endif
 #if STOP_DISABLE_ENABLE
-    { .function = Input_StopDisable, .aux_port = 0xFF, .irq_mode = IRQ_Mode_Change, .cap = { .stop_disable = On }, .pin = 0xFF, .port = NULL },
+    { .function = Input_StopDisable,     .aux_port = 0xFF, .irq_mode = IRQ_Mode_Change,        .cap = { .stop_disable = On }, .pin = 0xFF, .port = NULL },
 #endif
 #if BLOCK_DELETE_ENABLE
-    { .function = Input_BlockDelete, .aux_port = 0xFF, .irq_mode = IRQ_Mode_Change, .cap = { .block_delete = On }, .pin = 0xFF, .port = NULL },
+    { .function = Input_BlockDelete,     .aux_port = 0xFF, .irq_mode = IRQ_Mode_Change,        .cap = { .block_delete = On }, .pin = 0xFF, .port = NULL },
 #endif
 #if SINGLE_BLOCK_ENABLE
-    { .function = Input_SingleBlock, .aux_port = 0xFF, .irq_mode = IRQ_Mode_Change, .cap = { .single_block = On }, .pin = 0xFF, .port = NULL },
+    { .function = Input_SingleBlock,     .aux_port = 0xFF, .irq_mode = IRQ_Mode_Change,        .cap = { .single_block = On }, .pin = 0xFF, .port = NULL },
 #endif
 #if PROBE_DISCONNECT_ENABLE
-    { .function = Input_ProbeDisconnect, .aux_port = 0xFF, .irq_mode = (pin_irq_mode_t)(IRQ_Mode_Rising|IRQ_Mode_Falling), .cap = { .probe_disconnected = On }, .pin = 0xFF, .port = NULL },
+    { .function = Input_ProbeDisconnect, .aux_port = 0xFF, .irq_mode = IRQ_Mode_RisingFalling, .cap = { .probe_disconnected = On }, .pin = 0xFF, .port = NULL },
 #endif
 };
 
@@ -304,7 +222,7 @@ static inline aux_ctrl_t *aux_ctrl_remap_explicit (void *port, uint8_t pin, uint
 
     uint_fast8_t idx = sizeof(aux_ctrl) / sizeof(aux_ctrl_t);
 
-    do {
+    if(idx) do {
         idx--;
         if(aux_ctrl[idx].port == port && aux_ctrl[idx].pin == pin) {
             ctrl_pin = &aux_ctrl[idx];
@@ -312,6 +230,28 @@ static inline aux_ctrl_t *aux_ctrl_remap_explicit (void *port, uint8_t pin, uint
             ctrl_pin->input = input;
         }
     } while(idx && ctrl_pin == NULL);
+
+#ifdef STM32_PLATFORM
+
+// "Hack" to downgrade pin IRQ mode if multiple pins are defined for the same IRQ.
+
+    if(ctrl_pin) {
+
+        idx = sizeof(aux_ctrl) / sizeof(aux_ctrl_t);
+        const control_signals_t main_signals = { .reset = On, .e_stop = On, .feed_hold = On, .cycle_start = On };
+
+        do {
+            if(aux_ctrl[--idx].pin == ctrl_pin->pin) {
+                if(ctrl_pin != &aux_ctrl[idx]) {
+                    if((aux_ctrl[idx].cap.bits & main_signals.bits) || (aux_ctrl[idx].cap.bits && !ctrl_pin->cap.bits))
+                        ctrl_pin->irq_mode = IRQ_Mode_None;
+                } else if(ctrl_pin->cap.bits && !(aux_ctrl[idx].cap.bits & main_signals.bits))
+                    aux_ctrl[idx].irq_mode = IRQ_Mode_None;
+            }
+        } while(idx);
+    }
+
+#endif // STM32_PLATFORM
 
     return ctrl_pin;
 }
@@ -322,7 +262,7 @@ static inline aux_ctrl_t *aux_ctrl_get_pin (uint8_t aux_port)
 
     uint_fast8_t idx = sizeof(aux_ctrl) / sizeof(aux_ctrl_t);
 
-    do {
+    if(idx) do {
         if(aux_ctrl[--idx].aux_port == aux_port)
             ctrl_pin = &aux_ctrl[idx];
     } while(idx && ctrl_pin == NULL);
@@ -335,23 +275,12 @@ static inline void aux_ctrl_irq_enable (settings_t *settings, ioport_interrupt_c
     uint_fast8_t idx = sizeof(aux_ctrl) / sizeof(aux_ctrl_t);
 
     if(idx) do {
-        if(aux_ctrl[--idx].aux_port != 0xFF) {
-#if PROBE_ENABLE && defined(PROBE_PIN) && defined(AUX_DEVICES)
-            if(aux_ctrl[idx].function == Input_Probe) {
-                xbar_t *xbar;
-                if((xbar = hal.port.get_pin_info(Port_Digital, Port_Input, aux_ctrl[idx].aux_port))) {
-                    gpio_in_config_t cfg;
-                    cfg.inverted = settings->probe.invert_probe_pin;
-                    cfg.debounce = xbar->mode.debounce;
-                    cfg.pull_mode = settings->probe.disable_probe_pullup ? PullMode_None : PullMode_Up;
-                    xbar->config(xbar, &cfg, false);
-                }
-            } else
-#endif
-            if(aux_ctrl[idx].irq_mode != IRQ_Mode_None) {
-                if(aux_ctrl[idx].irq_mode & (IRQ_Mode_Falling|IRQ_Mode_Rising))
-                    aux_ctrl[idx].irq_mode = (settings->control_invert.mask & aux_ctrl[idx].cap.mask) ? IRQ_Mode_Falling : IRQ_Mode_Rising;
-                hal.port.register_interrupt_handler(aux_ctrl[idx].aux_port, aux_ctrl[idx].irq_mode, aux_irq_handler);
+        if(aux_ctrl[--idx].aux_port != 0xFF && aux_ctrl[idx].irq_mode != IRQ_Mode_None) {
+            if(!(aux_ctrl[idx].function == Input_Probe || aux_ctrl[idx].function == Input_Probe2 || aux_ctrl[idx].function == Input_Toolsetter)) {
+                pin_irq_mode_t irq_mode;
+                if((irq_mode = aux_ctrl[idx].irq_mode) & IRQ_Mode_RisingFalling)
+                    irq_mode = (settings->control_invert.mask & aux_ctrl[idx].cap.mask) ? IRQ_Mode_Falling : IRQ_Mode_Rising;
+                hal.port.register_interrupt_handler(aux_ctrl[idx].aux_port, irq_mode, aux_irq_handler);
             }
         }
     } while(idx);
@@ -367,6 +296,13 @@ static bool aux_ctrl_claim_port (xbar_t *properties, uint8_t port, void *data)
     return ((aux_ctrl_t *)data)->aux_port != 0xFF;
 }
 
+static bool aux_ctrl_find_port (xbar_t *properties, uint8_t port, void *data)
+{
+    ((aux_ctrl_t *)data)->aux_port = port;
+
+    return true;
+}
+
 static inline void aux_ctrl_claim_ports (aux_claim_explicit_ptr aux_claim_explicit, ioports_enumerate_callback_ptr aux_claim)
 {
     uint_fast8_t idx;
@@ -375,18 +311,27 @@ static inline void aux_ctrl_claim_ports (aux_claim_explicit_ptr aux_claim_explic
         aux_claim = aux_ctrl_claim_port;
 
     for(idx = 0; idx < sizeof(aux_ctrl) / sizeof(aux_ctrl_t); idx++) {
+
+        pin_cap_t cap = { .irq_mode = aux_ctrl[idx].irq_mode, .claimable = On };
+
+        if(aux_ctrl[idx].pin == 0xFE) // Toolsetter and Probe2
+            ioports_enumerate(Port_Digital, Port_Input, cap, aux_ctrl_find_port, (void *)&aux_ctrl[idx]);
+#ifdef STM32_PLATFORM
+        if(aux_ctrl[idx].irq_mode == IRQ_Mode_None && !(aux_ctrl[idx].function == Input_Probe || aux_ctrl[idx].function == Input_LimitsOverride))
+            continue;
+#endif
         if(aux_ctrl[idx].pin == 0xFF) {
-            if(ioports_enumerate(Port_Digital, Port_Input, (pin_cap_t){ .irq_mode = aux_ctrl[idx].irq_mode, .claimable = On }, aux_claim, (void *)&aux_ctrl[idx]))
+            if(ioports_enumerate(Port_Digital, Port_Input, cap, aux_claim, (void *)&aux_ctrl[idx]))
                 hal.signals_cap.mask |= aux_ctrl[idx].cap.mask;
         } else if(aux_ctrl[idx].aux_port != 0xFF)
             aux_claim_explicit(&aux_ctrl[idx]);
     }
 }
 
-#if AUX_CONTROLS_SCAN
-
 static inline control_signals_t aux_ctrl_scan_status (control_signals_t signals)
 {
+#if PROBE_DISCONNECT_ENABLE || STOP_DISABLE_ENABLE || BLOCK_DELETE_ENABLE || SINGLE_BLOCK_ENABLE || LIMITS_OVERRIDE_ENABLE
+
     uint_fast8_t idx =  sizeof(aux_ctrl) / sizeof(aux_ctrl_t);
 
     if(idx) do {
@@ -394,33 +339,20 @@ static inline control_signals_t aux_ctrl_scan_status (control_signals_t signals)
             break;
         if(aux_ctrl[idx].aux_port != 0xFF) {
             signals.mask &= ~aux_ctrl[idx].cap.mask;
-#ifdef GRBL_ESP32 // Snowflake guru workaround
+  #ifdef GRBL_ESP32 // Snowflake guru workaround
             if(hal.port.wait_on_input(Port_Digital, aux_ctrl[idx].aux_port, WaitMode_Immediate, FZERO) == 1)
                 signals.mask |= aux_ctrl[idx].cap.mask;
-#else
+  #else
             if(hal.port.wait_on_input(Port_Digital, aux_ctrl[idx].aux_port, WaitMode_Immediate, 0.0f) == 1)
                 signals.mask |= aux_ctrl[idx].cap.mask;
-#endif
+  #endif
         }
     } while(idx);
 
+#endif
+
     return signals;
 }
-
-#endif
-
-#else
-#define AUX_CONTROLS_ENABLED 0
-#define AUX_CONTROLS_SCAN    0
-#endif
-
-#if defined(AUX_CONTROLS_OUT) && !defined(AUX_CONTROLS)
-#define AUX_CONTROLS AUX_CONTROL_SPINDLE
-#elif !defined(AUX_CONTROLS)
-#define AUX_CONTROLS 0
-#endif
-
-#if AUX_CONTROLS
 
 // The following pins are bound explicitly to aux output pins
 static aux_ctrl_out_t aux_ctrl_out[] = {
@@ -431,8 +363,14 @@ static aux_ctrl_out_t aux_ctrl_out[] = {
 #if defined(X_ENABLE_PIN) && X_ENABLE_PORT == EXPANDER_PORT
     { .function = Output_StepperEnableX, .aux_port = 0xFF, .pin = X_ENABLE_PIN,   .port = (void *)X_ENABLE_PORT },
 #endif
+#if defined(X2_ENABLE_PIN) && X2_ENABLE_PORT == EXPANDER_PORT
+    { .function = Output_StepperEnableX2, .aux_port = 0xFF, .pin = X2_ENABLE_PIN,   .port = (void *)X2_ENABLE_PORT },
+#endif
 #if defined(Y_ENABLE_PIN) && Y_ENABLE_PORT == EXPANDER_PORT
     { .function = Output_StepperEnableY, .aux_port = 0xFF, .pin = Y_ENABLE_PIN,   .port = (void *)Y_ENABLE_PORT },
+#endif
+#if defined(Y2_ENABLE_PIN) && Y2_ENABLE_PORT == EXPANDER_PORT
+    { .function = Output_StepperEnableY2, .aux_port = 0xFF, .pin = Y2_ENABLE_PIN,   .port = (void *)Y2_ENABLE_PORT },
 #endif
 #if defined(XY_ENABLE_PIN) && XY_ENABLE_PORT == EXPANDER_PORT
     { .function = Output_StepperEnableXY, .aux_port = 0xFF, .pin = XY_ENABLE_PIN,   .port = (void *)XY_ENABLE_PORT },
@@ -440,8 +378,13 @@ static aux_ctrl_out_t aux_ctrl_out[] = {
 #if defined(Z_ENABLE_PIN) && Z_ENABLE_PORT == EXPANDER_PORT
     { .function = Output_StepperEnableZ, .aux_port = 0xFF, .pin = Z_ENABLE_PIN,   .port = (void *)Z_ENABLE_PORT },
 #endif
+#if defined(Z2_ENABLE_PIN) && Z2_ENABLE_PORT == EXPANDER_PORT
+    { .function = Output_StepperEnableZ2, .aux_port = 0xFF, .pin = Z2_ENABLE_PIN,   .port = (void *)Z2_ENABLE_PORT },
 #endif
-#if AUX_CONTROLS & AUX_CONTROL_SPINDLE
+#if defined(A_ENABLE_PIN) && A_ENABLE_PORT == EXPANDER_PORT
+    { .function = Output_StepperEnableA, .aux_port = 0xFF, .pin = A_ENABLE_PIN,   .port = (void *)A_ENABLE_PORT },
+#endif
+#endif
 #ifdef SPINDLE_ENABLE_PIN
  #ifndef SPINDLE_ENABLE_PORT
   #define SPINDLE_ENABLE_PORT 0
@@ -479,9 +422,7 @@ static aux_ctrl_out_t aux_ctrl_out[] = {
  #endif
     { .function = Output_Spindle1Dir,  .aux_port = 0xFF, .pin = SPINDLE1_DIRECTION_PIN, .port = (void *)SPINDLE1_DIRECTION_PORT },
 #endif
-#endif // SPINDLES
 
-#if AUX_CONTROLS & AUX_CONTROL_COOLANT
 #ifdef COOLANT_FLOOD_PIN
  #ifndef COOLANT_FLOOD_PORT
   #define COOLANT_FLOOD_PORT 0
@@ -494,7 +435,6 @@ static aux_ctrl_out_t aux_ctrl_out[] = {
  #endif
     { .function = Output_CoolantMist,  .aux_port = 0xFF, .pin = COOLANT_MIST_PIN,       .port = (void *)COOLANT_MIST_PORT },
 #endif
-#endif // COOLANT
 
 #ifdef COPROC_RESET_PIN
  #ifndef COPROC_RESET_PORT
@@ -570,20 +510,6 @@ static inline void aux_ctrl_claim_out_ports (aux_claim_explicit_out_ptr aux_clai
     }
 }
 
-#endif // AUX_CONTROLS
-
-//
-
-#ifndef CONTROL_MASK
-#if SAFETY_DOOR_ENABLE
-#define CONTROL_MASK (RESET_BIT|FEED_HOLD_BIT|CYCLE_START_BIT|ESTOP_BIT|PROBE_DISCONNECT_BIT|STOP_DISABLE_BIT|BLOCK_DELETE_BIT|SINGLE_BLOCK_BIT|MOTOR_FAULT_BIT|MOTOR_WARNING_BIT|LIMITS_OVERRIDE_BIT|SAFETY_DOOR_BIT)
-#define CONTROL_MASK_SUM (RESET_BIT+FEED_HOLD_BIT+CYCLE_START_BIT+ESTOP_BIT+PROBE_DISCONNECT_BIT+STOP_DISABLE_BIT+BLOCK_DELETE_BIT+SINGLE_BLOCK_BIT+MOTOR_FAULT_BIT+MOTOR_WARNING_BIT+LIMITS_OVERRIDE_BIT+SAFETY_DOOR_BIT)
-#else
-#define CONTROL_MASK (RESET_BIT|FEED_HOLD_BIT|CYCLE_START_BIT|ESTOP_BIT|PROBE_DISCONNECT_BIT|STOP_DISABLE_BIT|BLOCK_DELETE_BIT|SINGLE_BLOCK_BIT|MOTOR_FAULT_BIT|MOTOR_WARNING_BIT|LIMITS_OVERRIDE_BIT)
-#define CONTROL_MASK_SUM (RESET_BIT+FEED_HOLD_BIT+CYCLE_START_BIT+ESTOP_BIT+PROBE_DISCONNECT_BIT+STOP_DISABLE_BIT+BLOCK_DELETE_BIT+SINGLE_BLOCK_BIT+MOTOR_FAULT_BIT+MOTOR_WARNING_BIT+LIMITS_OVERRIDE_BIT)
-#endif
-#endif
-
 // Output Signals
 
 #if defined(SPINDLE_ENABLE_PIN) && !defined(SPINDLE_ENABLE_BIT)
@@ -612,27 +538,6 @@ static inline void aux_ctrl_claim_out_ports (aux_claim_explicit_out_ptr aux_clai
 #endif
 
 // IRQ enabled input singnals
-
-#ifndef AUX_DEVICES
-
-// IRQ capability for the probe input is optional
-#if defined(PROBE_PIN) && !defined(PROBE_BIT)
-#define PROBE_BIT (1<<PROBE_PIN)
-#endif
-
-#if defined(MPG_MODE_PIN) && !defined(MPG_MODE_BIT)
-#define MPG_MODE_BIT (1<<MPG_MODE_PIN)
-#endif
-
-#if defined(I2C_STROBE_PIN) && !defined(I2C_STROBE_BIT)
-#define I2C_STROBE_BIT (1<<I2C_STROBE_PIN)
-#endif
-
-#if defined(QEI_SELECT_PIN) && !defined(QEI_SELECT_BIT)
-#define QEI_SELECT_BIT (1<<QEI_SELECT_PIN)
-#endif
-
-#endif // !AUX_DEVICES
 
 #if QEI_ENABLE
 #ifndef QEI_A_BIT
@@ -688,13 +593,8 @@ static inline void aux_ctrl_claim_out_ports (aux_claim_explicit_out_ptr aux_clai
 #endif
 
 #ifndef DEVICES_IRQ_MASK
-#ifdef AUX_DEVICES
 #define DEVICES_IRQ_MASK (SPI_IRQ_BIT|SPINDLE_INDEX_BIT|QEI_A_BIT|QEI_B_BIT|SD_DETECT_BIT)
 #define DEVICES_IRQ_MASK_SUM (SPI_IRQ_BIT+SPINDLE_INDEX_BIT+QEI_A_BIT+QEI_B_BIT+SD_DETECT_BIT)
-#else
-#define DEVICES_IRQ_MASK (MPG_MODE_BIT|I2C_STROBE_BIT|QEI_SELECT_BIT|SPI_IRQ_BIT|SPINDLE_INDEX_BIT|QEI_A_BIT|QEI_B_BIT|SD_DETECT_BIT)
-#define DEVICES_IRQ_MASK_SUM (MPG_MODE_BIT+I2C_STROBE_BIT+QEI_SELECT_BIT+SPI_IRQ_BIT+SPINDLE_INDEX_BIT+QEI_A_BIT+QEI_B_BIT+SD_DETECT_BIT)
-#endif
 #endif
 
 // Auxillary input signals

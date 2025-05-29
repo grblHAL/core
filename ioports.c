@@ -1255,6 +1255,38 @@ static const setting_descr_t ioport_settings_descr[] = {
 
 #endif
 
+static bool config_probe_pins (pin_function_t function, gpio_in_config_t *config)
+{
+    bool ok = true;
+
+    switch(function) {
+
+        case Input_Probe:
+            config->debounce  = Off;
+            config->inverted  = settings.probe.invert_probe_pin;
+            config->pull_mode = settings.probe.disable_probe_pullup ? PullMode_None : PullMode_Up;
+            break;
+
+        case Input_Probe2:
+            config->debounce  = Off;
+            config->inverted  = settings.probe.invert_probe2_input;
+            config->pull_mode = settings.probe.disable_probe_pullup ? PullMode_None : PullMode_Up;
+            break;
+
+        case Input_Toolsetter:
+            config->debounce  = Off;
+            config->inverted  = settings.probe.invert_toolsetter_input;
+            config->pull_mode = settings.probe.disable_toolsetter_pullup ? PullMode_None : PullMode_Up;
+            break;
+
+        default:
+            ok = false;
+            break;
+    }
+
+    return ok;
+}
+
 void ioport_setting_changed (setting_id_t id)
 {
     if(on_setting_changed)
@@ -1271,29 +1303,11 @@ void ioport_setting_changed (setting_id_t id)
 
                 do {
                     if((xbar = hal.port.get_pin_info(Port_Digital, Port_Input, map_reverse(&ports_cfg[Port_DigitalIn], --port)))) {
-                        if(xbar->config && xbar->function == Input_Probe) {
-
-                            in_config.debounce  = Off;
-                            in_config.inverted  = settings.probe.invert_probe_pin;
-                            in_config.pull_mode = settings.probe.disable_probe_pullup ? PullMode_None : PullMode_Up;
-
+                        if(xbar->config && config_probe_pins(xbar->function, &in_config)) {
                             if(in_config.inverted)
                                 settings.ioport.invert_in.mask |= (1 << port);
                             else
                                 settings.ioport.invert_in.mask &= ~(1 << port);
-
-                            xbar->config(xbar, &in_config, false);
-                        } else if(xbar->config && xbar->function == Input_Toolsetter) {
-
-                            in_config.debounce  = Off;
-                            in_config.inverted  = settings.probe.invert_toolsetter_input;
-                            in_config.pull_mode = settings.probe.disable_toolsetter_pullup ? PullMode_None : PullMode_Up;
-
-                            if(in_config.inverted)
-                                settings.ioport.invert_in.mask |= (1 << port);
-                            else
-                                settings.ioport.invert_in.mask &= ~(1 << port);
-
                             xbar->config(xbar, &in_config, false);
                         }
                     }
@@ -1368,12 +1382,14 @@ static void ioports_configure (settings_t *settings)
 #endif
             } else { // For probe and control signals higher level config takes priority
                 in_config.inverted = Off;
-                if(xbar->function == Input_Probe)
-                    in_config.pull_mode = settings->probe.disable_probe_pullup ? PullMode_None : PullMode_Up;
-                else if(xbar->function < Input_Probe) {
+                if(!config_probe_pins(xbar->function, &in_config) && xbar->function < Input_Probe) {
                     control_signals_t ctrl;
-                    if((ctrl = xbar_fn_to_signals_mask(xbar->function)).mask)
+                    if((ctrl = xbar_fn_to_signals_mask(xbar->function)).mask) {
+#ifdef RP2040 // RP2xxx MCUs use hardware signal inversion
+                        in_config.inverted = !!(settings->control_invert.mask & ctrl.mask);
+#endif
                         in_config.pull_mode = (settings->control_disable_pullup.mask & ctrl.mask) ? PullMode_None : PullMode_Up;
+                    }
                 }
             }
             xbar->config(xbar, &in_config, false);

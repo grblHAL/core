@@ -60,23 +60,29 @@ directly from the incoming data stream.
 */
 ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
 {
-    static control_signals_t onoff_signals = {
+    static const control_signals_t onoff_signals = {
        .block_delete = On,
        .single_block = On,
        .stop_disable = On,
        .deasserted = On
     };
+    static const control_signals_t critical_signals = {
+       .reset = On,
+       .e_stop = On,
+       .motor_fault = On
+    };
 
     if(signals.deasserted)
-        signals.value &= onoff_signals.mask;
+        signals.bits &= onoff_signals.bits;
 
-    if(signals.value) {
+    if(signals.bits) {
 
-        sys.last_event.control.value = signals.value;
+        sys.last_event.control.bits = signals.bits;
 
-        if((signals.reset || signals.e_stop || signals.motor_fault) && state_get() != STATE_ESTOP)
-            mc_reset();
-        else {
+        if(signals.bits & critical_signals.bits) {
+            if(state_get() != STATE_ESTOP)
+                mc_reset();
+        } else {
 #ifndef NO_SAFETY_DOOR_SUPPORT
             if(signals.safety_door_ajar && hal.signals_cap.safety_door_ajar && !gc_state.tool_change) {
                 if(settings.safety_door.flags.ignore_when_idle) {

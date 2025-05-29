@@ -69,12 +69,13 @@ typedef union {
                  odometers                 :1,
                  pwm_spindle               :1,
                  probe_latch               :1, //!< Deprecated.
-                 toolsetter                :1, //!< Toolsetter (2nd probe) input is supported.
+                 probe                     :1, //!< Primary (default) probe input is supported.
                  probe2                    :1, //!< 2nd or 3rd probe input is supported.
+                 toolsetter                :1, //!< Toolsetter (2nd probe) input is supported.
                  rtc                       :1,
                  rtc_set                   :1,
                  bltouch_probe             :1,
-                 unassigned                :6;
+                 unassigned                :5;
     };
 } driver_cap_t;
 

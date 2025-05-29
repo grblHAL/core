@@ -55,6 +55,12 @@
 #error "I2C strobe not supported!"
 #endif
 
+#define DRIVER_PROBES ((PROBE_ENABLE ? 1 : 0) + PROBE2_ENABLE + TOOLSETTER_ENABLE)
+
+#ifndef CONTROL_ENABLE
+#define CONTROL_ENABLE 0
+#endif
+
 #if EEPROM_ENABLE == 0
 #define FLASH_ENABLE 1
 #else

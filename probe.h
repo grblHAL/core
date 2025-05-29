@@ -48,9 +48,21 @@ typedef union {
     };
 } probe_state_t;
 
+typedef union {
+    uint8_t value;
+    struct {
+        uint8_t connected     :1, //!< Set to true when probe is connected. Always set to true if the driver does not have a probe connected input.
+                latchable     :1, //!< Set to true when probe input supports change rising/falling.
+                watchable     :1, //!< Set to true when probe input supports change interrupt.
+                unassigned    :5;
+    };
+} probe_flags_t;
+
 typedef struct {
+    probe_id_t probe_id;
+    probe_flags_t flags;
     uint8_t port;
-    bool latchable;
+    void *input;
 } probe_t;
 
 #endif
