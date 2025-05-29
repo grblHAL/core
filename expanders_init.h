@@ -31,7 +31,7 @@ extern void board_ports_init (void); // default is a weak function
 
 // I2C expanders
 
-#if PCA9654E_ENABLE || MCP3221_ENABLE || MCP4725_ENABLE
+#if PCA9654E_ENABLE || MCP3221_ENABLE || MCP4725_ENABLE || FLEXGPIO_ENABLE
 
 #if defined(I2C_ENABLE) && !I2C_ENABLE
 #undef I2C_ENABLE
@@ -54,6 +54,10 @@ extern void pca9654e_init(void);
 #endif
 
 // Third party I2C expander plugins goes after this line
+
+#if FLEXGPIO_ENABLE
+extern void flexgpio_init (void);
+#endif
 
 #endif // I2C expanders
 
@@ -111,5 +115,9 @@ static inline void io_expanders_init (void)
 
 #if PICOHAL_IO_ENABLE
     picohal_io_init();
+#endif
+
+#if FLEXGPIO_ENABLE
+    flexgpio_init ();
 #endif
 }
