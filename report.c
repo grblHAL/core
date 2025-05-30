@@ -960,7 +960,7 @@ void report_build_info (char *line, bool extended)
         else {
             if(hal.probe.select) {
                 strcat(buf, "PROBES=");
-                strcat(buf, uitoa(0b001 | (hal.driver_cap.toolsetter << 1) | (hal.driver_cap.probe2 << 2)));
+                strcat(buf, uitoa(hal.driver_cap.probe | (hal.driver_cap.toolsetter << 1) | (hal.driver_cap.probe2 << 2)));
                 strcat(buf, ",");
             }
             if(hal.signals_cap.probe_disconnected)

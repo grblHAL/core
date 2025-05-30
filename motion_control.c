@@ -143,10 +143,11 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
                 plan_line_data_t pl_backlash;
 
                 plan_data_init(&pl_backlash);
-                pl_backlash.condition.rapid_motion = On;
-                pl_backlash.condition.backlash_motion = On;
+                pl_backlash.feed_rate = pl_data->feed_rate;
                 pl_backlash.line_number = pl_data->line_number;
                 pl_backlash.spindle.rpm = pl_data->spindle.rpm;
+                pl_backlash.condition.backlash_motion = On;
+                pl_backlash.condition.rapid_motion = pl_data->condition.rapid_motion;
 
                 // If the buffer is full: good! That means we are well ahead of the robot.
                 // Remain in this loop until there is room in the buffer.

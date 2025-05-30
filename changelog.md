@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+<a name="20250530">Build 20250530
+
+Core:
+
+* Changed backlash feed rate to be the same as the current motion. Ref. issue [#751](https://github.com/grblHAL/core/issues/751).
+
+* Minor fix for probe availability report in `$I` output.
+
+Drivers:
+
+* iMXRT1062, LPC176x, SAM3X8E and MSP432P401R: Harmonized serial port definitions with other drivers. Fixes issue [#97](https://github.com/grblHAL/iMXRT1062/issues/97).
+
+---
+
 <a name="20250526">Build 20250526
 
 Core:
