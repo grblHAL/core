@@ -21,9 +21,11 @@
 
 */
 
+#include <stdio.h>
 #include <string.h>
 
 #include "hal.h"
+#include "platform.h"
 #include "protocol.h"
 #include "settings.h"
 #include "crc.h"
@@ -89,6 +91,14 @@ static volatile queue_entry_t *tail, *head, *packet = NULL;
 static volatile modbus_state_t state = ModBus_Idle;
 static uint8_t dir_port = IOPORT_UNASSIGNED;
 
+static struct {
+    uint32_t tx_count;
+    uint32_t retries;
+    uint32_t timeouts;
+    uint32_t crc_errors;
+    uint32_t rx_exceptions;
+} stats = {};
+
 static driver_reset_ptr driver_reset;
 static on_report_options_ptr on_report_options;
 static nvs_address_t nvs_address;
@@ -107,16 +117,19 @@ static void retry_exception (uint8_t code, void *context)
     if(packet && packet->callbacks.retries) {
         state = ModBus_Retry;
         silence_until = hal.get_elapsed_ticks() + silence_timeout + packet->callbacks.retry_delay;
+        stats.retries++;
     }
 }
 
 static inline queue_entry_t *add_message (queue_entry_t *packet, modbus_message_t *msg, bool async, const modbus_callbacks_t *callbacks)
 {
+    stats.tx_count++;
+
     memcpy(&packet->msg, msg, sizeof(modbus_message_t));
 
     packet->async = async;
 
-    if(callbacks) {
+    if(callbacks && !sys.reset_pending) {
         memcpy(&packet->callbacks, callbacks, sizeof(modbus_callbacks_t));
         if(!packet->async && packet->callbacks.retries)
             packet->callbacks.on_rx_exception = retry_exception;
@@ -184,6 +197,9 @@ static void modbus_poll (void *data)
 
         case ModBus_AwaitReply:
             if(rx_timeout && --rx_timeout == 0) {
+
+                stats.timeouts++;
+
                 if(packet->async) {
                     state = ModBus_Silent;
                     if(packet->callbacks.on_rx_exception)
@@ -192,8 +208,10 @@ static void modbus_poll (void *data)
                 } else if(stream.read() == packet->msg.adu[0] && (stream.read() & 0x80)) {
                     exception_code = stream.read();
                     state = ModBus_Exception;
+                    stats.rx_exceptions++;
                 } else
                     state = ModBus_Timeout;
+
                 spin_lock = false;
                 if(state != ModBus_AwaitReply)
                     silence_until = hal.get_elapsed_ticks() + silence_timeout;
@@ -210,10 +228,11 @@ static void modbus_poll (void *data)
                 } while(--packet->msg.rx_length);
 
                 if(packet->msg.crc_check) {
-                    uint_fast16_t crc = modbus_crc16x(((queue_entry_t *)packet)->msg.adu, rx_len - 2);
 
+                    uint_fast16_t crc = modbus_crc16x(((queue_entry_t *)packet)->msg.adu, rx_len - 2);
                     if(packet->msg.adu[rx_len - 2] != (crc & 0xFF) || packet->msg.adu[rx_len - 1] != (crc >> 8)) {
                         // CRC check error
+                        stats.crc_errors++;
                         if((state = packet->async ? ModBus_Silent : ModBus_Exception) == ModBus_Silent) {
                             if(packet->callbacks.on_rx_exception)
                                 packet->callbacks.on_rx_exception(0, packet->msg.context);
@@ -499,6 +518,20 @@ static bool claim_stream (io_stream_properties_t const *sstream)
 
     return claimed != NULL;
 }
+static status_code_t report_stats (sys_state_t state, char *args)
+{
+    char buf[110];
+
+    snprintf(buf, sizeof(buf) - 1, "TX: " UINT32FMT ", retries: " UINT32FMT ", timeouts: " UINT32FMT ", RX exceptions: " UINT32FMT ", CRC errors: " UINT32FMT,
+              stats.tx_count, stats.retries, stats.timeouts, stats.rx_exceptions, stats.crc_errors);
+
+    report_message(buf, Message_Info);
+
+    if(args && (*args == 'r' || *args == 'R'))
+        stats.tx_count = stats.retries = stats.timeouts = stats.rx_exceptions = stats.crc_errors = 0;
+
+    return Status_OK;
+}
 
 void modbus_rtu_init (int8_t stream, int8_t dir_aux)
 {
@@ -518,6 +551,15 @@ void modbus_rtu_init (int8_t stream, int8_t dir_aux)
         .save = modbus_settings_save,
         .load = modbus_settings_load,
         .restore = modbus_settings_restore
+    };
+
+    static const sys_command_t command_list[] = {
+        {"MODBUSSTATS", report_stats, { .allow_blocking = On }, { .str = "output Modbus RTU statistics" } },
+    };
+
+    static sys_commands_t commands = {
+        .n_commands = sizeof(command_list) / sizeof(sys_command_t),
+        .commands = command_list
     };
 
     if(dir_aux != -2) {
@@ -556,6 +598,8 @@ void modbus_rtu_init (int8_t stream, int8_t dir_aux)
             queue[idx].next = idx == MODBUS_QUEUE_LENGTH - 1 ? &queue[0] : &queue[idx + 1];
 
         modbus_register_api(&api);
+
+        system_register_commands(&commands);
 
         modbus_set_silence(NULL);
 

@@ -1,5 +1,24 @@
 ## grblHAL changelog
 
+<a name="20250604">Build 20250604
+
+Core:
+
+* No longer retries Modbus commands if there is a pending reset.
+
+* Added `$MODBUSSTATS` and `$MODBUSSTATS=R` commands, outputs communication statistics such as number of sent commands, retries etc.
+`$MODBUSSTATS=R` clears the statistics after outputting it. Ref. issue [#753](https://github.com/grblHAL/core/issues/753).
+
+Drivers:
+
+* STM32Fxxx: bug fix - moved code for assigning IRQs for auxiliary inputs from the core to the drivers.
+
+Plugins:
+
+* Spindle: "hardened" code for Huanyang VFD drivers to prevent hardfaults. Updated some VFD drivers to delay reading data from the VFD till after a pending soft reset has been executed.
+
+---
+
 <a name="20250530">Build 20250530
 
 Core:
