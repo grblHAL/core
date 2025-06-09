@@ -1,5 +1,22 @@
 ## grblHAL changelog
 
+<a name="20250609">Build 20250609
+
+Core:
+
+* Added initial support for TMC2440 in SPI mode. Thanks to @jebanon for donating drivers for testing.
+Ref. issue [#22](https://github.com/grblHAL/Plugins_motor/issues/22).
+
+Drivers:
+
+* STM32Fxxx: fix for regression, keypad interrupt pin not working. Ref [issue #234](https://github.com/grblHAL/STM32F4xx/issues/234).
+
+Plugins:
+
+* Motor: Added initial support for TMC2440 in SPI mode.
+
+---
+
 <a name="20250604">Build 20250604
 
 Core:
