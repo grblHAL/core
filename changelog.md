@@ -4,8 +4,7 @@
 
 Core:
 
-* Added initial support for TMC2440 in SPI mode. Thanks to @jebanon for donating drivers for testing.
-Ref. issue [#22](https://github.com/grblHAL/Plugins_motor/issues/22).
+* Added initial support for TMC2240 in SPI mode. Thanks to @jebanon for donating drivers for testing.
 
 Drivers:
 
@@ -13,7 +12,7 @@ Drivers:
 
 Plugins:
 
-* Motor: Added initial support for TMC2440 in SPI mode.
+* Motor: added initial support for TMC2240 in SPI mode. Ref. issue [#22](https://github.com/grblHAL/Plugins_motor/issues/22).
 
 ---
 
