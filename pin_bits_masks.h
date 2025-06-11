@@ -250,11 +250,12 @@ static inline aux_ctrl_t *aux_ctrl_remap_explicit (void *port, uint8_t pin, uint
 
         uint_fast8_t idx;
 
-        for(idx = 0; ctrl_pin == NULL && aux_ctrl[idx].pin != 0xFF && idx < sizeof(aux_ctrl) / sizeof(aux_ctrl_t); idx++) {
+        for(idx = 0; ctrl_pin == NULL && idx < sizeof(aux_ctrl) / sizeof(aux_ctrl_t) && aux_ctrl[idx].pin != 0xFF; idx++) {
             if(aux_ctrl[idx].pin == pin && aux_ctrl[idx].port == port) {
                 ctrl_pin = &aux_ctrl[idx];
                 ctrl_pin->aux_port = aux_port;
                 ctrl_pin->input = input;
+                break;
             }
         }
     }

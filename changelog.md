@@ -1,5 +1,15 @@
 ## grblHAL changelog
 
+<a name="20250611">Build 20250611
+
+Core:
+
+* Fix for hardfault due to recent control pins handling change - affects at least RP2040/RP2350 MCUs.
+
+* No longer outputs settings/settings data for `$14` \(inversion\) and `$17` \(pullup disable\) if no control inputs are configured.
+
+---
+
 <a name="20250609">Build 20250609
 
 Core:
