@@ -1,5 +1,35 @@
 ## grblHAL changelog
 
+<a name="20250618">Build 20250618
+
+Core:
+
+* Refactored tool table API/HAL, now supports tool > tool rack/carousel pocket mapping.
+Tool to pocket mapping is 1:1 when no tool table is defined or when the core tool table is enabled.
+Named system parameters `_current_pocket` and `_selected_pocket` updated to return the correct values.
+
+* Moved handling of keeping last tool number over reboot from template plugin to the core. Set `$385=1` to enable.
+> [!NOTE]
+> The setting value and last tool used will _not_ be imported from the plugin..
+
+* Added named system parameters `_homed_state` and `_homed_axes`.
+`_homed_state` returns `1` if axes are homed according to the configuration `0` if not. `_homed_axes` returns a bitfield containing the homed axes, `0` if none are homed.
+
+* Fix for failure to claim auxiliary ports in some configurations. Ref STM32F4xx discussion [#237](https://github.com/grblHAL/STM32F4xx/discussions/237).
+
+Plugins:
+
+* Fans: fix for failure to claim auxiliary ports in some configurations. Ref STM32F4xx discussion [#237](https://github.com/grblHAL/STM32F4xx/discussions/237).
+
+* SD card, macros: updated to support file based tooltables.
+
+* Misc, tooltable: initial commit of file based tooltable, using [LinuxCNC file format](https://www.linuxcnc.org/docs/devel/html/gcode/tool-compensation.html#sub:tool-table-format).  
+The data is read from/written to the file _/linuxcnc/tooltable.tbl_ and it is automatically read when the SD card is mounted.   
+> [!NOTE]
+> Currently this is not a full implementation and it is in an experimental state. An attempt to automount the SD card early in the boot process will be carried out regardless of the $650 setting - to allow the last tool to be restored when called for.
+
+---
+
 <a name="20250611">Build 20250611
 
 Core:

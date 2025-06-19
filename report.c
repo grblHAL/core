@@ -645,14 +645,19 @@ void report_ngc_parameters (void)
     hal.stream.write(get_axis_values(gc_state.g92_coord_offset));
     hal.stream.write("]" ASCII_EOL);
 
+    tool_data_t *tool_data;
+
     for (idx = 1; idx <= grbl.tool_table.n_tools; idx++) {
-        hal.stream.write("[T:");
-        hal.stream.write(uitoa((uint32_t)idx));
-        hal.stream.write("|");
-        hal.stream.write(get_axis_values(grbl.tool_table.tool[idx].offset));
-        hal.stream.write("|");
-        hal.stream.write(get_axis_value(grbl.tool_table.tool[idx].radius));
-        hal.stream.write("]" ASCII_EOL);
+        if((tool_data = grbl.tool_table.get_tool_by_idx(idx)) &&
+            (settings.macro_atc_flags.random_toolchanger ? tool_data->tool_id >= 0 : tool_data->tool_id > 0)) {
+            hal.stream.write("[T:");
+            hal.stream.write(uitoa(tool_data->tool_id));
+            hal.stream.write("|");
+            hal.stream.write(get_axis_values(tool_data->offset.values));
+            hal.stream.write("|");
+            hal.stream.write(get_axis_value(tool_data->radius));
+            hal.stream.write("]" ASCII_EOL);
+        }
     }
 
 #if COMPATIBILITY_LEVEL < 10
@@ -660,9 +665,9 @@ void report_ngc_parameters (void)
         report_home_position();
 #endif
 
-    report_tool_offsets();      // Print tool length offset value.
-    report_probe_parameters();  // Print probe parameters. Not persistent in memory.
-    if(sys.tlo_reference_set.mask) { // Print tool length reference offset. Not persistent in memory.
+    report_tool_offsets();              // Print tool length offset value.
+    report_probe_parameters();          // Print probe parameters. Not persistent in memory.
+    if(sys.tlo_reference_set.mask) {    // Print tool length reference offset. Not persistent in memory.
         plane_t plane;
         gc_get_plane_data(&plane, gc_state.modal.plane_select);
         hal.stream.write("[TLR:");

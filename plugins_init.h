@@ -38,6 +38,11 @@
     plasma_init();
 #endif
 
+#if TOOLTABLE_ENABLE
+    extern void tooltable_init (void);
+    tooltable_init();
+#endif
+
 #if MODBUS_ENABLE && (MODBUS_ENABLE & MODBUS_RTU_ENABLED)
 
     extern void modbus_rtu_init (int8_t stream, int8_t dir_aux);

@@ -597,7 +597,8 @@ typedef union {
                  keep_offsets_on_reset           :1,
                  tool_change_at_g30              :1,
                  tool_change_fast_pulloff        :1,
-         		 unassigned                      :12;
+                 tool_persistent                 :1,
+         		 unassigned                      :11;
     };
 } settingflags_t;
 
@@ -897,7 +898,8 @@ typedef struct {
     macro_atc_flags_t macro_atc_flags;
     stepper_spindle_settings_flags_t stepper_spindle_flags;
     uint16_t stepper_enable_delay; // Move to stepper_settings_t
-    char reserved[16];          // Reserved For future expansion
+    tool_id_t tool_id;
+    char reserved[10];             // Reserved For future expansion
 } settings_t;
 
 typedef enum {

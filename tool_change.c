@@ -43,6 +43,8 @@ static volatile uint32_t spin_lock = 0;
 static tool_data_t current_tool = {}, *next_tool = NULL;
 static plane_t plane;
 static coord_data_t target = {}, previous;
+
+static tool_select_ptr tool_select;
 static driver_reset_ptr driver_reset = NULL;
 static enqueue_realtime_command_ptr enqueue_realtime_command = NULL;
 static control_signals_callback_ptr control_interrupt_callback = NULL;
@@ -421,11 +423,15 @@ ISR_CODE static void ISR_FUNC(on_toolchange_ack)(void)
 }
 
 // Set next and/or current tool. Called by gcode.c on on a Tn or M61 command (via HAL).
-static void tool_select (tool_data_t *tool, bool next)
+static void onToolSelect (tool_data_t *tool, bool next)
 {
     next_tool = tool;
+
     if(!next)
         memcpy(&current_tool, tool, sizeof(tool_data_t));
+
+    if(tool_select)
+        tool_select(tool, next);
 }
 
 // Start a tool change sequence. Called by gcode.c on a M6 command (via HAL).
@@ -562,16 +568,17 @@ void tc_init (void)
     system_add_rt_report(Report_TLOReference);
 
     if(settings.tool_change.mode == ToolChange_Disabled || settings.tool_change.mode == ToolChange_Ignore) {
-        hal.tool.select = NULL;
         hal.tool.change = NULL;
         grbl.on_toolchange_ack = NULL;
     } else {
-        hal.tool.select = tool_select;
         hal.tool.change = tool_change;
         grbl.on_toolchange_ack = on_toolchange_ack;
         if(!on_homing_subscribed) {
 
             on_homing_subscribed = true;
+
+            tool_select = hal.tool.select;
+            hal.tool.select = onToolSelect;
 
             on_homing_completed = grbl.on_homing_completed;
             grbl.on_homing_completed = onHomingComplete;

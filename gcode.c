@@ -47,7 +47,6 @@
 // arbitrary value, and some GUIs may require more. So we increased it based on a max safe
 // value when converting a float (7.2 digit precision) to an integer.
 #define MAX_LINE_NUMBER 10000000
-#define MAX_TOOL_NUMBER 4294967294 // Limited by max unsigned 32-bit value - 1
 
 #define MACH3_SCALING
 
@@ -257,7 +256,7 @@ void gc_set_tool_offset (tool_offset_mode_t mode, uint_fast8_t idx, int32_t offs
                 tlo_changed |= gc_state.tool_length_offset[idx] != 0.0f;
                 gc_state.tool_length_offset[idx] = 0.0f;
                 if(grbl.tool_table.n_tools == 0)
-                    gc_state.tool->offset[idx] = 0.0f;
+                    gc_state.tool->offset.values[idx] = 0.0f;
             } while(idx);
             break;
 
@@ -267,7 +266,7 @@ void gc_set_tool_offset (tool_offset_mode_t mode, uint_fast8_t idx, int32_t offs
                 tlo_changed |= gc_state.tool_length_offset[idx] != new_offset;
                 gc_state.tool_length_offset[idx] = new_offset;
                 if(grbl.tool_table.n_tools == 0)
-                    gc_state.tool->offset[idx] = new_offset;
+                    gc_state.tool->offset.values[idx] = new_offset;
             }
             break;
 
@@ -329,16 +328,22 @@ float gc_get_accel_factor (uint8_t profile)
 void gc_init (bool stop)
 {
 #if COMPATIBILITY_LEVEL > 1
-    memset(&gc_state, 0, sizeof(parser_state_t));
-    gc_state.tool = &grbl.tool_table.tool[0];
-    if(grbl.tool_table.n_tools == 0)
-        memset(grbl.tool_table.tool, 0, sizeof(tool_data_t));
+        memset(&gc_state, 0, sizeof(parser_state_t));
+        gc_state.tool = grbl.tool_table.get_tool(0);
+        if(grbl.tool_table.n_tools == 0)
+            memset(gc_state.tool, 0, sizeof(tool_data_t));
 #else
     if(sys.cold_start) {
         memset(&gc_state, 0, sizeof(parser_state_t));
-        gc_state.tool = &grbl.tool_table.tool[0];
-        if(grbl.tool_table.n_tools == 0)
-            memset(grbl.tool_table.tool, 0, sizeof(tool_data_t));
+        if(settings.flags.tool_persistent)
+            gc_state.tool = grbl.tool_table.get_tool(settings.tool_id);
+        if(gc_state.tool == NULL)
+            gc_state.tool = grbl.tool_table.get_tool(0);
+        if(grbl.tool_table.n_tools == 0) {
+            memset(gc_state.tool, 0, sizeof(tool_data_t));
+            if(settings.flags.tool_persistent)
+                gc_state.tool->tool_id = settings.tool_id;
+        }
     } else {
 
         coord_system_id_t coord_system_id = gc_state.modal.coord_system.id;
@@ -470,7 +475,7 @@ static tool_data_t *tool_get_pending (tool_id_t tool_id)
     static tool_data_t tool_data = {0};
 
     if(grbl.tool_table.n_tools)
-        return &grbl.tool_table.tool[tool_id];
+        return grbl.tool_table.get_tool(tool_id);
 
     memcpy(&tool_data, gc_state.tool, sizeof(tool_data_t));
     tool_data.tool_id = tool_id;
@@ -1583,7 +1588,7 @@ status_code_t gc_execute_block (char *block)
                     case 'T':
                         if(mantissa > 0)
                             FAIL(Status_GcodeCommandValueNotInteger);
-                        if(int_value > (grbl.tool_table.n_tools ? grbl.tool_table.n_tools : MAX_TOOL_NUMBER))
+                        if(grbl.tool_table.n_tools ? (grbl.tool_table.get_tool((tool_id_t)int_value) == NULL) : (int_value > MAX_TOOL_NUMBER))
                             FAIL(Status_GcodeIllegalToolTableEntry);
                         word_bit.parameter.t = On;
                         gc_block.values.t = isnan(value) ? 0xFFFFFFFF : int_value;
@@ -1931,7 +1936,7 @@ status_code_t gc_execute_block (char *block)
             FAIL(Status_GcodeValueWordMissing);
         if(!isintf(gc_block.values.q))
             FAIL(Status_GcodeCommandValueNotInteger);
-        if((uint32_t)gc_block.values.q > (grbl.tool_table.n_tools ? grbl.tool_table.n_tools : MAX_TOOL_NUMBER))
+        if(grbl.tool_table.n_tools ? grbl.tool_table.get_tool((tool_id_t)gc_block.values.q) == NULL : gc_block.values.q > MAX_TOOL_NUMBER)
             FAIL(Status_GcodeIllegalToolTableEntry);
 
         gc_block.values.t = (uint32_t)gc_block.values.q;
@@ -2250,11 +2255,11 @@ status_code_t gc_execute_block (char *block)
             case ToolLengthOffset_Enable:
                 if(grbl.tool_table.n_tools) {
                     if(gc_block.words.h) {
-                        if(gc_block.values.h > grbl.tool_table.n_tools)
+                        if(gc_block.values.h == 0 && !settings.macro_atc_flags.random_toolchanger)
+                            gc_block.values.h = gc_block.values.t; // !! no tool clear offset
+                        if(!grbl.tool_table.get_tool((tool_id_t)gc_block.values.h))
                             FAIL(Status_GcodeIllegalToolTableEntry);
                         gc_block.words.h = Off;
-                        if(gc_block.values.h == 0)
-                            gc_block.values.h = gc_block.values.t;
                     } else
                         gc_block.values.h = gc_block.values.t;
                 } else
@@ -2264,7 +2269,7 @@ status_code_t gc_execute_block (char *block)
             case ToolLengthOffset_ApplyAdditional:
                 if(grbl.tool_table.n_tools) {
                     if(gc_block.words.h) {
-                        if(gc_block.values.h == 0 || gc_block.values.h > grbl.tool_table.n_tools)
+                        if(gc_block.values.h == 0 || !grbl.tool_table.get_tool((tool_id_t)gc_block.values.h))
                             FAIL(Status_GcodeIllegalToolTableEntry);
                         gc_block.words.h = Off;
                     } else
@@ -2376,13 +2381,14 @@ status_code_t gc_execute_block (char *block)
                 case 11:
 #endif
                     if(grbl.tool_table.n_tools) {
-                        if(p_value == 0 || p_value > grbl.tool_table.n_tools)
-                           FAIL(Status_GcodeIllegalToolTableEntry); // [Greater than max allowed tool number]
 
-                        grbl.tool_table.tool[p_value].tool_id = (tool_id_t)p_value;
+                        tool_data_t *tool_data;
+
+                        if((tool_data = grbl.tool_table.get_tool((tool_id_t)p_value)) == NULL)
+                            FAIL(Status_GcodeIllegalToolTableEntry); // [Greater than max allowed tool number]
 
                         if(gc_block.words.r) {
-                            grbl.tool_table.tool[p_value].radius = gc_block.values.r;
+                            tool_data->radius = gc_block.values.r;
                             gc_block.words.r = Off;
                         }
 
@@ -2393,29 +2399,29 @@ status_code_t gc_execute_block (char *block)
 #endif
 
                         if(gc_block.values.l == 1)
-                            grbl.tool_table.read(p_value, &grbl.tool_table.tool[p_value]);
+                            tool_data = grbl.tool_table.get_tool((tool_id_t)p_value);
 
                         idx = N_AXIS;
                         do {
                             if(bit_istrue(axis_words.mask, bit(--idx))) {
                                 if(gc_block.values.l == 1)
-                                    grbl.tool_table.tool[p_value].offset[idx] = gc_block.values.xyz[idx];
+                                    tool_data->offset.values[idx] = gc_block.values.xyz[idx];
                                 else if(gc_block.values.l == 10)
-                                    grbl.tool_table.tool[p_value].offset[idx] = gc_state.position[idx] - gc_state.modal.coord_system.xyz[idx] - gc_state.g92_coord_offset[idx] - gc_block.values.xyz[idx];
+                                    tool_data->offset.values[idx] = gc_state.position[idx] - gc_state.modal.coord_system.xyz[idx] - gc_state.g92_coord_offset[idx] - gc_block.values.xyz[idx];
 #if COMPATIBILITY_LEVEL <= 1
                                 else if(gc_block.values.l == 11)
-                                    grbl.tool_table.tool[p_value].offset[idx] = g59_3_offset[idx] - gc_block.values.xyz[idx];
+                                    tool_data->offset.values[idx] = g59_3_offset[idx] - gc_block.values.xyz[idx];
 #endif
     //                            if(gc_block.values.l != 1)
     //                                tool_table[p_value].offset[idx] -= gc_state.tool_length_offset[idx];
                             } else if(gc_block.values.l == 10 || gc_block.values.l == 11)
-                                grbl.tool_table.tool[p_value].offset[idx] = gc_state.tool_length_offset[idx];
+                                tool_data->offset.values[idx] = gc_state.tool_length_offset[idx];
 
                             // else, keep current stored value.
                         } while(idx);
 
                         if(gc_block.values.l == 1)
-                            grbl.tool_table.write(&grbl.tool_table.tool[p_value]);
+                            grbl.tool_table.set_tool(tool_data);
                     } else
                         FAIL(Status_GcodeUnsupportedCommand);
                     break;
@@ -3542,12 +3548,16 @@ status_code_t gc_execute_block (char *block)
     // NOTE: If G43 were supported, its operation wouldn't be any different from G43.1 in terms
     // of execution. The error-checking step would simply load the offset value into the correct
     // axis of the block XYZ value array.
-    if (command_words.G8) { // Indicates a change.
+    if(command_words.G8) { // Indicates a change.
 
         bool tlo_changed = false;
+        tool_data_t *tool_data = NULL;
 
         idx = N_AXIS;
         gc_state.modal.tool_offset_mode = gc_block.modal.tool_offset_mode;
+
+        if(gc_state.modal.tool_offset_mode == ToolLengthOffset_Enable || gc_state.modal.tool_offset_mode == ToolLengthOffset_ApplyAdditional)
+            tool_data = grbl.tool_table.get_tool((tool_id_t)gc_block.values.h);
 
         do {
 
@@ -3561,19 +3571,19 @@ status_code_t gc_execute_block (char *block)
                     break;
 
                 case ToolLengthOffset_Enable: // G43
-                    if (gc_state.tool_length_offset[idx] != grbl.tool_table.tool[gc_block.values.h].offset[idx]) {
+                    if(gc_state.tool_length_offset[idx] != tool_data->offset.values[idx]) {
                         tlo_changed = true;
-                        gc_state.tool_length_offset[idx] = grbl.tool_table.tool[gc_block.values.h].offset[idx];
+                        gc_state.tool_length_offset[idx] = tool_data->offset.values[idx];
                     }
                     break;
 
                 case ToolLengthOffset_ApplyAdditional: // G43.2
-                    tlo_changed |= grbl.tool_table.tool[gc_block.values.h].offset[idx] != 0.0f;
-                    gc_state.tool_length_offset[idx] += grbl.tool_table.tool[gc_block.values.h].offset[idx];
+                    tlo_changed |= tool_data->offset.values[idx] != 0.0f;
+                    gc_state.tool_length_offset[idx] += tool_data->offset.values[idx];
                     break;
 
                 case ToolLengthOffset_EnableDynamic: // G43.1
-                    if (bit_istrue(axis_words.mask, bit(idx)) && gc_state.tool_length_offset[idx] != gc_block.values.xyz[idx]) {
+                    if(bit_istrue(axis_words.mask, bit(idx)) && gc_state.tool_length_offset[idx] != gc_block.values.xyz[idx]) {
                         tlo_changed = true;
                         gc_state.tool_length_offset[idx] = gc_block.values.xyz[idx];
                     }

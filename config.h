@@ -186,6 +186,8 @@ or EMI triggering the related interrupt falsely or too many times.
 #define DEBOUNCE_DELAY 40 // ms
 #endif
 
+#define MAX_TOOL_NUMBER 2147483647 // Limited by max signed 32-bit value - 1
+
 // ---------------------------------------------------------------------------------------
 // ADVANCED CONFIGURATION OPTIONS:
 
@@ -2226,11 +2228,9 @@ __NOTE:__ Must be a positive values.
 // Sanity checks
 
 // N_TOOLS may have been defined on the compiler command line.
-#if defined(N_TOOLS) && N_TOOLS == 0
-#undef N_TOOLS
-#endif
-
-#if defined(N_TOOLS) && N_TOOLS > 32
+#if !defined(N_TOOLS)
+#define N_TOOLS 0
+#elif N_TOOLS > 32
 #undef N_TOOLS
 #define N_TOOLS 32
 #endif

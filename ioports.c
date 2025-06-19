@@ -189,17 +189,19 @@ uint8_t ioports_unclaimed (io_port_type_t type, io_port_direction_t dir)
     return p_data->free;
 }
 
-static struct ff_data {
+struct ff_data {
     uint8_t port;
     const char *description;
-} ff_data;
+};
 
 static bool match_port (xbar_t *properties, uint8_t port, void *data)
 {
-    if(((struct ff_data *)data)->description && (!properties->description || strcmp(properties->description, ((struct ff_data *)data)->description)))
+    struct ff_data *ff_data = (struct ff_data *)data;
+
+    if(ff_data->description && (properties->description == NULL || strcmp(properties->description, ff_data->description)))
         return false;
 
-    ((struct ff_data *)data)->port = port;
+    ff_data->port = port;
 
     return true;
 }
@@ -212,14 +214,17 @@ static bool match_port (xbar_t *properties, uint8_t port, void *data)
 */
 uint8_t ioport_find_free (io_port_type_t type, io_port_direction_t dir, pin_cap_t filter, const char *description)
 {
+    struct ff_data ff_data;
+
     ff_data.port = IOPORT_UNASSIGNED;
     ff_data.description = (description && *description) ? description : NULL;
 
     // TODO: pass modified filter with .claimable off when looking for description match?
-    if(ff_data.description && !ioports_enumerate(type, dir, (pin_cap_t){}, match_port, (void *)&ff_data)) {
+    if(ff_data.description && !ioports_enumerate(type, dir, (pin_cap_t){}, match_port, (void *)&ff_data))
         ff_data.description = NULL;
+
+    if(ff_data.description == NULL)
         ioports_enumerate(type, dir, filter, match_port, (void *)&ff_data);
-    }
 
     return ff_data.port;
 }
@@ -434,20 +439,21 @@ bool ioports_enumerate (io_port_type_t type, io_port_direction_t dir, pin_cap_t 
 
        xbar_t *portinfo;
        uint_fast16_t n_ports;
+       io_ports_private_t *p_data = get_port_data(type, dir);
 
        if(filter.mask) {
 
-           uint_fast16_t n_ports = p_data->n_ports;
+           n_ports = p_data->n_ports;
 
            do {
-                if((portinfo = hal.port.get_pin_info(type, dir, --n_ports)) && (portinfo->cap.mask & filter.mask) == filter.mask) {
+                if((portinfo = hal.port.get_pin_info(type, dir, map_reverse(p_data, --n_ports))) && (portinfo->cap.mask & filter.mask) == filter.mask) {
                     if((ok = callback(portinfo, resolve_portnum(p_data, portinfo), data)))
                         break;
                 }
             } while(n_ports);
 
        } else for(n_ports = 0; n_ports < p_data->n_ports; n_ports++) {
-           if((portinfo = hal.port.get_pin_info(type, dir, n_ports))) {
+           if((portinfo = hal.port.get_pin_info(type, dir, map_reverse(p_data, n_ports)))) {
                if((ok = callback(portinfo, resolve_portnum(p_data, portinfo), data)))
                    break;
            }

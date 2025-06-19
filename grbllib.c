@@ -200,6 +200,14 @@ static bool onProbeToolsetter (tool_data_t *tool, coord_data_t *position, bool a
     return ok;
 }
 
+static void tool_changed (tool_data_t *tool)
+{
+    if(settings.flags.tool_persistent && tool->tool_id != settings.tool_id) {
+        settings.tool_id = tool->tool_id;
+        settings_write_global();
+    }
+}
+
 static void settings_changed (settings_t *settings, settings_changed_flags_t changed)
 {
     hal_settings_changed(settings, changed);
@@ -230,6 +238,7 @@ int grbl_enter (void)
     grbl.on_get_alarms = alarms_get_details;
     grbl.on_get_errors = errors_get_details;
     grbl.on_get_settings = settings_get_details;
+    grbl.on_tool_changed = tool_changed;
 #if NGC_EXPRESSIONS_ENABLE
     grbl.on_process_gcode_comment = ngc_process_comment;
 #endif

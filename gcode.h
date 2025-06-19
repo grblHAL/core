@@ -31,7 +31,8 @@
 
 #define MAX_OFFSET_ENTRIES 4 // must be a power of 2
 
-typedef uint32_t tool_id_t;
+typedef int32_t tool_id_t;
+typedef int16_t pocket_id_t;
 typedef uint16_t macro_id_t;
 typedef int8_t offset_id_t;
 
@@ -604,11 +605,15 @@ typedef struct {
 
 //! Tool data.
 typedef struct {
-    float offset[N_AXIS];   //!< Tool offset
+    coord_data_t offset;    //!< Tool offset
     float radius;           //!< Radius of tool (currently unsupported)
-// TODO: add float max_rpm; ?
     tool_id_t tool_id;      //!< Tool number
 } tool_data_t;
+
+typedef struct {
+    tool_data_t tool;
+    pocket_id_t pocket_id;
+} tool_pocket_t;
 
 /*! \brief Parser state
 

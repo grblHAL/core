@@ -102,14 +102,14 @@ typedef enum {
     NGCParam_call_level,
     NGCParam_probe_state,
     NGCParam_toolsetter_state,
+    NGCParam_homed_state,
+    NGCParam_homed_axes,
     NGCParam_Last
 } ncg_name_param_id_t;
 
 typedef enum {
     G65Macro_GetSetting      = 1,
-#if N_TOOLS || defined __DOXYGEN__
     G65Macro_GetToolOffset   = 2,
-#endif
     G65Macro_ParameterRW     = 3,
     G65Macro_GetMachineState = 4,
     G65Macro_SelectProbe     = 5

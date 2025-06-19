@@ -411,7 +411,9 @@ PROGMEM static const ngc_named_ro_param_t ngc_named_ro_param[] = {
     { .name = "_selected_pocket",     .id = NGCParam_selected_pocket },
     { .name = "_call_level",          .id = NGCParam_call_level },
     { .name = "_probe_state",         .id = NGCParam_probe_state },
-    { .name = "_toolsetter_state",    .id = NGCParam_toolsetter_state }
+    { .name = "_toolsetter_state",    .id = NGCParam_toolsetter_state },
+    { .name = "_homed_state",         .id = NGCParam_homed_state },
+    { .name = "_homed_axes",          .id = NGCParam_homed_axes }
 };
 
 // Named parameters
@@ -602,7 +604,7 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             break;
 
         case NGCParam_current_pocket:
-            value = 0.0f;
+            value = (float)grbl.tool_table.get_pocket(gc_state.tool->tool_id);
             break;
 
         case NGCParam_selected_tool:
@@ -610,7 +612,7 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             break;
 
         case NGCParam_selected_pocket:
-            value = 0.0f;
+            value = gc_state.tool_pending != gc_state.tool->tool_id ? (float)grbl.tool_table.get_pocket(gc_state.tool_pending) : -1.0f;
             break;
 
         case NGCParam_call_level:
@@ -654,6 +656,18 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
                 } else
                     value = (float)probe_state.tls_triggered;
             }
+            break;
+
+        case NGCParam_homed_state:
+            if(sys.homing.mask || settings.homing.flags.single_axis_commands || settings.homing.flags.manual) {
+                axes_signals_t homing = { sys.homing.mask ? sys.homing.mask : AXES_BITMASK };
+                value = (homing.mask & sys.homed.mask) == homing.mask ? 1.0f : 0.0f;
+            } else
+                value = 0.0f;
+            break;
+
+        case NGCParam_homed_axes:
+            value = (float)sys.homed.mask;
             break;
 
         default:
@@ -1072,8 +1086,6 @@ static status_code_t macro_select_probe (void)
     return status;
 }
 
-#if N_TOOLS
-
 static status_code_t macro_get_tool_offset (void)
 {
     float tool_id, axis_id;
@@ -1082,9 +1094,12 @@ static status_code_t macro_get_tool_offset (void)
 
     if(!(args.q && args.r))
         status = Status_GcodeValueWordMissing;
-    else if(ngc_param_get(17 /* Q word */, &tool_id) && ngc_param_get(18 /* R word */, &axis_id)) {
-        if((uint32_t)tool_id <= grbl.tool_table.n_tools && (uint8_t)axis_id < N_AXIS) {
-            ngc_named_param_set("_value", grbl.tool_table.tool[(uint32_t)tool_id].offset[(uint8_t)axis_id]);
+    else if(grbl.tool_table.n_tools && ngc_param_get(17 /* Q word */, &tool_id) && ngc_param_get(18 /* R word */, &axis_id)) {
+
+        tool_data_t *tool_data = grbl.tool_table.get_tool((tool_id_t)tool_id);
+
+        if(tool_data && (uint8_t)axis_id < N_AXIS) {
+            ngc_named_param_set("_value", tool_data->offset.values[(uint8_t)axis_id]);
             ngc_named_param_set("_value_returned", 1.0f);
         } else
             status = Status_GcodeIllegalToolTableEntry;
@@ -1093,8 +1108,6 @@ static status_code_t macro_get_tool_offset (void)
 
     return status;
 }
-
-#endif // N_TOOLS
 
 static status_code_t onMacroExecute (macro_id_t macro_id)
 {
@@ -1105,11 +1118,11 @@ static status_code_t onMacroExecute (macro_id_t macro_id)
         case G65Macro_GetSetting:
             status = macro_get_setting();
             break;
-#if N_TOOLS
+
        case G65Macro_GetToolOffset:
             status = macro_get_tool_offset();
             break;
-#endif
+
         case G65Macro_ParameterRW:
             status = macro_ngc_parameter_rw();
             break;

@@ -840,6 +840,13 @@ static status_code_t set_estop_unlock (setting_id_t id, uint_fast16_t int_value)
     return Status_OK;
 }
 
+static status_code_t set_persistent_tool (setting_id_t id, uint_fast16_t int_value)
+{
+    settings.flags.tool_persistent = int_value != 0;
+
+    return Status_OK;
+}
+
 static inline void tmp_set_hard_limits (void)
 {
     sys.hard_limits.mask = settings.limits.flags.hard_enabled ? AXES_BITMASK : 0;
@@ -1632,6 +1639,10 @@ static uint32_t get_int (setting_id_t id)
             value = settings.flags.no_unlock_after_estop ? 0 : 1;
             break;
 
+        case Setting_EnableToolPersistence:
+            value = settings.flags.tool_persistent;
+            break;
+
         case Setting_EncoderSpindle:
             {
                 spindle_id_t spindle_id;
@@ -2140,6 +2151,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_AutoReportInterval, Group_General, "Autoreport interval", "ms", Format_Int16, "###0", "100", "1000", Setting_IsExtendedFn, set_report_interval, get_int, NULL, { .reboot_required = On, .allow_null = On } },
 //     { Setting_TimeZoneOffset, Group_General, "Timezone offset", NULL, Format_Decimal, "-#0.00", "0", "12", Setting_IsExtended, &settings.timezone, NULL, NULL },
      { Setting_UnlockAfterEStop, Group_General, "Unlock required after E-Stop", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_estop_unlock, get_int, is_setting_available },
+     { Setting_EnableToolPersistence, Group_Toolchange, "Keep tool number over reboot", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_persistent_tool, get_int, NULL },
 #if NGC_EXPRESSIONS_ENABLE
      { Setting_NGCDebugOut, Group_General, "Output NGC debug messages", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_ngc_debug_out, get_int, NULL },
 #endif
@@ -2480,8 +2492,10 @@ bool settings_read_coord_data (coord_system_id_t id, float (*coord_data)[N_AXIS]
 
 #if N_TOOLS
 
+static tool_data_t tool_data[N_TOOLS + 1];
+
 // Write selected tool data to persistent storage.
-static bool settings_write_tool_data (tool_data_t *tool_data)
+static bool settings_set_tool_data (tool_data_t *tool_data)
 {
     assert(tool_data->tool_id > 0 && tool_data->tool_id <= N_TOOLS); // NOTE: idx 0 is a non-persistent entry for tools not in tool table
 
@@ -2492,17 +2506,17 @@ static bool settings_write_tool_data (tool_data_t *tool_data)
 }
 
 // Read selected tool data from persistent storage.
-static bool settings_read_tool_data (tool_id_t tool_id, tool_data_t *tool_data)
+static tool_data_t *settings_get_tool_data (tool_id_t tool_id)
 {
-    assert(tool_id > 0 && tool_id <= N_TOOLS); // NOTE: idx 0 is a non-persistent entry for tools not in tool table
+    assert(tool_id <= N_TOOLS); // NOTE: idx 0 is a non-persistent entry for tools not in tool table
 
-    if (!(hal.nvs.type != NVS_None && hal.nvs.memcpy_from_nvs((uint8_t *)tool_data, NVS_ADDR_TOOL_TABLE + (tool_id - 1) * (sizeof(tool_data_t) + NVS_CRC_BYTES),
-                                                               sizeof(tool_data_t), true) == NVS_TransferResult_OK && tool_data->tool_id == tool_id)) {
+    if(tool_id && !(hal.nvs.type != NVS_None && hal.nvs.memcpy_from_nvs((uint8_t *)&tool_data[tool_id], NVS_ADDR_TOOL_TABLE + (tool_id - 1) * (sizeof(tool_data_t) + NVS_CRC_BYTES),
+                                                               sizeof(tool_data_t), true) == NVS_TransferResult_OK && tool_data[tool_id].tool_id == tool_id)) {
         memset(tool_data, 0, sizeof(tool_data_t));
-        tool_data->tool_id = tool_id;
+        tool_data[tool_id].tool_id = tool_id;
     }
 
-    return tool_data->tool_id == tool_id;
+    return &tool_data[tool_id];
 }
 
 // Clear all tool data in persistent storage.
@@ -2514,13 +2528,46 @@ static bool settings_clear_tool_data (void)
     memset(&tool_data, 0, sizeof(tool_data_t));
     for (idx = 1; idx <= N_TOOLS; idx++) {
         tool_data.tool_id = (tool_id_t)idx;
-        settings_write_tool_data(&tool_data);
+        settings_set_tool_data(&tool_data);
     }
 
     return true;
 }
 
+#else
+
+static tool_data_t tool_data = {0};
+
+// Write selected tool data to persistent storage.
+static bool settings_set_tool_data (tool_data_t *tool_data)
+{
+    return true;
+}
+
+// Read selected tool data from persistent storage.
+static tool_data_t *settings_get_tool_data (tool_id_t tool_id)
+{
+
+	if(tool_id <= MAX_TOOL_NUMBER)
+    	tool_data.tool_id = tool_id;
+
+    return tool_id <= MAX_TOOL_NUMBER ? &tool_data : NULL;
+}
+
+// Clear all tool data in persistent storage.
+static bool settings_clear_tool_data (void)
+{
+    memset(&tool_data, 0, sizeof(tool_data_t));
+
+    return true;
+}
+
 #endif // N_TOOLS
+
+static pocket_id_t settings_get_tool_pocket (tool_id_t tool_id)
+{
+    return (pocket_id_t)tool_id;
+}
 
 // Sanity check of settings, board map could have been changed...
 static void sanity_check (void)
@@ -3328,20 +3375,17 @@ void settings_init (void)
         grbl.on_set_axis_setting_unit = set_axis_setting_unit;
 #endif
 
-#if N_TOOLS
-    static tool_data_t tools[N_TOOLS + 1];
-
-    grbl.tool_table.n_tools = N_TOOLS;
-    grbl.tool_table.tool = tools;
-    grbl.tool_table.read = settings_read_tool_data;
-    grbl.tool_table.write = settings_write_tool_data;
-    grbl.tool_table.clear = settings_clear_tool_data;
-#else
-    static tool_data_t tools;
-    if(grbl.tool_table.tool == NULL) {
-        grbl.tool_table.n_tools = 0;
-        grbl.tool_table.tool = &tools;
+    if(grbl.tool_table.n_tools == 0) {
+        grbl.tool_table.n_tools = N_TOOLS;
+        grbl.tool_table.get_tool = settings_get_tool_data;
+        grbl.tool_table.get_tool_by_idx = settings_get_tool_data;
+        grbl.tool_table.set_tool = settings_set_tool_data;
+        grbl.tool_table.get_pocket = settings_get_tool_pocket;
+        grbl.tool_table.clear = settings_clear_tool_data;
     }
+
+#if N_TOOLS
+    memset(tool_data, 0, sizeof(tool_data_t)); // First entry is for tools not in tool table
 #endif
 
     strcpy(step_us_min, ftoa(hal.step_us_min, 1));
@@ -3363,14 +3407,6 @@ void settings_init (void)
 #endif
         changed.spindle = settings_changed_spindle();
     } else {
-
-        memset(grbl.tool_table.tool, 0, sizeof(tool_data_t)); // First entry is for tools not in tool table
-
-        if(grbl.tool_table.n_tools) {
-            uint_fast8_t idx;
-            for(idx = 1; idx <= grbl.tool_table.n_tools; idx++)
-                grbl.tool_table.read(idx, &grbl.tool_table.tool[idx]);
-        }
 
         report_init();
 
