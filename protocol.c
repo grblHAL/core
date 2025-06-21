@@ -987,7 +987,7 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(char c)
             break;
 
         default:
-            if((c < ' ' && c != ASCII_BS) || (c > ASCII_DEL && c <= 0xBF))
+            if(((unsigned char)c < ' ' && c != ASCII_BS) || ((unsigned char)c > ASCII_DEL && (unsigned char)c <= 0xBF))
                 drop = grbl.on_unknown_realtime_cmd == NULL || grbl.on_unknown_realtime_cmd(c);
             break;
     }

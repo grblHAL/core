@@ -1,5 +1,11 @@
 ## grblHAL changelog
 
+<a name="20250621">20250621
+
+* Fix for typecast issue causing compile failure with some compilers. Ref issue [#761](https://github.com/grblHAL/core/issues/761).
+
+---
+
 <a name="20250618">Build 20250618
 
 Core:

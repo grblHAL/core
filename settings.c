@@ -3378,7 +3378,7 @@ void settings_init (void)
     if(grbl.tool_table.n_tools == 0) {
         grbl.tool_table.n_tools = N_TOOLS;
         grbl.tool_table.get_tool = settings_get_tool_data;
-        grbl.tool_table.get_tool_by_idx = settings_get_tool_data;
+        grbl.tool_table.get_tool_by_idx = (get_tool_by_idx_ptr)settings_get_tool_data;
         grbl.tool_table.set_tool = settings_set_tool_data;
         grbl.tool_table.get_pocket = settings_get_tool_pocket;
         grbl.tool_table.clear = settings_clear_tool_data;
