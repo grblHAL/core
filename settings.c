@@ -132,6 +132,7 @@ PROGMEM const settings_t defaults = {
     .homing.flags.override_locks = DEFAULT_HOMING_OVERRIDE_LOCKS,
     .homing.flags.keep_on_reset = DEFAULT_HOMING_KEEP_STATUS_ON_RESET,
     .homing.flags.use_limit_switches = DEFAULT_HOMING_USE_LIMIT_SWITCHES,
+    .homing.flags.nx_scrips_on_homed_only = DEFAULT_RUN_STARTUP_SCRIPTS_ONLY_ON_HOMED,
 #else
     .homing.flags.value = 0,
 #endif
@@ -414,7 +415,7 @@ PROGMEM static const setting_group_detail_t setting_group_detail [] = {
 static bool machine_mode_changed = false;
 #if COMPATIBILITY_LEVEL <= 1
 static char probe_signals[] = "Probe,Toolsetter,Probe 2";
-static char homing_options[] = "Enable,Enable single axis commands,Homing on startup required,Set machine origin to 0,Two switches shares one input,Allow manual,Override locks,N/A,Use limit switches,Per axis feedrates";
+static char homing_options[] = "Enable,Enable single axis commands,Homing on startup required,Set machine origin to 0,Two switches shares one input,Allow manual,Override locks,N/A,Use limit switches,Per axis feedrates,Run startup scripts only on homing completed";
 #else
 static char probe_signals[] = "Probe";
 #endif
@@ -998,6 +999,7 @@ static status_code_t set_homing_enable (setting_id_t id, uint_fast16_t int_value
         settings.homing.flags.override_locks = DEFAULT_HOMING_OVERRIDE_LOCKS;
         settings.homing.flags.keep_on_reset = DEFAULT_HOMING_KEEP_STATUS_ON_RESET;
         settings.homing.flags.use_limit_switches = DEFAULT_HOMING_USE_LIMIT_SWITCHES;
+        settings.homing.flags.nx_scrips_on_homed_only = DEFAULT_RUN_STARTUP_SCRIPTS_ONLY_ON_HOMED;
         settings.limits.flags.two_switches = DEFAULT_LIMITS_TWO_SWITCHES_ON_AXES;
 #else
         settings.limits.flags.two_switches = settings.homing.flags.two_switches;

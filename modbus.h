@@ -97,6 +97,7 @@ typedef bool (*modbus_is_up_ptr)(void);
 typedef void (*modbus_flush_queue_ptr)(void);
 typedef void (*modbus_set_silence_ptr)(const modbus_silence_timeout_t *timeout);
 typedef bool (*modbus_send_ptr)(modbus_message_t *msg, const modbus_callbacks_t *callbacks, bool block);
+typedef bool (*modbus_is_busy_ptr)(void);
 
 typedef struct {
     modbus_if_t interface;
@@ -104,9 +105,11 @@ typedef struct {
     modbus_flush_queue_ptr flush_queue;
     modbus_set_silence_ptr set_silence;
     modbus_send_ptr send;
+    modbus_is_busy_ptr is_busy;
 } modbus_api_t;
 
 modbus_cap_t modbus_isup (void);
+bool modbus_isbusy (void);
 bool modbus_enabled (void);
 void modbus_flush_queue (void);
 void modbus_set_silence (const modbus_silence_timeout_t *timeout);

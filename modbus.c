@@ -58,6 +58,33 @@ modbus_cap_t modbus_isup (void)
     return cap;
 }
 
+bool modbus_isbusy (void)
+{
+    bool busy = false;
+
+    uint_fast16_t idx = n_api;
+
+    if(idx) do {
+        idx--;
+        if(modbus[idx].is_busy) switch(modbus[idx].interface) {
+
+            case Modbus_InterfaceRTU:
+                busy = modbus[idx].is_busy();
+                break;
+
+            case Modbus_InterfaceASCII:
+                busy = modbus[idx].is_busy();
+                break;
+
+            case Modbus_InterfaceTCP:
+                busy = modbus[idx].is_busy();
+                break;
+        }
+    } while(idx && !busy);
+
+    return busy;
+}
+
 bool modbus_enabled (void)
 {
     return n_api > 0;

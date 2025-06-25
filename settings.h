@@ -682,17 +682,18 @@ typedef struct {
 typedef union {
     uint16_t value;
     struct {
-        uint16_t enabled              :1,
-                 single_axis_commands :1,
-                 init_lock            :1,
-                 force_set_origin     :1,
-                 two_switches         :1, // -> limits.flags.two_switches, never set
-                 manual               :1,
-                 override_locks       :1,
-                 keep_on_reset        :1,
-                 use_limit_switches   :1,
-                 per_axis_feedrates   :1,
-                 unused               :6;
+        uint16_t enabled                 :1,
+                 single_axis_commands    :1,
+                 init_lock               :1,
+                 force_set_origin        :1,
+                 two_switches            :1, // -> limits.flags.two_switches, never set
+                 manual                  :1,
+                 override_locks          :1,
+                 keep_on_reset           :1,
+                 use_limit_switches      :1,
+                 per_axis_feedrates      :1,
+                 nx_scrips_on_homed_only :1,
+                 unused                  :5;
     };
 } homing_settings_flags_t;
 

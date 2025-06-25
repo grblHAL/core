@@ -1482,7 +1482,7 @@ homing cycle while on the limit switch and not have to move the machine off of i
 \brief
 If enabled this allows using the homing $-commands to set the home position to the
 current axis position.
-\internal Bit 4 in settings.homing.flags.
+\internal Bit 5 in settings.homing.flags.
 */
 #if !defined DEFAULT_HOMING_ALLOW_MANUAL || defined __DOXYGEN__
 #define DEFAULT_HOMING_ALLOW_MANUAL Off // Default disabled. Set to \ref On or 1 to enable.
@@ -1492,7 +1492,7 @@ current axis position.
 \brief
 If homing init lock is enabled this sets grblHAL into an alarm state upon power up or a soft reset.
 To allow a soft reset to override the lock uncomment the line below.
-\internal Bit 5 in settings.homing.flags.
+\internal Bit 6 in settings.homing.flags.
 */
 #if !defined DEFAULT_HOMING_OVERRIDE_LOCKS || defined __DOXYGEN__
 #define DEFAULT_HOMING_OVERRIDE_LOCKS Off // Default disabled. Set to \ref On or 1 to enable.
@@ -1501,10 +1501,20 @@ To allow a soft reset to override the lock uncomment the line below.
 /*! /def DEFAULT_HOMING_USE_LIMIT_SWITCHES
 \brief
 Enable this setting to force using limit switches for homing.
-\internal Bit 7 in settings.homing.flags.
+\internal Bit 8 in settings.homing.flags.
 */
 #if !defined DEFAULT_HOMING_USE_LIMIT_SWITCHES || defined __DOXYGEN__
 #define DEFAULT_HOMING_USE_LIMIT_SWITCHES Off // Default disabled. Set to \ref On or 1 to enable.
+#endif
+///@}
+
+/*! /def DEFAULT_RUN_STARTUP_SCRIPTS_ONLY_ON_HOMED
+\brief
+Enable this setting to to only run startup scripts ($N0 and $N1) on homing completed.
+\internal Bit 10 in settings.homing.flags.
+*/
+#if !defined DEFAULT_RUN_STARTUP_SCRIPTS_ONLY_ON_HOMED || defined __DOXYGEN__
+#define DEFAULT_RUN_STARTUP_SCRIPTS_ONLY_ON_HOMED Off // Default disabled. Set to \ref On or 1 to enable.
 #endif
 ///@}
 

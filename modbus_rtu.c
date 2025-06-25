@@ -453,6 +453,11 @@ static bool modbus_rtu_isup (void)
     return is_up;
 }
 
+static bool modbus_is_busy (void)
+{
+    return state != STATE_IDLE;
+}
+
 static void modbus_rtu_flush_queue (void)
 {
     while(spin_lock);
@@ -540,7 +545,8 @@ void modbus_rtu_init (int8_t stream, int8_t dir_aux)
         .is_up = modbus_rtu_isup,
         .flush_queue = modbus_rtu_flush_queue,
         .set_silence = modbus_rtu_set_silence,
-        .send = modbus_send_rtu
+        .send = modbus_send_rtu,
+        .is_busy = modbus_is_busy
     };
 
     static setting_details_t setting_details = {

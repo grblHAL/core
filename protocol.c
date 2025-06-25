@@ -174,7 +174,8 @@ bool protocol_main_loop (void)
         }
 #endif
         // All systems go!
-        task_add_immediate(system_execute_startup, NULL); // Schedule startup script for execution.
+        if(!settings.homing.flags.nx_scrips_on_homed_only)
+            task_add_immediate(system_execute_startup, NULL); // Schedule startup script for execution.
     }
 
     // Ensure spindle and coolant is switched off on a cold start

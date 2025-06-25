@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+<a name="20250625">Build 20250625
+
+Core:
+
+* Added option flag to $22 \(Homing cycle\) to run startup scripts only on homing completed.
+
+* Added API call `modbus_isbusy()` for checking if Modbus transaction is ongoing.
+
+Drivers:
+
+* STM32F4xx: now skips RGB LED output via plain GPIO if there is an ongoing Modbus transaction. Allow setting RGB strip lengths to 0.
+
+---
+
 <a name="20250621">20250621
 
 * Fix for typecast issue causing compile failure with some compilers. Ref issue [#761](https://github.com/grblHAL/core/issues/761).
