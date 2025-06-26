@@ -216,6 +216,11 @@ static void settings_changed (settings_t *settings, settings_changed_flags_t cha
         grbl.on_settings_changed(settings, changed);
 }
 
+static atc_status_t atc_get_state (void)
+{
+    return hal.driver_cap.atc ? ATC_Online : ATC_None;
+}
+
 // main entry point
 
 int grbl_enter (void)
@@ -257,6 +262,7 @@ int grbl_enter (void)
     hal.control.interrupt_callback = control_interrupt_handler;
     hal.stepper.interrupt_callback = stepper_driver_interrupt_handler;
     hal.stream_blocking_callback = stream_tx_blocking;
+    hal.tool.atc_get_state = atc_get_state;
     hal.signals_pullup_disable_cap.value = (uint16_t)-1;
 
     sys.cold_start = true;
@@ -360,6 +366,9 @@ int grbl_enter (void)
         driver.spindle = spindle->get_pwm == NULL || spindle->update_pwm != NULL;
     } else
         driver.spindle = spindle_select(spindle_add_null());
+
+    if(!hal.driver_cap.sd_card)
+        settings.macro_atc_flags.error_on_no_macro = Off;
 
     if(driver.ok != 0xFF) {
         sys.alarm = Alarm_SelftestFailed;

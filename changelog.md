@@ -1,10 +1,26 @@
 ## grblHAL changelog
 
+<a name="20250626">Build 20250626
+
+Core:
+
+* Added flag to `$675` \(Macro ATC options\) for enabling error on `M6` if _tc.macro_ is not found in the filing system.
+
+* Changed `$I` `NEWOPT` "ATC" element to `ATC=1` when ATC is online and `ATC=0` when offline.
+For macro based ATC code this is set to `ATC=0` if _tc.macro_ is not found and the new `$675` flag is set.
+
+Plugins:
+
+* Spindle, all VFDs: added exception trigger level for async Modbus messages \(status requests\), defaults to 10.
+This means that ten consecutive messages has to fail before alarm 14 is raised. Ref. issue [#762](https://github.com/grblHAL/core/issues/762#issuecomment-3006372138)
+
+---
+
 <a name="20250625">Build 20250625
 
 Core:
 
-* Added option flag to $22 \(Homing cycle\) to run startup scripts only on homing completed.
+* Added option flag to `$22` \(Homing cycle\) to run startup scripts only on homing completed.
 
 * Added API call `modbus_isbusy()` for checking if Modbus transaction is ongoing.
 

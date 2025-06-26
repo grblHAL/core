@@ -941,6 +941,7 @@ void report_build_info (char *line, bool extended)
 
         uint_fast8_t idx;
         nvs_io_t *nvs = nvs_buffer_get_physical();
+        atc_status_t atc = hal.tool.atc_get_state();
 
         strcat(strcpy(buf, "[AXS:"), uitoa(N_AXIS));
 
@@ -1001,8 +1002,8 @@ void report_build_info (char *line, bool extended)
         strcat(buf, "EXPR,");
     #endif
 
-        if(hal.tool.change)
-            strcat(buf, hal.driver_cap.atc ? "ATC," : "TC,"); // Tool change supported (M6)
+        if(atc != ATC_None || (settings.tool_change.mode != ToolChange_Ignore && !!hal.stream.suspend_read))
+            strcat(buf, atc == ATC_None ? "TC," : (atc == ATC_Online ? "ATC=1," : "ATC=0,")); // Tool change supported (M6)
 
         if(hal.driver_cap.spindle_sync)
             strcat(buf, "SS,");

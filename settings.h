@@ -845,8 +845,9 @@ typedef union {
     uint8_t value;
     struct {
         uint8_t execute_m6t0       :1,
+                error_on_no_macro  :1,
                 random_toolchanger :1,
-                unassigned         :6;
+                unassigned         :5;
     };
 } macro_atc_flags_t;
 

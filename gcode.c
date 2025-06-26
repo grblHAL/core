@@ -1343,11 +1343,14 @@ status_code_t gc_execute_block (char *block)
                         break;
 
                     case 6:
-                        if(hal.driver_cap.atc || settings.tool_change.mode != ToolChange_Ignore) {
-                            if(hal.stream.suspend_read || hal.tool.change)
-                                word_bit.modal_group.M6 = On;
-                            else
-                                FAIL(Status_GcodeUnsupportedCommand); // [Unsupported M command]
+                        {
+                            atc_status_t atc = hal.tool.atc_get_state();
+                            if(atc != ATC_None || settings.tool_change.mode != ToolChange_Ignore) {
+                                if(atc == ATC_None ? !!hal.stream.suspend_read : (atc == ATC_Online && hal.tool.change))
+                                    word_bit.modal_group.M6 = On;
+                                else
+                                    FAIL(Status_GcodeUnsupportedCommand); // [Unsupported M command]
+                            }
                         }
                         break;
 

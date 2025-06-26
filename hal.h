@@ -405,6 +405,12 @@ typedef struct {
  *  Tool selection and change  *
  *******************************/
 
+typedef enum {
+    ATC_None = 0,
+    ATC_Offline,
+    ATC_Online
+} atc_status_t;
+
 /*! \brief Pointer to function for selecting a tool.
 \param tool pointer to tool_data_t struct.
 \param next \a true if tool is selected for next the next tool change (M6), \a false to as set current tool.
@@ -416,6 +422,11 @@ typedef void (*tool_select_ptr)(tool_data_t *tool, bool next);
 */
 typedef status_code_t (*tool_change_ptr)(parser_state_t *gc_state);
 
+/*! \brief Pointer to function for checking ATC status.
+\returns \a true if online.
+*/
+typedef atc_status_t (*atc_get_state_ptr)(void);
+
 /*! \brief Handlers for tool changes.
 
 If the driver (or a plugin) does not set these handlers the core will set them to its own
@@ -423,10 +434,10 @@ handlers for manual or semi-automatic tool change if the current input stream su
 the tool change protocol.
  */
 typedef struct {
-    tool_select_ptr select; //!< Optional handler for selecting a tool.
-    tool_change_ptr change; //!< Optional handler for executing a tool change (M6).
+    tool_select_ptr select;    //!< Optional handler for selecting a tool.
+    tool_change_ptr change;    //!< Optional handler for executing a tool change (M6).
+    atc_get_state_ptr atc_get_state; //!< Optional handler for checking ATC status.
 } tool_ptrs_t;
-
 
 /*******************
  *  Encoder input  *

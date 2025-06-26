@@ -559,7 +559,7 @@ void tc_init (void)
 {
     static bool on_homing_subscribed = false;
 
-    if(hal.driver_cap.atc) // Do not override driver tool change implementation!
+    if(hal.tool.atc_get_state() != ATC_None) // Do not override tool change implementation!
         return;
 
     if(!hal.stream.suspend_read) // Tool change requires support for suspending input stream.
