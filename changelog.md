@@ -1,5 +1,15 @@
 ## grblHAL changelog
 
+<a name="20250627">20250627
+
+Drivers:
+
+* LPC176x: fix for spindle output not working. Ref issue [#55](https://github.com/grblHAL/LPC176x/issues/55).
+
+* STM32F4xx: fix for E-Stop not working for Superlongboards \(SLB and SLB Ext\).
+
+---
+
 <a name="20250626">Build 20250626
 
 Core:
