@@ -393,7 +393,11 @@ bool spindle_enumerate_spindles (spindle_enumerate_callback_ptr callback, void *
         spindle.name = spindles[idx].name;
         spindle.num = spindle_get_num(idx);
         spindle.enabled = spindle.num != -1;
+#if N_SYS_SPINDLE == 1
+        spindle.hal = spindle.enabled && sys_spindle[0].hal.id == spindle.id ? &sys_spindle[0].hal : &spindles[idx].hal;
+#else
         spindle.hal = spindle.enabled && sys_spindle[spindle.num].hal.id == spindle.id ? &sys_spindle[spindle.num].hal : &spindles[idx].hal;
+#endif
         spindle.is_current = spindle.enabled && sys_spindle[0].hal.id == idx;
 
         if(callback(&spindle, data))

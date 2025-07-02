@@ -1,5 +1,13 @@
 ## grblHAL changelog
 
+<a name="20250702">Build 20250702
+
+Core:
+
+* Fix for incorrect reporting of spindle capabilities when more than one spindle configured. Ref. issue [#770](https://github.com/grblHAL/core/issues/770).
+
+---
+
 <a name="20250627">20250627
 
 Drivers:
