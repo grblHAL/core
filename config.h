@@ -2055,6 +2055,24 @@ G90
 #endif
 ///@}
 
+/*! @name $374 - Settings_ModBus_BaudRate
+Default baud rate for ModBus RTU stream.
+*/
+///@{
+#if !defined DEFAULT_MODBUS_STREAM_BAUD || defined __DOXYGEN__
+#define DEFAULT_MODBUS_STREAM_BAUD 3 // 0 = 2400, 1 = 4800, 2 = 9600, 3 = 19200, 4 = 38400, 5 = 115200
+#endif
+///@}
+
+/*! @name $681 - Setting_ModBus_StreamFormat
+Default stream format settings for ModBus RTU stream.
+*/
+///@{
+#if !defined DEFAULT_MODBUS_STREAM_PARITY || defined __DOXYGEN__
+#define DEFAULT_MODBUS_STREAM_PARITY 0 // 0 = None, 1 = Even, 2 = Odd
+#endif
+///@}
+
 // Axis settings (Group_XAxis - Group_VAxis)
 
 /*! @name $10x - Setting_AxisStepsPerMM
