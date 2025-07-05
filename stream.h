@@ -91,6 +91,35 @@ typedef enum {
     StreamType_Null
 } stream_type_t;
 
+typedef enum {
+    Serial_8bit = 0,
+    Serial_7bit
+} serial_width_t;
+
+typedef enum {
+    Serial_StopBits2 = 0,
+    Serial_StopBits1_5,
+    Serial_StopBits1,
+    Serial_StopBits0_5,
+} serial_stopbits_t;
+
+typedef enum {
+    Serial_ParityNone = 0,
+    Serial_ParityEven,
+    Serial_ParityOdd,
+    Serial_ParityMarkSPace,
+} serial_parity_t;
+
+typedef union {
+    uint8_t value;
+    struct {
+        uint8_t width    :2,
+                stopbits :2,
+                parity   :2,
+                unused   :2;
+    };
+} serial_format_t;
+
 typedef union {
     uint8_t value;
     struct {
@@ -162,6 +191,11 @@ set it to protocol_enqueue_realtime_command() on initialization.
 */
 typedef enqueue_realtime_command_ptr (*set_enqueue_rt_handler_ptr)(enqueue_realtime_command_ptr handler);
 
+/*! \brief Pointer to function for setting the stream format.
+\param format a \a serial_format_t struct.
+\returns true if successful.
+*/
+typedef bool (*set_format_ptr)(serial_format_t format);
 
 /*! \brief Pointer to function for setting the stream baud rate.
 \param baud_rate
@@ -262,6 +296,7 @@ typedef struct {
     get_stream_buffer_count_ptr get_tx_buffer_count;        //!< Optional handler for getting number of characters in the output buffer(s). Count shall include any unsent characters in any transmit FIFO and/or transmit register. Required for Modbus support.
     flush_stream_buffer_ptr reset_write_buffer;             //!< Optional handler for flushing the output buffer. Any transmit FIFO shall be flushed as well. Required for Modbus support.
     set_baud_rate_ptr set_baud_rate;                        //!< Optional handler for setting the stream baud rate. Required for Modbus support, recommended for Bluetooth support.
+    set_format_ptr set_format;                              //!< Optional handler for setting the stream format.
     on_linestate_changed_ptr on_linestate_changed;          //!< Optional handler to be called when line state changes. Set by client.
     vfs_file_t *file;                                       //!< File handle, non-null if streaming from a file.
 } io_stream_t;

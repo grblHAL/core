@@ -269,6 +269,7 @@ typedef struct {
 bool ioports_add_analog (io_analog_t *ports);
 bool ioports_add_digital (io_digital_t *ports);
 void ioports_add_settings (driver_settings_load_ptr settings_loaded, setting_changed_ptr setting_changed);
+bool ioport_remap (io_port_type_t type, io_port_direction_t dir, uint8_t from, uint8_t to);
 void ioport_save_input_settings (xbar_t *xbar, gpio_in_config_t *config);
 void ioport_save_output_settings (xbar_t *xbar, gpio_out_config_t *config);
 void ioport_setting_changed (setting_id_t id);

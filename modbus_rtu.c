@@ -34,10 +34,6 @@
 #include "state_machine.h"
 #include "modbus.h"
 
-#ifndef MODBUS_BAUDRATE
-#define MODBUS_BAUDRATE 3 // 19200
-#endif
-
 typedef enum {
     ModBus_Idle,
     ModBus_Silent,
@@ -53,7 +49,8 @@ typedef void (*stream_set_direction_ptr)(bool tx);
 
 typedef struct {
     set_baud_rate_ptr set_baud_rate;
-    stream_set_direction_ptr set_direction; // NULL if auto direction
+    set_format_ptr set_format;                          //!< Optional handler for setting the stream format.
+    stream_set_direction_ptr set_direction;             //!< NULL if auto direction
     get_stream_buffer_count_ptr get_tx_buffer_count;
     get_stream_buffer_count_ptr get_rx_buffer_count;
     stream_write_n_ptr write;
@@ -411,7 +408,7 @@ static uint32_t get_baudrate (uint32_t rate)
             return idx;
     } while(idx);
 
-    return MODBUS_BAUDRATE;
+    return DEFAULT_MODBUS_STREAM_BAUD;
 }
 
 static const setting_group_detail_t modbus_groups [] = {
@@ -420,8 +417,9 @@ static const setting_group_detail_t modbus_groups [] = {
 
 static status_code_t modbus_set_baud (setting_id_t id, uint_fast16_t value)
 {
-    modbus.baud_rate = baud[(uint32_t)value];
-    silence_timeout = silence.timeout[(uint32_t)value];
+    settings.modbus_baud = (uint8_t)value;
+    modbus.baud_rate = settings.modbus_baud = baud[settings.modbus_baud];
+    silence_timeout = silence.timeout[settings.modbus_baud];
     stream.set_baud_rate(modbus.baud_rate);
 
     return Status_OK;
@@ -432,9 +430,30 @@ static uint32_t modbus_get_baud (setting_id_t setting)
     return get_baudrate(modbus.baud_rate);
 }
 
+static status_code_t modbus_set_format (setting_id_t id, uint_fast16_t value)
+{
+    if(stream.set_format) {
+        settings.modbus_stream_format.parity = (serial_parity_t)value;
+        stream.set_format(settings.modbus_stream_format);
+    }
+
+    return stream.set_format ? Status_OK : Status_SettingDisabled;
+}
+
+static uint32_t modbus_get_format (setting_id_t setting)
+{
+    return (uint32_t)settings.modbus_stream_format.parity;
+}
+
+static bool can_set_format (const setting_detail_t *setting, uint_fast16_t offset)
+{
+    return stream.set_format != NULL;
+}
+
 static const setting_detail_t modbus_settings[] = {
     { Settings_ModBus_BaudRate, Group_ModBus, "ModBus baud rate", NULL, Format_RadioButtons, "2400,4800,9600,19200,38400,115200", NULL, NULL, Setting_NonCoreFn, modbus_set_baud, modbus_get_baud, NULL },
-    { Settings_ModBus_RXTimeout, Group_ModBus, "ModBus RX timeout", "milliseconds", Format_Integer, "####0", "50", "250", Setting_NonCore, &modbus.rx_timeout, NULL, NULL }
+    { Settings_ModBus_RXTimeout, Group_ModBus, "ModBus RX timeout", "milliseconds", Format_Integer, "####0", "50", "250", Setting_NonCore, &modbus.rx_timeout, NULL, NULL },
+    { Setting_ModBus_StreamFormat, Group_ModBus, "ModBus serial format", NULL, Format_RadioButtons, "8-bit no parity, 8-bit even parity, 8-bit odd parity", NULL, NULL, Setting_NonCoreFn, modbus_set_format, modbus_get_format, can_set_format }
 };
 
 static void modbus_settings_save (void)
@@ -445,7 +464,7 @@ static void modbus_settings_save (void)
 static void modbus_settings_restore (void)
 {
     modbus.rx_timeout = 50;
-    modbus.baud_rate = baud[MODBUS_BAUDRATE];
+    modbus.baud_rate = baud[DEFAULT_MODBUS_STREAM_BAUD];
 
     hal.nvs.memcpy_to_nvs(nvs_address, (uint8_t *)&modbus, sizeof(modbus_settings_t), true);
 }
@@ -460,6 +479,9 @@ static void modbus_settings_load (void)
     silence_timeout = silence.timeout[get_baudrate(modbus.baud_rate)];
 
     stream.set_baud_rate(modbus.baud_rate);
+
+    if(stream.set_format)
+        stream.set_format(settings.modbus_stream_format);
 }
 
 static void onReportOptions (bool newopt)
@@ -467,7 +489,7 @@ static void onReportOptions (bool newopt)
     on_report_options(newopt);
 
     if(!newopt)
-        report_plugin("MODBUS", "0.19");
+        report_plugin("MODBUS", "0.20");
 }
 
 static bool modbus_rtu_isup (void)
@@ -522,11 +544,12 @@ static bool claim_stream (io_stream_properties_t const *sstream)
     if(sstream->type == StreamType_Serial && (stream_instance >= 0
                                                ? sstream->instance == (uint8_t)stream_instance
                                                : sstream->flags.modbus_ready && !sstream->flags.claimed)) {
-        if((claimed = sstream->claim(baud[MODBUS_BAUDRATE])) && stream_is_valid(claimed)) {
+        if((claimed = sstream->claim(baud[DEFAULT_MODBUS_STREAM_BAUD])) && stream_is_valid(claimed)) {
 
             claimed->set_enqueue_rt_handler(stream_buffer_all);
 
             stream.set_baud_rate = claimed->set_baud_rate;
+            stream.set_format = claimed->set_format;                              //!< Optional handler for setting the stream format.
             stream.get_tx_buffer_count = claimed->get_tx_buffer_count;
             stream.get_rx_buffer_count = claimed->get_rx_buffer_count;
             stream.write = claimed->write_n;

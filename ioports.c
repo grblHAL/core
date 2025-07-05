@@ -532,6 +532,31 @@ bool ioport_digital_pwm_config (uint8_t port, pwm_config_t *config)
     return ok && pin->config(pin, config, false);
 }
 
+/*! \brief Remap (virtual) port.
+\param type as an \a #io_port_type_t enum value.
+\param dir as an \a #io_port_direction_t enum value.
+\param port_from the assigned port number.
+\param port_to the remapped port number. The original port number will be shadowed.
+\returns \a true if successful, \a false if original port is already claimed.
+*/
+bool ioport_remap (io_port_type_t type, io_port_direction_t dir, uint8_t port_from, uint8_t port_to)
+{
+    uint8_t org_port;
+    bool ok;
+    io_ports_private_t *cfg = get_port_data(type, dir);
+
+    if((ok = (cfg->claimed.mask & (1UL << port_to))) == 0) {
+
+        if((org_port = map_reverse(cfg, port_from)) != port_to)
+            cfg->map[org_port] = 255;
+
+        cfg->free = -1;
+        cfg->map[port_to] = port_from;
+    }
+
+    return ok;
+}
+
 // HAL wrapper/veneers
 
 __STATIC_FORCEINLINE bool is_match (io_ports_list_t *io_port, io_port_type_t type, io_port_direction_t dir, uint8_t port)

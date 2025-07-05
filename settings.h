@@ -26,6 +26,7 @@
 
 #include "config.h"
 #include "system.h"
+#include "stream.h"
 #include "plugins.h"
 
 // Version of the persistent storage data. Always stored in byte 0 of non-volatile storage.
@@ -459,6 +460,7 @@ typedef enum {
     Setting_RelayPortToolsetter = 678,
     Setting_RelayPortProbe2 = 679,
     Setting_StepperEnableDelay = 680,
+    Setting_ModBus_StreamFormat = 681,
 
     Setting_SpindlePWMOptions1 = 709,
 
@@ -901,7 +903,8 @@ typedef struct {
     stepper_spindle_settings_flags_t stepper_spindle_flags;
     uint16_t stepper_enable_delay; // Move to stepper_settings_t
     tool_id_t tool_id;
-    char reserved[10];             // Reserved For future expansion
+    serial_format_t modbus_stream_format;
+    char reserved[9];             // Reserved For future expansion
 } settings_t;
 
 typedef enum {

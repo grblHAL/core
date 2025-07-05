@@ -1,5 +1,32 @@
 ## grblHAL changelog
 
+<a name="20250705">Build 20250705
+
+Core:
+
+* Added ioports API call for remapping port numbers.
+
+* Added HAL support for setting serial stream format. Added setting `$681` for configuring Modbus RTU stream parity, available when the underlying driver supports format setting.  
+Ref. STM32F7xx driver PR [#51](https://github.com/dresco/STM32H7xx/pull/51).
+
+Drivers:
+
+* STM32F4xx: added basic support for setting serial stream format, parity only for now.
+
+Plugins:
+
+* Plasma: updated to use new call for remapping portnumbers for virtual ports. Potential fix for ioSender issue [#470](https://github.com/terjeio/ioSender/issues/470).
+
+---
+
+<a name="20250702">Build 20250702
+
+Core:
+
+* Fix for incorrect reporting of spindle capabilities when more than one spindle configured. Ref. issue [#770](https://github.com/grblHAL/core/issues/770).
+
+---
+
 <a name="20250627">20250627
 
 Drivers:

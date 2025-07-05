@@ -354,6 +354,9 @@ PROGMEM const settings_t defaults = {
     .safety_door.spindle_on_delay = DEFAULT_SAFETY_DOOR_SPINDLE_DELAY,
     .safety_door.coolant_on_delay = DEFAULT_SAFETY_DOOR_COOLANT_DELAY,
 
+    .modbus_baud = DEFAULT_MODBUS_STREAM_BAUD,
+    .modbus_stream_format = (DEFAULT_MODBUS_STREAM_PARITY << 4),
+
     .rgb_strip.length0 = DEFAULT_RGB_STRIP0_LENGTH,
     .rgb_strip.length1 = DEFAULT_RGB_STRIP1_LENGTH
 };
