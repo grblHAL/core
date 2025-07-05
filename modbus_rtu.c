@@ -26,25 +26,6 @@
 #include <string.h>
 
 #include "hal.h"
-#if MODBUS_DEBUG
-#include "stream.h"
-static void log_modbus_frame(const char *label,
-                             const uint8_t *data,
-                             uint8_t len)
-{
-    char buf[64];
-    size_t n = (size_t)snprintf(buf, sizeof(buf), "%s:", label);
-    hal.stream.write(buf);
-
-    for(uint_fast8_t i = 0; i < len; i++) {
-        snprintf(buf, sizeof(buf), " %02X", data[i]);
-        hal.stream.write(buf);
-    }
-
-    hal.stream.write(ASCII_EOL);
-}
-#endif
-#include "report.h"
 #include "platform.h"
 #include "protocol.h"
 #include "settings.h"
@@ -132,6 +113,21 @@ static bool valid_crc (const char *buf, uint_fast16_t len)
 }
 */
 
+#if DEBUG
+static void log_modbus_frame(const char *label,
+                             const uint8_t *data,
+                             uint8_t len)
+{
+    char frame[3 * MODBUS_MAX_ADU_SIZE + 4];
+    char *ptr = frame;
+    ptr += sprintf(ptr, "%s:", label);
+    for(uint_fast8_t i = 0; i < len; i++) {
+        ptr += sprintf(ptr, " %02X", data[i]);
+    }
+    debug_printf("%s", frame);
+}
+#endif
+
 static void retry_exception (uint8_t code, void *context)
 {
     if(packet && packet->callbacks.retries) {
@@ -172,7 +168,7 @@ static void tx_message (volatile queue_entry_t *msg)
     rx_timeout = modbus.rx_timeout;
 
     stream.flush_rx_buffer();
-#if MODBUS_DEBUG
+#if DEBUG
     log_modbus_frame("TX", (const uint8_t *)msg->msg.adu, msg->msg.tx_length);
 #endif
     stream.write((char *)((queue_entry_t *)msg)->msg.adu, ((queue_entry_t *)msg)->msg.tx_length);
@@ -266,7 +262,7 @@ static void modbus_poll (void *data)
                     }
                 }
 
-#if MODBUS_DEBUG
+#if DEBUG
                 log_modbus_frame("RX", (const uint8_t *)((queue_entry_t *)packet)->msg.adu, rx_len);
 #endif
                 if((state = packet->async ? ModBus_Silent : ModBus_GotReply) == ModBus_Silent) {
