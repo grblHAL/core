@@ -97,9 +97,9 @@ typedef enum {
 } serial_width_t;
 
 typedef enum {
-    Serial_StopBits2 = 0,
+    Serial_StopBits1 = 0,
     Serial_StopBits1_5,
-    Serial_StopBits1,
+    Serial_StopBits2,
     Serial_StopBits0_5,
 } serial_stopbits_t;
 
@@ -107,7 +107,8 @@ typedef enum {
     Serial_ParityNone = 0,
     Serial_ParityEven,
     Serial_ParityOdd,
-    Serial_ParityMarkSPace,
+    Serial_ParityMark,
+    Serial_ParitySpace,
 } serial_parity_t;
 
 typedef union {
@@ -115,8 +116,8 @@ typedef union {
     struct {
         uint8_t width    :2,
                 stopbits :2,
-                parity   :2,
-                unused   :2;
+                parity   :3,
+                unused   :1;
     };
 } serial_format_t;
 

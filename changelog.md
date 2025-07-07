@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+<a name="20250706">Build 20250706
+
+Core:
+
+* Updated serial stream format options. Fix for compiler warning.
+
+Drivers:
+
+* RP2040: fix for VSCode\(?\) issue - not updating build files on SDK change, ref. issue [#140](https://github.com/grblHAL/RP2040/issues/140).
+
+* ESP32, iMXRT1062, RP2040, SAM3X8E, STM32F4xx, STM32F7xx: added basic support for setting serial stream format, parity only for now.
+
+---
+
 <a name="20250705">Build 20250705
 
 Core:

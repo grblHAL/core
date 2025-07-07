@@ -50,14 +50,14 @@ know when there is a realtime command to execute.
 #define EXEC_RESET              bit(5)
 #define EXEC_SAFETY_DOOR        bit(6)
 #define EXEC_MOTION_CANCEL      bit(7)
-#define EXEC_MOTION_CANCEL_FAST bit(7)
-#define EXEC_SLEEP              bit(8)
-#define EXEC_TOOL_CHANGE        bit(9)
-#define EXEC_PID_REPORT         bit(10)
-#define EXEC_GCODE_REPORT       bit(11)
-#define EXEC_TLO_REPORT         bit(12)
-#define EXEC_RT_COMMAND         bit(13)
-#define EXEC_DOOR_CLOSED        bit(14)
+#define EXEC_MOTION_CANCEL_FAST bit(7) // Permanently enabled for now
+#define EXEC_SLEEP              bit(9)
+#define EXEC_TOOL_CHANGE        bit(10)
+#define EXEC_PID_REPORT         bit(11)
+#define EXEC_GCODE_REPORT       bit(12)
+#define EXEC_TLO_REPORT         bit(13)
+#define EXEC_RT_COMMAND         bit(14)
+#define EXEC_DOOR_CLOSED        bit(15)
 ///@}
 
 //! \def sys_state
