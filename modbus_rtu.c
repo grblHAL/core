@@ -396,7 +396,7 @@ static const setting_group_detail_t modbus_groups [] = {
 static status_code_t modbus_set_baud (setting_id_t id, uint_fast16_t value)
 {
     settings.modbus_baud = (uint8_t)value;
-    modbus.baud_rate = settings.modbus_baud = baud[settings.modbus_baud];
+    modbus.baud_rate = baud[settings.modbus_baud];
     silence_timeout = silence.timeout[settings.modbus_baud];
     stream.set_baud_rate(modbus.baud_rate);
 
@@ -413,6 +413,7 @@ static status_code_t modbus_set_format (setting_id_t id, uint_fast16_t value)
     if(stream.set_format) {
         settings.modbus_stream_format.parity = (serial_parity_t)value;
         stream.set_format(settings.modbus_stream_format);
+        settings_write_global();
     }
 
     return stream.set_format ? Status_OK : Status_SettingDisabled;
