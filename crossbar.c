@@ -29,6 +29,22 @@ axes_signals_t xbar_fn_to_axismask (pin_function_t fn)
 
     switch(fn) {
 
+        case Output_StepperEnable:
+            mask.bits = AXES_BITMASK;
+            break;
+
+        case Output_StepperEnableXY:
+            mask.x = mask.y = On;
+            break;
+
+#if N_AXIS > 3
+        case Output_StepperEnableAB:
+            mask.a = On;
+#if N_AXIS > 4
+            mask.b = On;
+#endif
+            break;
+#endif
         case Input_LimitX:
         case Input_LimitX_Max:
         case Input_LimitX_2:
@@ -98,6 +114,8 @@ axes_signals_t xbar_fn_to_axismask (pin_function_t fn)
 #endif
 
         default:
+            if(fn >= Output_StepperEnableX && fn <= Output_StepperEnableV)
+                mask.bits = (1 << (fn - Output_StepperEnableX));
             break;
     }
 

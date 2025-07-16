@@ -1,5 +1,25 @@
 ## grblHAL changelog
 
+<a name="20250716">Build 20250716
+
+Core:
+
+* "hardened" code related to ioports claiming and PWM2 spindle configuration. Added API call and expanded one.
+
+Drivers:
+
+* iMXRT1062: removed stray code guard preventing initialisation of analog auxiliary outputs. Refs issue [#99](https://github.com/grblHAL/iMXRT1062/issues/99).
+
+* STM32F1xx, STM32F3xx, STM32F4xx, STM32F7xx: ensured stepper enable signals are set to disabled during startup.
+> [!NOTE]
+> The initial stepper enable signal state will be determined by the stepper driver enable input (pulled up or down) since the related MCU pins are briefly in a high-Z state during startup.
+
+Plugins:
+
+* Spindle, PWM: "hardened" and cleaned up code.
+
+---
+
 <a name="20250706">Build 20250706
 
 Core:

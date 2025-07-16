@@ -978,35 +978,54 @@ static uint32_t get_int (setting_id_t id)
     return value;
 }
 
-static status_code_t set_dir_port (setting_id_t id, float value)
+static float get_port (setting_id_t id)
 {
-    sp1_settings.port_dir = value < 0.0f ? 255 : (int8_t)value;
+    uint8_t port;
 
-    return Status_OK;
-}
+    switch(id) {
 
-static float get_dir_port (setting_id_t id)
-{
-    return sp1_settings.port_dir == 255 ? -1.0f : (float)sp1_settings.port_dir;
-}
+        case Setting_Spindle_OnPort:
+            port = sp1_settings.port_on;
+            break;
 
-static uint32_t get_pwm_port (setting_id_t id)
-{
-    return (uint32_t)sp1_settings.port_pwm;
+        case Setting_Spindle_DirPort:
+            port = sp1_settings.port_dir;
+            break;
+
+        default: // Setting_Spindle_PWMPort:
+            port = sp1_settings.port_pwm;
+            break;
+    }
+
+    return port == IOPORT_UNASSIGNED ? -1.0f : (float)port;
 }
 
 bool pwm_port_validate (xbar_t *properties, uint8_t port, void *data)
 {
-    return port == (uint8_t)((uint32_t)data);
+    return port == *(uint8_t *)data;
 }
 
-static status_code_t set_pwm_port (setting_id_t id, uint_fast16_t int_value)
+static status_code_t set_port (setting_id_t id, float value)
 {
-    bool ok;
+    bool ok = true;
+    uint8_t port = value < 0.0f ? IOPORT_UNASSIGNED : (uint8_t)value;
 
-    if((ok = (uint8_t)int_value == sp1_settings.port_pwm ||
-              ioports_enumerate(Port_Analog, Port_Output, (pin_cap_t){ .pwm = On, .claimable = On }, pwm_port_validate, (void *)((uint32_t)int_value))))
-        sp1_settings.port_pwm = (uint8_t)int_value;
+    switch(id) {
+
+        case Setting_Spindle_OnPort:
+            sp1_settings.port_on = port;
+            break;
+
+        case Setting_Spindle_DirPort:
+            sp1_settings.port_dir = port;
+            break;
+
+        default: // Setting_Spindle_PWMPort:
+            if((ok = port == sp1_settings.port_pwm ||
+                      ioports_enumerate(Port_Analog, Port_Output, (pin_cap_t){ .claimable = On, .pwm = On }, pwm_port_validate, &port)))
+                sp1_settings.port_pwm = port;
+            break;
+    }
 
     return ok ? Status_OK : Status_SettingValueOutOfRange;
 }
@@ -1027,10 +1046,10 @@ static bool has_ports (const setting_detail_t *setting, uint_fast16_t offset)
 }
 
 static const setting_detail_t spindle1_settings[] = {
-    { Setting_Spindle_OnPort, Group_AuxPorts, "PWM2 spindle on port", NULL, Format_Int8, "##0", "0", max_dport, Setting_NonCore, &sp1_settings.port_on, NULL, has_ports, { .reboot_required = On } },
-    { Setting_Spindle_DirPort, Group_AuxPorts, "PWM2 spindle direction port", NULL, Format_Decimal, "-#0", "-1", max_dport, Setting_NonCoreFn, set_dir_port, get_dir_port, has_ports, { .reboot_required = On } },
+    { Setting_Spindle_OnPort, Group_AuxPorts, "PWM2 spindle on port", NULL, Format_Decimal, "-#0", "0", max_dport, Setting_NonCoreFn, set_port, get_port, has_ports, { .reboot_required = On } },
+    { Setting_Spindle_DirPort, Group_AuxPorts, "PWM2 spindle direction port", NULL, Format_Decimal, "-#0", "-1", max_dport, Setting_NonCoreFn, set_port, get_port, has_ports, { .reboot_required = On } },
     { Setting_SpindleInvertMask1, Group_Spindle, "PWM2 spindle signals invert", NULL, Format_Bitfield, spindle_signals, NULL, NULL, Setting_IsExtendedFn, set_spindle_invert, get_int, NULL, { .reboot_required = On } },
-    { Setting_Spindle_PWMPort, Group_AuxPorts, "PWM2 spindle PWM port", NULL, Format_Int8, "#0", "0", max_aport, Setting_NonCoreFn, set_pwm_port, get_pwm_port, has_ports, { .reboot_required = On } },
+    { Setting_Spindle_PWMPort, Group_AuxPorts, "PWM2 spindle PWM port", NULL, Format_Decimal, "-#0", "0", max_aport, Setting_NonCoreFn, set_port, get_port, has_ports, { .reboot_required = On } },
     { Setting_SpindlePWMOptions1, Group_Spindle, "PWM2 spindle options", NULL, Format_XBitfield, "Enable,RPM controls spindle enable signal,Disable laser mode capability", NULL, NULL, Setting_IsExtendedFn, set_pwm_options, get_int, has_pwm },
     { Setting_RpmMax1, Group_Spindle, "PWM2 spindle min speed", "RPM", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacy, &sp1_settings.cfg.rpm_max, NULL, has_pwm },
     { Setting_RpmMin1, Group_Spindle, "PWM2 spindle max speed", "RPM", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacy, &sp1_settings.cfg.rpm_min, NULL, has_pwm },
@@ -1052,7 +1071,6 @@ static const setting_detail_t spindle1_settings[] = {
 #endif
 };
 
-#ifndef NO_SETTINGS_DESCRIPTIONS
 static const setting_descr_t spindle1_settings_descr[] = {
     { Setting_Spindle_OnPort, "On/off aux port." },
     { Setting_Spindle_DirPort, "Direction aux port, set to -1 if not required." },
@@ -1080,7 +1098,6 @@ static const setting_descr_t spindle1_settings_descr[] = {
   #endif
 #endif
 };
-#endif
 
 static void spindle1_settings_changed (settings_t *settings, settings_changed_flags_t changed)
 {
@@ -1144,6 +1161,10 @@ static void spindle1_settings_restore (void)
 
     memcpy(&sp1_settings.cfg, &defaults, sizeof(spindle_pwm_settings_t));
 
+    sp1_settings.port_pwm = ioport_find_free(Port_Analog, Port_Output, (pin_cap_t){.claimable = On, .pwm = On }, NULL);
+    sp1_settings.port_on = ioport_find_free(Port_Digital, Port_Output, (pin_cap_t){ .claimable = On }, NULL);
+    sp1_settings.port_dir = sp1_settings.port_on != IOPORT_UNASSIGNED && sp1_settings.port_on > 0 ? sp1_settings.port_on - 1 : IOPORT_UNASSIGNED;
+
     hal.nvs.memcpy_to_nvs(nvs_address, (uint8_t *)&sp1_settings, sizeof(spindle1_pwm_settings_t), true);
 }
 
@@ -1153,35 +1174,16 @@ static void spindle1_settings_load (void)
         spindle1_settings_restore();
 }
 
-static bool pwm_count (xbar_t *properties, uint8_t port, void *data)
-{
-    *((uint32_t *)data) += 1;
-
-    sp1_settings.port_pwm = max(sp1_settings.port_pwm, port);
-
-    return false;
-}
-
-static bool check_pwm_ports (void)
-{
-    uint32_t n_pwm_out = 0;
-
-    ioports_enumerate(Port_Analog, Port_Output, (pin_cap_t){ .pwm = On, .claimable = On }, pwm_count, &n_pwm_out);
-
-    return n_pwm_out != 0;
-}
-
 spindle1_pwm_settings_t *spindle1_settings_add (bool claim_ports)
 {
-    uint8_t n_out;
+    uint8_t a_out = IOPORT_UNASSIGNED;
 
-    if((ports_ok = claim_ports && (n_out = ioports_available(Port_Digital, Port_Output)) && check_pwm_ports())) {
+    if((ports_ok = claim_ports &&
+                    ioports_available(Port_Digital, Port_Output) &&
+                     (a_out = ioport_find_free(Port_Analog, Port_Output, (pin_cap_t){ .claimable = On, .pwm = On }, NULL)) != IOPORT_UNASSIGNED)) {
 
-        sp1_settings.port_on = n_out - 1;
-        sp1_settings.port_dir = n_out > 1 ? n_out - 2 : 255;
-
-        strcpy(max_aport, uitoa(sp1_settings.port_pwm));
-        strcpy(max_dport, uitoa(n_out - 1));
+        strcpy(max_aport, uitoa(a_out));
+        strcpy(max_dport, uitoa(ioport_find_free(Port_Digital, Port_Output, (pin_cap_t){ .claimable = On }, NULL)));
     }
 
     return nvs_address == 0 && (!claim_ports || ports_ok) && (nvs_address = nvs_alloc(sizeof(spindle1_pwm_settings_t))) ? &sp1_settings : NULL;
@@ -1193,10 +1195,8 @@ void spindle1_settings_register (spindle_cap_t cap, spindle1_settings_changed_pt
         .is_core = true,
         .settings = spindle1_settings,
         .n_settings = sizeof(spindle1_settings) / sizeof(setting_detail_t),
-    #ifndef NO_SETTINGS_DESCRIPTIONS
         .descriptions = spindle1_settings_descr,
         .n_descriptions = sizeof(spindle1_settings_descr) / sizeof(setting_descr_t),
-    #endif
         .load = spindle1_settings_load,
         .restore = spindle1_settings_restore,
         .save = spindle1_settings_save,
@@ -1216,4 +1216,4 @@ void spindle1_settings_register (spindle_cap_t cap, spindle1_settings_changed_pt
     setting_remove_elements(Setting_SpindleInvertMask1, spindle_state.mask);
 }
 
-#endif
+#endif // N_SPINDLE > 1

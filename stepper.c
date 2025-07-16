@@ -1297,3 +1297,18 @@ offset_id_t st_get_offset_id (void)
                 ? pl_block->offset_id
                 : -1);
 }
+
+// Called by driver setup function to get initial enable signals state
+// TODO: returns all disabled for now, should return enabled according to configuration if
+//       not using Trinamic drivers since Trinamic drivers are init'ed after driver setup?
+axes_signals_t st_get_enable_out (void)
+{
+    axes_signals_t enable;
+
+//
+//    enable.mask = (settings.steppers.idle_lock_time == 255 ? AXES_BITMASK : settings.steppers.energize.mask) ^ settings.steppers.enable_invert.mask;
+
+    enable.mask = settings.steppers.enable_invert.mask;
+
+    return enable;
+}

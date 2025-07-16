@@ -581,6 +581,7 @@ static xbar_t *io_get_pin_info (io_port_type_t type, io_port_direction_t dir, ui
         if(is_match(io_port, type, dir, port)) {
             if((pin = io_port->hal.get_pin_info(dir, port - io_port->ports_id->cfg[dir].n_start))) {
                 pin->ports_id = io_port->ports_id;
+                pin->cap.claimable = is_aux(cfg, pin->function);
                 pin->mode.claimed = cfg->claimed.mask & (1UL << (pin->id + io_port->ports_id->cfg[dir].n_start));
             }
         }

@@ -132,5 +132,6 @@ float st_get_realtime_rate (void);
 void stepper_driver_interrupt_handler (void);
 
 offset_id_t st_get_offset_id (void);
+axes_signals_t st_get_enable_out (void);
 
 #endif
