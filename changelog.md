@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+<a name="20250718">Build 20250718
+
+Core:
+
+* Added early (on startup) configuration of secondary PWM spindles.
+
+Drivers:
+
+* iMXRT1062: added support for second driver based PWM spindle, enabled it as an option in the T41U5XBB map. Ref. issue [#99](https://github.com/grblHAL/iMXRT1062/issues/99).
+ 
+---
+ 
 <a name="20250716">Build 20250716
 
 Core:
@@ -8,7 +20,7 @@ Core:
 
 Drivers:
 
-* iMXRT1062: removed stray code guard preventing initialisation of analog auxiliary outputs. Refs issue [#99](https://github.com/grblHAL/iMXRT1062/issues/99).
+* iMXRT1062: removed stray code guard preventing initialisation of analog auxiliary outputs. Ref. issue [#99](https://github.com/grblHAL/iMXRT1062/issues/99).
 
 * STM32F1xx, STM32F3xx, STM32F4xx, STM32F7xx: ensured stepper enable signals are set to disabled during startup.
 > [!NOTE]

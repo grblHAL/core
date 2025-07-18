@@ -56,6 +56,14 @@ static spindle_sys_t sys_spindle[N_SYS_SPINDLE] = {0};
 static spindle_reg_t spindles[N_SPINDLE] = {0}, *pwm_spindle = NULL;
 static const spindle_data_ptrs_t *encoder;
 
+static void spindle_init (void *data)
+{
+    spindle_reg_t *spindle = (spindle_reg_t *)data;
+
+    if((spindle->init_ok = spindle->hal.config == NULL || spindle->hal.config(&spindle->hal)))
+        spindle->hal.set_state(&spindle->hal, (spindle_state_t){0}, 0.0f);
+}
+
 /*! \internal \brief Activates and registers a spindle as enabled with a specific spindle number.
 \param spindle_id spindle id of spindle to activate as a \ref spindle_id_t.
 \param spindle_num spindle number to set as enabled as a \ref spindle_num_t.
@@ -74,8 +82,7 @@ static bool spindle_activate (spindle_id_t spindle_id, spindle_num_t spindle_num
             pwm_spindle->hal.rpm_max = settings.pwm_spindle.rpm_max;
         }
 
-        if((pwm_spindle->init_ok = pwm_spindle->hal.config == NULL || pwm_spindle->hal.config(&pwm_spindle->hal)))
-            pwm_spindle->hal.set_state(&pwm_spindle->hal, (spindle_state_t){0}, 0.0f);
+        spindle_init(pwm_spindle);
     }
     pwm_spindle = NULL;
 
@@ -144,9 +151,12 @@ spindle_id_t spindle_register (const spindle_ptrs_t *spindle, const char *name)
         memcpy(&spindles[n_spindle].hal, spindles[n_spindle].cfg, sizeof(spindle_ptrs_t));
         spindles[n_spindle].hal.id = n_spindle;
 
-        if(spindle->type == SpindleType_PWM && pwm_spindle == NULL) {
-            pwm_spindle = &spindles[n_spindle];
-            hal.driver_cap.pwm_spindle = On;
+        if(spindle->type == SpindleType_PWM) {
+            if(pwm_spindle == NULL) {
+                pwm_spindle = &spindles[n_spindle];
+                hal.driver_cap.pwm_spindle = On;
+            } else
+                task_run_on_startup(spindle_init, &spindles[n_spindle]);
         }
 
         if(n_spindle == 0)
@@ -1051,8 +1061,8 @@ static const setting_detail_t spindle1_settings[] = {
     { Setting_SpindleInvertMask1, Group_Spindle, "PWM2 spindle signals invert", NULL, Format_Bitfield, spindle_signals, NULL, NULL, Setting_IsExtendedFn, set_spindle_invert, get_int, NULL, { .reboot_required = On } },
     { Setting_Spindle_PWMPort, Group_AuxPorts, "PWM2 spindle PWM port", NULL, Format_Decimal, "-#0", "0", max_aport, Setting_NonCoreFn, set_port, get_port, has_ports, { .reboot_required = On } },
     { Setting_SpindlePWMOptions1, Group_Spindle, "PWM2 spindle options", NULL, Format_XBitfield, "Enable,RPM controls spindle enable signal,Disable laser mode capability", NULL, NULL, Setting_IsExtendedFn, set_pwm_options, get_int, has_pwm },
-    { Setting_RpmMax1, Group_Spindle, "PWM2 spindle min speed", "RPM", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacy, &sp1_settings.cfg.rpm_max, NULL, has_pwm },
-    { Setting_RpmMin1, Group_Spindle, "PWM2 spindle max speed", "RPM", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacy, &sp1_settings.cfg.rpm_min, NULL, has_pwm },
+    { Setting_RpmMin1, Group_Spindle, "PWM2 spindle min speed", "RPM", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacy, &sp1_settings.cfg.rpm_max, NULL, has_pwm },
+    { Setting_RpmMax1, Group_Spindle, "PWM2 spindle max speed", "RPM", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacy, &sp1_settings.cfg.rpm_min, NULL, has_pwm },
     { Setting_PWMFreq1, Group_Spindle, "PWM2 spindle PWM frequency", "Hz", Format_Decimal, "#####0", NULL, NULL, Setting_IsExtended, &sp1_settings.cfg.pwm_freq, NULL, has_freq },
     { Setting_PWMOffValue1, Group_Spindle, "PWM2 spindle PWM off value", "percent", Format_Decimal, "##0.0", NULL, "100", Setting_IsExtended, &sp1_settings.cfg.pwm_off_value, NULL, has_pwm },
     { Setting_PWMMinValue1, Group_Spindle, "PWM2 spindle PWM min value", "percent", Format_Decimal, "##0.0", NULL, "100", Setting_IsExtended, &sp1_settings.cfg.pwm_min_value, NULL, has_pwm },
