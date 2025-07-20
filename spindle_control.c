@@ -895,7 +895,8 @@ static char spindle_signals[] = "Spindle enable,Spindle direction,PWM";
 static bool ports_ok = false;
 static char max_aport[4], max_dport[4];
 static spindle_cap_t spindle_cap;
-static spindle1_settings_changed_ptr on_settings_changed;
+static settings_changed_ptr on_settings_changed;
+static spindle1_settings_changed_ptr on_spindle1_settings_changed;
 
 #if ENABLE_SPINDLE_LINEARIZATION
 
@@ -1061,8 +1062,8 @@ static const setting_detail_t spindle1_settings[] = {
     { Setting_SpindleInvertMask1, Group_Spindle, "PWM2 spindle signals invert", NULL, Format_Bitfield, spindle_signals, NULL, NULL, Setting_IsExtendedFn, set_spindle_invert, get_int, NULL, { .reboot_required = On } },
     { Setting_Spindle_PWMPort, Group_AuxPorts, "PWM2 spindle PWM port", NULL, Format_Decimal, "-#0", "0", max_aport, Setting_NonCoreFn, set_port, get_port, has_ports, { .reboot_required = On } },
     { Setting_SpindlePWMOptions1, Group_Spindle, "PWM2 spindle options", NULL, Format_XBitfield, "Enable,RPM controls spindle enable signal,Disable laser mode capability", NULL, NULL, Setting_IsExtendedFn, set_pwm_options, get_int, has_pwm },
-    { Setting_RpmMin1, Group_Spindle, "PWM2 spindle min speed", "RPM", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacy, &sp1_settings.cfg.rpm_max, NULL, has_pwm },
-    { Setting_RpmMax1, Group_Spindle, "PWM2 spindle max speed", "RPM", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacy, &sp1_settings.cfg.rpm_min, NULL, has_pwm },
+    { Setting_RpmMax1, Group_Spindle, "PWM2 spindle max speed", "RPM", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacy, &sp1_settings.cfg.rpm_max, NULL, has_pwm },
+    { Setting_RpmMin1, Group_Spindle, "PWM2 spindle min speed", "RPM", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacy, &sp1_settings.cfg.rpm_min, NULL, has_pwm },
     { Setting_PWMFreq1, Group_Spindle, "PWM2 spindle PWM frequency", "Hz", Format_Decimal, "#####0", NULL, NULL, Setting_IsExtended, &sp1_settings.cfg.pwm_freq, NULL, has_freq },
     { Setting_PWMOffValue1, Group_Spindle, "PWM2 spindle PWM off value", "percent", Format_Decimal, "##0.0", NULL, "100", Setting_IsExtended, &sp1_settings.cfg.pwm_off_value, NULL, has_pwm },
     { Setting_PWMMinValue1, Group_Spindle, "PWM2 spindle PWM min value", "percent", Format_Decimal, "##0.0", NULL, "100", Setting_IsExtended, &sp1_settings.cfg.pwm_min_value, NULL, has_pwm },
@@ -1113,10 +1114,17 @@ static void spindle1_settings_changed (settings_t *settings, settings_changed_fl
 {
     UNUSED(changed);
 
-    if(on_settings_changed) {
-        changed.spindle = On;
-        on_settings_changed(&sp1_settings);
-    }
+    if(on_spindle1_settings_changed)
+        on_spindle1_settings_changed(&sp1_settings);
+}
+
+static void onSettingsChanged (settings_t *settings, settings_changed_flags_t changed)
+{
+    if(on_settings_changed)
+        on_settings_changed(settings, changed);
+
+    if(changed.spindle)
+        spindle1_settings_changed(settings, changed);
 }
 
 static void spindle1_settings_save (void)
@@ -1213,7 +1221,10 @@ void spindle1_settings_register (spindle_cap_t cap, spindle1_settings_changed_pt
         .on_changed = spindle1_settings_changed
     };
 
-    on_settings_changed = on_changed;
+    if((on_spindle1_settings_changed = on_changed)) {
+        on_settings_changed = grbl.on_settings_changed;
+        grbl.on_settings_changed = onSettingsChanged;
+    }
 
     settings_register(&spindle1_setting_details);
 

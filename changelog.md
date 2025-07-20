@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+<a name="20250720>Build 20250720
+
+Core:
+
+* Updated secondary PWM spindle settings handling to propagate laser mode changes dynamically. Fixed secondary PWM spindle RPM settings mixup.
+
+Drivers:
+
+* iMXRT1062: removed stray debug message. Ref. issue [#99](https://github.com/grblHAL/iMXRT1062/issues/99).
+
+---
+
 <a name="20250718">Build 20250718
 
 Core:
@@ -9,9 +21,9 @@ Core:
 Drivers:
 
 * iMXRT1062: added support for second driver based PWM spindle, enabled it as an option in the T41U5XBB map. Ref. issue [#99](https://github.com/grblHAL/iMXRT1062/issues/99).
- 
+
 ---
- 
+
 <a name="20250716">Build 20250716
 
 Core:
