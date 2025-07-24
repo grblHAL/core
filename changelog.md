@@ -1,6 +1,23 @@
 ## grblHAL changelog
 
-<a name="20250720>Build 20250720
+<a name="20250724">Build 20250724
+
+Core:
+
+Fix for optional control signals not respecting `$14` inversion setting. Ref. issue [#780](https://github.com/grblHAL/core/issues/780).
+
+For developers: added core `on_spindle_at_speed` event. This must be verified with actual VFD spindles, I only have a simulator available.  
+Improved handling of "iterated" settings, can now be fully implemented by plugins.
+
+Plugins:
+
+* Spindle, select: updated for core change, fixed bug in tool number start vs. spindle settings \($52x\). Ref. iMXRT1062 issue [#99](https://github.com/grblHAL/iMXRT1062/issues/99).
+
+* Spindle, offset: added setting `$772` for options, currently _Update G92 on spindle change_ is available.
+
+---
+
+<a name="20250720">Build 20250720
 
 Core:
 

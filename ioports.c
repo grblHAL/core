@@ -1276,16 +1276,12 @@ static const setting_detail_t ioport_settings[] = {
 //    { Settings_IoPort_OD_Enable, Group_AuxPorts, "I/O Port outputs as open drain", NULL, Format_Bitfield, digital.out.port_names, NULL, NULL, Setting_NonCoreFn, aux_set_value, aux_get_value, is_setting_available }
 };
 
-#ifndef NO_SETTINGS_DESCRIPTIONS
-
 static const setting_descr_t ioport_settings_descr[] = {
     { Settings_IoPort_InvertIn, "Invert IOPort inputs." },
 //    { Settings_IoPort_Pullup_Disable, "Disable IOPort input pullups." },
     { Settings_IoPort_InvertOut, "Invert IOPort output." },
 //    { Settings_IoPort_OD_Enable, "Set IOPort outputs as open drain (OD)." }
 };
-
-#endif
 
 static bool config_probe_pins (pin_function_t function, gpio_in_config_t *config)
 {
@@ -1360,12 +1356,13 @@ void ioport_setting_changed (setting_id_t id)
                         if(xbar->config && xbar->function < Input_Probe) {
 
                             in_config.debounce = xbar->mode.debounce;
-                            in_config.inverted = !!(settings.ioport.invert_in.mask & (1 << port));
-                            in_config.pull_mode = (pull_mode_t)xbar->mode.pull_mode;
 
                             if((ctrl = xbar_fn_to_signals_mask(xbar->function)).mask) {
                                 in_config.inverted = !!(settings.control_invert.mask & ctrl.mask);
                                 in_config.pull_mode = (settings.control_disable_pullup.mask & ctrl.mask) ? PullMode_None : PullMode_Up;
+                            } else {
+                                in_config.inverted = !!(settings.ioport.invert_in.mask & (1 << port));
+                                in_config.pull_mode = (pull_mode_t)xbar->mode.pull_mode;
                             }
 
                             if(in_config.inverted)
@@ -1417,9 +1414,7 @@ static void ioports_configure (settings_t *settings)
                 if(!config_probe_pins(xbar->function, &in_config) && xbar->function < Input_Probe) {
                     control_signals_t ctrl;
                     if((ctrl = xbar_fn_to_signals_mask(xbar->function)).mask) {
-#ifdef RP2040 // RP2xxx MCUs use hardware signal inversion
                         in_config.inverted = !!(settings->control_invert.mask & ctrl.mask);
-#endif
                         in_config.pull_mode = (settings->control_disable_pullup.mask & ctrl.mask) ? PullMode_None : PullMode_Up;
                     }
                 }
@@ -1463,10 +1458,8 @@ void ioports_add_settings (driver_settings_load_ptr settings_loaded, setting_cha
         .n_groups = sizeof(ioport_groups) / sizeof(setting_group_detail_t),
         .settings = ioport_settings,
         .n_settings = sizeof(ioport_settings) / sizeof(setting_detail_t),
-    #ifndef NO_SETTINGS_DESCRIPTIONS
         .descriptions = ioport_settings_descr,
         .n_descriptions = sizeof(ioport_settings_descr) / sizeof(setting_descr_t),
-    #endif
         .save = settings_write_global
     };
 

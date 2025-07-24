@@ -509,10 +509,11 @@ typedef enum {
     Setting_ActionPort8    = 768,
     Setting_ActionPort9    = 769,
 
-    Setting_SpindleOffsetX = 770,
-    Setting_SpindleOffsetY = 771,
+    Setting_SpindleOffsetX       = 770,
+    Setting_SpindleOffsetY       = 771,
+    Setting_SpindleOffsetOptions = 772,
 //
-// 772-779 - reserved for spindle offset settings
+// 773-779 - reserved for spindle offset settings
 //
 
 // Reserving settings in the range 800 - 899 for axis settings.
@@ -1074,6 +1075,7 @@ typedef void (*driver_settings_load_ptr)(void);
 typedef void (*driver_settings_save_ptr)(void);
 typedef void (*driver_settings_restore_ptr)(void);
 typedef bool (*driver_settings_iterator_ptr)(const setting_detail_t *setting, setting_output_ptr callback, void *data);
+typedef setting_id_t (*driver_settings_normalize_ptr)(setting_id_t id);
 
 typedef struct setting_details {
     const bool is_core;
@@ -1092,6 +1094,7 @@ typedef struct setting_details {
     driver_settings_load_ptr load;
     driver_settings_restore_ptr restore;
     driver_settings_iterator_ptr iterator;
+    driver_settings_normalize_ptr normalize;
 } setting_details_t;
 
 // NOTE: this must match the signature of on_get_settings in the setting_details_t structure above!
@@ -1105,7 +1108,7 @@ void settings_clear (void);
 // Initialize the configuration subsystem (load settings from persistent storage)
 void settings_init();
 
-// Write Grbl global settings and version number to persistent storage
+// Write grblHAL global settings and version number to persistent storage
 void settings_write_global(void);
 
 // Helper function to clear and restore persistent storage defaults

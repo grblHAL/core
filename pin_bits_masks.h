@@ -297,8 +297,10 @@ typedef bool (*aux_claim_explicit_ptr)(aux_ctrl_t *aux_ctrl);
 
 static bool aux_ctrl_claim_port (xbar_t *properties, uint8_t port, void *data)
 {
-    if(ioport_claim(Port_Digital, Port_Input, &port, xbar_fn_to_pinname(((aux_ctrl_t *)data)->function)))
+    if(ioport_claim(Port_Digital, Port_Input, &port, NULL)) {
         ((aux_ctrl_t *)data)->aux_port = port;
+        ioport_set_function(properties, ((aux_ctrl_t *)data)->function, &((aux_ctrl_t *)data)->cap);
+    }
 
     return ((aux_ctrl_t *)data)->aux_port != IOPORT_UNASSIGNED;
 }

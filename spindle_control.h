@@ -209,7 +209,8 @@ typedef union {
         uint8_t enable_rpm_controlled :1, // PWM spindle only
                 laser_mode_disable    :1, // PWM spindle only
                 pwm_disable           :1, // PWM spindle only
-                unassigned            :5;
+                g92offset             :1,
+                unassigned            :4;
     };
 } spindle_settings_flags_t;
 

@@ -1233,8 +1233,7 @@ inline static setting_id_t normalize_id (setting_id_t id)
              (id > Setting_MacroPort0 && id <= Setting_MacroPort9) ||
               (id > Setting_ButtonAction0 && id <= Setting_ButtonAction9) ||
                (id > Setting_Action0 && id <= Setting_Action9) ||
-                (id > Setting_ActionPort0 && id <= Setting_ActionPort9) ||
-                 (id > Setting_SpindleToolStart0 && id <= Setting_SpindleToolStart7))
+                (id > Setting_ActionPort0 && id <= Setting_ActionPort9))
         id = (setting_id_t)(id - (id % 10));
 
     return id;
@@ -2151,7 +2150,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_DoorCoolantOnDelay, Group_SafetyDoor, "Coolant on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtended, &settings.safety_door.coolant_on_delay, NULL, is_setting_available, { .allow_null = On } },
 #endif
      { Setting_SpindleOnDelay, Group_Spindle, "Spindle on delay", "s", Format_Decimal, "#0.0", "0.5", "20", Setting_IsExtendedFn, set_float, get_float, is_setting_available, { .allow_null = On } },
-     { Setting_SpindleType, Group_Spindle, "Default spindle", NULL, Format_RadioButtons, spindle_types, NULL, NULL, Setting_IsExtendedFn, set_default_spindle, get_int, is_setting_available },
+     { Setting_SpindleType, Group_Spindle, "Default spindle", NULL, Format_RadioButtons, spindle_types, NULL, NULL, Setting_IsExtendedFn, set_default_spindle, get_int, is_setting_available, { .reboot_required = On } },
      { Setting_PlannerBlocks, Group_General, "Planner buffer blocks", NULL, Format_Int16, "####0", "30", "1000", Setting_IsExtended, &settings.planner_buffer_blocks, NULL, NULL, { .reboot_required = On } },
      { Setting_AutoReportInterval, Group_General, "Autoreport interval", "ms", Format_Int16, "###0", "100", "1000", Setting_IsExtendedFn, set_report_interval, get_int, NULL, { .reboot_required = On, .allow_null = On } },
 //     { Setting_TimeZoneOffset, Group_General, "Timezone offset", NULL, Format_Decimal, "-#0.00", "0", "12", Setting_IsExtended, &settings.timezone, NULL, NULL },
@@ -2841,9 +2840,9 @@ bool settings_iterator (const setting_detail_t *setting, setting_output_ptr call
     return ok;
 }
 
-const setting_detail_t *setting_get_details (setting_id_t id, setting_details_t **set)
+static inline const setting_detail_t *_setting_get_details (setting_id_t id, uint_fast16_t offset, setting_details_t **set)
 {
-    uint_fast16_t idx, offset = id - normalize_id(id);
+    uint_fast16_t idx;
     setting_details_t *details = settings_get_details();
 
     id -= offset;
@@ -2867,6 +2866,37 @@ const setting_detail_t *setting_get_details (setting_id_t id, setting_details_t 
     } while((details = details->next));
 
     return NULL;
+}
+
+const setting_detail_t *setting_get_details (setting_id_t id, setting_details_t **set)
+{
+    const setting_detail_t *detail;
+
+    if((detail = _setting_get_details(id, id - normalize_id(id), set)) == NULL) {
+
+        uint_fast16_t idx, offset;
+        setting_details_t *details = settings_get_details();
+
+        do {
+            if(details->normalize && (offset = id - details->normalize(id))) {
+
+                id -= offset;
+
+                for(idx = 0; idx < details->n_settings; idx++) {
+                    if(details->settings[idx].id == id && is_available(&details->settings[idx], offset)) {
+
+                        detail =  &details->settings[idx];
+
+                        if(set)
+                            *set = details;
+                    }
+                }
+                break;
+            }
+        } while((details = details->next));
+    }
+
+    return detail;
 }
 
 const char *setting_get_description (setting_id_t id)
