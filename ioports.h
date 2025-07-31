@@ -197,6 +197,7 @@ uint8_t ioports_available (io_port_type_t type, io_port_direction_t dir);
 uint8_t ioports_unclaimed (io_port_type_t type, io_port_direction_t dir);
 xbar_t *ioport_get_info (io_port_type_t type, io_port_direction_t dir, uint8_t port);
 xbar_t *ioport_claim (io_port_type_t type, io_port_direction_t dir, uint8_t *port, const char *description);
+bool ioport_claimable (io_port_type_t type, io_port_direction_t dir, uint8_t port);
 io_port_cando_t ioports_can_do (void);
 uint8_t ioport_find_free (io_port_type_t type, io_port_direction_t dir, pin_cap_t filter, const char *description);
 bool ioports_enumerate (io_port_type_t type, io_port_direction_t dir, pin_cap_t filter, ioports_enumerate_callback_ptr callback, void *data);

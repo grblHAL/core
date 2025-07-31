@@ -252,12 +252,12 @@ char *trim_float (char *s);
 // Returns true if float value is a whole number (integer)
 bool isintf (float value);
 
-status_code_t read_uint (char *line, uint_fast8_t *char_counter, uint32_t *uint_ptr);
+status_code_t read_uint (const char *line, uint_fast8_t *char_counter, uint32_t *uint_ptr);
 
 // Read a floating point value from a string. Line points to the input buffer, char_counter
 // is the indexer pointing to the current character of the line, while float_ptr is
 // a pointer to the result variable. Returns true when it succeeds
-bool read_float (char *line, uint_fast8_t *char_counter, float *float_ptr);
+bool read_float (const char *line, uint_fast8_t *char_counter, float *float_ptr);
 
 // Non-blocking delay function used for general operation and suspend features.
 bool delay_sec (float seconds, delaymode_t mode);

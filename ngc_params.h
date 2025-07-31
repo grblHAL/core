@@ -104,6 +104,7 @@ typedef enum {
     NGCParam_toolsetter_state,
     NGCParam_homed_state,
     NGCParam_homed_axes,
+    NGCParam_tool_table_size,
     NGCParam_Last
 } ncg_name_param_id_t;
 

@@ -1,17 +1,39 @@
 ## grblHAL changelog
 
+<a name="20250731">Build 20250731
+
+Core:
+
+* Fix for corrupted tool table entries not beeing reset. This may happen on resizing the tool table.
+
+* Added system parameter `_tool_table_size`, 0 if a tool table is not enabled.
+
+* Removed dependency on safety door input for parking settings: `$41`, `$42`, `$56`-`$59`, `$392` and `$393`.
+
+* Removed strict dependency on spindle encoder input for spindle synced motion, allows the use of the stepper spindle which has an implicit encoder.
+
+Plugins:
+
+* Spindle, stepper: updated to work with new spindle sync handling.
+
+* Plugins misc, eventout: added support for spindle at speed event \(to be verified\), updated for core changes.
+
+* Plugins keypad, macros: updated for core changes.
+
+---
+
 <a name="20250724">Build 20250724
 
 Core:
 
-Fix for optional control signals not respecting `$14` inversion setting. Ref. issue [#780](https://github.com/grblHAL/core/issues/780).
+* Fix for optional control signals not respecting `$14` inversion setting. Ref. issue [#780](https://github.com/grblHAL/core/issues/780).
 
-For developers: added core `on_spindle_at_speed` event. This must be verified with actual VFD spindles, I only have a simulator available.  
+* For developers: added core `on_spindle_at_speed` event. This must be verified with actual VFD spindles, I only have a simulator available.  
 Improved handling of "iterated" settings, can now be fully implemented by plugins.
 
 Plugins:
 
-* Spindle, select: updated for core change, fixed bug in tool number start vs. spindle settings \($52x\). Ref. iMXRT1062 issue [#99](https://github.com/grblHAL/iMXRT1062/issues/99).
+* Spindle, select: updated for core change, fixed bug in tool number start vs. spindle settings \(`$52x`\). Ref. iMXRT1062 issue [#99](https://github.com/grblHAL/iMXRT1062/issues/99).
 
 * Spindle, offset: added setting `$772` for options, currently _Update G92 on spindle change_ is available.
 

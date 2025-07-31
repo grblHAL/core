@@ -413,7 +413,8 @@ PROGMEM static const ngc_named_ro_param_t ngc_named_ro_param[] = {
     { .name = "_probe_state",         .id = NGCParam_probe_state },
     { .name = "_toolsetter_state",    .id = NGCParam_toolsetter_state },
     { .name = "_homed_state",         .id = NGCParam_homed_state },
-    { .name = "_homed_axes",          .id = NGCParam_homed_axes }
+    { .name = "_homed_axes",          .id = NGCParam_homed_axes },
+    { .name = "_tool_table_size",     .id = NGCParam_tool_table_size }
 };
 
 // Named parameters
@@ -668,6 +669,10 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
 
         case NGCParam_homed_axes:
             value = (float)sys.homed.mask;
+            break;
+
+        case NGCParam_tool_table_size:
+            value = (float)grbl.tool_table.n_tools;
             break;
 
         default:

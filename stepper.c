@@ -265,7 +265,9 @@ void st_spindle_sync_cfg (settings_t *settings, settings_changed_flags_t changed
     spindle_tracker.min_cycles_per_tick = hal.f_step_timer / (uint32_t)(settings->axis[Z_AXIS].max_rate * settings->axis[Z_AXIS].steps_per_mm / 60.0f);
 
     // hal.driver_cap.spindle_encoder ?? check?
-    if((hal.driver_cap.spindle_sync = hal.spindle_data.get && settings->spindle.ppr) && pidf_config_changed(&spindle_tracker.pid, &settings->position.pid))
+    if((hal.driver_cap.spindle_sync = !!hal.spindle_data.get &&
+                                       (!hal.driver_cap.spindle_encoder || settings->spindle.ppr > 0)) &&
+                                         pidf_config_changed(&spindle_tracker.pid, &settings->position.pid))
         pidf_init(&spindle_tracker.pid, &settings->position.pid);
 }
 

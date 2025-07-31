@@ -655,8 +655,8 @@ typedef union {
 
 typedef struct {
     safety_door_setting_flags_t flags; // TODO: move to last element in next revision
-    float spindle_on_delay; // TODO: change to uint16_t in next revision
-    float coolant_on_delay; // TODO: change to uint16_t in next revision
+    float spindle_on_delay; // TODO: change to uint16_t and move to parking_setting_flags_t in next revision
+    float coolant_on_delay; // TODO: change to uint16_t and move to parking_setting_flags_t in next revision
 } safety_door_settings_t;
 
 typedef union {

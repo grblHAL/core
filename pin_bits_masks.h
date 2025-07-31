@@ -603,8 +603,8 @@ static inline void aux_ctrl_claim_out_ports (aux_claim_explicit_out_ptr aux_clai
 #define SPINDLE_PULSE_BIT 0
 #endif
 
-#if SPINDLE_SYNC_ENABLE && (SPINDLE_INDEX_BIT + SPINDLE_PULSE_BIT) == 0
-#error "Spindle sync requires SPINDLE_PULSE_PIN and SPINDLE_INDEX_PIN defined in the board map!"
+#if SPINDLE_ENCODER_ENABLE && (SPINDLE_INDEX_BIT + SPINDLE_PULSE_BIT) == 0
+#error "Spindle encoder requires SPINDLE_PULSE_PIN and SPINDLE_INDEX_PIN defined in the board map!"
 #endif
 
 #ifndef SPI_IRQ_PIN

@@ -87,6 +87,7 @@ typedef enum {
     Status_IllegalHomingConfiguration = 55,
     Status_GCodeCoordSystemLocked = 56,
     Status_UnexpectedDemarcation = 57,
+    Status_AuxiliaryPortUnavailable = 58,
 
     Status_SDMountError = 60,
     Status_FileReadError = 61,

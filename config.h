@@ -1418,6 +1418,14 @@ and less range over the total 255 PWM levels to signal different spindle speeds.
 #endif
 ///@}
 
+/*! @name $485 - Setting_EnableToolPersistence
+*/
+///@{
+#if !defined DEFAULT_PERSIST_TOOL || defined __DOXYGEN__
+#define DEFAULT_PERSIST_TOOL Off
+#endif
+///@}
+
 // Homing settings (Group_Homing)
 
 /*! @name $22 - Setting_HomingEnable

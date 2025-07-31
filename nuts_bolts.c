@@ -181,9 +181,9 @@ char *trim_float (char *s)
 }
 
 // Extracts an unsigned integer value from a string.
-status_code_t read_uint (char *line, uint_fast8_t *char_counter, uint32_t *uint_ptr)
+status_code_t read_uint (const char *line, uint_fast8_t *char_counter, uint32_t *uint_ptr)
 {
-    char *ptr = line + *char_counter;
+    const char *ptr = line + *char_counter;
     int_fast8_t exp = 0;
     uint_fast8_t ndigit = 0, c;
     uint32_t intval = 0;
@@ -239,9 +239,9 @@ status_code_t read_uint (char *line, uint_fast8_t *char_counter, uint32_t *uint_
 // Scientific notation is officially not supported by g-code, and the 'E' character may
 // be a g-code word on some CNC systems. So, 'E' notation will not be recognized.
 // NOTE: Thanks to Radu-Eosif Mihailescu for identifying the issues with using strtod().
-bool read_float (char *line, uint_fast8_t *char_counter, float *float_ptr)
+bool read_float (const char *line, uint_fast8_t *char_counter, float *float_ptr)
 {
-    char *ptr = line + *char_counter;
+    const char *ptr = line + *char_counter;
     int_fast8_t exp = 0;
     uint_fast8_t ndigit = 0, c;
     uint32_t intval = 0;

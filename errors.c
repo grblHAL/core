@@ -88,6 +88,7 @@ PROGMEM static const status_detail_t status_detail[] = {
     { Status_GCodeCoordSystemLocked, "Coordinate system is locked." },
 #endif
     { Status_UnexpectedDemarcation, "Unexpected file demarcation." },
+    { Status_AuxiliaryPortUnavailable, "Port is not available" },
 #if NGC_EXPRESSIONS_ENABLE
     { Status_ExpressionUknownOp, "Unknown operation found in expression." },
     { Status_ExpressionDivideByZero, "Divide by zero in expression attempted." },

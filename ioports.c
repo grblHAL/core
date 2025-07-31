@@ -191,6 +191,7 @@ uint8_t ioports_unclaimed (io_port_type_t type, io_port_direction_t dir)
 
 struct ff_data {
     uint8_t port;
+    uint32_t max_port;
     const char *description;
 };
 
@@ -198,7 +199,9 @@ static bool match_port (xbar_t *properties, uint8_t port, void *data)
 {
     struct ff_data *ff_data = (struct ff_data *)data;
 
-    if(ff_data->description && (properties->description == NULL || strcmp(properties->description, ff_data->description)))
+    if(ff_data->description
+         ? (properties->description == NULL || strcmp(properties->description, ff_data->description))
+         : port >= ff_data->max_port)
         return false;
 
     ff_data->port = port;
@@ -206,24 +209,29 @@ static bool match_port (xbar_t *properties, uint8_t port, void *data)
     return true;
 }
 
-/*! \brief find first free or claimed digital or analog port.
+/*! \brief find claimable or claimed analog or digital port. Search starts from the last port number.
 \param type as an \a #io_port_type_t enum value.
 \param dir as an \a #io_port_direction_t enum value.
-\param description pointer to a \a char constant for the pin description of a previousely claimed port or \a NULL if searching for the first free port.
+\param description pointer to a \a char constant for the pin description of a previousely claimed port
+or a port number to be used as the upper limit for the search, or \a NULL if searching for the first free port.
 \returns the port number if successful, 0xFF (255) if not.
 */
 uint8_t ioport_find_free (io_port_type_t type, io_port_direction_t dir, pin_cap_t filter, const char *description)
 {
-    struct ff_data ff_data;
+    struct ff_data ff_data = { .port = IOPORT_UNASSIGNED, .max_port = IOPORT_UNASSIGNED + 1 };
 
-    ff_data.port = IOPORT_UNASSIGNED;
-    ff_data.description = (description && *description) ? description : NULL;
+    if((ff_data.description = (description && *description) ? description : NULL)) {
+        uint_fast8_t pos = 0;
+        read_uint(ff_data.description, &pos, &ff_data.max_port);
+        if(ff_data.max_port <= IOPORT_UNASSIGNED)
+            ff_data.description = NULL;
+    }
 
     // TODO: pass modified filter with .claimable off when looking for description match?
     if(ff_data.description && !ioports_enumerate(type, dir, (pin_cap_t){}, match_port, (void *)&ff_data))
         ff_data.description = NULL;
 
-    if(ff_data.description == NULL)
+    if(ff_data.description == NULL && ff_data.max_port != IOPORT_UNASSIGNED)
         ioports_enumerate(type, dir, filter, match_port, (void *)&ff_data);
 
     return ff_data.port;
@@ -315,6 +323,19 @@ xbar_t *ioport_claim (io_port_type_t type, io_port_direction_t dir, uint8_t *por
     }
 
     return portinfo;
+}
+
+/*! \brief Check if a analog or digital port is available for exclusive use.
+\param type as an \a #io_port_type_t enum value.
+\param dir as an \a #io_port_direction_t enum value.
+\param port a \a uint8_t holding the ports aux number.
+\returns \a TRUE if available, \a FALSE if not.
+*/
+bool ioport_claimable (io_port_type_t type, io_port_direction_t dir, uint8_t port)
+{
+    xbar_t *portinfo = port == IOPORT_UNASSIGNED ? NULL : get_info(type, dir, port, false);
+
+    return port == IOPORT_UNASSIGNED || (portinfo && portinfo->cap.claimable);
 }
 
 // Deprecated
