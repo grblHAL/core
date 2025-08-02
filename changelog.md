@@ -1,5 +1,24 @@
 ## grblHAL changelog
 
+<a name="20250802">20250802
+
+Core:
+
+* Fix for transposed options in `$41` - parking cycle enable.
+
+Drivers:
+
+* ESP32: added missing define for I2C for MKS DLC 32 v2.0 board. Ref. discussion comment in [#645](https://github.com/grblHAL/core/discussions/645#discussioncomment-13960933)
+
+* RP2040: added tentative support for Mesa THCAD2 voltage to frequency converter. Not complete!  
+Added option for using Aux out 1 for Neopixels on the RP23U5XBB board. Ref. discussion [#143](https://github.com/grblHAL/RP2040/discussions/143).
+
+Plugins:
+
+* Misc, eventout: fix for potential crash on reset when plugin is enabled.
+
+---
+
 <a name="20250731">Build 20250731
 
 Core:
