@@ -607,9 +607,9 @@ status_code_t limits_go_home (axes_signals_t cycle)
 void limits_soft_check (float *target, planner_cond_t condition)
 {
 #ifdef KINEMATICS_API
-    if(condition.target_validated ? !condition.target_valid : !grbl.check_travel_limits(target, sys.soft_limits, false)) {
+    if(condition.target_validated ? !condition.target_valid : !grbl.check_travel_limits(target, sys.soft_limits, false, &sys.work_envelope)) {
 #else
-    if(condition.target_validated ? !condition.target_valid : !grbl.check_travel_limits(target, sys.soft_limits, true)) {
+    if(condition.target_validated ? !condition.target_valid : !grbl.check_travel_limits(target, sys.soft_limits, true, &sys.work_envelope)) {
 #endif
 
         sys.flags.soft_limit = On;
@@ -663,7 +663,7 @@ static float get_homing_rate (axes_signals_t cycle, homing_mode_t mode)
 }
 
 // Checks and reports if target array exceeds machine travel limits. Returns false if check failed.
-static bool check_travel_limits (float *target, axes_signals_t axes, bool is_cartesian)
+static bool check_travel_limits (float *target, axes_signals_t axes, bool is_cartesian, work_envelope_t *envelope)
 {
     bool failed = false;
     uint_fast8_t idx = N_AXIS;
@@ -671,7 +671,7 @@ static bool check_travel_limits (float *target, axes_signals_t axes, bool is_car
     if(is_cartesian && (sys.homed.mask & axes.mask)) do {
         idx--;
         if(bit_istrue(sys.homed.mask, bit(idx)) && bit_istrue(axes.mask, bit(idx)))
-            failed = target[idx] < sys.work_envelope.min.values[idx] || target[idx] > sys.work_envelope.max.values[idx];
+            failed = target[idx] < envelope->min.values[idx] || target[idx] > envelope->max.values[idx];
     } while(!failed && idx);
 
     return is_cartesian && !failed;
@@ -679,7 +679,7 @@ static bool check_travel_limits (float *target, axes_signals_t axes, bool is_car
 
 // Checks and reports if the arc exceeds machine travel limits. Returns false if check failed.
 // NOTE: needs the work envelope to be a cuboid!
-static bool check_arc_travel_limits (coord_data_t *target, coord_data_t *position, point_2d_t center, float radius, plane_t plane, int32_t turns)
+static bool check_arc_travel_limits (coord_data_t *target, coord_data_t *position, point_2d_t center, float radius, plane_t plane, int32_t turns, work_envelope_t *envelope)
 {
     typedef union {
         uint_fast8_t value;
@@ -694,7 +694,7 @@ static bool check_arc_travel_limits (coord_data_t *target, coord_data_t *positio
     static const axes_signals_t xyz = { .x = On, .y = On, .z = On };
 
     if((sys.soft_limits.mask & xyz.mask) == 0)
-        return grbl.check_travel_limits(target->values, sys.soft_limits, true);
+        return grbl.check_travel_limits(target->values, sys.soft_limits, true, envelope);
 
     arc_x_t x = {0};
     point_2d_t start, end;
@@ -764,14 +764,14 @@ static bool check_arc_travel_limits (coord_data_t *target, coord_data_t *positio
     corner1.values[plane.axis_0] = x.neg_x ? center.x - radius : min(position->values[plane.axis_0], target->values[plane.axis_0]);
     corner1.values[plane.axis_1] = x.neg_y ? center.y - radius : max(position->values[plane.axis_1], target->values[plane.axis_1]);
 
-    if(!grbl.check_travel_limits(corner1.values, sys.soft_limits, true))
+    if(!grbl.check_travel_limits(corner1.values, sys.soft_limits, true, envelope))
         return false;
 
     memcpy(&corner2, turns > 0 ? target : position, sizeof(coord_data_t));
     corner2.values[plane.axis_0] = x.pos_x ? center.x + radius : max(position->values[plane.axis_0], target->values[plane.axis_0]);
     corner2.values[plane.axis_1] = x.pos_y ? center.y + radius : min(position->values[plane.axis_1], target->values[plane.axis_1]);
 
-   return grbl.check_travel_limits(corner2.values, sys.soft_limits, true);
+   return grbl.check_travel_limits(corner2.values, sys.soft_limits, true, envelope);
 }
 
 // Derived from code by Dimitrios Matthes & Vasileios Drakopoulos
@@ -815,7 +815,7 @@ static void clip_3d_target (coord_data_t *position, coord_data_t *target, work_e
 
 // Limits jog commands to be within machine limits, homed axes only.
 // If position is non-null clip XYZ motion.
-static void apply_travel_limits (float *target, float *position)
+static void apply_travel_limits (float *target, float *position, work_envelope_t *envelope)
 {
     if(sys.homed.mask == 0)
         return;
@@ -834,14 +834,14 @@ static void apply_travel_limits (float *target, float *position)
         } while(idx && n_axes < 2);
 
         if(n_axes > 1)
-            clip_3d_target((coord_data_t *)position, (coord_data_t *)target, &sys.work_envelope);
+            clip_3d_target((coord_data_t *)position, (coord_data_t *)target, envelope);
     }
 
     idx = N_AXIS;
     do {
         idx--;
         if(bit_istrue(sys.homed.mask, bit(idx)) && settings.axis[idx].max_travel < -0.0f)
-            target[idx] = max(min(target[idx], sys.work_envelope.max.values[idx]), sys.work_envelope.min.values[idx]);
+            target[idx] = max(min(target[idx], envelope->max.values[idx]), envelope->min.values[idx]);
     } while(idx);
 }
 

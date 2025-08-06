@@ -631,7 +631,7 @@ static bool spindle_set_state_wait (spindle_ptrs_t *spindle, spindle_state_t sta
 
         if((ok = spindle_set_state(spindle, state, rpm))) {
 
-            bool at_speed = !state.on || spindle->cap.torch || !spindle->cap.at_speed || spindle->at_speed_tolerance <= 0.0f;
+            bool at_speed = !spindle->cap.at_speed || spindle->cap.torch || spindle->at_speed_tolerance <= 0.0f;
 
             if(at_speed)
                 ok = delay_ms == 0 || spindle->cap.torch || delay_sec((float)delay_ms / 1000.0f, delay_mode);

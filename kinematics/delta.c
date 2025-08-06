@@ -234,7 +234,7 @@ static float *delta_segment_line (float *target, float *position, plan_line_data
 
             if(!pl_data->condition.target_validated) {
                 pl_data->condition.target_validated = On;
-                pl_data->condition.target_valid = grbl.check_travel_limits(mpos.values, sys.soft_limits, false);
+                pl_data->condition.target_valid = grbl.check_travel_limits(mpos.values, sys.soft_limits, false, &sys.work_envelope);
             }
 
             transform_to_cartesian(segment_target.values, position);
@@ -576,14 +576,14 @@ static inline bool pos_ok (coord_data_t *pos)
 }
 
 // Checks and reports if target array exceeds machine travel limits. Returns false if check failed.
-static bool delta_check_travel_limits (float *target, axes_signals_t axes, bool is_cartesian)
+static bool delta_check_travel_limits (float *target, axes_signals_t axes, bool is_cartesian, work_envelope_t *envelope)
 {
     bool failed = false;
     uint_fast8_t idx = N_AXIS;
     coord_data_t pos;
 
 #if N_AXIS > 3
-    if((axes.mask & ~0b111) && !check_travel_limits(target, (axes_signals_t){ axes.mask & ~0b111 }, is_cartesian))
+    if((axes.mask & ~0b111) && !check_travel_limits(target, (axes_signals_t){ axes.mask & ~0b111 }, is_cartesian, envelope))
         return false;
 #endif
 
@@ -607,7 +607,7 @@ static bool delta_check_travel_limits (float *target, axes_signals_t axes, bool 
         idx--;
         if(bit_istrue(sys.homed.mask, bit(idx)) && settings.axis[idx].max_travel < -0.0f) {
             if(idx > Z_AXIS)
-                failed = target[idx] < sys.work_envelope.min.values[idx] || target[idx] > sys.work_envelope.max.values[idx];
+                failed = target[idx] < envelope->min.values[idx] || target[idx] > envelope->max.values[idx];
             else
                 failed = pos.values[idx] < machine.min_angle[idx] || pos.values[idx] > machine.max_angle[idx];
         }
@@ -616,13 +616,13 @@ static bool delta_check_travel_limits (float *target, axes_signals_t axes, bool 
     return !failed;
 }
 
-static void delta_apply_travel_limits (float *target, float *position)
+static void delta_apply_travel_limits (float *target, float *position, work_envelope_t *envelope)
 {
     if(sys.homed.mask == 0)
         return;
 
     if(machine.cfg.flags.limit_to_cuboid)
-        apply_travel_limits(target, position);
+        apply_travel_limits(target, position, envelope);
 
     else if(position && !is_target_inside_cuboid(target, true)) {
 

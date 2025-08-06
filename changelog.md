@@ -1,5 +1,26 @@
 ## grblHAL changelog
 
+<a name="20250806">Build 20250806
+
+Core:
+
+* Improved ioport remapping of auxiliary pins \(used by plasma plugin\).
+
+* Changed signature of limit check functions, [grbl.travel_limits()](https://svn.io-engineering.com/grblHAL/html/core__handlers_8h.html#a56eced06d1c379782d86c2f139cd3f96) et. al. to include a pointer to the work envelope to use.
+This may simplify implementations of plugins that want to alter the envelope.
+
+* Updated spindle off handling to check for "at speed" on deceleration when spindle is "at speed" capable
+
+Drivers:
+
+* STM32F4xx, STM32F7xx: fix for I2C transmits sometimes blocking when they should not. Will cause I2C displays to fail.
+
+Plugins:
+
+* Plasma: improved/fixed handling of virtual auxiliary ports.
+
+---
+
 <a name="20250802">20250802
 
 Core:
@@ -10,7 +31,7 @@ Drivers:
 
 * ESP32: added missing define for I2C for MKS DLC 32 v2.0 board. Ref. discussion comment in [#645](https://github.com/grblHAL/core/discussions/645#discussioncomment-13960933)
 
-* RP2040: added tentative support for Mesa THCAD2 voltage to frequency converter. Not complete!  
+* RP2040: added tentative support for [Mesa THCAD2](https://mesaus.com/product/thcad2/) voltage to frequency converter. Not complete!  
 Added option for using Aux out 1 for Neopixels on the RP23U5XBB board. Ref. discussion [#143](https://github.com/grblHAL/RP2040/discussions/143).
 
 Plugins:

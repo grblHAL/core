@@ -78,10 +78,10 @@ typedef struct {
 
 typedef bool (*enqueue_gcode_ptr)(char *data);
 typedef bool (*protocol_enqueue_realtime_command_ptr)(char c);
-typedef bool (*travel_limits_ptr)(float *target, axes_signals_t axes, bool is_cartesian);
-typedef bool (*arc_limits_ptr)(coord_data_t *target, coord_data_t *position, point_2d_t center, float radius, plane_t plane, int32_t turns);
+typedef bool (*travel_limits_ptr)(float *target, axes_signals_t axes, bool is_cartesian, work_envelope_t *envelope);
+typedef bool (*arc_limits_ptr)(coord_data_t *target, coord_data_t *position, point_2d_t center, float radius, plane_t plane, int32_t turns, work_envelope_t *envelope);
 
-typedef void (*apply_travel_limits_ptr)(float *target, float *position);
+typedef void (*apply_travel_limits_ptr)(float *target, float *position, work_envelope_t *envelope);
 typedef bool (*home_machine_ptr)(axes_signals_t cycle, axes_signals_t auto_square);
 
 typedef void (*on_parser_init_ptr)(parser_state_t *gc_state);

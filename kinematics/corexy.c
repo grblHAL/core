@@ -118,16 +118,16 @@ static void corexy_limits_set_target_pos (uint_fast8_t idx) // fn name?
 
 // Checks and reports if target array exceeds machine travel limits. Returns false if check failed.
 // NOTE: target for axes X and Y are in motor coordinates if is_cartesian is false.
-static bool corexy_check_travel_limits (float *target, axes_signals_t axes, bool is_cartesian)
+static bool corexy_check_travel_limits (float *target, axes_signals_t axes, bool is_cartesian, work_envelope_t *envelope)
 {
     if(is_cartesian)
-        return check_travel_limits(target, axes, true);
+        return check_travel_limits(target, axes, true, envelope);
 
     float cartesian_coords[N_AXIS];
 
     transform_to_cartesian(cartesian_coords, target);
 
-    return check_travel_limits(cartesian_coords, axes, true);
+    return check_travel_limits(cartesian_coords, axes, true, envelope);
 }
 
 // Set machine positions for homed limit switches. Don't update non-homed axes.

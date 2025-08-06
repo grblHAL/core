@@ -246,7 +246,7 @@ void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *o
         pl_data->condition.target_validated = On;
         pl_data->condition.target_valid = grbl.check_arc_travel_limits((coord_data_t *)target, (coord_data_t *)position,
                                                                         (point_2d_t){ .x = (float)center.x, .y = (float)center.y },
-                                                                         radius, plane, turns);
+                                                                         radius, plane, turns, &sys.work_envelope);
     }
 
     if(labs(turns) > 1) {
@@ -795,8 +795,8 @@ status_code_t mc_jog_execute (plan_line_data_t *pl_data, parser_block_t *gc_bloc
     pl_data->line_number = gc_block->values.n;
 
     if(settings.limits.flags.jog_soft_limited)
-        grbl.apply_travel_limits(gc_block->values.xyz, position);
-    else if(sys.soft_limits.mask && !grbl.check_travel_limits(gc_block->values.xyz, sys.soft_limits, true))
+        grbl.apply_travel_limits(gc_block->values.xyz, position, &sys.work_envelope);
+    else if(sys.soft_limits.mask && !grbl.check_travel_limits(gc_block->values.xyz, sys.soft_limits, true, &sys.work_envelope))
         return Status_TravelExceeded;
 
     // Valid jog command. Plan, set state, and execute.
@@ -987,7 +987,7 @@ gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_f
         return GCProbe_CheckMode;
 
     if(settings.probe.soft_limited)
-        grbl.apply_travel_limits(target, NULL);
+        grbl.apply_travel_limits(target, NULL, &sys.work_envelope);
 
     do {
         idx--;
