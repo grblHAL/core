@@ -4,6 +4,14 @@
 
 Core:
 
+* Fix for `grbl.on_tool_changed` event raised too early when tool change code is in _tc.macro_.
+
+---
+
+<a name="20250806">Build 20250806
+
+Core:
+
 * Improved ioport remapping of auxiliary pins \(used by plasma plugin\).
 
 * Changed signature of limit check functions, [grbl.travel_limits()](https://svn.io-engineering.com/grblHAL/html/core__handlers_8h.html#a56eced06d1c379782d86c2f139cd3f96) et. al. to include a pointer to the work envelope to use.

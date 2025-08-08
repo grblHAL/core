@@ -3364,10 +3364,12 @@ status_code_t gc_execute_block (char *block)
                 }
             }
 
+            bool macro_toolchange = false;
+
             if(hal.tool.change) { // ATC
                 if((int_value = (uint_fast16_t)hal.tool.change(&gc_state)) != Status_OK) {
 #if NGC_EXPRESSIONS_ENABLE
-                    if(int_value != Status_Unhandled)
+                    if(!(macro_toolchange = (int_value == Status_Unhandled)))
 #endif
                         FAIL((status_code_t)int_value);
                 }
@@ -3388,7 +3390,8 @@ status_code_t gc_execute_block (char *block)
 #else
             tool_set(pending_tool);
 #endif
-            if(grbl.on_tool_changed && state_get() != STATE_TOOL_CHANGE)
+
+            if(grbl.on_tool_changed && !macro_toolchange && state_get() != STATE_TOOL_CHANGE)
                 grbl.on_tool_changed(gc_state.tool);
         }
     }
