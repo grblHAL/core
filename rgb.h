@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2024 Terje Io
+  Copyright (c) 2024-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -98,6 +98,23 @@ static inline bool rgb_is_neopixels (rgb_ptr_t *device)
 static inline bool rgb_is_onoff (rgb_ptr_t *device)
 {
     return device->out != NULL && device->cap.R == 1 && device->cap.G == 1 && device->cap.B == 1;
+}
+
+static inline void rgb_clear (rgb_ptr_t *device)
+{
+    if(device->set_intensity)
+        device->set_intensity(255);
+
+    if(rgb_is_neopixels(device) && device->num_devices) {
+
+        uint32_t idx;
+
+        for(idx = 0; idx <= device->num_devices; idx++)
+            device->out(idx, (rgb_color_t){0});
+
+        if(device->num_devices > 1 && device->write)
+            device->write();
+    }
 }
 
 // Intensity conversions

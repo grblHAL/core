@@ -1,5 +1,28 @@
 ## grblHAL changelog
 
+<a name="20250825">Build 20250825
+
+Core:
+
+* Added function for clearing LED strips.
+
+Drivers:
+
+* ESP32: fix for incorrect handling of claimed analog output ports. Ref. issue [#175](https://github.com/grblHAL/ESP32/issues/175).
+
+* LPC176x: fix for NXP framework "bug" causing compiler error insted of warning, possibly due to stricter compiler in newer versions of the IDE.  
+Ref. discussion [#57](https://github.com/grblHAL/LPC176x/discussions/57).
+
+* STM32F4xx: updated to allow mixing of LED strip drivers.
+
+Plugins:
+
+* Keypad, macros: fixed typo.
+
+* Plasma: added arc ok, probe and up/down input states to real time report when idle.
+
+--
+
 <a name="20250806">Build 20250806
 
 Core:
