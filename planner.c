@@ -313,6 +313,8 @@ float plan_compute_profile_nominal_speed (plan_block_t *block)
     if(block->condition.rapid_motion)
         nominal_speed *= (0.01f * (float)sys.override.rapid_rate);
     else {
+		if(nominal_speed > block->rapid_rate)
+            nominal_speed = block->rapid_rate;
         if(!block->condition.no_feed_override)
             nominal_speed *= (0.01f * (float)sys.override.feed_rate);
         if(nominal_speed > block->rapid_rate)
