@@ -461,6 +461,7 @@ typedef enum {
     Setting_RelayPortProbe2 = 679,
     Setting_StepperEnableDelay = 680,
     Setting_ModBus_StreamFormat = 681,
+    Setting_THC_FeedFactor = 682,
 
     Setting_SpindlePWMOptions1 = 709,
 

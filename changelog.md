@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+<a name="20250829">Build 20250829
+
+Core:
+
+* Fix for laser enable not restored after feedhold. Ref. issue [#798](https://github.com/grblHAL/core/issues/798).
+
+* Fix for incorrect direction of motion via second stepper driver used for step injection /(plasma THC/) and stepper spindle.
+
+Plugins:
+
+* Keypad, display: workaround for ESP32 defaulting to 32-bit enums, allows use if display plugin.
+
+* Plasma: added setting for controlling Z-axis feedrate from current XY feedrate, changed up/down control to accelerated/decelerated continuous motion.
+
+---
+
 <a name="20250825">Build 20250825
 
 Core:
@@ -40,7 +56,7 @@ Core:
 * Changed signature of limit check functions, [grbl.travel_limits()](https://svn.io-engineering.com/grblHAL/html/core__handlers_8h.html#a56eced06d1c379782d86c2f139cd3f96) et. al. to include a pointer to the work envelope to use.
 This may simplify implementations of plugins that want to alter the envelope.
 
-* Updated spindle off handling to check for "at speed" on deceleration when spindle is "at speed" capable
+* Updated spindle off handling to check for "at speed" on spin down when spindle is "at speed" capable
 
 Drivers:
 

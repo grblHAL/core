@@ -390,15 +390,11 @@ that calls st2_motor_run().
 */
 bool st2_motor_move (st2_motor_t *motor, const float move, const float speed, position_t type)
 {
-    bool dir = move < 0.0f;
-
     if(speed == 0.0f)
         return false;
 
-    if((motor->dir.mask == 0) != dir)
-        motor->dir.mask = dir ? 0 : motor->axis.mask;
-
     motor->ptype = type;
+    motor->dir.bits = (move < 0.0f ? motor->axis.bits : 0);
 
     switch(type) {
 
@@ -417,7 +413,7 @@ bool st2_motor_move (st2_motor_t *motor, const float move, const float speed, po
     if(motor->move == 1 && type == Stepper2_Steps) {
         if(motor->state == State_Idle) {
 
-            if(motor->dir.mask)
+            if(motor->dir.bits)
                 motor->position--;
             else
                 motor->position++;
@@ -561,7 +557,7 @@ __attribute__((always_inline)) static inline bool _motor_run (st2_motor_t *motor
     // output step;
     hal.stepper.output_step(motor->axis, motor->dir);
 
-    if(motor->dir.mask)
+    if(motor->dir.bits)
         motor->position--;
     else
         motor->position++;
