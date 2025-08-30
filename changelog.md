@@ -1,5 +1,20 @@
 ## grblHAL changelog
 
+<a name="20250830">Build 20250830
+
+Drivers:
+
+* RP2040: improved handling of direction signal for step injection for boards using shift register for step/dir output.
+
+Plugins:
+
+* Plasma: added support for VAD lock \(Velcoity Anti Dive\) to THC up/down mode and tentative support for puddle jumping.
+Puddle jump parameters can only be set via LinuxCNC style material data.  
+Moved THC on delay to delayed task so cutting can start before THC is enabled and fixed non-responsive up/down mode when the undelying step injection code is run via polling.  
+Ref. issue [#24](https://github.com/grblHAL/Plugin_plasma/issues/24).
+
+---
+
 <a name="20250829">Build 20250829
 
 Core:
