@@ -1,6 +1,18 @@
 ## grblHAL changelog
 
-<a name="20250830">Build 20250830
+<a name="20250831">20250831
+
+Drivers:
+
+* STM32F4xx: fix for incorrect PWM parameters for PB2/TIM2. Ref. issue [#253](https://github.com/grblHAL/STM32F4xx/issues/253).
+
+Plugins:
+
+* Fans: fix for typo blocking plugin startup if no auxiliary inputs available. Ref. issue [#4](https://github.com/grblHAL/Plugin_fans/issues/4).
+
+---
+
+<a name="20250830">20250830
 
 Drivers:
 
