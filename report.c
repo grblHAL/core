@@ -1154,7 +1154,7 @@ void report_realtime_status (stream_write_ptr stream_write)
     static bool probing = false;
 
     uint_fast8_t idx;
-    float print_position[N_AXIS], wco[N_AXIS];
+    float print_position[N_AXIS], wco[N_AXIS], dist_remaining[N_AXIS];
     report_tracking_flags_t report = system_get_rt_report_flags(), delayed_report = {};
     probe_state_t probe_state = {
         .connected = On,
@@ -1252,6 +1252,19 @@ void report_realtime_status (stream_write_ptr stream_write)
         plan_block_t *cur_block = plan_get_current_block();
         if (cur_block != NULL && cur_block->line_number > 0)
             stream_write(appendbuf(2, "|Ln:", uitoa((uint32_t)cur_block->line_number)));
+    }
+
+    // Report distance remaining as difference between target (end of block) and current position
+    plan_block_t *cur_block = plan_get_current_block();
+    if (cur_block != NULL) {
+        system_convert_array_steps_to_mpos(dist_remaining, sys.position);
+
+        for(idx = 0; idx < N_AXIS; idx++) {
+            dist_remaining[idx] = cur_block->target_mm[idx] - dist_remaining[idx];
+        }
+        // Report distance to go
+        hal.stream.write_all("|DToGo:");
+        hal.stream.write_all(get_axis_values(dist_remaining));
     }
 
     spindle_ptrs_t *spindle_0;
