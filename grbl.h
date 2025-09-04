@@ -42,7 +42,7 @@
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_BUILD 2020829
+#define GRBL_BUILD 20250902
 
 #define GRBL_URL "https://github.com/grblHAL"
 
@@ -213,7 +213,9 @@
 // frequencies below 10kHz, where the aliasing between axes of multi-axis motions can cause audible
 // noise and shake your machine. At even lower step frequencies, AMASS adapts and provides even better
 // step smoothing. See stepper.c for more details on the AMASS system works.
-#define ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING  // Default enabled. Comment to disable.
+#ifndef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
+#define ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING 1 // Default enabled. Set to 0 to disable.
+#endif
 
 // Define Adaptive Multi-Axis Step-Smoothing(AMASS) levels and cutoff frequencies. The highest level
 // frequency bin starts at 0Hz and ends at its cutoff frequency. The next lower level frequency bin
@@ -224,7 +226,7 @@
 // NOTE: AMASS cutoff frequency multiplied by ISR overdrive factor must not exceed maximum step frequency.
 // NOTE: Current settings are set to overdrive the ISR to no more than 16kHz, balancing CPU overhead
 // and timer accuracy.  Do not alter these settings unless you know what you are doing.
-#ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
+#if ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
   #ifndef MAX_AMASS_LEVEL
     #define MAX_AMASS_LEVEL 3
   #endif

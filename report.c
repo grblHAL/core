@@ -1147,9 +1147,9 @@ static bool report_spindle_num (spindle_info_t *spindle, void *data)
  // Prints real-time data. This function grabs a real-time snapshot of the stepper subprogram
  // and the actual location of the CNC machine. Users may change the following function to their
  // specific needs, but the desired real-time data report must be as short as possible. This is
- // requires as it minimizes the computational overhead and allows grbl to keep running smoothly,
+ // requires as it minimizes the computational overhead and allows grblHAL to keep running smoothly,
  // especially during g-code programs with fast, short line segments and high frequency reports (5-20Hz).
-void report_realtime_status (void)
+void report_realtime_status (stream_write_ptr stream_write)
 {
     static bool probing = false;
 
@@ -1167,62 +1167,62 @@ void report_realtime_status (void)
         probe_state = hal.probe.get_state();
 
     // Report current machine state and sub-states
-    hal.stream.write_all("<");
+    stream_write("<");
 
     sys_state_t state = state_get();
 
     switch (gc_state.tool_change && state == STATE_CYCLE ? STATE_TOOL_CHANGE : state) {
 
         case STATE_IDLE:
-            hal.stream.write_all("Idle");
+            stream_write("Idle");
             break;
 
         case STATE_CYCLE:
-            hal.stream.write_all("Run");
+            stream_write("Run");
             if(sys.probing_state == Probing_Active && settings.status_report.run_substate)
                 probing = true;
             else if (probing)
                 probing = probe_state.triggered;
             if(sys.flags.feed_hold_pending)
-                hal.stream.write_all(":1");
+                stream_write(":1");
             else if(probing)
-                hal.stream.write_all(":2");
+                stream_write(":2");
             break;
 
         case STATE_HOLD:
-            hal.stream.write_all(appendbuf(2, "Hold:", uitoa((uint32_t)(sys.holding_state - 1))));
+            stream_write(appendbuf(2, "Hold:", uitoa((uint32_t)(sys.holding_state - 1))));
             break;
 
         case STATE_JOG:
-            hal.stream.write_all("Jog");
+            stream_write("Jog");
             break;
 
         case STATE_HOMING:
-            hal.stream.write_all("Home");
+            stream_write("Home");
             break;
 
         case STATE_ESTOP:
         case STATE_ALARM:
             if((report.all || settings.status_report.alarm_substate) && sys.alarm)
-                hal.stream.write_all(appendbuf(2, "Alarm:", uitoa((uint32_t)sys.alarm)));
+                stream_write(appendbuf(2, "Alarm:", uitoa((uint32_t)sys.alarm)));
             else
-                hal.stream.write_all("Alarm");
+                stream_write("Alarm");
             break;
 
         case STATE_CHECK_MODE:
-            hal.stream.write_all("Check");
+            stream_write("Check");
             break;
 
         case STATE_SAFETY_DOOR:
-            hal.stream.write_all(appendbuf(2, "Door:", uitoa((uint32_t)sys.parking_state)));
+            stream_write(appendbuf(2, "Door:", uitoa((uint32_t)sys.parking_state)));
             break;
 
         case STATE_SLEEP:
-            hal.stream.write_all("Sleep");
+            stream_write("Sleep");
             break;
 
         case STATE_TOOL_CHANGE:
-            hal.stream.write_all("Tool");
+            stream_write("Tool");
             break;
     }
 
@@ -1235,23 +1235,23 @@ void report_realtime_status (void)
     }
 
     // Report position
-    hal.stream.write_all(settings.status_report.machine_position ? "|MPos:" : "|WPos:");
-    hal.stream.write_all(get_axis_values(print_position));
+    stream_write(settings.status_report.machine_position ? "|MPos:" : "|WPos:");
+    stream_write(get_axis_values(print_position));
 
     // Returns planner and output stream buffer states.
 
     if (settings.status_report.buffer_state) {
-        hal.stream.write_all("|Bf:");
-        hal.stream.write_all(uitoa((uint32_t)plan_get_block_buffer_available()));
-        hal.stream.write_all(",");
-        hal.stream.write_all(uitoa(hal.stream.get_rx_buffer_free()));
+        stream_write("|Bf:");
+        stream_write(uitoa((uint32_t)plan_get_block_buffer_available()));
+        stream_write(",");
+        stream_write(uitoa(hal.stream.get_rx_buffer_free()));
     }
 
     if(settings.status_report.line_numbers) {
         // Report current line number
         plan_block_t *cur_block = plan_get_current_block();
         if (cur_block != NULL && cur_block->line_number > 0)
-            hal.stream.write_all(appendbuf(2, "|Ln:", uitoa((uint32_t)cur_block->line_number)));
+            stream_write(appendbuf(2, "|Ln:", uitoa((uint32_t)cur_block->line_number)));
     }
 
     spindle_ptrs_t *spindle_0;
@@ -1263,12 +1263,12 @@ void report_realtime_status (void)
     // Report realtime feed speed
     if(settings.status_report.feed_speed) {
         if(spindle_0->cap.variable) {
-            hal.stream.write_all(appendbuf(2, "|FS:", get_rate_value(st_get_realtime_rate())));
-            hal.stream.write_all(appendbuf(2, ",", uitoa(spindle_0_state.on ? lroundf(spindle_0->param->rpm_overridden) : 0)));
+            stream_write(appendbuf(2, "|FS:", get_rate_value(st_get_realtime_rate())));
+            stream_write(appendbuf(2, ",", uitoa(spindle_0_state.on ? lroundf(spindle_0->param->rpm_overridden) : 0)));
             if(spindle_0->get_data /* && sys.mpg_mode */)
-                hal.stream.write_all(appendbuf(2, ",", uitoa(lroundf(spindle_0->get_data(SpindleData_RPM)->rpm))));
+                stream_write(appendbuf(2, ",", uitoa(lroundf(spindle_0->get_data(SpindleData_RPM)->rpm))));
         } else
-            hal.stream.write_all(appendbuf(2, "|F:", get_rate_value(st_get_realtime_rate())));
+            stream_write(appendbuf(2, "|F:", get_rate_value(st_get_realtime_rate())));
     }
 
 #if N_SYS_SPINDLE > 1
@@ -1280,10 +1280,10 @@ void report_realtime_status (void)
 
         if((spindle_n = spindle_get(idx))) {
             spindle_n_state = spindle_n->get_state(spindle_n);
-            hal.stream.write_all(appendbuf(3, "|SP", uitoa(idx), ":"));
-            hal.stream.write_all(appendbuf(3, uitoa(spindle_n_state.on ? lroundf(spindle_n->param->rpm_overridden) : 0), ",,", spindle_n_state.on ? (spindle_n_state.ccw ? "C" : "S") : ""));
+            stream_write(appendbuf(3, "|SP", uitoa(idx), ":"));
+            stream_write(appendbuf(3, uitoa(spindle_n_state.on ? lroundf(spindle_n->param->rpm_overridden) : 0), ",,", spindle_n_state.on ? (spindle_n_state.ccw ? "C" : "S") : ""));
             if(settings.status_report.overrides)
-                hal.stream.write_all(appendbuf(2, ",", uitoa(spindle_n->param->override_pct)));
+                stream_write(appendbuf(2, ",", uitoa(spindle_n->param->override_pct)));
         }
     }
 
@@ -1328,7 +1328,7 @@ void report_realtime_status (void)
                 append = control_signals_tostring(append, ctrl_pin_state);
 
             *append = '\0';
-            hal.stream.write_all(buf);
+            stream_write(buf);
         }
     }
 
@@ -1382,19 +1382,19 @@ void report_realtime_status (void)
                 for(idx = 0; idx < N_AXIS; idx++)
                     wco[idx] = gc_get_offset(idx, true);
             }
-            hal.stream.write_all("|WCO:");
-            hal.stream.write_all(get_axis_values(wco));
+            stream_write("|WCO:");
+            stream_write(get_axis_values(wco));
         }
 
         if(report.gwco) {
-            hal.stream.write_all("|WCS:");
-            hal.stream.write_all(gc_coord_system_to_str(gc_state.modal.coord_system.id));
+            stream_write("|WCS:");
+            stream_write(gc_coord_system_to_str(gc_state.modal.coord_system.id));
         }
 
         if(report.overrides) {
-            hal.stream.write_all(appendbuf(2, "|Ov:", uitoa((uint32_t)sys.override.feed_rate)));
-            hal.stream.write_all(appendbuf(2, ",", uitoa((uint32_t)sys.override.rapid_rate)));
-            hal.stream.write_all(appendbuf(2, ",", uitoa((uint32_t)spindle_0->param->override_pct)));
+            stream_write(appendbuf(2, "|Ov:", uitoa((uint32_t)sys.override.feed_rate)));
+            stream_write(appendbuf(2, ",", uitoa((uint32_t)sys.override.rapid_rate)));
+            stream_write(appendbuf(2, ",", uitoa((uint32_t)spindle_0->param->override_pct)));
         }
 
         if(report.spindle || report.coolant || report.tool || gc_state.tool_change) {
@@ -1424,61 +1424,61 @@ void report_realtime_status (void)
                 *append++ = 'T';
 
             *append = '\0';
-            hal.stream.write_all(buf);
+            stream_write(buf);
         }
 
         if(report.scaling) {
             axis_signals_tostring(buf, gc_get_g51_state());
-            hal.stream.write_all("|Sc:");
-            hal.stream.write_all(buf);
+            stream_write("|Sc:");
+            stream_write(buf);
         }
 
 #if COMPATIBILITY_LEVEL <= 1
         if((report.all || report.mpg_mode) && settings.report_interval) {
-            hal.stream.write_all(sys.flags.auto_reporting ? "|AR:" : "|AR");
+            stream_write(sys.flags.auto_reporting ? "|AR:" : "|AR");
             if(sys.flags.auto_reporting)
-                hal.stream.write_all(uitoa(settings.report_interval));
+                stream_write(uitoa(settings.report_interval));
         }
 #endif
 
         if(report.mpg_mode)
-            hal.stream.write_all(sys.mpg_mode ? "|MPG:1" : "|MPG:0");
+            stream_write(sys.mpg_mode ? "|MPG:1" : "|MPG:0");
 
         if(report.homed && (sys.homing.mask || settings.homing.flags.single_axis_commands || settings.homing.flags.manual)) {
             axes_signals_t homing = {sys.homing.mask ? sys.homing.mask : AXES_BITMASK};
-            hal.stream.write_all(appendbuf(2, "|H:", (homing.mask & sys.homed.mask) == homing.mask ? "1" : "0"));
+            stream_write(appendbuf(2, "|H:", (homing.mask & sys.homed.mask) == homing.mask ? "1" : "0"));
             if(settings.homing.flags.single_axis_commands)
-                hal.stream.write_all(appendbuf(2, ",", uitoa(sys.homed.mask)));
+                stream_write(appendbuf(2, ",", uitoa(sys.homed.mask)));
         }
 
         if(report.xmode && settings.mode == Mode_Lathe)
-            hal.stream.write_all(gc_state.modal.diameter_mode ? "|D:1" : "|D:0");
+            stream_write(gc_state.modal.diameter_mode ? "|D:1" : "|D:0");
 
         if(report.tool)
-            hal.stream.write_all(appendbuf(2, "|T:", uitoa((uint32_t)gc_state.tool->tool_id)));
+            stream_write(appendbuf(2, "|T:", uitoa((uint32_t)gc_state.tool->tool_id)));
 
         if(report.probe_id)
-            hal.stream.write_all(appendbuf(2, "|P:", uitoa((uint32_t)probe_state.probe_id)));
+            stream_write(appendbuf(2, "|P:", uitoa((uint32_t)probe_state.probe_id)));
 
         if(report.tlo_reference)
-            hal.stream.write_all(appendbuf(2, "|TLR:", uitoa(sys.tlo_reference_set.mask != 0)));
+            stream_write(appendbuf(2, "|TLR:", uitoa(sys.tlo_reference_set.mask != 0)));
 
         if(report.m66result && sys.var5399 > -2) { // M66 result
             if(sys.var5399 >= 0)
-                hal.stream.write_all(appendbuf(2, "|In:", uitoa(sys.var5399)));
+                stream_write(appendbuf(2, "|In:", uitoa(sys.var5399)));
             else
-                hal.stream.write_all("|In:-1");
+                stream_write("|In:-1");
         }
     }
 
     if(grbl.on_realtime_report)
-        grbl.on_realtime_report(hal.stream.write_all, sys.report);
+        grbl.on_realtime_report(stream_write, sys.report);
 
 #if COMPATIBILITY_LEVEL <= 1
     if(report.all) {
-        hal.stream.write_all("|FW:grblHAL");
+        stream_write("|FW:grblHAL");
         if(sys.blocking_event)
-            hal.stream.write_all("|$C:1");
+            stream_write("|$C:1");
     } else
 #endif
 
@@ -1510,7 +1510,7 @@ void report_realtime_status (void)
             system_set_exec_state_flag(EXEC_TLO_REPORT);
     }
 
-    hal.stream.write_all(">" ASCII_EOL);
+    stream_write(">" ASCII_EOL);
 
     system_add_rt_report(Report_ClearAll);
 

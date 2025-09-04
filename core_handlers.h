@@ -47,7 +47,7 @@ typedef enum {
 /* TODO: add to grbl pointers so that a different formatting (xml, json etc) of reports may be implemented by a plugin?
 typedef struct {
     void (*report_echo_line_received)(char *line);
-    void (*report_realtime_status)(void);
+    void (*report_realtime_status)(stream_write_ptr stream_write);
     void (*report_probe_parameters)(void);
     void (*report_ngc_parameters)(void);
     void (*report_gcode_modes)(void);

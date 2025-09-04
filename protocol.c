@@ -504,7 +504,7 @@ bool protocol_exec_rt_system (void)
 
                 if(bit_istrue(sys.rt_exec_state, EXEC_STATUS_REPORT)) {
                     system_clear_exec_state_flag(EXEC_STATUS_REPORT);
-                    report_realtime_status();
+                    report_realtime_status(hal.stream.write_all);
                 }
 
                 protocol_poll_cmd();
@@ -604,7 +604,7 @@ bool protocol_exec_rt_system (void)
 
         // Execute and print status to output stream
         if (rt_exec & EXEC_STATUS_REPORT)
-            report_realtime_status();
+            report_realtime_status(hal.stream.write_all);
 
         if(rt_exec & EXEC_GCODE_REPORT)
             report_gcode_modes();

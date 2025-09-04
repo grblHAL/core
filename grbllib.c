@@ -319,7 +319,7 @@ int grbl_enter (void)
 
 // check and configure driver
 
-#ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
+#if ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
     driver.amass = hal.driver_cap.amass_level >= MAX_AMASS_LEVEL;
     hal.driver_cap.amass_level = MAX_AMASS_LEVEL;
 #else

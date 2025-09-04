@@ -92,6 +92,12 @@ typedef enum {
 } stream_type_t;
 
 typedef enum {
+    StreamSuspend_Off = 0,
+    StreamSuspend_Pending,
+    StreamSuspend_Active
+} stream_suspend_state_t;
+
+typedef enum {
     Serial_8bit = 0,
     Serial_7bit
 } serial_width_t;
@@ -367,7 +373,9 @@ int16_t stream_get_null (void);
 \param suspend when true _hal.stream.read_ is changed to stream_get_null(), if false it is restored if already saved.
 \returns true if there is data in the buffer, false otherwise.
 */
-bool stream_rx_suspend (stream_rx_buffer_t *rxbuffer, bool suspend);
+ bool stream_rx_suspend (stream_rx_buffer_t *rxbuffer, bool suspend);
+
+ stream_suspend_state_t stream_is_rx_suspended (void);
 
 bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stream_write_char_ptr write_char);
 

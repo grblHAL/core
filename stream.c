@@ -138,6 +138,11 @@ ISR_CODE static bool ISR_FUNC(await_toolchange_ack)(char c)
     return true;
 }
 
+stream_suspend_state_t stream_is_rx_suspended (void)
+{
+    return stream.rxbuffer ? (stream.rxbuffer->backup ? StreamSuspend_Active : StreamSuspend_Pending) : StreamSuspend_Off;
+}
+
 bool stream_rx_suspend (stream_rx_buffer_t *rxbuffer, bool suspend)
 {
     if(suspend) {

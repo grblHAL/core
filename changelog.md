@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+<a name="20250902">Build 20250902
+
+Core:
+
+* Fix for bug preventing disabling of AMASS, changed the `ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING` symbol so it can be overridden via compiler argument.
+
+* For developers: added output function parameter to signature of `report_realtime_status()` call to allow routing output to a given stream \(or streams\).
+
+Drivers:
+
+* ESP32, TM4C123: updated for changed `ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING` symbol.
+
+* RP2040: updated BTT SKR Pico v1 map to use _Servo_ port for reset/estop in four motor configurations. Ref discussion [#110](https://github.com/grblHAL/RP2040/discussions/110).
+
+---
+
 <a name="20250831">20250831
 
 Drivers:
@@ -22,7 +38,7 @@ Plugins:
 
 * Plasma: added support for VAD lock \(Velcoity Anti Dive\) to THC up/down mode and tentative support for puddle jumping.
 Puddle jump parameters can only be set via LinuxCNC style material data.  
-Moved THC on delay to delayed task so cutting can start before THC is enabled and fixed non-responsive up/down mode when the undelying step injection code is run via polling.  
+Moved THC on delay to delayed task so cutting can start before THC is enabled and fixed non-responsive up/down mode when the underlying step injection code is run via polling.  
 Ref. issue [#24](https://github.com/grblHAL/Plugin_plasma/issues/24).
 
 ---
@@ -33,7 +49,7 @@ Core:
 
 * Fix for laser enable not restored after feedhold. Ref. issue [#798](https://github.com/grblHAL/core/issues/798).
 
-* Fix for incorrect direction of motion via second stepper driver used for step injection /(plasma THC/) and stepper spindle.
+* Fix for incorrect direction of motion via second stepper driver used for step injection \(plasma THC\) and stepper spindle.
 
 Plugins:
 

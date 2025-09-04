@@ -69,7 +69,7 @@ DCRAM static segment_t segment_buffer[SEGMENT_BUFFER_SIZE];
 // Stepper ISR data struct. Contains the running data for the main stepper ISR.
 static stepper_t st = {};
 
-#ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
+#if ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
 typedef struct {
     uint32_t level_1;
     uint32_t level_2;
@@ -495,12 +495,12 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
                 #endif
                   = st.step_event_count >> 1;
 
-              #ifndef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
-                memcpy(st.steps, st.exec_block->steps, sizeof(st.steps));
+              #if !ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
+                memcpy(&st.steps, &st.exec_block->steps, sizeof(st.steps));
               #endif
             }
 
-#ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
+#if ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
 
             // With AMASS enabled, adjust Bresenham axis increment counters according to AMASS level.
             st.amass_level = st.exec_segment->amass_level;
@@ -572,6 +572,7 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
             sys.position[Y_AXIS] = sys.position[Y_AXIS] + (st.dir_out.y ? -1 : 1);
     }
 
+    if(st.steps.value[Z_AXIS]) {
     st.counter.z += st.steps.value[Z_AXIS];
     if (st.counter.z > st.step_event_count) {
         step_out.z = On;
@@ -580,6 +581,7 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
         if(!backlash_motion)
 #endif
             sys.position[Z_AXIS] = sys.position[Z_AXIS] + (st.dir_out.z ? -1 : 1);
+    }
     }
 
   #ifdef A_AXIS
@@ -695,13 +697,13 @@ void st_reset (void)
     memset(&prep, 0, sizeof(st_prep_t));
     memset(&st, 0, sizeof(stepper_t));
 
-#ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
+#if ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
     // TODO: move to driver?
     // AMASS_LEVEL0: Normal operation. No AMASS. No upper cutoff frequency. Starts at LEVEL1 cutoff frequency.
     // Defined as step timer frequency / Cutoff frequency in Hz
     amass.level_1 = hal.f_step_timer / 8000;
-    amass.level_2 = hal.f_step_timer / 4000;
-    amass.level_3 = hal.f_step_timer / 2000;
+    amass.level_2 = amass.level_1 << 1;
+    amass.level_3 = amass.level_2 << 1;
 #endif
 
     cycles_per_min = (float)hal.f_step_timer * 60.0f;
@@ -829,13 +831,7 @@ void st_prep_buffer (void)
                 st_prep_block = st_prep_block->next;
 
                 uint_fast8_t idx = N_AXIS;
-              #ifndef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
-                do {
-                    idx--;
-                    st_prep_block->steps[idx] = (pl_block->steps[idx] << 1);
-                } while(idx);
-                st_prep_block->step_event_count = (pl_block->step_event_count << 1);
-              #else
+#if ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
                 // With AMASS enabled, simply bit-shift multiply all Bresenham data by the max AMASS
                 // level, such that we never divide beyond the original data anywhere in the algorithm.
                 // If the original data is divided, we can lose a step from integer roundoff.
@@ -844,7 +840,13 @@ void st_prep_buffer (void)
                     st_prep_block->steps.value[idx] = pl_block->steps.value[idx] << MAX_AMASS_LEVEL;
                 } while(idx);
                 st_prep_block->step_event_count = pl_block->step_event_count << MAX_AMASS_LEVEL;
-              #endif
+#else
+                do {
+                    idx--;
+                    st_prep_block->steps.value[idx] = pl_block->steps.value[idx] << 1;
+                } while(idx);
+                st_prep_block->step_event_count = pl_block->step_event_count << 1;
+#endif
 
                 st_prep_block->direction = pl_block->direction;
                 st_prep_block->programmed_rate = pl_block->programmed_rate;
@@ -1224,7 +1226,7 @@ void st_prep_buffer (void)
             prep_segment->target_position = prep.target_position; //st_prep_block->millimeters - pl_block->millimeters;
         }
 
-      #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
+#if ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
         // Compute step timing and multi-axis smoothing level.
         // NOTE: AMASS overdrives the timer with each level, so only one prescalar is required.
         if (cycles < amass.level_1)
@@ -1234,7 +1236,7 @@ void st_prep_buffer (void)
             cycles >>= prep_segment->amass_level;
             prep_segment->n_step <<= prep_segment->amass_level;
         }
-      #endif
+#endif
 
         prep_segment->cycles_per_tick = cycles;
         prep_segment->current_rate = prep.current_speed;
