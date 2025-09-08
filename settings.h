@@ -631,6 +631,7 @@ typedef union {
         uint16_t machine_position   :1,
                  buffer_state       :1,
                  line_numbers       :1,
+                 distance_to_go     :1,
                  feed_speed         :1,
                  pin_state          :1,
                  work_coord_offset  :1,
@@ -641,7 +642,7 @@ typedef union {
                  alarm_substate     :1,
                  run_substate       :1,
                  when_homing        :1,
-                 unassigned         :3;
+                 unassigned         :2;
     };
 } reportmask_t;
 

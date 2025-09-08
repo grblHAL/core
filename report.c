@@ -1254,18 +1254,20 @@ void report_realtime_status (stream_write_ptr stream_write)
             stream_write(appendbuf(2, "|Ln:", uitoa((uint32_t)cur_block->line_number)));
     }
 
-    // Report distance remaining as difference between target (end of block) and current position
-    plan_block_t *cur_block = plan_get_current_block();
-    if (cur_block != NULL) {
-        system_convert_array_steps_to_mpos(dist_remaining, sys.position);
+    if(settings.status_report.distance_to_go) {
+        // Report distance-to-go in current block (i.e., difference between target / end-of-block) and current position)
+        plan_block_t *cur_block = plan_get_current_block();
+        if (cur_block != NULL) {
+            system_convert_array_steps_to_mpos(dist_remaining, sys.position);
 
-        for(idx = 0; idx < N_AXIS; idx++) {
-            dist_remaining[idx] = cur_block->target_mm[idx] - dist_remaining[idx];
+            for(idx = 0; idx < N_AXIS; idx++) {
+                dist_remaining[idx] = cur_block->target_mm[idx] - dist_remaining[idx];
+            }
+
+            hal.stream.write_all("|DTG:");
+            hal.stream.write_all(get_axis_values(dist_remaining));
         }
-        // Report distance to go
-        hal.stream.write_all("|DToGo:");
-        hal.stream.write_all(get_axis_values(dist_remaining));
-    }
+    }   
 
     spindle_ptrs_t *spindle_0;
     spindle_state_t spindle_0_state;
