@@ -617,21 +617,11 @@ in the real time report.
 #define DEFAULT_REPORT_LINE_NUMBERS On // Default on. Set to \ref Off or 0 to disable.
 #endif
 
-/*! \def DEFAULT_REPORT_DISTANCE_TO_GO
-\brief
-If set to \ref Off or 0 the `|DTG:` distance-to-go element is not included
-in the real time report.
-\internal Bit 3 in settings.status_report.
-*/
-#if !defined DEFAULT_REPORT_DISTANCE_TO_GO || defined __DOXYGEN__
-#define DEFAULT_REPORT_DISTANCE_TO_GO On // Default on. Set to \ref Off or 0 to disable.
-#endif
-
 /*! \def DEFAULT_REPORT_CURRENT_FEED_SPEED
 \brief
 If set to \ref Off or 0 the `|FS:` current feed & speed element is not included
 in the real time report.
-\internal Bit 4 in settings.status_report.
+\internal Bit 3 in settings.status_report.
 */
 #if !defined DEFAULT_REPORT_CURRENT_FEED_SPEED || defined __DOXYGEN__
 #define DEFAULT_REPORT_CURRENT_FEED_SPEED On // Default on. Set to \ref Off or 0 to disable.
@@ -641,7 +631,7 @@ in the real time report.
 \brief
 If set to \ref Off or 0 the `|Pn:` input pins state element is not included
 in the real time report.
-\internal Bit 5 in settings.status_report.
+\internal Bit 4 in settings.status_report.
 */
 #if !defined DEFAULT_REPORT_PIN_STATE || defined __DOXYGEN__
 #define DEFAULT_REPORT_PIN_STATE On // Default on. Set to \ref Off or 0 to disable.
@@ -651,7 +641,7 @@ in the real time report.
 \brief
 If set to \ref Off or 0 the `|WCO:` work coordinate offset element is not included
 in the real time report.
-\internal Bit 6 in settings.status_report.
+\internal Bit 5 in settings.status_report.
 */
 #if !defined DEFAULT_REPORT_WORK_COORD_OFFSET || defined __DOXYGEN__
 #define DEFAULT_REPORT_WORK_COORD_OFFSET On // Default on. Set to \ref Off or 0 to disable.
@@ -661,7 +651,7 @@ in the real time report.
 \brief
 If set to \ref Off or 0 the `|Pn:` input pins state element is not included
 in the real time report.
-\internal Bit 7 in settings.status_report.
+\internal Bit 6 in settings.status_report.
 */
 #if !defined DEFAULT_REPORT_OVERRIDES || defined __DOXYGEN__
 #define DEFAULT_REPORT_OVERRIDES On // Default on. Set to \ref Off or 0 to disable.
@@ -672,7 +662,7 @@ in the real time report.
 Upon a successful probe cycle, this option provides immediately feedback of the probe coordinates
 through an automatically generated message. If disabled, users can still access the last probe
 coordinates through grblHAL `$#` print parameters command.
-\internal Bit 8 in settings.status_report.
+\internal Bit 7 in settings.status_report.
 */
 #if !defined DEFAULT_REPORT_PROBE_COORDINATES || defined __DOXYGEN__
 #define DEFAULT_REPORT_PROBE_COORDINATES On // Default on. Set to \ref Off or 0 to disable.
@@ -686,7 +676,7 @@ can be several motions behind. This option forces the planner buffer to empty, s
 motion whenever there is a command that alters the work coordinate offsets `G10,G43.1,G92,G54-59.3`.
 This is the simplest way to ensure `WPos:` is always correct. Fortunately, it's exceedingly rare
 that any of these commands are used need continuous motions through them.
-\internal Bit 9 in settings.status_report.
+\internal Bit 8 in settings.status_report.
 */
 #if !defined DEFAULT_REPORT_SYNC_ON_WCO_CHANGE || defined __DOXYGEN__
 #define DEFAULT_REPORT_SYNC_ON_WCO_CHANGE On //!< ok
@@ -697,7 +687,7 @@ that any of these commands are used need continuous motions through them.
 When enabled adds automatic report of the parser state following a status report request
 if the state was changed since the last report. The output is the same as provided by
 the `$G` command.
-\internal Bit 10 in settings.status_report.
+\internal Bit 9 in settings.status_report.
 */
 #if !defined DEFAULT_REPORT_PARSER_STATE || defined __DOXYGEN__
 #define DEFAULT_REPORT_PARSER_STATE Off // Default off. Set to \ref On or 1 to enable.
@@ -711,7 +701,7 @@ normally no way to determine the cause of the alarm. Enabling this setting adds 
 code (see \ref alarm_code_t) as a substate, separated by a colon, to the _Alarm_ state in
 the real time report.
 <br>__NOTE:__ Enabling this option may break senders.
-\internal Bit 11 in settings.status_report.
+\internal Bit 10 in settings.status_report.
 */
 #if !defined DEFAULT_REPORT_ALARM_SUBSTATE || defined __DOXYGEN__
 #define DEFAULT_REPORT_ALARM_SUBSTATE Off // Default off. Set to \ref On or 1 to enable.
@@ -724,7 +714,7 @@ The following codes are defined:
 + `1` - a feed hold is pending, waiting for spindle synchronized motion to complete.
 + `2` - the motion is a probe.
 <br>__NOTE:__ Enabling this option may break senders.
-\internal Bit 12 in settings.status_report.
+\internal Bit 11 in settings.status_report.
 */
 #if !defined DEFAULT_REPORT_RUN_SUBSTATE || defined __DOXYGEN__
 #define DEFAULT_REPORT_RUN_SUBSTATE Off // Default off. Set to \ref On or 1 to enable.
@@ -734,10 +724,19 @@ The following codes are defined:
 \brief
 Enabling this setting enables status reporting while homing.
 <br>__NOTE:__ Enabling this option may break senders.
-\internal Bit 13 in settings.status_report.
+\internal Bit 12 in settings.status_report.
 */
 #if !defined DEFAULT_REPORT_WHEN_HOMING || defined __DOXYGEN__
 #define DEFAULT_REPORT_WHEN_HOMING Off // Default off. Set to \ref On or 1 to enable.
+#endif
+
+/*! \def DEFAULT_REPORT_DISTANCE_TO_GO
+\brief
+If set to \ref Off or 0 the `|DTG:` distance-to-go element is not included in the real time report.
+\internal Bit 13 in settings.status_report.
+*/
+#if !defined DEFAULT_REPORT_DISTANCE_TO_GO || defined __DOXYGEN__
+#define DEFAULT_REPORT_DISTANCE_TO_GO On // Default on. Set to \ref Off or 0 to disable.
 #endif
 
 ///@}

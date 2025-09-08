@@ -152,7 +152,6 @@ PROGMEM const settings_t defaults = {
     .status_report.machine_position = DEFAULT_REPORT_MACHINE_POSITION,
     .status_report.buffer_state = DEFAULT_REPORT_BUFFER_STATE,
     .status_report.line_numbers = DEFAULT_REPORT_LINE_NUMBERS,
-    .status_report.distance_to_go = DEFAULT_REPORT_DISTANCE_TO_GO,
     .status_report.feed_speed = DEFAULT_REPORT_CURRENT_FEED_SPEED,
     .status_report.pin_state = DEFAULT_REPORT_PIN_STATE,
     .status_report.work_coord_offset = DEFAULT_REPORT_WORK_COORD_OFFSET,
@@ -163,6 +162,7 @@ PROGMEM const settings_t defaults = {
     .status_report.alarm_substate = DEFAULT_REPORT_ALARM_SUBSTATE,
     .status_report.run_substate = DEFAULT_REPORT_RUN_SUBSTATE,
     .status_report.when_homing = DEFAULT_REPORT_WHEN_HOMING,
+    .status_report.distance_to_go = DEFAULT_REPORT_DISTANCE_TO_GO,
     .limits.flags.hard_enabled = DEFAULT_HARD_LIMIT_ENABLE,
     .limits.flags.jog_soft_limited = DEFAULT_JOG_LIMIT_ENABLE,
     .limits.flags.check_at_init = DEFAULT_CHECK_LIMITS_AT_INIT,
@@ -2015,7 +2015,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_GangedDirInvertMask, Group_Stepper, "Ganged axes direction invert", NULL, Format_Bitfield, ganged_axes, NULL, NULL, Setting_IsExtendedFn, set_ganged_dir_invert, get_int, is_setting_available },
      { Setting_SpindlePWMOptions, Group_Spindle, "PWM spindle options", NULL, Format_XBitfield, "Enable,RPM controls spindle enable signal,Disable laser mode capability", NULL, NULL, Setting_IsExtendedFn, set_pwm_options, get_int, is_setting_available },
 #if COMPATIBILITY_LEVEL <= 1
-     { Setting_StatusReportMask, Group_General, "Status report options", NULL, Format_Bitfield, "Position in machine coordinate,Buffer state,Line numbers,Distance-to-go,Feed & speed,Pin state,Work coordinate offset,Overrides,Probe coordinates,Buffer sync on WCO change,Parser state,Alarm substatus,Run substatus,Enable when homing", NULL, NULL, Setting_IsExtendedFn, set_report_mask, get_int, NULL },
+     { Setting_StatusReportMask, Group_General, "Status report options", NULL, Format_Bitfield, "Position in machine coordinate,Buffer state,Line numbers,Feed & speed,Pin state,Work coordinate offset,Overrides,Probe coordinates,Buffer sync on WCO change,Parser state,Alarm substatus,Run substatus,Enable when homing,Distance-to-go", NULL, NULL, Setting_IsExtendedFn, set_report_mask, get_int, NULL },
 #else
      { Setting_StatusReportMask, Group_General, "Status report options", NULL, Format_Bitfield, "Position in machine coordinate,Buffer state", NULL, NULL, Setting_IsLegacyFn, set_report_mask, get_int, NULL },
 #endif
