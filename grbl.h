@@ -42,7 +42,7 @@
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_BUILD 20250902
+#define GRBL_BUILD 20250910
 
 #define GRBL_URL "https://github.com/grblHAL"
 
@@ -120,7 +120,7 @@
 #define CMD_OPTIONAL_STOP_TOGGLE            0x88
 #define CMD_SINGLE_BLOCK_TOGGLE             0x89
 #define CMD_OVERRIDE_FAN0_TOGGLE            0x8A //!< Toggle Fan 0 on/off, not implemented by the core.
-#define CMD_MPG_MODE_TOGGLE                 0x8B //!< Toggle MPG mode on/off, not implemented by the core.
+#define CMD_MPG_MODE_TOGGLE                 0x8B //!< Toggle MPG mode on/off, available when the MPG stream is enabled with MPG mode 2.
 #define CMD_AUTO_REPORTING_TOGGLE           0x8C //!< Toggle auto real time reporting if configured.
 #define CMD_OVERRIDE_FEED_RESET             0x90 //!< Restores feed override value to 100%.
 #define CMD_OVERRIDE_FEED_COARSE_PLUS       0x91

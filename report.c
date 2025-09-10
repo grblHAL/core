@@ -1264,8 +1264,8 @@ void report_realtime_status (stream_write_ptr stream_write)
                 dist_remaining[idx] = cur_block->target_mm[idx] - dist_remaining[idx];
             }
 
-            hal.stream.write_all("|DTG:");
-            hal.stream.write_all(get_axis_values(dist_remaining));
+            stream_write("|DTG:");
+            stream_write(get_axis_values(dist_remaining));
         }
     }   
 

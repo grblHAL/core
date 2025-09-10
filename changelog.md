@@ -1,5 +1,27 @@
 ## grblHAL changelog
 
+<a name="20250910">Build 20250910
+
+Core:
+
+* Added setting options for clearing rapids and feed overrids on soft reset to `$676`, defaults to on. Ref. issue [#803](https://github.com/grblHAL/core/issues/803).
+
+* Added realtime report of distance-to-go. Ref. PR [#802](https://github.com/grblHAL/core/pull/802).
+
+Drivers:
+
+* iMXRT1062: fix for crash when basic on/off spindle is configured.
+
+* STM32F4xx: workaround for PWM LED strip code setting output pin as high-Z when idle.
+
+* STM32F7xx: improved spindle encoder code. 
+
+Plugins:
+
+* Misc, eventout: fix for mixup of spindle on/off and spindle-at-speed events.
+
+---
+
 <a name="20250902">Build 20250902
 
 Core:
@@ -10,7 +32,7 @@ Core:
 
 Drivers:
 
-* ESP32, TM4C123: updated for changed `ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING` symbol.
+* ESP32, SAM3X8E and TM4C123: updated for changed `ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING` symbol.
 
 * RP2040: updated BTT SKR Pico v1 map to use _Servo_ port for reset/estop in four motor configurations. Ref discussion [#110](https://github.com/grblHAL/RP2040/discussions/110).
 

@@ -91,6 +91,8 @@ PROGMEM const settings_t defaults = {
     .flags.tool_change_fast_pulloff = DEFAULT_TOOLCHANGE_FAST_PROBE_PULLOFF,
     .flags.no_unlock_after_estop = DEFAULT_NO_UNLOCK_AFTER_ESTOP,
     .flags.keep_offsets_on_reset = DEFAULT_KEEP_OFFSETS_ON_RESET,
+    .flags.keep_rapids_override_on_reset = DEFAULT_KEEP_RAPIDS_OVR_ON_RESET,
+    .flags.keep_feed_override_on_reset = DEFAULT_KEEP_FEED_OVR_ON_RESET,
     .flags.tool_persistent = DEFAULT_PERSIST_TOOL,
 
     .probe.disable_probe_pullup = DEFAULT_PROBE_SIGNAL_DISABLE_PULLUP,
@@ -1049,6 +1051,8 @@ static status_code_t set_reset_actions (setting_id_t id, uint_fast16_t int_value
 {
     settings.homing.flags.keep_on_reset = bit_isfalse(int_value, bit(0));
     settings.flags.keep_offsets_on_reset = bit_isfalse(int_value, bit(1));
+    settings.flags.keep_rapids_override_on_reset = bit_isfalse(int_value, bit(2));
+    settings.flags.keep_feed_override_on_reset = bit_isfalse(int_value, bit(3));
 
     return Status_OK;
 }
@@ -1660,7 +1664,10 @@ static uint32_t get_int (setting_id_t id)
             break;
 #endif
         case Setting_ResetActions:
-            value = (!settings.homing.flags.keep_on_reset) | ((!settings.flags.keep_offsets_on_reset) << 1);
+            value = (!settings.homing.flags.keep_on_reset) |
+                     ((!settings.flags.keep_offsets_on_reset) << 1) |
+                      ((!settings.flags.keep_rapids_override_on_reset) << 2) |
+                       ((!settings.flags.keep_feed_override_on_reset) << 3);
             break;
 
         default:
@@ -2162,7 +2169,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_MotorWarningsInvert, Group_Stepper, "Invert motor warning inputs", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.motor_warning_invert, NULL, is_setting_available },
      { Setting_MotorFaultsEnable, Group_Stepper, "Motor fault inputs enable", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.motor_fault_enable, NULL, is_setting_available },
      { Setting_MotorFaultsInvert, Group_Stepper, "Invert motor fault inputs", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.motor_fault_invert, NULL, is_setting_available },
-     { Setting_ResetActions, Group_General, "Reset actions", NULL, Format_Bitfield, "Clear homed status if position was lost,Clear offsets (except G92)", NULL, NULL, Setting_IsExtendedFn, set_reset_actions, get_int, NULL },
+     { Setting_ResetActions, Group_General, "Reset actions", NULL, Format_Bitfield, "Clear homed status if position was lost,Clear offsets (except G92),Clear rapids override,Clear feed override", NULL, NULL, Setting_IsExtendedFn, set_reset_actions, get_int, NULL },
      { Setting_StepperEnableDelay, Group_Stepper, "Stepper enable delay", "ms", Format_Int16, "##0", NULL, "250", Setting_IsExtended, &settings.stepper_enable_delay, NULL, NULL },
 };
 

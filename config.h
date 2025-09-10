@@ -902,13 +902,37 @@ to a reset during motion.
 /*! /def DEFAULT_KEEP_OFFSETS_ON_RESET
 \brief
 Enable this setting to keep offsets (except G92 which is always kept) over a soft reset.
-\internal Bit 14 in settings.flags.
+\internal Bit 17 in settings.flags.
 */
 ///@{
 #if !defined DEFAULT_KEEP_OFFSETS_ON_RESET || defined __DOXYGEN__
 #define DEFAULT_KEEP_OFFSETS_ON_RESET Off
 #endif
 ///@}
+
+/*! /def DEFAULT_KEEP_RAPIDS_OVR_ON_RESET
+\brief
+Enable this setting to keep rapids override over a soft reset.
+\internal Bit 21 in settings.flags.
+*/
+///@{
+#if !defined DEFAULT_KEEP_RAPIDS_OVR_ON_RESET || defined __DOXYGEN__
+#define DEFAULT_KEEP_RAPIDS_OVR_ON_RESET Off
+#endif
+///@}
+
+/*! /def DEFAULT_KEEP_FEED_OVR_ON_RESET
+\brief
+Enable this setting to feedrate override over a soft reset.
+\internal Bit 22 in settings.flags.
+*/
+///@{
+#if !defined DEFAULT_KEEP_FEED_OVR_ON_RESET || defined __DOXYGEN__
+#define DEFAULT_KEEP_FEED_OVR_ON_RESET Off
+#endif
+///@}
+
+
 
 // Control signals settings (Group_ControlSignals)
 

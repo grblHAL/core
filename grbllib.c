@@ -420,14 +420,18 @@ int grbl_enter (void)
         // Reset report entry points
         report_init_fns();
 
+        overrides_t override;
+
+        memcpy(&override, &sys.override, sizeof(overrides_t));
+
         if(!sys.position_lost || settings.homing.flags.keep_on_reset)
             memset(&sys, 0, offsetof(system_t, homed)); // Clear system variables except alarm & homed status.
         else
             memset(&sys, 0, offsetof(system_t, alarm)); // Clear system variables except state & alarm.
 
-        sys.var5399 = -2;                                        // Clear last M66 result
-        sys.override.feed_rate = DEFAULT_FEED_OVERRIDE;          // Set to 100%
-        sys.override.rapid_rate = DEFAULT_RAPID_OVERRIDE;        // Set to 100%
+        sys.var5399 = -2;                               // Clear last M66 result
+        sys.override.feed_rate = sys.cold_start || !settings.flags.keep_feed_override_on_reset ? DEFAULT_FEED_OVERRIDE : override.feed_rate;
+        sys.override.rapid_rate = sys.cold_start || !settings.flags.keep_rapids_override_on_reset ? DEFAULT_RAPID_OVERRIDE : override.rapid_rate;
         do {
             if(spindle_is_enabled(--spindle_num))
                 spindle_get(spindle_num)->param->override_pct = DEFAULT_SPINDLE_RPM_OVERRIDE; // Set to 100%

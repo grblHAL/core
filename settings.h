@@ -602,7 +602,9 @@ typedef union {
                  tool_change_at_g30              :1,
                  tool_change_fast_pulloff        :1,
                  tool_persistent                 :1,
-         		 unassigned                      :11;
+                 keep_rapids_override_on_reset   :1,
+                 keep_feed_override_on_reset     :1,
+         		 unassigned                      :9;
     };
 } settingflags_t;
 
