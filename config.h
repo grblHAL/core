@@ -730,6 +730,15 @@ Enabling this setting enables status reporting while homing.
 #define DEFAULT_REPORT_WHEN_HOMING Off // Default off. Set to \ref On or 1 to enable.
 #endif
 
+/*! \def DEFAULT_REPORT_DISTANCE_TO_GO
+\brief
+If set to \ref Off or 0 the `|DTG:` distance-to-go element is not included in the real time report.
+\internal Bit 13 in settings.status_report.
+*/
+#if !defined DEFAULT_REPORT_DISTANCE_TO_GO || defined __DOXYGEN__
+#define DEFAULT_REPORT_DISTANCE_TO_GO On // Default on. Set to \ref Off or 0 to disable.
+#endif
+
 ///@}
 
 /*! @name $11 - Setting_JunctionDeviation

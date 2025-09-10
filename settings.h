@@ -641,7 +641,8 @@ typedef union {
                  alarm_substate     :1,
                  run_substate       :1,
                  when_homing        :1,
-                 unassigned         :3;
+                 distance_to_go     :1,
+                 unassigned         :2;
     };
 } reportmask_t;
 
