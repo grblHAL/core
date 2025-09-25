@@ -259,7 +259,7 @@ PROGMEM static const ngc_ro_param_t ngc_ro_params[] = {
     { .id_min = 5261, .id_max = 5270, .get = coord_system_offset },
     { .id_min = 5281, .id_max = 5290, .get = coord_system_offset },
     { .id_min = 5301, .id_max = 5310, .get = coord_system_offset },
-    { .id_min = 5321, .id_max = 5230, .get = coord_system_offset },
+    { .id_min = 5321, .id_max = 5330, .get = coord_system_offset },
     { .id_min = 5341, .id_max = 5350, .get = coord_system_offset },
     { .id_min = 5361, .id_max = 5370, .get = coord_system_offset },
     { .id_min = 5381, .id_max = 5390, .get = coord_system_offset },

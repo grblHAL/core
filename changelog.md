@@ -1,5 +1,13 @@
 ## grblHAL changelog
 
+<a name="20250925">Build 20250925
+
+Core:
+
+* Fixed typo in parameter access for G59 coordinate. Ref. issue [#814](https://github.com/grblHAL/core/issues/814).
+
+---
+
 <a name="20250922">Build 20250922
 
 * Added `G65P6` for disabling spindle on/off delay for the next spindle command (`M3`, `M4` and `M5`)
