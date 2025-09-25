@@ -826,6 +826,7 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(char c)
     static bool esc = false;
 
     bool drop = false;
+    control_signals_t signals = {};
 
     // 1. Process characters in the ranges 0x - 1x and 8x-Ax
     // Characters with functions assigned are always acted upon even when the input stream
@@ -886,12 +887,7 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(char c)
             break;
 
         case CMD_CYCLE_START:
-            system_set_exec_state_flag(EXEC_CYCLE_START);
-            // Cancel any pending tool change
-            gc_state.tool_change = false;
-            drop = true;
-            if(grbl.on_cycle_start)
-                grbl.on_cycle_start();
+            signals.cycle_start = On;
             break;
 
         case CMD_FEED_HOLD:
@@ -929,12 +925,12 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(char c)
             break;
 
         case CMD_OPTIONAL_STOP_TOGGLE:
-            if(!hal.signals_cap.stop_disable) // Not available as realtime command if HAL supports physical switch
+            if((signals.stop_disable = !hal.signals_cap.stop_disable)) // Not available as realtime command if HAL supports physical switch
                 sys.flags.optional_stop_disable = !sys.flags.optional_stop_disable;
             break;
 
         case CMD_SINGLE_BLOCK_TOGGLE:
-            if(!hal.signals_cap.single_block) // Not available as realtime command if HAL supports physical switch
+            if((signals.single_block = !hal.signals_cap.single_block)) // Not available as realtime command if HAL supports physical switch
                 sys.flags.single_block = !sys.flags.single_block;
             break;
 
@@ -1007,14 +1003,7 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(char c)
             break;
 
         case CMD_CYCLE_START_LEGACY:
-            if(!keep_rt_commands || settings.flags.legacy_rt_commands) {
-                system_set_exec_state_flag(EXEC_CYCLE_START);
-                // Cancel any pending tool change
-                gc_state.tool_change = false;
-                drop = true;
-                if(grbl.on_cycle_start)
-                    grbl.on_cycle_start();
-            }
+            signals.cycle_start = !keep_rt_commands || settings.flags.legacy_rt_commands;
             break;
 
         case CMD_FEED_HOLD_LEGACY:
@@ -1030,6 +1019,21 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(char c)
     }
 
     esc = c == ASCII_ESC;
+
+    if(signals.bits) {
+
+        if(grbl.on_control_signals_changed)
+            grbl.on_control_signals_changed(signals);
+
+        if(signals.cycle_start) {
+            system_set_exec_state_flag(EXEC_CYCLE_START);
+            // Cancel any pending tool change
+            gc_state.tool_change = false;
+            drop = true;
+            if(grbl.on_cycle_start)
+                grbl.on_cycle_start();
+        }
+    }
 
     return drop;
 }

@@ -520,7 +520,7 @@ static void state_await_hold (uint_fast16_t rt_exec)
                 // Ensure any prior spindle stop override is disabled at start of safety door routine.
                 sys.override.spindle_stop.value = 0;
 
-                // Parking requires parking axis homed, the current location not exceeding the???
+                // Parking requires parking axis homed, the current location not exceeding the
                 // parking target location, and laser mode disabled.
                 if (settings.parking.flags.enabled && !sys.override.control.parking_disable && settings.mode != Mode_Laser) {
 

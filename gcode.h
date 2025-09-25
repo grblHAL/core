@@ -341,12 +341,13 @@ typedef union {
 typedef union {
     uint8_t value;
     struct {
-        uint8_t feed_rate_disable   :1,
-                feed_hold_disable   :1,
-                spindle_rpm_disable :1,
-                parking_disable     :1,
-                reserved            :3,
-                sync                :1;
+        uint8_t feed_rate_disable    :1,
+                feed_hold_disable    :1,
+                spindle_rpm_disable  :1,
+                parking_disable      :1,
+                spindle_wait_disable :1,
+                reserved             :2,
+                sync                 :1;
     };
 } gc_override_flags_t;
 

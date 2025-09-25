@@ -109,11 +109,12 @@ typedef enum {
 } ncg_name_param_id_t;
 
 typedef enum {
-    G65Macro_GetSetting      = 1,
-    G65Macro_GetToolOffset   = 2,
-    G65Macro_ParameterRW     = 3,
-    G65Macro_GetMachineState = 4,
-    G65Macro_SelectProbe     = 5
+    G65Macro_GetSetting          = 1,
+    G65Macro_GetToolOffset       = 2,
+    G65Macro_ParameterRW         = 3,
+    G65Macro_GetMachineState     = 4,
+    G65Macro_SelectProbe         = 5,
+    G65Macro_SpindleDelayDisable = 6
 } g65_inbuilt_t;
 
 void ngc_params_init (void);

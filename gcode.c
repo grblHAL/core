@@ -2840,13 +2840,13 @@ status_code_t gc_execute_block (char *block)
                     //   point and the radius to the target point differs more than 0.002mm (EMC def. 0.5mm OR 0.005mm and 0.1% radius).
                     // [G2/3 Full-Circle-Mode Errors]: Axis words exist. No offsets programmed. P must be an integer.
                     // NOTE: Both radius and offsets are required for arc tracing and are pre-computed with the error-checking.
-                    if (gc_block.words.r) { // Arc Radius Mode
+
                     if (!axis_words.mask)
                         FAIL(Status_GcodeNoAxisWords); // [No axis words]
 
                     if (!(axis_words.mask & (bit(plane.axis_0)|bit(plane.axis_1))))
                         FAIL(Status_GcodeNoAxisWordsInPlane); // [No axis words in plane]
-                    }
+
                     if (gc_block.words.p) { // Number of turns
                         if(!isintf(gc_block.values.p))
                             FAIL(Status_GcodeCommandValueNotInteger); // [P word is not an integer]
@@ -2861,6 +2861,9 @@ status_code_t gc_execute_block (char *block)
                     float x, y;
                     x = gc_block.values.xyz[plane.axis_0] - gc_state.position[plane.axis_0]; // Delta x between current position and target
                     y = gc_block.values.xyz[plane.axis_1] - gc_state.position[plane.axis_1]; // Delta y between current position and target
+
+                    if(gc_state.modal.scaling_active && scale_factor.ijk[plane.axis_0] * scale_factor.ijk[plane.axis_1] < 0.0f)
+                        gc_parser_flags.arc_is_clockwise = !gc_parser_flags.arc_is_clockwise;
 
                     if (gc_block.words.r) { // Arc Radius Mode
 
@@ -3445,6 +3448,8 @@ status_code_t gc_execute_block (char *block)
 
             spindle_event = !spindle_ok;
         }
+
+        sys.override.control.spindle_wait_disable = Off;
 
         if(spindle_event && grbl.on_spindle_programmed)
             grbl.on_spindle_programmed(sspindle->hal, sspindle->state, plan_data.spindle.rpm, sspindle->rpm_mode);

@@ -95,6 +95,7 @@ typedef void (*on_program_completed_ptr)(program_flow_t program_flow, bool check
 typedef void (*on_execute_realtime_ptr)(sys_state_t state);
 typedef void (*on_unknown_accessory_override_ptr)(uint8_t cmd);
 typedef void (*on_cycle_start_ptr)(void);
+typedef void (*on_control_signals_changed_ptr)(control_signals_t signals);
 typedef bool (*on_unknown_realtime_cmd_ptr)(char c);
 typedef void (*on_report_handlers_init_ptr)(void);
 typedef void (*on_report_options_ptr)(bool newopt);
@@ -233,9 +234,9 @@ typedef struct {
     on_unknown_accessory_override_ptr on_unknown_accessory_override;
     on_report_options_ptr on_report_options;
     on_report_ngc_parameters_ptr on_report_ngc_parameters;
-    on_report_command_help_ptr on_report_command_help;      //!< Deprecated, use system_register_commands() to register new commands.
+    on_report_command_help_ptr on_report_command_help;          //!< Deprecated, use system_register_commands() to register new commands.
     on_rt_reports_added_ptr on_rt_reports_added;
-    on_settings_changed_ptr on_settings_changed;            //!< Called on initial settings load and on setting changes.
+    on_settings_changed_ptr on_settings_changed;                //!< Called on initial settings load and on setting changes.
     on_global_settings_restore_ptr on_global_settings_restore;
     on_setting_get_description_ptr on_setting_get_description;
     on_get_alarms_ptr on_get_alarms;
@@ -243,10 +244,11 @@ typedef struct {
     on_get_settings_ptr on_get_settings;
     on_realtime_report_ptr on_realtime_report;
     on_unknown_feedback_message_ptr on_unknown_feedback_message;
-    on_cycle_start_ptr on_cycle_start;                      //!< Called from interrupt context. NOTE: this is for the cycle start signal.
-    on_unknown_realtime_cmd_ptr on_unknown_realtime_cmd;    //!< Called from interrupt context.
-    on_unknown_sys_command_ptr on_unknown_sys_command;      //!< return Status_Unhandled if not handled.
-    on_get_commands_ptr on_get_commands;                    //!< Deprecated, use system_register_commands() to register new commands.
+    on_cycle_start_ptr on_cycle_start;                          //!< Called from interrupt context. NOTE: this is for the cycle start signal.
+    on_control_signals_changed_ptr on_control_signals_changed;  //!< Called from interrupt context. NOTE: this is only for cycle start and some of the optional signals.
+    on_unknown_realtime_cmd_ptr on_unknown_realtime_cmd;        //!< Called from interrupt context.
+    on_unknown_sys_command_ptr on_unknown_sys_command;          //!< Return Status_Unhandled if not handled.
+    on_get_commands_ptr on_get_commands;                        //!< Deprecated, use system_register_commands() to register new commands.
     on_user_command_ptr on_user_command;
     on_stream_changed_ptr on_stream_changed;
     on_homing_rate_set_ptr on_homing_rate_set;
@@ -256,20 +258,20 @@ typedef struct {
     on_probe_completed_ptr on_probe_completed;
     on_set_axis_setting_unit_ptr on_set_axis_setting_unit;
     on_process_gcode_comment_ptr on_process_gcode_comment;
-    on_gcode_message_ptr on_gcode_message;                  //!< Called on output of message parsed from gcode. NOTE: string pointed to is freed after this call.
-    on_gcode_message_ptr on_gcode_comment;                  //!< Called when a plain gcode comment has been parsed.
-    on_tool_selected_ptr on_tool_selected;                  //!< Called prior to executing M6 or after executing M61.
-    on_tool_changed_ptr on_tool_changed;                    //!< Called after executing M6 or M61.
-    on_toolchange_ack_ptr on_toolchange_ack;                //!< Called from interrupt context.
-    on_jog_cancel_ptr on_jog_cancel;                        //!< Called from interrupt context.
+    on_gcode_message_ptr on_gcode_message;                      //!< Called on output of message parsed from gcode. NOTE: string pointed to is freed after this call.
+    on_gcode_message_ptr on_gcode_comment;                      //!< Called when a plain gcode comment has been parsed.
+    on_tool_selected_ptr on_tool_selected;                      //!< Called prior to executing M6 or after executing M61.
+    on_tool_changed_ptr on_tool_changed;                        //!< Called after executing M6 or M61.
+    on_toolchange_ack_ptr on_toolchange_ack;                    //!< Called from interrupt context.
+    on_jog_cancel_ptr on_jog_cancel;                            //!< Called from interrupt context.
     on_laser_ppi_enable_ptr on_laser_ppi_enable;
-    on_spindle_select_ptr on_spindle_select;                //!< Called before spindle is selected, hook in HAL overrides here
-    on_spindle_selected_ptr on_spindle_selected;            //!< Called when spindle is selected, do not change HAL pointers here!
-    on_reset_ptr on_reset;                                  //!< Called from interrupt context.
-    on_file_demarcate_ptr on_file_demarcate;                //!< Called when percent sign is parsed in the gcode stream.
-    on_file_open_ptr on_file_open;                          //!< Called when a file is opened for streaming.
-    on_file_end_ptr on_file_end;                            //!< Called when a file opened for streaming reaches the end.
-    user_mcode_ptrs_t user_mcode;                           //!< Optional handlers for user defined M-codes.
+    on_spindle_select_ptr on_spindle_select;                    //!< Called before spindle is selected, hook in HAL overrides here
+    on_spindle_selected_ptr on_spindle_selected;                //!< Called when spindle is selected, do not change HAL pointers here!
+    on_reset_ptr on_reset;                                      //!< Called from interrupt context.
+    on_file_demarcate_ptr on_file_demarcate;                    //!< Called when percent sign is parsed in the gcode stream.
+    on_file_open_ptr on_file_open;                              //!< Called when a file is opened for streaming.
+    on_file_end_ptr on_file_end;                                //!< Called when a file opened for streaming reaches the end.
+    user_mcode_ptrs_t user_mcode;                               //!< Optional handlers for user defined M-codes.
     // core entry points - set up by core before driver_init() is called.
     home_machine_ptr home_machine;
     travel_limits_ptr check_travel_limits;

@@ -1,10 +1,29 @@
 ## grblHAL changelog
 
+<a name="20250922">Build 20250922
+
+* added `G65P6` for disabling spindle on/off delay for the next spindle command (`M3`, `M4` and `M5`)
+
+* for programmers: added `grbl.on_control_signals_changed` event, fired on some signals: optional stop, single step, block delete and cycle start.
+
+* fix for incorrect handling of arcs when negative scaling is enabled with `G51`.
+
+Drivers:
+
+* STM32F4xx: added tentative support for THCAD2 voltage to frequency converter - for use by plasma plugin.
+
+Plugins:
+
+* Networking: httpd - fix/workaround for network stack failure when attempting to send data from flash via DMA. Only seen with the _STM32F407VET6_DEV_ board. 
+
+* Misc, eventout: added _Motion_ event \(trigged by RUN, JOG and HOMING states\) and toggle events for optional stop, single step and block delete signals.
+Ref. discussion [#813](https://github.com/grblHAL/core/discussions/813).
+
 <a name="20250910">Build 20250910
 
 Core:
 
-* Added setting options for clearing rapids and feed overrids on soft reset to `$676`, defaults to on. Ref. issue [#803](https://github.com/grblHAL/core/issues/803).
+* Added setting options for clearing rapids and feed override on soft reset to `$676`, defaults to on. Ref. issue [#803](https://github.com/grblHAL/core/issues/803).
 
 * Added realtime report of distance-to-go. Ref. PR [#802](https://github.com/grblHAL/core/pull/802).
 

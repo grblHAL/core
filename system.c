@@ -77,6 +77,8 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
 
     if(signals.bits) {
 
+        control_signals_t event_signals = {};
+
         sys.last_event.control.bits = signals.bits;
 
         if(signals.bits & critical_signals.bits) {
@@ -97,7 +99,9 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
                     system_set_exec_state_flag(EXEC_SAFETY_DOOR);
             }
 #endif
-            if(signals.probe_overtravel) {
+            if(signals.probe_overtravel || signals.tls_overtravel) {
+                event_signals.probe_overtravel = On;
+                event_signals.tls_overtravel = signals.tls_overtravel;
                 limit_signals_t overtravel = { .min.z = On};
                 hal.limits.interrupt_callback(overtravel);
                 // TODO: add message?
@@ -108,19 +112,15 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
                 } else
                     hal.probe.configure(false, false);
             } else if(signals.probe_disconnected) {
+                event_signals.probe_disconnected = On;
                 if(sys.probing_state == Probing_Active && state_get() == STATE_CYCLE) {
                     system_set_exec_state_flag(EXEC_FEED_HOLD);
                     sys.alarm_pending = Alarm_ProbeProtect;
                 }
             } else if(signals.feed_hold)
                 system_set_exec_state_flag(EXEC_FEED_HOLD);
-            else if(signals.cycle_start) {
-                system_set_exec_state_flag(EXEC_CYCLE_START);
-                sys.report.cycle_start = settings.status_report.pin_state;
-                gc_state.tool_change = false;
-                if(grbl.on_cycle_start)
-                    grbl.on_cycle_start();
-            }
+            else if(signals.cycle_start)
+                event_signals.cycle_start = On;
 
             if(signals.block_delete)
                 sys.flags.block_delete_enabled = !signals.deasserted;
@@ -130,10 +130,25 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
 
             if(signals.stop_disable)
                 sys.flags.optional_stop_disable = !signals.deasserted;
+
+            event_signals.bits |= (signals.bits & (control_signals_t){ .block_delete = On, .single_block = On, .stop_disable = On }.bits);
+
+            if(event_signals.bits) {
+
+                if(grbl.on_control_signals_changed)
+                    grbl.on_control_signals_changed(signals);
+
+                if(event_signals.cycle_start) {
+                    system_set_exec_state_flag(EXEC_CYCLE_START);
+                    sys.report.cycle_start = settings.status_report.pin_state;
+                    gc_state.tool_change = false;
+                    if(grbl.on_cycle_start)
+                        grbl.on_cycle_start();
+                }
+            }
         }
     }
 }
-
 
 /*! \brief Executes user startup scripts, if stored.
 */
@@ -331,6 +346,8 @@ static status_code_t toggle_single_block (sys_state_t state, char *args)
     if(!hal.signals_cap.single_block) {
         sys.flags.single_block = !sys.flags.single_block;
         grbl.report.feedback_message(sys.flags.single_block ? Message_Enabled : Message_Disabled);
+        if(grbl.on_control_signals_changed)
+            grbl.on_control_signals_changed((control_signals_t){ .single_block = On });
     }
 
     return hal.signals_cap.single_block ? Status_InvalidStatement : Status_OK;
@@ -341,6 +358,8 @@ static status_code_t toggle_block_delete (sys_state_t state, char *args)
     if(!hal.signals_cap.block_delete) {
         sys.flags.block_delete_enabled = !sys.flags.block_delete_enabled;
         grbl.report.feedback_message(sys.flags.block_delete_enabled ? Message_Enabled : Message_Disabled);
+        if(grbl.on_control_signals_changed)
+            grbl.on_control_signals_changed((control_signals_t){ .block_delete = On });
     }
 
     return hal.signals_cap.block_delete ? Status_InvalidStatement : Status_OK;
@@ -350,7 +369,9 @@ static status_code_t toggle_optional_stop (sys_state_t state, char *args)
 {
     if(!hal.signals_cap.stop_disable) {
         sys.flags.optional_stop_disable = !sys.flags.optional_stop_disable;
-        grbl.report.feedback_message(sys.flags.block_delete_enabled ? Message_Enabled : Message_Disabled);
+        grbl.report.feedback_message(sys.flags.optional_stop_disable ? Message_Enabled : Message_Disabled);
+        if(grbl.on_control_signals_changed)
+            grbl.on_control_signals_changed((control_signals_t){ .stop_disable = On });
     }
 
     return hal.signals_cap.stop_disable ? Status_InvalidStatement : Status_OK;

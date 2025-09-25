@@ -2073,17 +2073,17 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_ParkingEnable, Group_SafetyDoor, "Parking cycle", NULL, Format_XBitfield, "Enable,Deactivate upon init,Enable parking override control", NULL, NULL, Setting_IsExtendedFn, set_parking_enable, get_int, NULL },
      { Setting_ParkingAxis, Group_SafetyDoor, "Parking axis", NULL, Format_RadioButtons, "X,Y,Z", NULL, NULL, Setting_IsExtended, &settings.parking.axis, NULL, NULL },
      { Setting_HomingLocateCycles, Group_Homing, "Homing passes", NULL, Format_Int8, "##0", "1", "128", Setting_IsExtended, &settings.homing.locate_cycles, NULL, NULL },
-     { Setting_HomingCycle_1, Group_Homing, "Axes homing, first pass", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_homing_cycle, get_int, NULL },
-     { Setting_HomingCycle_2, Group_Homing, "Axes homing, second pass", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_homing_cycle, get_int, NULL },
-     { Setting_HomingCycle_3, Group_Homing, "Axes homing, third pass", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_homing_cycle, get_int, NULL },
+     { Setting_HomingCycle_1, Group_Homing, "Axes homing, first phase", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_homing_cycle, get_int, NULL },
+     { Setting_HomingCycle_2, Group_Homing, "Axes homing, second phase", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_homing_cycle, get_int, NULL },
+     { Setting_HomingCycle_3, Group_Homing, "Axes homing, third phase", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_homing_cycle, get_int, NULL },
 #ifdef A_AXIS
-     { Setting_HomingCycle_4, Group_Homing, "Axes homing, fourth pass", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_homing_cycle, get_int, NULL },
+     { Setting_HomingCycle_4, Group_Homing, "Axes homing, fourth phase", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_homing_cycle, get_int, NULL },
 #endif
 #ifdef B_AXIS
-     { Setting_HomingCycle_5, Group_Homing, "Axes homing, fifth pass", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_homing_cycle, get_int, NULL },
+     { Setting_HomingCycle_5, Group_Homing, "Axes homing, fifth phase", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_homing_cycle, get_int, NULL },
 #endif
 #ifdef C_AXIS
-     { Setting_HomingCycle_6, Group_Homing, "Axes homing, sixth pass", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_homing_cycle, get_int, NULL },
+     { Setting_HomingCycle_6, Group_Homing, "Axes homing, sixth phase", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_homing_cycle, get_int, NULL },
 #endif
      { Setting_ParkingPulloutIncrement, Group_SafetyDoor, "Parking pull-out distance", "mm", Format_Decimal, "###0.0", NULL, NULL, Setting_IsExtended, &settings.parking.pullout_increment, NULL, NULL },
      { Setting_ParkingPulloutRate, Group_SafetyDoor, "Parking pull-out rate", "mm/min", Format_Decimal, "###0.0", NULL, NULL, Setting_IsExtended, &settings.parking.pullout_rate, NULL, NULL },
@@ -2250,17 +2250,17 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_ParkingEnable, "Enables parking cycle, requires parking axis homed." },
     { Setting_ParkingAxis, "Define which axis that performs the parking motion." },
     { Setting_HomingLocateCycles, "Number of homing passes. Minimum 1, maximum 128." },
-    { Setting_HomingCycle_1, "Axes to home in first pass." },
-    { Setting_HomingCycle_2, "Axes to home in second pass." },
-    { Setting_HomingCycle_3, "Axes to home in third pass." },
+    { Setting_HomingCycle_1, "Axes to home in first phase." },
+    { Setting_HomingCycle_2, "Axes to home in second phase." },
+    { Setting_HomingCycle_3, "Axes to home in third phase." },
 #ifdef A_AXIS
-    { Setting_HomingCycle_4, "Axes to home in fourth pass." },
+    { Setting_HomingCycle_4, "Axes to home in fourth phase." },
 #endif
 #ifdef B_AXIS
-    { Setting_HomingCycle_5, "Axes to home in fifth pass." },
+    { Setting_HomingCycle_5, "Axes to home in fifth phase." },
 #endif
 #ifdef C_AXIS
-    { Setting_HomingCycle_6, "Axes to home in sixth pass." },
+    { Setting_HomingCycle_6, "Axes to home in sixth phase." },
 #endif
     { Setting_JogStepSpeed, "Step jogging speed in millimeters per minute." },
     { Setting_JogSlowSpeed, "Slow jogging speed in millimeters per minute." },

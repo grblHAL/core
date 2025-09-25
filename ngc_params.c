@@ -95,32 +95,30 @@ static ngc_string_id_t ref_id = (uint32_t)-1;
 static ngc_string_param_t *ngc_string_params = NULL;
 static on_macro_execute_ptr on_macro_execute;
 
+#if N_AXIS > 3
+
+static float _convert_pos (float value, uint_fast8_t axis)
+{
+    return settings.flags.report_inches && bit_isfalse(settings.steppers.is_rotary.mask, bit(idx)) ? value * 25.4f : value;
+}
+
+#else
+
+static inline float _convert_pos (float value, uint_fast8_t axis)
+{
+    return settings.flags.report_inches ? value * 25.4f : value;
+}
+
+#endif
+
 static float _absolute_pos (uint_fast8_t axis)
 {
-    float value;
-
-    if(axis < N_AXIS) {
-        value = sys.position[axis] / settings.axis[axis].steps_per_mm;
-        if(settings.flags.report_inches)
-            value *= 25.4f;
-    } else
-        value = 0.0f;
-
-    return value;
+    return _convert_pos(axis < N_AXIS ? sys.position[axis] / settings.axis[axis].steps_per_mm : 0.0f, axis);
 }
 
 static float _relative_pos (uint_fast8_t axis)
 {
-    float value;
-
-    if(axis < N_AXIS) {
-        value = sys.position[axis] / settings.axis[axis].steps_per_mm - gc_get_offset(axis, false);
-        if(settings.flags.report_inches)
-            value *= 25.4f;
-    } else
-        value = 0.0f;
-
-    return value;
+    return _convert_pos(axis < N_AXIS ? sys.position[axis] / settings.axis[axis].steps_per_mm - gc_get_offset(axis, false) : 0.0f, axis);
 }
 
 // numbered parameters
@@ -131,14 +129,11 @@ static float probe_coord (ngc_param_id_t id)
     uint_fast8_t axis = (id % 10) - 1;
     coord_system_t data;
 
-    if(axis < N_AXIS && (sys.probe_coordsys_id == gc_state.modal.coord_system.id || settings_read_coord_data(sys.probe_coordsys_id, &data.xyz))) {
+    if(axis < N_AXIS && (sys.probe_coordsys_id == gc_state.modal.coord_system.id || settings_read_coord_data(sys.probe_coordsys_id, &data.xyz)))
         value = sys.probe_position[axis] / settings.axis[axis].steps_per_mm -
                  (sys.probe_coordsys_id == gc_state.modal.coord_system.id ? gc_state.modal.coord_system.xyz[axis] : data.xyz[axis]);
-        if(settings.flags.report_inches)
-            value *= 25.4f;
-    }
 
-    return value;
+    return _convert_pos(value, axis);
 }
 
 static float scaling_factors (ngc_param_id_t id)
@@ -242,13 +237,7 @@ static float g92_offset (ngc_param_id_t id)
 
 static float work_position (ngc_param_id_t id)
 {
-    float value = 0.0f;
-    uint_fast8_t axis = id % 10;
-
-    if(axis < N_AXIS)
-        value = _relative_pos(axis);
-
-    return value;
+    return _relative_pos(id % 10);
 }
 
 static float debug_output (ngc_param_id_t id)
@@ -1138,6 +1127,11 @@ static status_code_t onMacroExecute (macro_id_t macro_id)
 
         case G65Macro_SelectProbe:
             status = macro_select_probe();
+            break;
+
+        case G65Macro_SpindleDelayDisable:
+            sys.override.control.spindle_wait_disable = On;
+            status = Status_OK;
             break;
     }
 

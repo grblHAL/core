@@ -631,25 +631,30 @@ static bool spindle_set_state_wait (spindle_ptrs_t *spindle, spindle_state_t sta
 
         if((ok = spindle_set_state(spindle, state, rpm))) {
 
-            bool at_speed = !spindle->cap.at_speed || spindle->cap.torch || spindle->at_speed_tolerance <= 0.0f;
+            if(sys.override.control.spindle_wait_disable) {
+                sys.override.control.spindle_wait_disable = Off;
+            } else {
 
-            if(at_speed)
-                ok = delay_ms == 0 || spindle->cap.torch || delay_sec((float)delay_ms / 1000.0f, delay_mode);
-            else {
-                uint16_t delay = 0;
-                if(delay_ms == 0)
-                    delay_ms = 60000; // one minute...
-                while(!(at_speed = spindle->get_state(spindle).at_speed)) {
-                    if(!delay_sec(0.2f, delay_mode))
-                        break;
-                    delay += 200;
-                    if(delay > delay_ms) {
-                        gc_spindle_off();
-                        system_raise_alarm(Alarm_Spindle);
-                        break;
+                bool at_speed = !spindle->cap.at_speed || spindle->cap.torch || spindle->at_speed_tolerance <= 0.0f;
+
+                if(at_speed)
+                    ok = delay_ms == 0 || spindle->cap.torch || delay_sec((float)delay_ms / 1000.0f, delay_mode);
+                else {
+                    uint16_t delay = 0;
+                    if(delay_ms == 0)
+                        delay_ms = 60000; // one minute...
+                    while(!(at_speed = spindle->get_state(spindle).at_speed)) {
+                        if(!delay_sec(0.2f, delay_mode))
+                            break;
+                        delay += 200;
+                        if(delay > delay_ms) {
+                            gc_spindle_off();
+                            system_raise_alarm(Alarm_Spindle);
+                            break;
+                        }
                     }
+                    ok &= at_speed;
                 }
-                ok &= at_speed;
             }
         }
 
