@@ -2,11 +2,11 @@
 
 <a name="20250922">Build 20250922
 
-* added `G65P6` for disabling spindle on/off delay for the next spindle command (`M3`, `M4` and `M5`)
+* Added `G65P6` for disabling spindle on/off delay for the next spindle command (`M3`, `M4` and `M5`)
 
-* for programmers: added `grbl.on_control_signals_changed` event, fired on some signals: optional stop, single step, block delete and cycle start.
+* For programmers: added `grbl.on_control_signals_changed` event, fired on some signals: optional stop, single step, block delete and cycle start.
 
-* fix for incorrect handling of arcs when negative scaling is enabled with `G51`.
+* Fix for incorrect handling of arcs when negative scaling is enabled with `G51`.
 
 Drivers:
 

@@ -99,7 +99,7 @@ static on_macro_execute_ptr on_macro_execute;
 
 static float _convert_pos (float value, uint_fast8_t axis)
 {
-    return settings.flags.report_inches && bit_isfalse(settings.steppers.is_rotary.mask, bit(idx)) ? value * 25.4f : value;
+    return settings.flags.report_inches && bit_isfalse(settings.steppers.is_rotary.mask, bit(axis)) ? value * 25.4f : value;
 }
 
 #else
