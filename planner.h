@@ -147,6 +147,7 @@ typedef struct {
                                     // i.e. arcs, canned cycles, and backlash compensation.
   float previous_unit_vec[N_AXIS];  // Unit vector of previous path line segment
   float previous_nominal_speed;     // Nominal speed of previous path line segment
+  float actual_rpm;                 // Updated when in units per revolution blocks (G95) mode.
 } planner_t;
 
 // Initialize and reset the motion plan subsystem
@@ -193,5 +194,7 @@ bool plan_check_full_buffer (void);
 void plan_feed_override (override_t feed_override, override_t rapid_override);
 
 void plan_data_init (plan_line_data_t *plan_data);
+
+void plan_sync_velocity (void *block);
 
 #endif

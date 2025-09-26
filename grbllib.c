@@ -615,7 +615,7 @@ ISR_CODE void task_delete (foreground_task_ptr fn, void *data)
     hal.irq_disable();
 
     if((task = next_task)) do {
-        if(fn == task->fn && data == task->data) {
+        if(fn == task->fn && (data == NULL || data == task->data)) {
             if(prev)
                 prev->next = task->next;
             else

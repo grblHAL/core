@@ -307,7 +307,7 @@ bool plan_check_full_buffer (void)
 float plan_compute_profile_nominal_speed (plan_block_t *block)
 {
     float nominal_speed = block->condition.units_per_rev || block->spindle.state.synchronized
-                           ? block->programmed_rate * block->spindle.hal->get_data(SpindleData_RPM)->rpm
+                           ? block->programmed_rate * (pl.actual_rpm = block->spindle.hal->get_data(SpindleData_RPM)->rpm)
                            : block->programmed_rate;
 
     if(block->condition.rapid_motion)
@@ -709,6 +709,20 @@ static bool plan_update_velocity_profile_parameters (void)
     }
 
     return block_buffer_tail != block_buffer_head;
+}
+
+// Re-calulates feed rate on RPM changes for units per revolution blocks (G95)
+// Called periodically from stepper.c
+void plan_sync_velocity (void *block)
+{
+    float rpm = ((plan_block_t *)block)->spindle.hal->get_data(SpindleData_RPM)->rpm;
+
+    if(pl.actual_rpm != rpm) {
+        pl.actual_rpm = rpm;
+        if(plan_update_velocity_profile_parameters())
+            plan_cycle_reinitialize();
+    } else
+        task_add_delayed(plan_sync_velocity, block, 10);
 }
 
 // Set feed overrides

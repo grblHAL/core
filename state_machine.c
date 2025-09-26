@@ -266,22 +266,33 @@ void state_set (sys_state_t new_state)
                             if (block->spindle.hal->reset_data)
                                 block->spindle.hal->reset_data();
 
-                            uint32_t index = block->spindle.hal->get_data(SpindleData_Counters)->index_count + 2;
+                            if(!block->condition.units_per_rev) {
 
-                            while(index != block->spindle.hal->get_data(SpindleData_Counters)->index_count) {
+                                uint32_t index = block->spindle.hal->get_data(SpindleData_Counters)->index_count + 2;
 
-                                if(hal.get_elapsed_ticks() - ms > 5000) {
+                                while(index != block->spindle.hal->get_data(SpindleData_Counters)->index_count) {
+
+                                    if(hal.get_elapsed_ticks() - ms > 5000) {
+                                        system_raise_alarm(Alarm_Spindle);
+                                        return;
+                                    }
+
+                                    if(sys.rt_exec_state & (EXEC_RESET|EXEC_STOP)) {
+                                        system_set_exec_state_flag(EXEC_RESET);
+                                        return;
+                                    }
+                                    // TODO: allow real time reporting?
+                                }
+
+                                if(block->spindle.hal->get_data(SpindleData_RPM)->rpm == 0.0f) {
                                     system_raise_alarm(Alarm_Spindle);
                                     return;
                                 }
 
-                                if(sys.rt_exec_state & (EXEC_RESET|EXEC_STOP)) {
-                                    system_set_exec_state_flag(EXEC_RESET);
-                                    return;
-                                }
-                                // TODO: allow real time reporting?
+                            } else if(block->spindle.hal->get_data(SpindleData_RPM)->rpm == 0.0f) {
+                                system_raise_alarm(Alarm_Spindle);
+                                return;
                             }
-
                         }
                         st_wake_up();
                         stateHandler = state_cycle;

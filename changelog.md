@@ -1,5 +1,13 @@
 ## grblHAL changelog
 
+<a name="20250926">Build 20250926
+
+Core:
+
+* Updated motion in units per revolution mode (G95) to handle spindle RPM changes. Changed initial wait for two index pulses to check RPM > 0 before starting such motion.
+
+---
+
 <a name="20250925">Build 20250925
 
 Core:

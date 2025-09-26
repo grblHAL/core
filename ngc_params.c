@@ -171,7 +171,7 @@ static float tool_offset (ngc_param_id_t id)
 {
     uint_fast8_t axis = id % 10;
 
-    return axis <= N_AXIS ? gc_state.tool_length_offset[axis] : 0.0f;
+    return _convert_pos(axis <= N_AXIS ? gc_state.tool_length_offset[axis] : 0.0f, axis);
 }
 
 static float g28_home (ngc_param_id_t id)
@@ -183,7 +183,7 @@ static float g28_home (ngc_param_id_t id)
     if(axis <= N_AXIS && settings_read_coord_data(CoordinateSystem_G28, &data.xyz))
         value = data.xyz[axis - 1];
 
-    return value;
+    return _convert_pos(value, axis);
 }
 
 static float g30_home (ngc_param_id_t id)
@@ -195,13 +195,13 @@ static float g30_home (ngc_param_id_t id)
 #if COMPATIBILITY_LEVEL > 1
     if(id <= CoordinateSystem_G59) {
 #endif
-    if (axis <= N_AXIS && settings_read_coord_data(CoordinateSystem_G30, &data.xyz))
+    if(axis <= N_AXIS && settings_read_coord_data(CoordinateSystem_G30, &data.xyz))
         value = data.xyz[axis - 1];
 #if COMPATIBILITY_LEVEL > 1
     }
 #endif
 
-    return value;
+    return _convert_pos(value, axis);
 }
 
 static float coord_system (ngc_param_id_t id)
@@ -220,7 +220,7 @@ static float coord_system_offset (ngc_param_id_t id)
     if (axis > 0 && axis <= N_AXIS && settings_read_coord_data((coord_system_id_t)id, &data.xyz))
         value = data.xyz[axis - 1];
 
-    return value;
+    return _convert_pos(value, axis);
 }
 
 static float g92_offset_applied (ngc_param_id_t id)
@@ -232,7 +232,7 @@ static float g92_offset (ngc_param_id_t id)
 {
     uint_fast8_t axis = id % 10;
 
-    return axis <= N_AXIS ? gc_state.g92_coord_offset [axis - 1] : 0.0f;
+    return _convert_pos(axis <= N_AXIS ? gc_state.g92_coord_offset[axis - 1] : 0.0f, axis);
 }
 
 static float work_position (ngc_param_id_t id)
@@ -677,7 +677,7 @@ static char *ngc_name_tolower (char *s)
     static char name[NGC_MAX_PARAM_LENGTH + 1];
 
     uint_fast8_t len = 0;
-	char c, *s1 = s, *s2 = name;
+    char c, *s1 = s, *s2 = name;
 
     while((c = *s1++) && len <= NGC_MAX_PARAM_LENGTH) {
         if(c > ' ') {
@@ -687,7 +687,7 @@ static char *ngc_name_tolower (char *s)
     }
     *s2 = '\0';
 
-	return name;
+    return name;
 }
 
 bool ngc_named_param_get (char *name, float *value)
@@ -999,7 +999,7 @@ uint_fast8_t ngc_call_level (void)
 
 uint8_t ngc_float_decimals (void)
 {
-	return settings.flags.report_inches ? N_DECIMAL_COORDVALUE_INCH : N_DECIMAL_COORDVALUE_MM;
+    return settings.flags.report_inches ? N_DECIMAL_COORDVALUE_INCH : N_DECIMAL_COORDVALUE_MM;
 }
 
 static status_code_t macro_get_setting (void)

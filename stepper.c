@@ -216,6 +216,8 @@ ISR_CODE void ISR_FUNC(st_go_idle)(void)
     stepping = false;
     hal.stepper.go_idle(false);
 
+    task_delete(plan_sync_velocity, NULL);
+
     // Set stepper driver idle state, disabled or enabled, depending on settings and circumstances.
     if(((settings.steppers.idle_lock_time != 255) || sys.rt_exec_alarm || state == STATE_SLEEP) && state != STATE_HOMING) {
         if(settings.steppers.idle_lock_time == 0 || state == STATE_SLEEP)
@@ -813,6 +815,9 @@ void st_prep_buffer (void)
             if (pl_block == NULL)
                 return; // No planner blocks. Exit.
 
+            if(pl_block->condition.units_per_rev)
+                task_add_delayed(plan_sync_velocity, pl_block, 10);
+
             // Check if we need to only recompute the velocity profile or load a new block.
             if (prep.recalculate.velocity_profile) {
                 if(settings.parking.flags.enabled) {
@@ -1252,6 +1257,9 @@ void st_prep_buffer (void)
 
         // Check for exit conditions and flag to load next planner block.
         if (mm_remaining <= prep.mm_complete) {
+
+            if(pl_block->condition.units_per_rev)
+                task_delete(plan_sync_velocity, NULL);
 
             // End of planner block or forced-termination. No more distance to be executed.
             if (mm_remaining > 0.0f) { // At end of forced-termination.
