@@ -272,6 +272,8 @@ void state_set (sys_state_t new_state)
 
                                 while(index != block->spindle.hal->get_data(SpindleData_Counters)->index_count) {
 
+                                    grbl.on_execute_realtime(sys_state);
+
                                     if(hal.get_elapsed_ticks() - ms > 5000) {
                                         system_raise_alarm(Alarm_Spindle);
                                         return;
@@ -283,12 +285,6 @@ void state_set (sys_state_t new_state)
                                     }
                                     // TODO: allow real time reporting?
                                 }
-
-                                if(block->spindle.hal->get_data(SpindleData_RPM)->rpm == 0.0f) {
-                                    system_raise_alarm(Alarm_Spindle);
-                                    return;
-                                }
-
                             } else if(block->spindle.hal->get_data(SpindleData_RPM)->rpm == 0.0f) {
                                 system_raise_alarm(Alarm_Spindle);
                                 return;

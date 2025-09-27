@@ -1,10 +1,20 @@
 ## grblHAL changelog
 
+<a name="20250927">Build 20250927
+
+Core:
+
+* Fix for stepper spindle in polling mode causing alarm 14 when used for spindle synced motion \(G33, G76\).
+Ref. iMXRT1062 discussion [#100](https://github.com/grblHAL/iMXRT1062/discussions/100).
+
+---
+
 <a name="20250926">Build 20250926
 
 Core:
 
-* Updated motion in units per revolution mode (G95) to handle spindle RPM changes. Changed initial wait for two index pulses to check RPM > 0 before starting such motion.
+* Updated motion in units per revolution mode (G95) to handle spindle RPM changes.
+Changed initial wait for two index pulses to check RPM > 0 before starting such motion.
 
 ---
 
@@ -34,6 +44,8 @@ Plugins:
 
 * Misc, eventout: added _Motion_ event \(trigged by RUN, JOG and HOMING states\) and toggle events for optional stop, single step and block delete signals.
 Ref. discussion [#813](https://github.com/grblHAL/core/discussions/813).
+
+---
 
 <a name="20250910">Build 20250910
 
