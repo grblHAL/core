@@ -1,5 +1,18 @@
 ## grblHAL changelog
 
+<a name="20250928">Build 20250928
+
+Core:
+
+* Fix for crash when multiple G95 mode motions are commanded.
+Ref. iMXRT1062 discussion [#100](https://github.com/grblHAL/iMXRT1062/discussions/100).
+
+Drivers:
+
+* ESP32: fix for MPG mode switch handling causing compilation error. Ref. Web Builder [discussion comment](https://github.com/grblHAL/core/discussions/645#discussioncomment-14529145).
+
+---
+
 <a name="20250927">Build 20250927
 
 Core:

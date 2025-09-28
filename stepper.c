@@ -414,7 +414,7 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
     if(st.exec_block) {
 
 #if SPINDLE_SYNC_ENABLE
-        if(st.new_block && st.exec_segment->spindle_sync) {
+        if(st.new_block && st.exec_segment->spindle_sync && hal.stepper.pulse_start != st_spindle_sync_out) {
             spindle_tracker.stepper_pulse_start = hal.stepper.pulse_start;
             hal.stepper.pulse_start = st_spindle_sync_out;
         }
@@ -1225,7 +1225,7 @@ void st_prep_buffer (void)
         uint32_t cycles = (uint32_t)ceilf(cycles_per_min * inv_rate); // (cycles/step)
 
         // Record end position of segment relative to block if spindle synchronized motion
-        if((prep_segment->spindle_sync = pl_block->spindle.state.synchronized)) {
+        if((prep_segment->spindle_sync = pl_block->spindle.state.synchronized && !pl_block->condition.units_per_rev)) {
             prep.target_position += dt * prep.target_feed;
             prep_segment->cruising = prep.ramp_type == Ramp_Cruise;
             prep_segment->target_position = prep.target_position; //st_prep_block->millimeters - pl_block->millimeters;
