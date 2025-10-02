@@ -22,7 +22,7 @@ Plugins:
 
 Drivers:
 
-* Simulator: Fix for crash on hard limits triggered, tuned code, ref [#16](https://github.com/grblHAL/Simulator/issues/16).
+* Simulator: fix for crash on hard limits triggered, tuned code, ref issue [#16](https://github.com/grblHAL/Simulator/issues/16).
 > [!NOTE]
 > Hard limit events may not result in alarm 1 as they should due to a compiler bug /(not handling volatiles correctly/). At least the Web Builder Windows version is affected.
 

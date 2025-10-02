@@ -19,12 +19,12 @@
   along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "grbl/vfs.h"
-#include "grbl/stream.h"
-#include "grbl/nuts_bolts.h"
-
 #include <stdlib.h>
 #include <string.h>
+
+#include "vfs.h"
+#include "stream.h"
+#include "nuts_bolts.h"
 
 struct fs_device {
     io_stream_t io_stream;
