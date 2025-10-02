@@ -95,6 +95,7 @@ typedef enum {
     MotionMode_CannedCycle81 = 81,          //!< 81 - G81
     MotionMode_CannedCycle82 = 82,          //!< 82 - G82
     MotionMode_CannedCycle83 = 83,          //!< 83 - G83
+    MotionMode_CannedCycle84 = 84,          //!< 83 - G83
     MotionMode_CannedCycle85 = 85,          //!< 85 - G85
     MotionMode_CannedCycle86 = 86,          //!< 86 - G86
     MotionMode_CannedCycle89 = 89,          //!< 89 - G89
@@ -187,15 +188,6 @@ typedef enum {
     ControlMode_ExactStop = 1,      //!< 1 - G61.1
     ControlMode_PathBlending = 2    //!< 2 - G64
 } control_mode_t;
-
-/*!  Modal Group G14: Spindle Speed Mode
-
-Do not alter values!
-*/
-typedef enum {
-    SpindleSpeedMode_RPM = 0,  //!< 0 - G97 - Default, must be zero
-    SpindleSpeedMode_CSS = 1   //!< 1 - G96
-} spindle_rpm_mode_t;
 
 /*! Modal Group M4: Program flow
 
@@ -339,15 +331,24 @@ typedef union {
 
 //! Override flags.
 typedef union {
-    uint8_t value;
+    uint16_t value;
     struct {
-        uint8_t feed_rate_disable    :1,
-                feed_hold_disable    :1,
-                spindle_rpm_disable  :1,
-                parking_disable      :1,
-                spindle_wait_disable :1,
-                reserved             :2,
-                sync                 :1;
+        uint16_t spindle_rpm_disable  :8,
+                 feed_rates_disable   :1,
+                 feed_hold_disable    :1,
+                 parking_disable      :1,
+                 spindle_wait_disable :1,
+                 reserved             :2,
+                 sync                 :1;
+    };
+    struct {
+        uint16_t spindle_rpm          :8,
+                 feed_rates           :1,
+                 feed_hold            :1,
+                 parking              :1,
+                 spindle              :1,
+                 reserved1            :2,
+                 reserved2            :1; // sync synonym
     };
 } gc_override_flags_t;
 
@@ -550,24 +551,32 @@ typedef struct {
 #endif
     program_flow_t program_flow;         //!< {M0,M1,M2,M30,M60}
     coolant_state_t coolant;             //!< {M7,M8,M9}
-#if N_SYS_SPINDLE > 1
-    spindle_t spindle[N_SYS_SPINDLE];
-#else
-    spindle_t spindle;                   //!< {M3,M4,M5 and G96,G97}
-#endif
+    spindle_t spindle[N_SYS_SPINDLE];    //!< {M3,M4,M5 and G96,G97}
     gc_override_flags_t override_ctrl;   //!< {M48,M49,M50,M51,M53,M56}
     cc_retract_mode_t retract_mode;      //!< {G98,G99}
     bool scaling_active;                 //!< {G50,G51}
     bool canned_cycle_active;
     float spline_pq[2];                  //!< {G5}
 #if NGC_PARAMETERS_ENABLE
-    bool auto_restore;
-    float feed_rate;                     //!< {F} NOTE: only set when saving modal state
+    float feed_rate;                     //!< {F} NOTE: set in snapshot when saving modal state
+    bool auto_restore;                   //!< {M73} NOTE: set in snapshot when saving modal state
 #endif
 #if ENABLE_ACCELERATION_PROFILES
-    float acceleration_factor;          //!< {G187} currently active factor of acceleration profile
+    float acceleration_factor;           //!< {G187} currently active factor of acceleration profile
 #endif
 } gc_modal_t;
+
+typedef struct {
+    override_t feed_rate;                   //!< Feed rate override value in percent
+    override_t rapid_rate;                  //!< Rapids override value in percent
+    override_t spindle_rpm[N_SYS_SPINDLE];  //!< Spindle override value(s) in percent
+} gc_override_values_t;
+
+//! Data for G70-G73
+typedef struct {
+    gc_modal_t modal;
+    gc_override_values_t override;
+} gc_modal_snapshot_t;
 
 //! Data for canned cycles.
 typedef struct {
@@ -735,7 +744,7 @@ plane_t *gc_get_plane_data (plane_t *plane, plane_select_t select);
 
 #if NGC_PARAMETERS_ENABLE
 parameter_words_t gc_get_g65_arguments (void);
-bool gc_modal_state_restore (gc_modal_t *copy);
+bool gc_modal_state_restore (gc_modal_snapshot_t *snapshot);
 #endif
 
 #if ENABLE_ACCELERATION_PROFILES

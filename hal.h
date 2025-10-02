@@ -48,34 +48,35 @@
 typedef union {
     uint32_t value; //!< All bitmap flags.
     struct {
-        uint32_t software_debounce         :1, //!< Software debounce of input switches signals is supported.
-                 step_pulse_delay          :1, //!< Stepper step pulse delay is supported.
-                 limits_pull_up            :1, //!< Pullup resistors for limit inputs are are supported.
-                 control_pull_up           :1, //!< Pullup resistors for control inputs are supported.
-                 probe_pull_up             :1, //!< Pullup resistors for probe inputs are supported.
-                 amass_level               :2, // 0...3 Deprecated?
-                 spindle_encoder           :1, //!< Spindle encoder is supported.
-                 spindle_sync              :1, //!< Spindle synced motion is supported.
-                 sd_card                   :1,
-                 littlefs                  :1,
-                 bluetooth                 :1,
-                 ethernet                  :1,
-                 wifi                      :1,
-                 spindle_pid               :1,
-                 mpg_mode                  :1,
-                 laser_ppi_mode            :1, //!< Laser PPI (Pulses Per Inch) mode is supported.
-                 atc                       :1, //!< Automatic tool changer (ATC) is supported.
-                 no_gcode_message_handling :1,
-                 odometers                 :1,
-                 pwm_spindle               :1,
-                 probe_latch               :1, //!< Deprecated.
-                 probe                     :1, //!< Primary (default) probe input is supported.
-                 probe2                    :1, //!< 2nd or 3rd probe input is supported.
-                 toolsetter                :1, //!< Toolsetter (2nd probe) input is supported.
-                 rtc                       :1,
-                 rtc_set                   :1,
-                 bltouch_probe             :1,
-                 unassigned                :5;
+        uint32_t software_debounce           :1, //!< Software debounce of input switches signals is supported.
+                 step_pulse_delay            :1, //!< Stepper step pulse delay is supported.
+                 limits_pull_up              :1, //!< Pullup resistors for limit inputs are are supported.
+                 control_pull_up             :1, //!< Pullup resistors for control inputs are supported.
+                 probe_pull_up               :1, //!< Pullup resistors for probe inputs are supported.
+                 amass_level                 :2, // 0...3 Deprecated?
+                 spindle_encoder             :1, //!< Spindle encoder is supported.
+                 spindle_encoder_index_event :1, //!< Spindle encoder is supported.
+                 spindle_sync                :1, //!< Spindle synced motion is supported.
+                 sd_card                     :1,
+                 littlefs                    :1,
+                 bluetooth                   :1,
+                 ethernet                    :1,
+                 wifi                        :1,
+                 spindle_pid                 :1,
+                 mpg_mode                    :1,
+                 laser_ppi_mode              :1, //!< Laser PPI (Pulses Per Inch) mode is supported.
+                 atc                         :1, //!< Automatic tool changer (ATC) is supported.
+                 no_gcode_message_handling   :1,
+                 odometers                   :1,
+                 pwm_spindle                 :1,
+                 probe_latch                 :1, //!< Deprecated.
+                 probe                       :1, //!< Primary (default) probe input is supported.
+                 probe2                      :1, //!< 2nd or 3rd probe input is supported.
+                 toolsetter                  :1, //!< Toolsetter (2nd probe) input is supported.
+                 rtc                         :1,
+                 rtc_set                     :1,
+                 bltouch_probe               :1,
+                 unassigned                  :4;
     };
 } driver_cap_t;
 
@@ -465,6 +466,13 @@ typedef struct {
     encoder_reset_ptr reset;                    //!< Optional handler for resetting data for an encoder.
 } encoder_ptrs_t;
 
+/*! \brief Pointer to callback function to receive spindle encoder index events.
+\param count index pulse count.
+*/
+typedef void (*spindle_encoder_on_index_ptr)(int32_t count);
+
+//****
+
 /*! \brief Pointer to function for claiming higher level interrupt requests (irq).
 \param irq irq type as a #irq_type_t enum value.
 \param id irq id, normally 0, > 0 if there are several sources for the same irq type.
@@ -667,6 +675,7 @@ typedef struct {
     void (*reboot)(void);                   //!< Optoional handler for rebooting the controller. This will be called when #ASCII_ESC followed by #CMD_REBOOT is received.
 
     encoder_ptrs_t encoder;                 //!< Optional handlers for encoder support.
+    spindle_encoder_on_index_ptr spindle_encoder_on_index;  //!< Optional handler (callback) to receive spindle encoder index event.
 
     /*! \brief Optional handler for getting the current axis positions.
     \returns the axis positions in an int32_array.

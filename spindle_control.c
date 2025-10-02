@@ -531,39 +531,48 @@ spindle_id_t spindle_add_null (void)
 /*! \brief Set spindle speed override.
 \param spindle pointer to a \ref spindle_ptrs_t structure.
 \param speed_override override as a percentage of the programmed RPM.
-
+\returns overridden RPM
 __NOTE:__ Unlike motion overrides, spindle overrides do not require a planner reinitialization.
 */
-void spindle_set_override (spindle_ptrs_t *spindle, override_t speed_override)
+float spindle_set_override (spindle_ptrs_t *spindle, override_t speed_override)
 {
-//    if(speed_override != 100 && sys.override.control.spindle_rpm_disable)
-//        return;
+    if(speed_override == DEFAULT_SPINDLE_RPM_OVERRIDE || !spindle->param->state.override_disable) {
 
-    if(speed_override != 100 && spindle->param->state.override_disable)
-        return;
+        speed_override = constrain(speed_override, MIN_SPINDLE_RPM_OVERRIDE, MAX_SPINDLE_RPM_OVERRIDE);
 
-    speed_override = constrain(speed_override, MIN_SPINDLE_RPM_OVERRIDE, MAX_SPINDLE_RPM_OVERRIDE);
+        if((uint8_t)speed_override != spindle->param->override_pct) {
 
-    if((uint8_t)speed_override != spindle->param->override_pct) {
+            spindle_set_rpm(spindle, spindle->param->rpm, speed_override);
 
-        spindle_set_rpm(spindle, spindle->param->rpm, speed_override);
+            if(state_get() == STATE_IDLE) {
+                if(spindle->get_pwm && spindle->update_pwm)
+                    spindle->update_pwm(spindle, spindle->get_pwm(spindle, spindle->param->rpm_overridden));
+                else if(spindle->update_rpm)
+                    spindle->update_rpm(spindle, spindle->param->rpm_overridden);
+            } else
+                sys.step_control.update_spindle_rpm = On;
 
-        if(state_get() == STATE_IDLE) {
-            if(spindle->get_pwm && spindle->update_pwm)
-                spindle->update_pwm(spindle, spindle->get_pwm(spindle, spindle->param->rpm_overridden));
-            else if(spindle->update_rpm)
-                spindle->update_rpm(spindle, spindle->param->rpm_overridden);
-        } else
-            sys.step_control.update_spindle_rpm = On;
+            system_add_rt_report(Report_Overrides); // Set to report change immediately
 
-        system_add_rt_report(Report_Overrides); // Set to report change immediately
+    //       if(grbl.on_spindle_programmed)
+    //           grbl.on_spindle_programmed(spindle, spindle->param->state, spindle->param->rpm, spindle->param->rpm_mode);
 
-//       if(grbl.on_spindle_programmed)
-//           grbl.on_spindle_programmed(spindle, spindle->param->state, spindle->param->rpm, spindle->param->rpm_mode);
-
-       if(grbl.on_override_changed)
-           grbl.on_override_changed(OverrideChanged_SpindleRPM);
+           if(grbl.on_override_changed)
+               grbl.on_override_changed(OverrideChanged_SpindleRPM);
+        }
     }
+
+    return spindle->param->rpm_overridden;
+}
+
+bool spindle_override_disable (spindle_ptrs_t *spindle, bool disable)
+{
+    if(disable && !spindle->param->state.override_disable)
+        spindle_set_override(spindle, DEFAULT_SPINDLE_RPM_OVERRIDE);
+
+    spindle->param->state.override_disable = disable;
+
+    return disable;
 }
 
 /*! \brief Checks actual spindle state against given state.
@@ -606,7 +615,8 @@ bool spindle_set_state (spindle_ptrs_t *spindle, spindle_state_t state, float rp
         }
 
         spindle->param->rpm = rpm;
-        spindle->param->state = state;
+        spindle->param->state.on = state.on;
+        spindle->param->state.ccw = state.ccw;
 
         system_add_rt_report(Report_Spindle); // Set to report change immediately
 
@@ -673,10 +683,19 @@ for it to reach the speed and raise an alarm if the speed is not reached within 
 \param rpm the spindle RPM to set.
 \returns \a true if successful, \a false if the current controller state is \ref ABORTED.
 */
-bool spindle_set_state_synced (spindle_ptrs_t *spindle, spindle_state_t state, float rpm)
+bool spindle_set_state_synced (spindle_ptrs_t *spindle, spindle_state_t state, float rpm, spindle_rpm_mode_t mode)
 {
-    // Empty planner buffer to ensure spindle is set when programmed.
-    return protocol_buffer_synchronize() && spindle_set_state_wait(spindle, state, rpm, state.on ? settings.spindle.on_delay : settings.spindle.off_delay, DelayMode_Dwell);
+    bool ok;
+
+    if((ok = protocol_buffer_synchronize())) {  // Empty planner buffer to ensure spindle is set when programmed.
+
+        if(grbl.on_spindle_programmed)
+            grbl.on_spindle_programmed(spindle, state, rpm, mode);
+
+        ok = spindle_set_state_wait(spindle, state, rpm, state.on ? settings.spindle.on_delay : settings.spindle.off_delay, DelayMode_Dwell);
+    }
+
+    return ok;
 }
 
 /*! \brief Restore spindle running state with direction, enable, spindle RPM and appropriate delay.
@@ -713,7 +732,7 @@ float spindle_set_rpm (spindle_ptrs_t *spindle, float rpm, override_t override_p
     spindle->param->rpm_overridden = rpm;
     spindle->param->override_pct = override_pct;
 
-    return rpm;
+    return spindle->param->rpm_overridden;
 }
 
 /*! \brief Turn off all enabled spindles.

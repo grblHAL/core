@@ -180,12 +180,51 @@ char *gc_coord_system_to_str (coord_system_id_t id)
     return buf;
 }
 
-static void set_spindle_override (spindle_t *spindle, bool disable)
+static void override_disable (spindle_t *spindle, int32_t spindle_id, gc_override_flags_t flags, overrides_t *overrides)
 {
-    if(spindle->hal && spindle->hal->param->state.override_disable != disable) {
-        if((spindle->state.override_disable = spindle->hal->param->state.override_disable = disable))
-            spindle_set_override(gc_state.spindle->hal, DEFAULT_SPINDLE_RPM_OVERRIDE);
+    gc_override_flags_t org_flags = gc_state.modal.override_ctrl;
+
+    if(flags.spindle_rpm_disable) {
+        overrides->spindle_rpm = spindle->hal->param->override_pct;
+        overrides->control.spindle_rpm_disable = org_flags.spindle_rpm_disable;
+        BIT_SET(org_flags.spindle_rpm_disable, bit(spindle_id), On);
     }
+
+    if(flags.feed_hold_disable) {
+        overrides->control.feed_hold_disable = org_flags.feed_hold_disable;
+        org_flags.feed_hold_disable = On;
+    }
+
+    if(flags.feed_rates_disable) {
+        overrides->feed_rate = sys.override.feed_rate;
+        overrides->rapid_rate = sys.override.rapid_rate;
+        overrides->control.feed_rates_disable = org_flags.feed_rates_disable;
+        plan_feed_override(DEFAULT_FEED_OVERRIDE, sys.override.rapid_rate);
+        org_flags.feed_rates_disable = On;
+    }
+
+    mc_override_ctrl_update(org_flags);
+}
+
+static void override_restore (spindle_t *spindle, int32_t spindle_id, gc_override_flags_t flags, overrides_t *overrides)
+{
+    if(flags.spindle_rpm) {
+        if(!(gc_state.modal.override_ctrl.spindle_rpm_disable = overrides->control.spindle_rpm_disable)) {
+            if(!spindle_override_disable(spindle->hal, bit_istrue(overrides->control.spindle_rpm_disable, bit(spindle_id))))
+                spindle_set_override(spindle->hal, overrides->spindle_rpm);
+        }
+    }
+
+    if(flags.feed_hold)
+        gc_state.modal.override_ctrl.feed_hold_disable = overrides->control.feed_hold_disable;
+
+    if(flags.feed_rates) {
+        sys.override.feed_rate = overrides->feed_rate;
+        if(!(gc_state.modal.override_ctrl.feed_rates_disable = overrides->control.feed_rates_disable))
+            plan_feed_override(sys.override.feed_rate, sys.override.rapid_rate);
+    }
+
+    mc_override_ctrl_update(gc_state.modal.override_ctrl);
 }
 
 static void set_scaling (float factor)
@@ -365,16 +404,9 @@ void gc_init (bool stop)
     // Clear any pending output commands
     gc_clear_output_commands(output_commands);
 
-    // Load default override status
-    gc_state.modal.override_ctrl = sys.override.control;
-
-#if N_SYS_SPINDLE > 1
+    gc_state.modal.override_ctrl = sys.override.control;    // Load default override status
     gc_state.spindle = &gc_state.modal.spindle[0];
     gc_state.modal.spindle[0].hal = spindle_get(0);
-#else
-    gc_state.spindle = &gc_state.modal.spindle;
-    gc_state.modal.spindle.hal = spindle_get(0);
-#endif
 
     set_scaling(1.0f);
 
@@ -437,20 +469,16 @@ spindle_t *gc_spindle_get (spindle_num_t spindle)
 #if N_SYS_SPINDLE > 1
     return spindle < 0 ? gc_state.spindle : &gc_state.modal.spindle[spindle];
 #else
-    return &gc_state.modal.spindle;
+    return &gc_state.modal.spindle[0];
 #endif
 }
 
 void gc_spindle_off (void)
 {
-#if N_SYS_SPINDLE > 1
     uint_fast8_t idx;
     for(idx = 0; idx < N_SYS_SPINDLE; idx++) {
         memset(&gc_state.modal.spindle[idx], 0, offsetof(spindle_t, hal));
     }
-#else
-    memset(&gc_state.modal.spindle, 0, offsetof(spindle_t, hal));
-#endif
 
     spindle_all_off();
     system_add_rt_report(Report_Spindle);
@@ -540,7 +568,7 @@ static status_code_t init_sync_motion (plan_line_data_t *pl_data, float pitch)
 
     // Disable feed rate and spindle overrides for the duration of the cycle.
     pl_data->overrides.spindle_rpm_disable = sys.override.control.spindle_rpm_disable = On;
-    pl_data->overrides.feed_rate_disable = sys.override.control.feed_rate_disable = On;
+    pl_data->overrides.feed_rates_disable = sys.override.control.feed_rates_disable = On;
     pl_data->spindle.hal->param->override_pct = DEFAULT_SPINDLE_RPM_OVERRIDE;
     // TODO: need for gc_state.distance_per_rev to be reset on modal change?
     float feed_rate = pl_data->feed_rate * pl_data->spindle.hal->get_data(SpindleData_RPM)->rpm;
@@ -580,36 +608,44 @@ parameter_words_t gc_get_g65_arguments (void)
     return g65_words;
 }
 
-bool gc_modal_state_restore (gc_modal_t *copy)
+bool gc_modal_state_restore (gc_modal_snapshot_t *snapshot)
 {
     bool ok = false;
 
-    if((ok = !!copy && !ABORTED)) {
+    if((ok = !!snapshot && !ABORTED)) {
 
-        copy->auto_restore = false;
-        copy->motion = gc_state.modal.motion;
+        uint_fast8_t idx;
+        bool update_spindle[N_SYS_SPINDLE];
 
-        if(copy->coolant.value != gc_state.modal.coolant.value)
-            coolant_restore(copy->coolant, settings.coolant.on_delay);
+        gc_state.feed_rate = snapshot->modal.feed_rate;
+        sys.override.control = snapshot->modal.override_ctrl;
 
-#if N_SYS_SPINDLE > 1
-        uint_fast8_t idx = N_SYS_SPINDLE;
-        spindle_t *spindle, *spindle_copy;
-        do {
-            if((spindle = &gc_state.modal.spindle[--idx])->hal) {
-                spindle_copy = &copy->spindle[idx];
-                if(!memcmp(spindle_copy, spindle, offsetof(spindle_t, hal)))
-                    spindle_restore(spindle->hal, spindle_copy->state, spindle_copy->rpm, settings.spindle.on_delay);
+        snapshot->modal.motion = gc_state.modal.motion;
+
+        plan_feed_override(snapshot->override.feed_rate, snapshot->override.rapid_rate);
+
+        for(idx = 0; idx < N_SYS_SPINDLE; idx++)
+            update_spindle[idx] = gc_state.modal.spindle[idx].hal &&
+                                   (bit_istrue(gc_state.modal.override_ctrl.spindle_rpm_disable, bit(idx)) != bit_istrue(snapshot->modal.override_ctrl.spindle_rpm_disable, bit(idx)) ||
+                                     gc_state.modal.spindle[idx].hal->param->override_pct != snapshot->override.spindle_rpm[idx] ||
+                                      memcmp(&snapshot->modal.spindle[idx], &gc_state.modal.spindle[idx], offsetof(spindle_t, hal) != 0));
+
+        if(snapshot->modal.coolant.value != gc_state.modal.coolant.value)
+            coolant_restore(snapshot->modal.coolant, settings.coolant.on_delay);
+
+        memcpy(&gc_state.modal, snapshot, sizeof(gc_modal_t));
+
+        // Only valid in snapshot
+        gc_state.modal.feed_rate = 0.0f;
+        gc_state.modal.auto_restore = false;
+
+        for(idx = 0; idx < N_SYS_SPINDLE; idx++) {
+            if(update_spindle[idx]) {
+                if(!spindle_override_disable(gc_state.modal.spindle[idx].hal, bit_istrue(gc_state.modal.override_ctrl.spindle_rpm_disable, bit(idx))))
+                    spindle_set_override(gc_state.modal.spindle[idx].hal, snapshot->override.spindle_rpm[idx]);
+                spindle_restore(gc_state.modal.spindle[idx].hal, gc_state.modal.spindle[idx].state, gc_state.modal.spindle[idx].rpm, settings.spindle.on_delay);
             }
-        } while(idx);
-#else
-        if(!memcmp(&copy->spindle, &gc_state.modal.spindle, offsetof(spindle_t, hal)))
-            spindle_restore(gc_state.modal.spindle.hal, copy->spindle.state, copy->spindle.rpm, settings.spindle.on_delay);
-#endif
-
-        memcpy(&gc_state.modal, copy, sizeof(gc_modal_t));
-
-        gc_state.feed_rate = gc_state.modal.feed_rate;
+        }
     }
 
     return ok;
@@ -889,6 +925,7 @@ status_code_t gc_execute_block (char *block)
     memset(&gc_block, 0, sizeof(gc_block));                           // Initialize the parser block struct.
     memcpy(&gc_block.modal, &gc_state.modal, sizeof(gc_state.modal)); // Copy current modes
 
+    int32_t spindle_id = 0;
     bool set_tool = false, spindle_event = false;
     axis_command_t axis_command = AxisCommand_None;
     io_mcode_t port_command = (io_mcode_t)0;
@@ -1143,7 +1180,7 @@ status_code_t gc_execute_block (char *block)
                         gc_block.modal.canned_cycle_active = false;
                         break;
 #if GCODE_ADVANCED
-                    case 73: case 81: case 82: case 83: case 85: case 86: case 89:
+                    case 73: case 81: case 82: case 83: case 84: case 85: case 86: case 89:
                         if (axis_command)
                             FAIL(Status_GcodeAxisCommandConflict); // [Axis word/command conflict]
                         axis_command = AxisCommand_MotionMode;
@@ -1873,14 +1910,14 @@ status_code_t gc_execute_block (char *block)
             if(gc_block.values.$ < (single_spindle_only ? 0 : -1))
                 FAIL(single_spindle_only ? Status_NegativeValue : Status_GcodeValueOutOfRange);
 #if N_SYS_SPINDLE > 1
-            if(gc_block.values.$ < 0)
+            if((spindle_id = gc_block.values.$) < 0)
                 sspindle = NULL;
             else {
-                if(!spindle_is_enabled(gc_block.values.$))
+                if(!spindle_is_enabled(spindle_id))
                     FAIL(Status_GcodeValueOutOfRange);
-                if(gc_state.modal.spindle[gc_block.values.$].hal == NULL)
-                    gc_state.modal.spindle[gc_block.values.$].hal = spindle_get(gc_block.values.$);
-                sspindle = &gc_state.modal.spindle[gc_block.values.$];
+                if(gc_state.modal.spindle[spindle_id].hal == NULL)
+                    gc_state.modal.spindle[spindle_id].hal = spindle_get(spindle_id);
+                sspindle = &gc_state.modal.spindle[spindle_id];
             }
 #else
             if(gc_block.values.$ > 0)
@@ -2068,21 +2105,45 @@ status_code_t gc_execute_block (char *block)
         switch(gc_block.override_command) {
 
             case Override_FeedSpeedEnable:
-                gc_block.modal.override_ctrl.feed_rate_disable = Off;
-                gc_block.modal.override_ctrl.spindle_rpm_disable = Off;
+                gc_block.modal.override_ctrl.feed_rates_disable = Off;
+#if N_SYS_SPINDLE > 1
+                if(spindle_id == - 1) {
+                    gc_block.values.$ = N_SYS_SPINDLE;
+                    do {
+                        bit_true(gc_block.modal.override_ctrl.spindle_rpm_disable, bit(--gc_block.values.$));
+                    } while(gc_block.values.$);
+                } else
+#endif
+                bit_false(gc_block.modal.override_ctrl.spindle_rpm_disable, bit(spindle_id));
                 break;
 
             case Override_FeedSpeedDisable:
-                gc_block.modal.override_ctrl.feed_rate_disable = On;
-                gc_block.modal.override_ctrl.spindle_rpm_disable = On;
+                gc_block.modal.override_ctrl.feed_rates_disable = On;
+#if N_SYS_SPINDLE > 1
+                if(spindle_id == - 1) {
+                    gc_block.values.$ = N_SYS_SPINDLE;
+                    do {
+                        bit_true(gc_block.modal.override_ctrl.spindle_rpm_disable, bit(--gc_block.values.$));
+                    } while(gc_block.values.$);
+                } else
+#endif
+                bit_true(gc_block.modal.override_ctrl.spindle_rpm_disable, bit(spindle_id));
                 break;
 
             case Override_FeedRate:
-                gc_block.modal.override_ctrl.feed_rate_disable = gc_block.values.p == 0.0f;
+                gc_block.modal.override_ctrl.feed_rates_disable = gc_block.values.p == 0.0f;
                 break;
 
             case Override_SpindleSpeed:
-                gc_block.modal.override_ctrl.spindle_rpm_disable = gc_block.values.p == 0.0f;
+#if N_SYS_SPINDLE > 1
+                if(spindle_id == - 1) {
+                    gc_block.values.$ = N_SYS_SPINDLE;
+                    do {
+                        BIT_SET(gc_block.modal.override_ctrl.spindle_rpm_disable, bit(--gc_block.values.$), gc_block.values.p == 0.0f);
+                    } while(gc_block.values.$);
+                } else
+#endif
+                BIT_SET(gc_block.modal.override_ctrl.spindle_rpm_disable, bit(spindle_id), gc_block.values.p == 0.0f);
                 break;
 
             case Override_FeedHold:
@@ -2780,6 +2841,12 @@ status_code_t gc_execute_block (char *block)
                         // no break
 
                     case MotionMode_CannedCycle82:
+                    case MotionMode_CannedCycle84:
+                        if(gc_block.modal.motion == MotionMode_CannedCycle84) {
+                            if(!sspindle->hal->cap.at_speed)
+                                FAIL(Status_GcodeUnsupportedCommand);
+                            gc_state.canned.rapid_retract = Off;
+                        }
                         if(gc_block.words.p) {
                             if(gc_block.values.p < 0.0f)
                                 FAIL(Status_NegativeValue);
@@ -3150,6 +3217,7 @@ status_code_t gc_execute_block (char *block)
     plan_line_data_t plan_data;
     memset(&plan_data, 0, sizeof(plan_line_data_t)); // Zero plan_data struct
     plan_data.offset_id = gc_state.offset_id;
+    plan_data.overrides = gc_state.modal.override_ctrl;
     plan_data.condition.target_validated = plan_data.condition.target_valid = sys.soft_limits.mask == 0;
 #if ENABLE_ACCELERATION_PROFILES
     plan_data.acceleration_factor = gc_state.modal.acceleration_factor;
@@ -3172,7 +3240,7 @@ status_code_t gc_execute_block (char *block)
 #if N_SYS_SPINDLE > 1
         spindle_t *spindle = sspindle ? sspindle : gc_state.modal.spindle;
 #else
-        spindle_t *spindle = &gc_block.modal.spindle;
+        spindle_t *spindle = &gc_block.modal.spindle[0];
 #endif
 
         // Initialize planner data to current spindle and coolant modal state.
@@ -3418,10 +3486,7 @@ status_code_t gc_execute_block (char *block)
 
                     if((spindle_ok = sys_spindle->state.value != gc_block.spindle_modal.state.value)) {
 
-                        if(grbl.on_spindle_programmed)
-                            grbl.on_spindle_programmed(sys_spindle->hal, gc_block.spindle_modal.state, sys_spindle->rpm, sys_spindle->rpm_mode);
-
-                        if((spindle_ok = spindle_set_state_synced(sys_spindle->hal, gc_block.spindle_modal.state, sys_spindle->rpm))) {
+                        if((spindle_ok = spindle_set_state_synced(sys_spindle->hal, gc_block.spindle_modal.state, sys_spindle->rpm, sys_spindle->rpm_mode))) {
                             if((sys_spindle->state = sys_spindle->hal->param->state = gc_block.spindle_modal.state).on)
                                 sspindle = sys_spindle;
                         }
@@ -3440,10 +3505,7 @@ status_code_t gc_execute_block (char *block)
 
         if((spindle_ok = sspindle->state.value != gc_block.spindle_modal.state.value)) {
 
-            if(grbl.on_spindle_programmed)
-                grbl.on_spindle_programmed(sspindle->hal, gc_block.spindle_modal.state, plan_data.spindle.rpm, sspindle->rpm_mode);
-
-            if((spindle_ok = spindle_set_state_synced(sspindle->hal, gc_block.spindle_modal.state, plan_data.spindle.rpm)))
+            if((spindle_ok = spindle_set_state_synced(sspindle->hal, gc_block.spindle_modal.state, plan_data.spindle.rpm, sspindle->rpm_mode)))
                 sspindle->state = sspindle->hal->param->state = gc_block.spindle_modal.state;
 
             spindle_event = !spindle_ok;
@@ -3473,9 +3535,17 @@ status_code_t gc_execute_block (char *block)
     switch(gc_block.state_action) {
 
         case ModalState_Save:
-        case ModalState_SaveAutoRestore:
-            gc_state.modal.feed_rate = gc_state.feed_rate;
-            if(!ngc_modal_state_save(&gc_state.modal, gc_block.state_action == ModalState_SaveAutoRestore))
+        case ModalState_SaveAutoRestore:;
+            gc_override_values_t override = {
+                .feed_rate = sys.override.feed_rate,
+                .rapid_rate = sys.override.rapid_rate,
+            };
+
+            for(idx = 0; idx < N_SYS_SPINDLE; idx++) {
+                if(gc_state.modal.spindle[idx].hal)
+                    override.spindle_rpm[idx] = gc_state.modal.spindle[idx].hal->param->override_pct;
+            }
+            if(!ngc_modal_state_save(&gc_state.modal, &override, gc_state.feed_rate, gc_block.state_action == ModalState_SaveAutoRestore))
                 FAIL(Status_FlowControlOutOfMemory); // [Out of memory] TODO: allocate memory during validation? Static allocation?
             break;
 
@@ -3510,18 +3580,7 @@ status_code_t gc_execute_block (char *block)
 
         gc_state.modal.override_ctrl = gc_block.modal.override_ctrl;
 
-#if N_SYS_SPINDLE > 1
-        if(sspindle == NULL) {
-            uint_fast8_t idx = N_SYS_SPINDLE;
-            do {
-                set_spindle_override(&gc_state.modal.spindle[--idx], gc_state.modal.override_ctrl.spindle_rpm_disable);
-            } while(idx);
-        } else
-#else
-        set_spindle_override(sspindle, gc_state.modal.override_ctrl.spindle_rpm_disable);
-#endif
-
-        if(gc_state.modal.override_ctrl.feed_rate_disable)
+        if(gc_state.modal.override_ctrl.feed_rates_disable)
             plan_feed_override(0, 0);
 
         mc_override_ctrl_update(gc_state.modal.override_ctrl); // NOTE: must be called last!
@@ -3870,10 +3929,20 @@ status_code_t gc_execute_block (char *block)
             case MotionMode_DrillChipBreak:
             case MotionMode_CannedCycle81:
             case MotionMode_CannedCycle82:
-            case MotionMode_CannedCycle83:;
+            case MotionMode_CannedCycle83:
+            case MotionMode_CannedCycle84:;
+
+                overrides_t overrides = {};
+
+                if(gc_state.modal.motion == MotionMode_CannedCycle84)
+                    override_disable(&plan_data.spindle, spindle_id, (gc_override_flags_t){ .feed_hold = On, .feed_rates = On, .spindle_rpm = On }, &overrides);
+
                 plan_data.spindle.rpm = gc_block.values.s;
                 gc_state.canned.retract_mode = gc_state.modal.retract_mode;
                 mc_canned_drill(gc_state.modal.motion, gc_block.values.xyz, &plan_data, gc_state.position, plane, gc_block.values.l, &gc_state.canned);
+
+                if(gc_state.modal.motion == MotionMode_CannedCycle84)
+                    override_restore(&plan_data.spindle, spindle_id, (gc_override_flags_t){ .feed_hold = On, .feed_rates = On, .spindle_rpm = On }, &overrides);
                 break;
 
 #endif // GCODE_ADVANCED
@@ -3951,35 +4020,27 @@ status_code_t gc_execute_block (char *block)
                 system_add_rt_report(Report_GWCO);
             }
             gc_state.modal.coolant = (coolant_state_t){0};
-            gc_state.modal.override_ctrl.feed_rate_disable = Off;
+            gc_state.modal.override_ctrl.feed_rates_disable = Off;
             gc_state.modal.override_ctrl.spindle_rpm_disable = Off;
 #if ENABLE_ACCELERATION_PROFILES
             gc_state.modal.acceleration_factor = gc_get_accel_factor(0);
 #endif
-
+            for(idx = 0; idx < N_SYS_SPINDLE; idx++) {
+                if(gc_state.modal.spindle[idx].hal) {
+                    gc_state.modal.spindle[idx].css = NULL;
+                    gc_state.modal.spindle[idx].state = (spindle_state_t){0};
+                    gc_state.modal.spindle[idx].rpm_mode = SpindleSpeedMode_RPM; // NOTE: not compliant with linuxcnc (?)
+                    gc_state.modal.spindle[idx].hal->param->state.override_disable = Off;
 #if N_SYS_SPINDLE > 1
-
-            idx = N_SYS_SPINDLE;
-            spindle_t *spindle;
-            do {
-                if((spindle = &gc_state.modal.spindle[--idx])->hal) {
-                    spindle->css = NULL;
-                    spindle->state = (spindle_state_t){0};
-                    spindle->rpm_mode = SpindleSpeedMode_RPM; // NOTE: not compliant with linuxcnc (?);
-                    spindle->hal->param->state.override_disable = Off;
                     if(settings.flags.restore_overrides)
-                        spindle->hal->param->override_pct = DEFAULT_SPINDLE_RPM_OVERRIDE;
+                        gc_state.modal.spindle[idx].hal->param->override_pct = DEFAULT_SPINDLE_RPM_OVERRIDE;
+#endif
                 }
-            } while(idx);
-#else
-            gc_state.modal.spindle.css = NULL;
-            gc_state.modal.spindle.state = (spindle_state_t){0};
-            gc_state.modal.spindle.rpm_mode = SpindleSpeedMode_RPM; // NOTE: not compliant with linuxcnc (?)
-            gc_state.modal.spindle.hal->param->state.override_disable = Off;
+            }
+#if N_SYS_SPINDLE == 1
             if(settings.flags.restore_overrides)
                 sspindle->hal->param->override_pct = DEFAULT_SPINDLE_RPM_OVERRIDE;
 #endif
-
             if(settings.parking.flags.enabled)
                 gc_state.modal.override_ctrl.parking_disable = settings.parking.flags.enable_override_control &&
                                                                 settings.parking.flags.deactivate_upon_init;

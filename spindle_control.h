@@ -127,6 +127,15 @@ typedef enum {
     SpindleHAL_Active,      //!< 2
 } spindle_hal_t;
 
+/*!  Modal Group G14: Spindle Speed Mode
+
+Do not alter values!
+*/
+typedef enum {
+    SpindleSpeedMode_RPM = 0,  //!< 0 - G97 - Default, must be zero
+    SpindleSpeedMode_CSS = 1   //!< 1 - G96
+} spindle_rpm_mode_t;
+
 struct spindle_ptrs;    // members defined below
 struct spindle_pwm;     // members defined below
 struct spindle_param;   // members defined below
@@ -362,13 +371,15 @@ typedef struct  {
 */
 typedef bool (*spindle_enumerate_callback_ptr)(spindle_info_t *spindle, void *data);
 
-void spindle_set_override (spindle_ptrs_t *spindle, override_t speed_override);
+float spindle_set_override (spindle_ptrs_t *spindle, override_t speed_override);
+
+bool spindle_override_disable (spindle_ptrs_t *spindle, bool disable);
 
 // Sets spindle running state with direction, enable, and spindle RPM.
 bool spindle_set_state (spindle_ptrs_t *spindle, spindle_state_t state, float rpm);
 
 // Called by g-code parser when setting spindle state and requires a buffer sync.
-bool spindle_set_state_synced (spindle_ptrs_t *spindle, spindle_state_t state, float rpm);
+bool spindle_set_state_synced (spindle_ptrs_t *spindle, spindle_state_t state, float rpm, spindle_rpm_mode_t mode);
 
 bool spindle_check_state (spindle_ptrs_t *spindle, spindle_state_t state);
 

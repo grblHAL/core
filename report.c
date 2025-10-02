@@ -794,7 +794,7 @@ void report_gcode_modes (void)
     } else
         hal.stream.write(" M9");
 
-    if (sys.override.control.feed_rate_disable)
+    if (sys.override.control.feed_rates_disable)
         hal.stream.write(" M50");
 
     if (sys.override.control.spindle_rpm_disable)
@@ -1330,7 +1330,7 @@ void report_realtime_status (stream_write_ptr stream_write)
                 ctrl_pin_state.single_block = sys.flags.single_block;
         }
 
-        if(lim_pin_state.value | ctrl_pin_state.value) {
+        if((lim_pin_state.value && !ctrl_pin_state.limits_override) || ctrl_pin_state.value) {
 
             char *append = &buf[4];
 

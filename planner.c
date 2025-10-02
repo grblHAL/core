@@ -730,7 +730,7 @@ void plan_feed_override (override_t feed_override, override_t rapid_override)
 {
     bool feedrate_changed = false, rapidrate_changed = false;
 
-    if(sys.override.control.feed_rate_disable)
+    if(sys.override.control.feed_rates_disable)
         return;
 
     if(feed_override == 0)

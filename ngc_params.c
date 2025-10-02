@@ -82,12 +82,12 @@ typedef struct ngc_string_param {
 typedef struct {
     uint32_t level;
     void *context;
-    gc_modal_t *modal_state;
+    gc_modal_snapshot_t *modal_state;
 } ngc_param_context_t;
 
 static int32_t call_level = -1;
 static void *call_context;
-static gc_modal_t *modal_state;
+static gc_modal_snapshot_t *modal_state;
 static ngc_param_context_t call_levels[NGC_MAX_CALL_LEVEL];
 static ngc_rw_param_t *rw_params = NULL;
 static ngc_named_rw_param_t *rw_global_params = NULL;
@@ -530,7 +530,7 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             break;
 
         case NGCParam_feed_override:
-            value = gc_state.modal.override_ctrl.feed_rate_disable ? 0.0f : 1.0f;
+            value = gc_state.modal.override_ctrl.feed_rates_disable ? 0.0f : 1.0f;
             break;
 
         case NGCParam_adaptive_feed:
@@ -900,22 +900,26 @@ void ngc_string_param_delete (ngc_string_id_t id)
     }
 }
 
-bool ngc_modal_state_save (gc_modal_t *state, bool auto_restore)
+bool ngc_modal_state_save (gc_modal_t *state, gc_override_values_t *overrides, float feed_rate, bool auto_restore)
 {
-    gc_modal_t **saved_state = call_level == -1 ? &modal_state : &call_levels[call_level].modal_state;
+    gc_modal_snapshot_t **saved_state = call_level == -1 ? &modal_state : &call_levels[call_level].modal_state;
 
     if(*saved_state == NULL)
-        *saved_state = malloc(sizeof(gc_modal_t));
+        *saved_state = malloc(sizeof(gc_modal_snapshot_t));
 
-    if(*saved_state)
-        memcpy(*saved_state, state, sizeof(gc_modal_t));
+    if(*saved_state) {
+        memcpy(&(*saved_state)->modal, state, sizeof(gc_modal_t));
+        memcpy(&(*saved_state)->override, overrides, sizeof(gc_override_values_t));
+        (*saved_state)->modal.feed_rate = feed_rate;
+        (*saved_state)->modal.auto_restore = auto_restore;
+    }
 
     return *saved_state != NULL;
 }
 
 void ngc_modal_state_invalidate (void)
 {
-    gc_modal_t **saved_state = call_level == -1 ? &modal_state : &call_levels[call_level].modal_state;
+    gc_modal_snapshot_t **saved_state = call_level == -1 ? &modal_state : &call_levels[call_level].modal_state;
 
     if(*saved_state) {
         free(*saved_state);
@@ -980,7 +984,7 @@ bool ngc_call_pop (void)
         }
 
         if(call_levels[call_level].modal_state) {
-            if(call_levels[call_level].modal_state->auto_restore)
+            if(call_levels[call_level].modal_state->modal.auto_restore)
                 gc_modal_state_restore(call_levels[call_level].modal_state);
             free(call_levels[call_level].modal_state);
             call_levels[call_level].modal_state = NULL;

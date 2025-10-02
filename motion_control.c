@@ -564,7 +564,7 @@ void mc_cubic_b_spline (float *target, plan_line_data_t *pl_data, float *positio
 
 // end Bezier splines
 
-void mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_data, float *position, plane_t plane, uint32_t repeats, gc_canned_t *canned)
+bool mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_data, float *position, plane_t plane, uint32_t repeats, gc_canned_t *canned)
 {
     pl_data->condition.rapid_motion = On; // Set rapid motion condition flag.
 
@@ -572,7 +572,7 @@ void mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_
     if(position[plane.axis_linear] < canned->retract_position) {
         position[plane.axis_linear] = canned->retract_position;
         if(!mc_line(position, pl_data))
-            return;
+            return false;
     }
 
     float position_linear = position[plane.axis_linear],
@@ -582,7 +582,7 @@ void mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_
     memcpy(position, target, sizeof(float) * N_AXIS);
     position[plane.axis_linear] = position_linear;
     if(!mc_line(position, pl_data))
-        return;
+        return false;
 
     while(repeats--) {
 
@@ -605,7 +605,15 @@ void mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_
 
             position[plane.axis_linear] = position_linear;
             if(!mc_line(position, pl_data)) // drill
-                return;
+                return false;
+
+            if(motion == MotionMode_CannedCycle84) {
+                if(!spindle_set_state_synced(pl_data->spindle.hal, (spindle_state_t){0}, 0.0f, pl_data->spindle.rpm_mode))
+                    return false;
+                pl_data->spindle.state.ccw = !pl_data->spindle.state.ccw;
+                pl_data->spindle.hal->set_state(pl_data->spindle.hal, pl_data->spindle.state, pl_data->spindle.rpm); // synced??
+                pl_data->spindle.state.ccw = !pl_data->spindle.state.ccw;
+            }
 
             if(canned->dwell > 0.0f)
                 mc_dwell(canned->dwell);
@@ -629,10 +637,12 @@ void mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_
 
             pl_data->condition.rapid_motion = canned->rapid_retract;
             if(!mc_line(position, pl_data))
-                return;
+                return false;
 
-            if(canned->spindle_off)
-                spindle_set_state_synced(pl_data->spindle.hal, pl_data->spindle.state, pl_data->spindle.rpm);
+            if(canned->spindle_off || motion == MotionMode_CannedCycle84) {
+                if(!spindle_set_state_synced(pl_data->spindle.hal, pl_data->spindle.state, pl_data->spindle.rpm, pl_data->spindle.rpm_mode))
+                    return false;
+            }
         }
 
         pl_data->condition.rapid_motion = On; // Set rapid motion condition flag.
@@ -642,11 +652,13 @@ void mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_
             position[plane.axis_0] += canned->xyz[plane.axis_0];
             position[plane.axis_1] += canned->xyz[plane.axis_1];
             if(!mc_line(position, pl_data))
-                return;
+                return false;
         }
     }
 
     memcpy(target, position, sizeof(float) * N_AXIS);
+
+    return !ABORTED;
 }
 
 // Calculates depth-of-cut (DOC) for a given threading pass.
@@ -1124,10 +1136,21 @@ bool mc_parking_motion (float *parking_target, plan_line_data_t *pl_data)
 
 void mc_override_ctrl_update (gc_override_flags_t override_state)
 {
-// Finish all queued commands before altering override control state
-    protocol_buffer_synchronize();
-    if (!sys.abort)
+ // Finish all queued commands before altering override control state
+    if(sys.override.control.value != override_state.value)
+        protocol_buffer_synchronize();
+
+    if(!sys.abort) {
+
         sys.override.control = override_state;
+
+        spindle_t *spindle;
+        uint8_t idx = N_SYS_SPINDLE, rpm_disable = override_state.spindle_rpm_disable;
+        do {
+            if((spindle = gc_spindle_get(--idx))->hal)
+                spindle_override_disable(spindle->hal, bit_istrue(rpm_disable, bit(idx)));
+        } while(idx);
+    }
 }
 
 // Method to ready the system to reset by setting the realtime reset command and killing any

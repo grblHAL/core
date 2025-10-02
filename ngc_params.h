@@ -137,7 +137,7 @@ void ngc_string_param_delete (ngc_string_id_t id);
 bool ngc_call_push (void *context);
 bool ngc_call_pop (void);
 uint_fast8_t ngc_call_level (void);
-bool ngc_modal_state_save (gc_modal_t *state, bool auto_restore);
+bool ngc_modal_state_save (gc_modal_t *state, gc_override_values_t *overrides, float feed_rate, bool auto_restore);
 bool ngc_modal_state_restore (void);
 void ngc_modal_state_invalidate (void);
 
