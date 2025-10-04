@@ -59,9 +59,23 @@ inline static float abs_angle (float ang)
 // Returns machine position in mm converted from system position steps.
 static float *transform_to_cartesian (float *target, float *position)
 {
-    target[X_AXIS] = cosf(position[POLAR_AXIS] * RADDEG) * position[RADIUS_AXIS];
-    target[Y_AXIS] = sinf(position[POLAR_AXIS] * RADDEG) * position[RADIUS_AXIS];
-    target[Z_AXIS] = position[Z_AXIS];  // unchanged
+    uint_fast8_t idx = N_AXIS;
+    do {
+        switch(--idx) {
+
+            case X_AXIS:
+                target[X_AXIS] = cosf(position[POLAR_AXIS] * RADDEG) * position[RADIUS_AXIS];
+                break;
+
+            case Y_AXIS:
+                target[Y_AXIS] = sinf(position[POLAR_AXIS] * RADDEG) * position[RADIUS_AXIS];
+                break;
+
+            default:
+                target[idx] = position[idx]; // unchanged
+                break;
+        }
+    } while(idx);
 
     return target;
 }
@@ -274,4 +288,4 @@ void polar_init (void)
     grbl.on_report_options = report_options;
 }
 
-#endif
+#endif // POLAR_ROBOT

@@ -1,6 +1,23 @@
 ## grblHAL changelog
 
-<a name="20251002 ">Build 20251002
+<a name="20251003">Build 20251003
+
+Core:
+
+* Workaround for some compilers configured to treat warnings as errors causing compilation failure.
+
+* Added `$PORTS` command for [listing serial ports](https://github.com/grblHAL/core/wiki/Report-extensions#serial-ports-uart), later I will update all drivers to provide the optional information.
+
+* Potential fix for polar kinematics not handling axes > 3 correctly, needs testing. Ref. issue [#820](https://github.com/grblHAL/core/issues/820).
+
+Drivers:
+
+* ESP32: workaround for crash on MPG switch input changes. Ref. PR [#179](https://github.com/grblHAL/ESP32/pull/179).
+Added new files to CMakeLists.txt.
+
+---
+
+<a name="20251002">Build 20251002
 
 Core:
 

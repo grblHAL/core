@@ -263,20 +263,6 @@ static status_code_t enumerate_all (sys_state_t state, char *args)
     return report_settings_details(SettingsFormat_MachineReadable, Setting_SettingsAll, Group_All);
 }
 
-static status_code_t enumerate_pins (sys_state_t state, char *args)
-{
-    return report_pins(state, args);
-}
-
-#ifndef NO_SETTINGS_DESCRIPTIONS
-
-static status_code_t pin_state (sys_state_t state, char *args)
-{
-    return report_pin_states(state, args);
-}
-
-#endif
-
 static status_code_t output_settings (sys_state_t state, char *args)
 {
     status_code_t retval = Status_OK;
@@ -298,8 +284,6 @@ static status_code_t output_settings (sys_state_t state, char *args)
     return retval;
 }
 
-#ifndef NO_SETTINGS_DESCRIPTIONS
-
 static status_code_t output_setting_description (sys_state_t state, char *args)
 {
     status_code_t retval = Status_BadNumberFormat;
@@ -313,8 +297,6 @@ static status_code_t output_setting_description (sys_state_t state, char *args)
 
     return retval;
 }
-
-#endif
 
 static status_code_t output_all_settings (sys_state_t state, char *args)
 {
@@ -857,14 +839,10 @@ const char *help_pins (const char *cmd)
     return hal.enumerate_pins ? "enumerate pin bindings" : NULL;
 }
 
-#ifndef NO_SETTINGS_DESCRIPTIONS
-
 const char *help_pin_state (const char *cmd)
 {
     return ioports_can_do().io ? "output auxiliary pin states" : NULL;
 }
-
-#endif
 
 const char *help_switches (const char *cmd)
 {
@@ -920,9 +898,7 @@ PROGMEM static const sys_command_t sys_commands[] = {
      ASCII_EOL "$$=<n> - output setting details for setting <n>"
     } },
     { "+", output_all_settings, { .allow_blocking = On }, { .str = "output all setting values" } },
-#ifndef NO_SETTINGS_DESCRIPTIONS
     { "SED", output_setting_description, { .allow_blocking = On }, { .str = "$SED=<n> - output settings description for setting <n>" } },
-#endif
     { "B", toggle_block_delete, { .noargs = On, .help_fn = On }, { .fn = help_switches } },
     { "S", toggle_single_block, { .noargs = On, .help_fn = On }, { .fn = help_switches } },
     { "O", toggle_optional_stop, { .noargs = On, .help_fn = On }, { .fn = help_switches } },
@@ -989,10 +965,9 @@ PROGMEM static const sys_command_t sys_commands[] = {
     { "ESG", enumerate_settings_grblformatted, { .noargs = On, .allow_blocking = On }, { .str = "enumerate settings, Grbl formatted" } },
     { "ESH", enumerate_settings_halformatted, { .noargs = On, .allow_blocking = On }, { .str = "enumerate settings, grblHAL formatted" } },
     { "E*", enumerate_all, { .noargs = On, .allow_blocking = On }, { .str = "enumerate alarms, status codes and settings" } },
-    { "PINS", enumerate_pins, { .noargs = On, .allow_blocking = On, .help_fn = On }, { .fn = help_pins } },
-#ifndef NO_SETTINGS_DESCRIPTIONS
-    { "PINSTATE", pin_state, { .noargs = On, .allow_blocking = On, .help_fn = On }, { .fn = help_pin_state } },
-#endif
+    { "PINS", report_pins, { .noargs = On, .allow_blocking = On, .help_fn = On }, { .fn = help_pins } },
+    { "PINSTATE", report_pin_states, { .noargs = On, .allow_blocking = On, .help_fn = On }, { .fn = help_pin_state } },
+    { "PORTS", report_uart_ports, { .noargs = On, .allow_blocking = On }, { .str = "enumerate serial (UART) ports" } },
     { "LEV", report_last_signals_event, { .noargs = On, .allow_blocking = On }, { .str = "output last control signal events" } },
     { "LIM", report_current_limit_state, { .noargs = On, .allow_blocking = On }, { .str = "output current limit pins" } },
     { "SD", report_spindle_data, { .help_fn = On }, { .fn = help_spindle } },

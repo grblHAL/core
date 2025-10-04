@@ -308,13 +308,22 @@ typedef struct {
     vfs_file_t *file;                                       //!< File handle, non-null if streaming from a file.
 } io_stream_t;
 
+typedef struct {
+    io_stream_state_t state;                                //!< Optional status flags such as connected status.
+    io_stream_flags_t flags;                                //!< Handler for getting stream connected status.
+    uint32_t baud_rate;
+    serial_format_t format;
+} io_stream_status_t;
+
 typedef const io_stream_t *(*stream_claim_ptr)(uint32_t baud_rate);
+typedef const io_stream_status_t *(*stream_get_status_ptr)(uint8_t instance);
 
 typedef struct {
     stream_type_t type;                                     //!< Type of stream.
     uint8_t instance;                                       //!< Instance of stream type, starts from 0.
     io_stream_flags_t flags;
     stream_claim_ptr claim;
+    stream_get_status_ptr get_status;                       //!< Optional handler for getting stream status, for UART streams only
 } io_stream_properties_t;
 
 typedef bool (*stream_enumerate_callback_ptr)(io_stream_properties_t const *properties);
@@ -410,6 +419,8 @@ bool stream_connected (void);
 const io_stream_t *stream_get_base (void);
 
 io_stream_flags_t stream_get_flags (io_stream_t stream);
+
+const io_stream_status_t *stream_get_uart_status (uint8_t instance);
 
 const io_stream_t *stream_null_init (uint32_t baud_rate);
 

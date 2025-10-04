@@ -115,6 +115,8 @@ status_code_t report_pins (sys_state_t state, char *args);
 
 status_code_t report_pin_states (sys_state_t state, char *args);
 
+status_code_t report_uart_ports (sys_state_t state, char *args);
+
 // Prints registered spindles.
 status_code_t report_spindles (bool machine_readable);
 

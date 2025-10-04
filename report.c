@@ -2372,6 +2372,90 @@ status_code_t report_pins (sys_state_t state, char *args)
     return Status_OK;
 }
 
+static void get_uart_pins (xbar_t *pin, void *data)
+{
+    if(pin->group >= PinGroup_UART && pin->group <= PinGroup_UART4)
+        get_pin_info(pin, &((pin_data_t *)data)->pins[((pin_data_t *)data)->idx++]);
+}
+
+static void count_uart_pins (xbar_t *pin, void *data)
+{
+    if(pin->group >= PinGroup_UART && pin->group <= PinGroup_UART4)
+        ((pin_data_t *)data)->n_pins++;
+}
+
+static void report_port_info (pin_info_t *pin)
+{
+    const io_stream_status_t *status;
+
+    if(pin->function == Input_RX) {
+        strcpy(buf, pin->port);
+        strcat(buf, uitoa(pin->pin));
+        strcat(buf, ",");
+        strcat(buf, xbar_fn_to_pinname(Input_RX));
+        strcat(buf, "|");
+    } else {
+
+        uint8_t instance = (pin->sortkey >> 16) - PinGroup_UART;
+
+        hal.stream.write("[PORT:");
+        hal.stream.write(uitoa(instance));
+        hal.stream.write("|");
+        hal.stream.write(pin->description);
+        hal.stream.write("|");
+        hal.stream.write(*buf ? buf : "-|");
+        if(*pin->port)
+            hal.stream.write(pin->port);
+        hal.stream.write(uitoa(pin->pin));
+        hal.stream.write(",");
+        hal.stream.write(xbar_fn_to_pinname(pin->function));
+        if(hal.stream.write_char && (status = stream_get_uart_status(instance))) {
+            hal.stream.write("|");
+            hal.stream.write(uitoa(status->baud_rate));
+            hal.stream.write(",");
+            hal.stream.write_char("87"[status->format.width]);
+            hal.stream.write(",");
+            hal.stream.write_char("NEOMS"[status->format.parity]);
+            hal.stream.write(",");
+            hal.stream.write(((const char * const[]){"1", "1.5", "2", "0.5"})[status->format.stopbits]);
+            if(status->flags.rts_handshake)
+                hal.stream.write(",P");
+            hal.stream.write("|");
+            hal.stream.write_char("FC"[status->flags.claimed]);
+        }
+        hal.stream.write("]" ASCII_EOL);
+        *buf = '\0';
+    }
+}
+
+status_code_t report_uart_ports (sys_state_t state, char *args)
+{
+    pin_data_t pin_data = {0};
+
+    if(hal.enumerate_pins) {
+
+        hal.enumerate_pins(false, count_uart_pins, (void *)&pin_data);
+
+        if((pin_data.pins = malloc(pin_data.n_pins * sizeof(pin_info_t)))) {
+
+            *buf = '\0';
+
+            hal.enumerate_pins(false, get_uart_pins, (void *)&pin_data);
+
+            qsort(pin_data.pins, pin_data.n_pins, sizeof(pin_info_t), cmp_pins);
+            for(pin_data.idx = 0; pin_data.idx < pin_data.n_pins; pin_data.idx++)
+                report_port_info(&pin_data.pins[pin_data.idx]);
+
+            free(pin_data.pins);
+
+        } else
+            hal.enumerate_pins(false, report_pin, NULL);
+    }
+
+    return Status_OK;
+}
+
+
 #ifndef NO_SETTINGS_DESCRIPTIONS
 
 static char *irq_mode (pin_irq_mode_t mode)

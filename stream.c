@@ -121,6 +121,27 @@ int16_t stream_get_null (void)
     return SERIAL_NO_DATA;
 }
 
+const io_stream_status_t *stream_get_uart_status (uint8_t instance)
+{
+    const io_stream_status_t *status = NULL;
+
+    io_stream_details_t *details = streams;
+
+    while(details) {
+        uint_fast8_t idx;
+        for(idx = 0; idx < details->n_streams; idx++) {
+            if(details->streams[idx].type == StreamType_Serial && details->streams[idx].instance == instance) {
+                if(details->streams[idx].get_status)
+                    status = details->streams[idx].get_status(instance);
+                break;
+            }
+        }
+        details = details->next;
+    };
+
+    return status;
+}
+
 ISR_CODE static bool ISR_FUNC(await_toolchange_ack)(char c)
 {
     if(c == CMD_TOOL_ACK && !stream.rxbuffer->backup) {

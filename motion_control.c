@@ -590,7 +590,7 @@ bool mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_
         if(position[plane.axis_linear] > canned->retract_position) {
             position[plane.axis_linear] = canned->retract_position;
             if(!mc_line(position, pl_data))
-                return;
+                return false;
         }
 
         position_linear = position[plane.axis_linear];
