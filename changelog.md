@@ -1,5 +1,25 @@
 ## grblHAL changelog
 
+<a name="20251005">Build 20251005
+
+Core:
+
+* For developers: added function for getting standardized UART pin descriptions.
+
+Drivers:
+
+* ESP32, iMXRT1062, RP2040: added optional data to `$PORTS` command.
+
+* STM32F1xx: fixed board map causing compilation errors.
+
+* STM32F4xx: changed code that older compiler used by platformio flagged as invalid.
+
+Plugins:
+
+* WebUI: fix for bad refactor of optional authentication code.
+
+---
+
 <a name="20251003">Build 20251003
 
 Core:
@@ -12,7 +32,7 @@ Core:
 
 Drivers:
 
-* ESP32: workaround for crash on MPG switch input changes. Ref. PR [#179](https://github.com/grblHAL/ESP32/pull/179).
+* ESP32: workaround for crash on MPG switch input changes. Ref. PR [#179](https://github.com/grblHAL/ESP32/pull/179).  
 Added new files to CMakeLists.txt.
 
 ---

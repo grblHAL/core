@@ -121,10 +121,14 @@ static vfs_file_t *fs_open (const char *filename, const char *mode)
 
         if((file = calloc(sizeof(vfs_file_t) + sizeof(io_stream_t *), 1))) {
             io_stream = &device->io_stream;
+#ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsizeof-pointer-memaccess"
+#endif
             memcpy(iostream_ptr((io_stream_t *)&file->handle), &io_stream, sizeof(io_stream_t *));
+#ifdef __GNUC__
 #pragma GCC diagnostic pop
+#endif
         }
     }
 

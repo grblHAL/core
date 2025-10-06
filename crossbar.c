@@ -170,6 +170,12 @@ const char *xbar_fn_to_pinname (pin_function_t fn)
     return name ? name : "N/A";
 }
 
+// Only returns description for UART groups
+const char *xbar_group_to_description ( pin_group_t group)
+{
+    return group >= PinGroup_UART && group <= PinGroup_UART4 ? (const char * const[]){ "UART1", "UART2", "UART3", "UART4" }[group - PinGroup_UART] : NULL;
+}
+
 control_signals_t xbar_fn_to_signals_mask (pin_function_t fn)
 {
     control_signals_t signals;
