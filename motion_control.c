@@ -516,7 +516,7 @@ void mc_cubic_b_spline (float *target, plan_line_data_t *pl_data, float *positio
         }
 
         // If we did not reduce the step, maybe we should enlarge it.
-        if (!did_reduce) while (new_t - t <= BEZIER_MAX_STEP) {
+        if (!did_reduce) while (new_t - t < BEZIER_MAX_STEP) {
 
 //            if (new_t - t > BEZIER_MAX_STEP)
 //                break;
