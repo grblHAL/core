@@ -1,5 +1,36 @@
 ## grblHAL changelog
 
+<a name="20251011">Build 20251011
+
+Core:
+
+* Added helper code for plugins claiming auxiliary ports to make plugin coding easier and behaviour consistent.
+
+* Some minor bug fixes such as incorrect error code returned for unknown $-commands and temporary incorrect position reporting on in-flight G92 offset changes.
+
+Drivers:
+
+* ESP32: fix for some unreported compilation failures, triggered by certain configuration options - due to unique build system.
+
+* iMXRT1062: addd tentative support for SPI based Trinamic drivers. Ref. issue [#101](https://github.com/grblHAL/iMXRT1062/issues/101).  
+A known issue is that PWM spindle cannot be enabled whith Trinamic drivers. Testing required.
+
+* STM32F4xx: updated board specific code to use new core helper code.
+
+Plugins:
+
+*all having configurable auxiliary ports: updated to use new core helper code.
+
+* SD card: fixed/improved error code returned on formatting errors.
+
+* Plasma: changed order of arc voltage calulation, now offset (`$362`) is applied before scaling factor (`$361`) to make calibration easier. WIP: some tweaks for voltage THC. 
+
+Libraries:
+
+* Trinamic: made compilable with cpp.
+
+---
+
 <a name="20251005">Build 20251005
 
 Core:
@@ -12,7 +43,7 @@ Drivers:
 
 * STM32F1xx: fixed board map causing compilation errors.
 
-* STM32F4xx: changed code that older compiler used by platformio flagged as invalid.
+* STM32F4xx
 
 Plugins:
 

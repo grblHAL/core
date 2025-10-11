@@ -228,6 +228,7 @@ typedef enum {
     Report_Fan = (1 << 16),
     Report_SpindleId = (1 << 17),
     Report_ProbeId = (1 << 18),
+    Report_DistanceToGo = (1 << 19),
     Report_ForceWCO = (1 << 29),
     Report_CycleStart = (1 << 30),
     Report_All = 0x8003FFFF
@@ -236,29 +237,30 @@ typedef enum {
 typedef union {
     uint32_t value;
     struct {
-        uint32_t mpg_mode      :1, //!< MPG mode changed.
-                 scaling       :1, //!< Scaling (G50/G51) changed.
-                 homed         :1, //!< Homed state changed.
-                 xmode         :1, //!< Lathe radius/diameter mode changed.
-                 spindle       :1, //!< Spindle state changed.
-                 coolant       :1, //!< Coolant state changed.
-                 overrides     :1, //!< Overrides changed.
-                 tool          :1, //!< Tool changed.
-                 wco           :1, //!< Add work coordinates.
-                 gwco          :1, //!< Add work coordinate.
-                 tool_offset   :1, //!< Tool offsets changed.
-                 m66result     :1, //!< M66 result updated.
-                 pwm           :1, //!< Add PWM information (optional: to be added by driver).
-                 motor         :1, //!< Add motor information (optional: to be added by driver).
-                 encoder       :1, //!< Add encoder information (optional: to be added by driver).
-                 tlo_reference :1, //!< Tool length offset reference changed.
-                 fan           :1, //!< Fan on/off changed.
-                 spindle_id    :1, //!< Spindle changed.
-                 probe_id      :1, //!< Probe changed.
-                 unassigned   :10, //
-                 force_wco     :1, //!< Add work coordinates (due to WCO changed during motion).
-                 cycle_start   :1, //!< Cycle start signal triggered. __NOTE:__ do __NOT__ add to Report_All enum above!
-                 all           :1; //!< Set when CMD_STATUS_REPORT_ALL is requested, may be used by user code.
+        uint32_t mpg_mode       :1, //!< MPG mode changed.
+                 scaling        :1, //!< Scaling (G50/G51) changed.
+                 homed          :1, //!< Homed state changed.
+                 xmode          :1, //!< Lathe radius/diameter mode changed.
+                 spindle        :1, //!< Spindle state changed.
+                 coolant        :1, //!< Coolant state changed.
+                 overrides      :1, //!< Overrides changed.
+                 tool           :1, //!< Tool changed.
+                 wco            :1, //!< Add work coordinates.
+                 gwco           :1, //!< Add work coordinate.
+                 tool_offset    :1, //!< Tool offsets changed.
+                 m66result      :1, //!< M66 result updated.
+                 pwm            :1, //!< Add PWM information (optional: to be added by driver).
+                 motor          :1, //!< Add motor information (optional: to be added by driver).
+                 encoder        :1, //!< Add encoder information (optional: to be added by driver).
+                 tlo_reference  :1, //!< Tool length offset reference changed.
+                 fan            :1, //!< Fan on/off changed.
+                 spindle_id     :1, //!< Spindle changed.
+                 probe_id       :1, //!< Probe changed.
+                 distance_to_go :1, //!< Distance to go.
+                 unassigned     :9, //
+                 force_wco      :1, //!< Add work coordinates (due to WCO changed during motion).
+                 cycle_start    :1, //!< Cycle start signal triggered. __NOTE:__ do __NOT__ add to Report_All enum above!
+                 all            :1; //!< Set when CMD_STATUS_REPORT_ALL is requested, may be used by user code.
     };
 } report_tracking_flags_t;
 
@@ -293,10 +295,9 @@ typedef union {
                  single_block            :1, //!< Set to true to disable M1 (optional stop), via realtime command.
                  keep_input              :1, //!< Set to true to not flush stream input buffer on executing STOP.
                  auto_reporting          :1, //!< Set to true when auto real time reporting is enabled.
-                 synchronizing           :1, //!< Set to true when protocol_buffer_synchronize() is running.
                  travel_changed          :1, //!< Set to true when maximum travel settings has changed.
                  is_homing               :1,
-                 unused                  :3;
+                 unused                  :4;
     };
 } system_flags_t;
 
@@ -321,7 +322,7 @@ typedef struct system {
     bool blocking_event;                    //!< Set when a blocking event that requires reset to clear is active.
     volatile bool steppers_deenergize;      //!< Set to true to deenergize stepperes
     alarm_code_t alarm_pending;             //!< Delayed alarm, currently used for probe protection
-    system_flags_t flags;                   //!< Assorted state flags
+    volatile system_flags_t flags;                   //!< Assorted state flags
     step_control_t step_control;            //!< Governs the step segment generator depending on system state.
     axes_signals_t homing_axis_lock;        //!< Locks axes when limits engage. Used as an axis motion mask in the stepper ISR.
     axes_signals_t homing;                  //!< Axes with homing enabled.

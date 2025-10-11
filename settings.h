@@ -1134,10 +1134,10 @@ void settings_write_build_info(char *line);
 bool settings_read_build_info(char *line);
 
 // Writes selected coordinate data to persistent storage
-void settings_write_coord_data(coord_system_id_t id, float (*coord_data)[N_AXIS]);
+void settings_write_coord_data(coord_system_id_t id, const float (*coord_data)[N_AXIS]);
 
 // Reads selected coordinate data from persistent storage
-bool settings_read_coord_data(coord_system_id_t id, float (*coord_data)[N_AXIS]);
+bool settings_read_coord_data(coord_system_id_t id, const float (*coord_data)[N_AXIS]);
 
 // Temporarily override acceleration, if 0 restore to configured setting value
 bool settings_override_acceleration (uint8_t axis, float acceleration);

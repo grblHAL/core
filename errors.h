@@ -117,7 +117,8 @@ typedef enum {
     Status_FlowControlOutOfMemory = 83,
     Status_FileOpenFailed = 84,
     Status_FsFormatFailed = 85,
-    Status_StatusMax = Status_FlowControlOutOfMemory,
+    Status_AuxiliaryPortUnusable = 86,
+    Status_StatusMax = Status_AuxiliaryPortUnusable,
     Status_UserException = 253,
     Status_Handled,   // For internal use only
     Status_Unhandled  // For internal use only

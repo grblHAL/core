@@ -41,7 +41,7 @@ typedef enum {
     Port_DigitalOut
 } ioport_type_xxx_t;
 
-typedef struct {
+struct ioports_handle {
     ioport_type_xxx_t type;
     io_ports_detail_t *ports;
     const char *pnum;
@@ -57,7 +57,9 @@ typedef struct {
     pin_function_t max_fn;
     uint8_t map[MAX_PORTS];
     ioport_bus_t bus;
-} io_ports_private_t;
+};
+
+typedef struct ioports_handle io_ports_private_t;
 
 typedef struct {
     digital_out_ptr digital_out;                       //!< Optional handler for setting a digital output.
@@ -197,16 +199,24 @@ struct ff_data {
 
 static bool match_port (xbar_t *properties, uint8_t port, void *data)
 {
+    bool ok;
     struct ff_data *ff_data = (struct ff_data *)data;
 
-    if(ff_data->description
-         ? (properties->description == NULL || strcmp(properties->description, ff_data->description))
-         : port >= ff_data->max_port)
-        return false;
+    if((ok = properties->id <= ff_data->max_port))
+        ff_data->port = port;
 
-    ff_data->port = port;
+    return ok;
+}
 
-    return true;
+static bool match_description (xbar_t *properties, uint8_t port, void *data)
+{
+    bool ok;
+    struct ff_data *ff_data = (struct ff_data *)data;
+
+    if((ok = properties->description && !strcmp(properties->description, ff_data->description)))
+        ff_data->port = port;
+
+    return ok;
 }
 
 /*! \brief find claimable or claimed analog or digital port. Search starts from the last port number.
@@ -216,6 +226,7 @@ static bool match_port (xbar_t *properties, uint8_t port, void *data)
 or a port number to be used as the upper limit for the search, or \a NULL if searching for the first free port.
 \returns the port number if successful, 0xFF (255) if not.
 */
+
 uint8_t ioport_find_free (io_port_type_t type, io_port_direction_t dir, pin_cap_t filter, const char *description)
 {
     struct ff_data ff_data = { .port = IOPORT_UNASSIGNED, .max_port = IOPORT_UNASSIGNED + 1 };
@@ -227,11 +238,9 @@ uint8_t ioport_find_free (io_port_type_t type, io_port_direction_t dir, pin_cap_
             ff_data.description = NULL;
     }
 
-    // TODO: pass modified filter with .claimable off when looking for description match?
-    if(ff_data.description && !ioports_enumerate(type, dir, (pin_cap_t){}, match_port, (void *)&ff_data))
-        ff_data.description = NULL;
-
-    if(ff_data.description == NULL && ff_data.max_port != IOPORT_UNASSIGNED)
+    if(ff_data.description)
+        ioports_enumerate(type, dir, (pin_cap_t){ .claimable = On }, match_description, (void *)&ff_data);
+    else
         ioports_enumerate(type, dir, filter, match_port, (void *)&ff_data);
 
     return ff_data.port;
@@ -260,12 +269,12 @@ static xbar_t *get_info (io_port_type_t type, io_port_direction_t dir, uint8_t p
 /*! \brief Return information about a digital or analog port.
 \param type as an \a #io_port_type_t enum value.
 \param dir as an \a #io_port_direction_t enum value.
-\param port the port aux number.
+\param port the claimed port aux number.
 \returns pointer to \a xbar_t struct if successful, \a NULL if not.
 */
 xbar_t *ioport_get_info (io_port_type_t type, io_port_direction_t dir, uint8_t port)
 {
-    return get_info(type, dir, port, false);
+    return hal.port.get_pin_info(type, dir, port);
 }
 
 /* code to keep deprecated data updated, to be removed */
@@ -333,7 +342,7 @@ xbar_t *ioport_claim (io_port_type_t type, io_port_direction_t dir, uint8_t *por
 */
 bool ioport_claimable (io_port_type_t type, io_port_direction_t dir, uint8_t port)
 {
-    xbar_t *portinfo = port == IOPORT_UNASSIGNED ? NULL : get_info(type, dir, port, false);
+    xbar_t *portinfo = port == IOPORT_UNASSIGNED ? NULL : hal.port.get_pin_info(type, dir, map_reverse(get_port_data(type, dir), port));
 
     return port == IOPORT_UNASSIGNED || (portinfo && portinfo->cap.claimable);
 }
@@ -392,7 +401,7 @@ bool ioport_set_function (xbar_t *pin, pin_function_t function, driver_caps_t ca
                 case Port_DigitalIn:
                     if(caps.control)
                         hal.signals_cap.mask |= caps.control->mask;
-                    if(function == Input_Probe || xbar_fn_to_signals_mask(function).mask)
+                    if(function == Input_Probe || function == Input_Probe2 || function == Input_Toolsetter || xbar_fn_to_signals_mask(function).mask)
                         setting_remove_elements(Settings_IoPort_InvertIn, cfg->bus.mask);
                     break;
 
@@ -443,6 +452,95 @@ bool ioport_can_claim_explicit (void)
     return ioports_can_do().claim_explicit;
 }
 
+//
+// Some helper functions for plugins using ports
+//
+
+static float _get_value (io_port_cfg_t *p, uint8_t port)
+{
+    return port > p->port_max ? -1.0f : (float)port;
+}
+
+static status_code_t _set_value (io_port_cfg_t *p, uint8_t *port, pin_cap_t caps, float value)
+{
+    status_code_t status;
+
+    if((status = isintf(value) ? Status_OK : Status_BadNumberFormat) == Status_OK) {
+        if(value >= 0.0f) {
+
+            xbar_t *portinfo = hal.port.get_pin_info(p->handle->type >> 1, p->handle->type & 1, map_reverse(&ports_cfg[p->handle->type], (uint8_t)value));
+
+            if(portinfo == NULL || !portinfo->cap.claimable)
+                status = Status_AuxiliaryPortUnavailable;
+            else if(!(caps.mask == 0 || (portinfo->cap.mask & caps.mask)))
+                status = Status_AuxiliaryPortUnusable;
+            else
+                *port = (uint8_t)value;
+        } else
+            *port = IOPORT_UNASSIGNED;
+    }
+
+    return status;
+}
+
+uint8_t _get_next (io_port_cfg_t *p, uint8_t port, const char *description, pin_cap_t caps)
+{
+    uint8_t px = IOPORT_UNASSIGNED;
+
+    caps.claimable = On;
+
+    if(description && *description)
+        px = ioport_find_free(p->handle->type >> 1, p->handle->type & 1, (pin_cap_t){ .claimable = On }, description);
+
+    if(px == IOPORT_UNASSIGNED && !(port == 0 && port == p->port_max))
+        px = ioport_find_free(p->handle->type >> 1, p->handle->type & 1, caps, uitoa(port == IOPORT_UNASSIGNED ? p->port_max : (port > p->port_max ? p->port_max : port) - 1));
+
+    return px;
+}
+
+static xbar_t *_claim (io_port_cfg_t *p, uint8_t *port, const char *description, pin_cap_t caps)
+{
+    xbar_t *portinfo = *port <= p->port_max ? hal.port.get_pin_info(p->handle->type >> 1, p->handle->type & 1, map_reverse(&ports_cfg[p->handle->type], *port)) : NULL;
+
+    if(!portinfo)
+        *port = IOPORT_UNASSIGNED;
+
+    return portinfo && !portinfo->mode.claimed && (caps.mask == 0 || (portinfo->cap.mask & caps.mask) == caps.mask) && ioport_claim(p->handle->type >> 1, p->handle->type & 1, port, description)
+            ? portinfo
+            : NULL;
+}
+
+/*! \brief Get data and pointers to helper functions for managing ports and port settings.
+\param pp a pointer to a \a io_port_cfg_t struct to hold the data and pointers.
+\param type as an \a #io_port_type_t enum value.
+\param dir as an \a #io_port_direction_t enum value.
+\returns the pointer to the \a io_port_cfg_t struct passed in the pp argument.
+*/
+io_port_cfg_t *ioports_cfg (io_port_cfg_t *pp, io_port_type_t type, io_port_direction_t dir)
+{
+    static io_port_cfg_t cfg[4] = {0};
+
+    io_port_cfg_t *p = &cfg[(type << 1) | dir];
+
+    if(p->n_ports == 0 && !!hal.port.claim) {
+        if((p->n_ports = ioports_available(type, dir))) {
+            p->handle = &ports_cfg[(type << 1) | dir];
+            p->port_max = ioport_find_free(type, dir, (pin_cap_t){ .claimable = On }, NULL);
+            p->get_value = _get_value;
+            p->set_value = _set_value;
+            p->get_next = _get_next;
+            p->claim = _claim;
+            strcpy((char *)p->port_maxs, uitoa(p->port_max));
+        }
+    }
+
+    memcpy(pp, p, sizeof(io_port_cfg_t));
+
+    return pp;
+}
+
+// ---
+
 /*! \brief Enumerate ports.
 \param type as an \a #io_port_type_t enum value.
 \param dir as an \a #io_port_direction_t enum value.
@@ -456,7 +554,7 @@ bool ioports_enumerate (io_port_type_t type, io_port_direction_t dir, pin_cap_t 
     bool ok = false;
     io_ports_private_t *p_data = get_port_data(type, dir);
 
-    if(p_data->ports && p_data->n_ports && ioport_can_claim_explicit()) {
+    if(p_data->ports && p_data->n_ports && ioports_can_do().claim_explicit) {
 
        xbar_t *portinfo;
        uint_fast16_t n_ports;

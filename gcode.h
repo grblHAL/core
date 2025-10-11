@@ -352,51 +352,6 @@ typedef union {
     };
 } gc_override_flags_t;
 
-//! Coordinate data.
-typedef union {
-    float values[N_AXIS];
-    struct {
-        float x;
-        float y;
-        float z;
-#ifdef A_AXIS
-        float a;
-#endif
-#ifdef B_AXIS
-        float b;
-#endif
-#ifdef C_AXIS
-        float c;
-#endif
-#ifdef U_AXIS
-        float u;
-#endif
-#ifdef V_AXIS
-        float v;
-#endif
-    };
-    struct {
-        float m0;
-        float m1;
-        float m2;
-#if N_AXIS > 3
-        float m3;
-#endif
-#if N_AXIS > 4
-        float m4;
-#endif
-#if N_AXIS > 5
-        float m5;
-#endif
-#if N_AXIS > 6
-        float m6;
-#endif
-#if N_AXIS == 8
-        float m7;
-#endif
-    };
-} coord_data_t;
-
 //! Coordinate data including id.
 typedef struct {
     float xyz[N_AXIS];

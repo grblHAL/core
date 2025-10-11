@@ -364,10 +364,8 @@ bool protocol_buffer_synchronize (void)
 
     // If system is queued, ensure cycle resumes if the auto start flag is present.
     protocol_auto_cycle_start();
-
-    sys.flags.synchronizing = gc_state.modal.program_flow == ProgramFlow_Running;
-    while ((ok = protocol_execute_realtime()) && (plan_get_current_block() || state_get() == STATE_CYCLE));
-    sys.flags.synchronizing = Off;
+    
+    while((ok = protocol_execute_realtime()) && (plan_get_current_block() || state_get() == STATE_CYCLE));
 
     return ok;
 }

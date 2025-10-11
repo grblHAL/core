@@ -1161,8 +1161,6 @@ void report_realtime_status (stream_write_ptr stream_write)
         .triggered = Off
     };
 
-    system_convert_array_steps_to_mpos(print_position, sys.position);
-
     if(hal.probe.get_state)
         probe_state = hal.probe.get_state();
 
@@ -1226,6 +1224,18 @@ void report_realtime_status (stream_write_ptr stream_write)
             break;
     }
 
+    system_convert_array_steps_to_mpos(print_position, sys.position);
+
+    if((report.distance_to_go = settings.status_report.distance_to_go)) {
+        // Calulate distance-to-go in current block (i.e., difference between target / end-of-block) and current position)
+        plan_block_t *cur_block = plan_get_current_block();
+        if((report.distance_to_go = !!cur_block)) {
+            for(idx = 0; idx < N_AXIS; idx++) {
+                dist_remaining[idx] = cur_block->target_mm[idx] - print_position[idx];
+            }
+        }
+    }
+
     if(!settings.status_report.machine_position) {
         // Apply work coordinate offsets and tool length offset to current position.
         for(idx = 0; idx < N_AXIS; idx++) {
@@ -1240,7 +1250,7 @@ void report_realtime_status (stream_write_ptr stream_write)
 
     // Returns planner and output stream buffer states.
 
-    if (settings.status_report.buffer_state) {
+    if(settings.status_report.buffer_state) {
         stream_write("|Bf:");
         stream_write(uitoa((uint32_t)plan_get_block_buffer_available()));
         stream_write(",");
@@ -1254,19 +1264,10 @@ void report_realtime_status (stream_write_ptr stream_write)
             stream_write(appendbuf(2, "|Ln:", uitoa((uint32_t)cur_block->line_number)));
     }
 
-    if(settings.status_report.distance_to_go) {
-        // Report distance-to-go in current block (i.e., difference between target / end-of-block) and current position)
-        plan_block_t *cur_block = plan_get_current_block();
-        if (cur_block != NULL) {
-            system_convert_array_steps_to_mpos(dist_remaining, sys.position);
-
-            for(idx = 0; idx < N_AXIS; idx++) {
-                dist_remaining[idx] = cur_block->target_mm[idx] - dist_remaining[idx];
-            }
-
-            stream_write("|DTG:");
-            stream_write(get_axis_values(dist_remaining));
-        }
+    if(report.distance_to_go) {
+        // Report distance-to-go.
+        stream_write("|DTG:");
+        stream_write(get_axis_values(dist_remaining));
     }   
 
     spindle_ptrs_t *spindle_0;
@@ -1320,7 +1321,7 @@ void report_realtime_status (stream_write_ptr stream_write)
 
         ctrl_pin_state.probe_triggered = probe_state.triggered;
         ctrl_pin_state.probe_disconnected = !probe_state.connected;
-        ctrl_pin_state.cycle_start |= sys.report.cycle_start;
+        ctrl_pin_state.cycle_start |= report.cycle_start;
         if(sys.flags.value & sys_switches.value) {
             if(!hal.signals_cap.stop_disable)
                 ctrl_pin_state.stop_disable = sys.flags.optional_stop_disable;
@@ -1378,7 +1379,7 @@ void report_realtime_status (stream_write_ptr stream_write)
             // If protocol_buffer_synchronize() is running
             // delay outputting WCO until sync is completed
             // unless requested from stepper_driver_interrupt_handler.
-            if(!report.all && (report.overrides || (sys.flags.synchronizing && !report.force_wco))) {
+            if(!report.all && (report.overrides || !report.force_wco)) {
                 report.wco = Off;
                 delayed_report.wco = On;
             }
@@ -1487,7 +1488,7 @@ void report_realtime_status (stream_write_ptr stream_write)
     }
 
     if(grbl.on_realtime_report)
-        grbl.on_realtime_report(stream_write, sys.report);
+        grbl.on_realtime_report(stream_write, report);
 
 #if COMPATIBILITY_LEVEL <= 1
     if(report.all) {

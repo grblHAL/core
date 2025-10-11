@@ -724,18 +724,26 @@ void debug_write (const char *s)
 {
     if(dbg_write) {
         dbg_write(s);
-        while(hal.debug.get_tx_buffer_count()) // Wait until message is delivered
-            grbl.on_execute_realtime(state_get());
+//        while(hal.debug.get_tx_buffer_count()) // Wait until message is delivered
+//            grbl.on_execute_realtime(state_get());
     }
 }
 
 void debug_writeln (const char *s)
 {
-    if(dbg_write) {
+    static volatile bool lock = false;
+
+    if(!lock && dbg_write) {
+
+        lock = true;
+
         dbg_write(s);
         dbg_write(ASCII_EOL);
-        while(hal.debug.get_tx_buffer_count()) // Wait until message is delivered
-            grbl.on_execute_realtime(state_get());
+
+//        while(hal.debug.get_tx_buffer_count()) // Wait until message is delivered
+//            grbl.on_execute_realtime(state_get());
+
+        lock = false;
     }
 }
 

@@ -1141,19 +1141,16 @@ status_code_t system_execute_line (char *line)
             *args++ = '\0';
     }
 
-    if (retval == Status_Unhandled) {
-        // Check for global setting, store if so
+    if(retval == Status_Unhandled) {
+        // Check for global setting, store or report if so
         if(state_get() == STATE_IDLE || (state_get() & (STATE_ALARM|STATE_ESTOP|STATE_CHECK_MODE))) {
             uint_fast8_t counter = 0;
             float parameter;
-            if(!read_float(line, &counter, &parameter))
-                retval = Status_BadNumberFormat;
-            else if(!isintf(parameter))
-                retval = Status_InvalidStatement;
-            else if(args)
-                retval = settings_store_setting((setting_id_t)parameter, args);
+            if(read_float(line, &counter, &parameter) && parameter >= 0.0f && isintf(parameter))
+                retval = args ? settings_store_setting((setting_id_t)parameter, args)
+                              :  report_grbl_setting((setting_id_t)parameter, NULL);
             else
-                retval = report_grbl_setting((setting_id_t)parameter, NULL);
+                retval = Status_InvalidStatement;
         } else
             retval = Status_IdleError;
     }

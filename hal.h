@@ -498,7 +498,10 @@ typedef union {
         uint8_t periodic :1, //!<
                 up       :1, //!< Timer supports upcounting
                 comp1    :1, //!< Timer supports compare interrupt 0
-                comp2    :1; //!< Timer supports compare interrupt 1
+                comp2    :1, //!< Timer supports compare interrupt 1
+                ext_clk  :1, //!< External clock supported
+                encoder  :1, //!< Emcode mode supported
+                unused   :2;
     };
 } timer_cap_t;
 

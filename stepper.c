@@ -465,9 +465,9 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
                 while(st.exec_block->output_commands) {
                     output_command_t *cmd = st.exec_block->output_commands;
                     if(cmd->is_digital)
-                        hal.port.digital_out(cmd->port, cmd->value != 0.0f);
+                        ioport_digital_out(cmd->port, cmd->value != 0.0f);
                     else
-                        hal.port.analog_out(cmd->port, cmd->value);
+                        ioport_analog_out(cmd->port, cmd->value);
                     st.exec_block->output_commands = cmd->next;
                 }
 

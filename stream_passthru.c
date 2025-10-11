@@ -83,14 +83,14 @@ static void onLinestateChanged (serial_linestate_t state)
     if(conn_ok) {
 
         if(state.dtr == state.rts) {
-            hal.port.digital_out(boot0_port, 0);
-            hal.port.digital_out(reset_port, 1);
+            ioport_digital_out(boot0_port, 0);
+            ioport_digital_out(reset_port, 1);
         } else if(state.dtr) {
-            hal.port.digital_out(reset_port, 0);
-            hal.port.digital_out(boot0_port, 0);
+            ioport_digital_out(reset_port, 0);
+            ioport_digital_out(boot0_port, 0);
         } else {
-            hal.port.digital_out(boot0_port, 0);
-            hal.port.digital_out(reset_port, 1);
+            ioport_digital_out(boot0_port, 0);
+            ioport_digital_out(reset_port, 1);
         }
     }
 }
@@ -98,7 +98,7 @@ static void onLinestateChanged (serial_linestate_t state)
 static void passthru_start2 (void *data)
 {
     conn_ok = true;
-    hal.port.digital_out(reset_port, 1);
+    ioport_digital_out(reset_port, 1);
 
     task_add_delayed(forward_uart_rx, NULL, 8);
 
@@ -108,8 +108,8 @@ static void passthru_start2 (void *data)
 
 static void passthru_start1 (void *data)
 {
-    hal.port.digital_out(boot0_port, 1);
-    hal.port.digital_out(reset_port, 0);
+    ioport_digital_out(boot0_port, 1);
+    ioport_digital_out(reset_port, 0);
 
     on_linestate_changed = hal.stream.on_linestate_changed;
     hal.stream.on_linestate_changed = onLinestateChanged;

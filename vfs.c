@@ -721,5 +721,5 @@ int vfs_drive_format (vfs_drive_t *drive)
 {
     const vfs_t *fs = drive->fs;
 
-    return fs->format ? fs->format() : -1;
+    return (vfs_errno = fs->format ? fs->format() : -1);
 }

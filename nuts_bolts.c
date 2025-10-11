@@ -59,6 +59,8 @@ static const float froundvalues[MAX_PRECISION + 1] =
 #error "Illegal remapping of ABC axes!"
 #endif
 
+const coord_data_t null_vector = {0};
+
 char const *const axis_letter[N_AXIS] = {
     "X",
     "Y",

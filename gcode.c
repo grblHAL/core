@@ -491,10 +491,10 @@ void gc_coolant (coolant_state_t state)
     system_add_rt_report(Report_Coolant);
 }
 
-static void add_offset (void)
+static void add_offset (const coord_data_t *offset)
 {
     gc_state.offset_id = (gc_state.offset_id + 1) & (MAX_OFFSET_ENTRIES - 1);
-    memcpy(&gc_state.offset_queue[gc_state.offset_id], &gc_state.g92_coord_offset, sizeof(coord_data_t));
+    memcpy(&gc_state.offset_queue[gc_state.offset_id], offset, sizeof(coord_data_t));
     system_flag_wco_change();
 }
 
@@ -3714,7 +3714,7 @@ status_code_t gc_execute_block (char *block)
                     }
                 }
             }
-            // no break
+            //  No break. Continues to next line.
 #endif
 
         case NonModal_GoHome_1:
@@ -3789,31 +3789,31 @@ status_code_t gc_execute_block (char *block)
             break;
 
         case NonModal_SetCoordinateOffset: // G92
+            add_offset((coord_data_t *)gc_block.values.xyz);
             gc_state.g92_coord_offset_applied = true; // TODO: check for all zero?
             memcpy(gc_state.g92_coord_offset, gc_block.values.xyz, sizeof(gc_state.g92_coord_offset));
+            gc_state.g92_coord_offset_applied = memcmp(gc_state.g92_coord_offset, null_vector.values, sizeof(coord_data_t)) != 0;
             if(!settings.flags.g92_is_volatile)
                 settings_write_coord_data(CoordinateSystem_G92, &gc_state.g92_coord_offset); // Save G92 offsets to non-volatile storage
-            add_offset();
             break;
 
         case NonModal_ResetCoordinateOffset: // G92.1
-            gc_state.g92_coord_offset_applied = false;
-            clear_vector(gc_state.g92_coord_offset); // Disable G92 offsets by zeroing offset vector.
             if(!settings.flags.g92_is_volatile)
-                settings_write_coord_data(CoordinateSystem_G92, &gc_state.g92_coord_offset); // Save G92 offsets to non-volatile storage
-            add_offset();
-            break;
+                settings_write_coord_data(CoordinateSystem_G92, &null_vector.values); // Save G92 offsets to non-volatile storage
+            //  No break. Continues to next line.
 
         case NonModal_ClearCoordinateOffset: // G92.2
+            add_offset(&null_vector);
             gc_state.g92_coord_offset_applied = false;
-            clear_vector(gc_state.g92_coord_offset); // Disable G92 offsets by zeroing offset vector.
-            add_offset();
+            memcpy(gc_state.g92_coord_offset, null_vector.values, sizeof(coord_data_t)); // Disable G92 offsets by zeroing offset vector.
             break;
 
-        case NonModal_RestoreCoordinateOffset: // G92.3
-            gc_state.g92_coord_offset_applied = true; // TODO: check for all zero?
-            settings_read_coord_data(CoordinateSystem_G92, &gc_state.g92_coord_offset); // Restore G92 offsets from non-volatile storage
-            add_offset();
+        case NonModal_RestoreCoordinateOffset:; // G92.3
+            coord_data_t offset;
+            settings_read_coord_data(CoordinateSystem_G92, &offset.values); // Restore G92 offsets from non-volatile storage
+            add_offset(&offset);
+            gc_state.g92_coord_offset_applied = memcmp(offset.values, null_vector.values, sizeof(coord_data_t)) != 0;
+            memcpy(gc_state.g92_coord_offset, offset.values, sizeof(coord_data_t)); // Disable G92 offsets by zeroing offset vector.
             break;
 
         default:
@@ -4052,15 +4052,17 @@ status_code_t gc_execute_block (char *block)
             }
 
             // Execute coordinate change and spindle/coolant stop.
-            if (!check_mode) {
+            if(!check_mode) {
 
-                if (!(settings_read_coord_data(gc_state.modal.coord_system.id, &gc_state.modal.coord_system.xyz)))
+                if(!(settings_read_coord_data(gc_state.modal.coord_system.id, &gc_state.modal.coord_system.xyz)))
                     FAIL(Status_SettingReadFail);
 
 #if COMPATIBILITY_LEVEL <= 1
-                float g92_offset_stored[N_AXIS];
-                if(settings_read_coord_data(CoordinateSystem_G92, &g92_offset_stored) && !isequal_position_vector(g92_offset_stored, gc_state.g92_coord_offset))
-                    settings_write_coord_data(CoordinateSystem_G92, &gc_state.g92_coord_offset); // Save G92 offsets to non-volatile storage
+                if(!settings.flags.g92_is_volatile) {
+                    float g92_offset_stored[N_AXIS];
+                    if(settings_read_coord_data(CoordinateSystem_G92, &g92_offset_stored) && !isequal_position_vector(g92_offset_stored, gc_state.g92_coord_offset))
+                        settings_write_coord_data(CoordinateSystem_G92, &gc_state.g92_coord_offset); // Save G92 offsets to non-volatile storage
+                }
 #endif
 
                 system_flag_wco_change(); // Set to refresh immediately just in case something altered.

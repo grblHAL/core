@@ -120,8 +120,6 @@
 #define N_ABC_AXIS 0
 #endif
 
-extern char const *const axis_letter[];
-
 typedef union {
     uint8_t mask;
     uint8_t bits;
@@ -137,6 +135,51 @@ typedef union {
                 v :1;
     };
 } axes_signals_t;
+
+//! Coordinate data.
+typedef union {
+    float values[N_AXIS];
+    struct {
+        float x;
+        float y;
+        float z;
+#ifdef A_AXIS
+        float a;
+#endif
+#ifdef B_AXIS
+        float b;
+#endif
+#ifdef C_AXIS
+        float c;
+#endif
+#ifdef U_AXIS
+        float u;
+#endif
+#ifdef V_AXIS
+        float v;
+#endif
+    };
+    struct {
+        float m0;
+        float m1;
+        float m2;
+#if N_AXIS > 3
+        float m3;
+#endif
+#if N_AXIS > 4
+        float m4;
+#endif
+#if N_AXIS > 5
+        float m5;
+#endif
+#if N_AXIS > 6
+        float m6;
+#endif
+#if N_AXIS == 8
+        float m7;
+#endif
+    };
+} coord_data_t;
 
 typedef union {
     int32_t value[N_AXIS];
@@ -239,6 +282,9 @@ typedef enum {
 
 #define bit_istrue(x, mask) (((x) & (mask)) != 0)
 #define bit_isfalse(x, mask) (((x) & (mask)) == 0)
+
+extern char const *const axis_letter[];
+extern const coord_data_t null_vector;
 
 // Converts an uint32 variable to string.
 char *uitoa (uint32_t n);

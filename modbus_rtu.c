@@ -44,8 +44,6 @@ typedef enum {
     ModBus_Retry
 } modbus_state_t;
 
-typedef void (*stream_set_direction_ptr)(bool tx);
-
 typedef struct {
     set_baud_rate_ptr set_baud_rate;
     set_format_ptr set_format;                          //!< Optional handler for setting the stream format.
@@ -535,7 +533,7 @@ static bool claim_stream (io_stream_properties_t const *sstream)
             stream.read = claimed->read;
             stream.flush_tx_buffer = claimed->reset_write_buffer;
             stream.flush_rx_buffer = claimed->reset_read_buffer;
-            stream.set_direction = dir_port != IOPORT_UNASSIGNED ? modbus_set_direction : NULL;
+            stream.set_direction = claimed->set_direction;
 
             if(hal.periph_port.set_pin_description) {
                 hal.periph_port.set_pin_description(Output_TX, (pin_group_t)(PinGroup_UART + claimed->instance), "Modbus");
@@ -547,6 +545,7 @@ static bool claim_stream (io_stream_properties_t const *sstream)
 
     return claimed != NULL;
 }
+
 static status_code_t report_stats (sys_state_t state, char *args)
 {
     char buf[110];
@@ -562,7 +561,7 @@ static status_code_t report_stats (sys_state_t state, char *args)
     return Status_OK;
 }
 
-void modbus_rtu_init (int8_t stream, int8_t dir_aux)
+void modbus_rtu_init (int8_t instance, int8_t dir_aux)
 {
     static const modbus_api_t api = {
         .interface = Modbus_InterfaceRTU,
@@ -592,22 +591,30 @@ void modbus_rtu_init (int8_t stream, int8_t dir_aux)
         .commands = command_list
     };
 
-    if(dir_aux != -2) {
-
-        int8_t n_out = ioports_available(Port_Digital, Port_Output);
-
-        dir_port = dir_aux != -1 ? dir_aux : (n_out ? n_out - 1 : IOPORT_UNASSIGNED);
-
-        if(!(dir_port != IOPORT_UNASSIGNED && ioport_claim(Port_Digital, Port_Output, &dir_port, "Modbus RX/TX direction"))) {
-            task_run_on_startup(report_warning, "Modbus failed to initialize!");
-            system_raise_alarm(Alarm_SelftestFailed);
-            return;
-        }
-    }
-
-    stream_instance = stream;
+    stream_instance = instance;
 
     if(stream_enumerate_streams(claim_stream) && (nvs_address = nvs_alloc(sizeof(modbus_settings_t)))) {
+
+        if(stream.set_direction == NULL && dir_aux != -2) {
+
+            xbar_t *dir_pin; // TODO: move to top and use for direct access
+            io_port_cfg_t d_out;
+
+            ioports_cfg(&d_out, Port_Digital, Port_Output);
+
+            dir_port = dir_aux != -1 ? dir_aux : (d_out.n_ports ? d_out.n_ports - 1 : IOPORT_UNASSIGNED);
+
+            if((dir_pin = d_out.claim(&d_out, &dir_port, NULL, (pin_cap_t){}))) {
+                stream.set_direction = modbus_set_direction;
+                ioport_set_function(dir_pin, Output_RS485_Direction, NULL);
+            }
+
+            if(stream.set_direction == NULL) {
+                task_run_on_startup(report_warning, "Modbus failed to initialize!");
+                system_raise_alarm(Alarm_SelftestFailed);
+                return;
+            }
+        }
 
         driver_reset = hal.driver_reset;
         hal.driver_reset = modbus_reset;

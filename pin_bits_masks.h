@@ -558,6 +558,10 @@ static inline void aux_ctrl_claim_out_ports (aux_claim_explicit_out_ptr aux_clai
 #define RTS_BIT (1<<RTS_PIN)
 #endif
 
+#if defined(RS485_DIR_PIN) && !defined(RS485_DIR_BIT)
+#define RS485_DIR_BIT (1<<RS485_DIR_PIN)
+#endif
+
 // IRQ enabled input singnals
 
 #if QEI_ENABLE

@@ -2460,7 +2460,7 @@ bool settings_read_startup_line (uint8_t idx, char *line)
 }
 
 // Write selected coordinate data to persistent storage.
-void settings_write_coord_data (coord_system_id_t id, float (*coord_data)[N_AXIS])
+void settings_write_coord_data (coord_system_id_t id, const float (*coord_data)[N_AXIS])
 {
     assert(id <= N_CoordinateSystems);
 
@@ -2476,13 +2476,13 @@ void settings_write_coord_data (coord_system_id_t id, float (*coord_data)[N_AXIS
 }
 
 // Read selected coordinate data from persistent storage.
-bool settings_read_coord_data (coord_system_id_t id, float (*coord_data)[N_AXIS])
+bool settings_read_coord_data (coord_system_id_t id, const float (*coord_data)[N_AXIS])
 {
     assert(id <= N_CoordinateSystems);
 
     if (!(hal.nvs.type != NVS_None && hal.nvs.memcpy_from_nvs((uint8_t *)coord_data, NVS_ADDR_PARAMETERS + id * (sizeof(coord_data_t) + NVS_CRC_BYTES), sizeof(coord_data_t), true) == NVS_TransferResult_OK)) {
         // Reset with default zero vector
-        memset(coord_data, 0, sizeof(coord_data_t));
+        memcpy((float *)coord_data, null_vector.values, sizeof(coord_data_t));
         settings_write_coord_data(id, coord_data);
         return false;
     }

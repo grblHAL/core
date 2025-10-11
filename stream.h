@@ -177,6 +177,10 @@ This should be called by driver code prior to inserting a character into the inp
 */
 typedef bool (*enqueue_realtime_command_ptr)(char c);
 
+/*! \brief Pointer to function for setting the transfer direction control signal for half-duplex connections (RS-485).
+\param tx \a true when transmitting, \a false when receiving.
+*/
+typedef void (*stream_set_direction_ptr)(bool tx);
 
 /*! \brief Optional, but recommended, pointer to function for enqueueing realtime command characters.
 \param c character to enqueue.
@@ -300,17 +304,18 @@ typedef struct {
     stream_write_n_ptr write_n;                             //!< Optional handler for writing n characters to current output stream only. Required for Modbus support.
     disable_rx_stream_ptr disable_rx;                       //!< Optional handler for disabling/enabling a stream. Recommended?
     get_stream_buffer_count_ptr get_rx_buffer_count;        //!< Optional handler for getting number of characters in the input buffer.
-    get_stream_buffer_count_ptr get_tx_buffer_count;        //!< Optional handler for getting number of characters in the output buffer(s). Count shall include any unsent characters in any transmit FIFO and/or transmit register. Required for Modbus support.
-    flush_stream_buffer_ptr reset_write_buffer;             //!< Optional handler for flushing the output buffer. Any transmit FIFO shall be flushed as well. Required for Modbus support.
-    set_baud_rate_ptr set_baud_rate;                        //!< Optional handler for setting the stream baud rate. Required for Modbus support, recommended for Bluetooth support.
+    get_stream_buffer_count_ptr get_tx_buffer_count;        //!< Optional handler for getting number of characters in the output buffer(s). Count shall include any unsent characters in any transmit FIFO and/or transmit register. Required for Modbus/RS-485 support.
+    flush_stream_buffer_ptr reset_write_buffer;             //!< Optional handler for flushing the output buffer. Any transmit FIFO shall be flushed as well. Required for Modbus/RS-485 support.
+    set_baud_rate_ptr set_baud_rate;                        //!< Optional handler for setting the stream baud rate. Required for Modbus/RS-485 support, recommended for Bluetooth support.
     set_format_ptr set_format;                              //!< Optional handler for setting the stream format.
+    stream_set_direction_ptr set_direction;                 //!< Optional handler for setting the transfer direction for half-duplex communication.
     on_linestate_changed_ptr on_linestate_changed;          //!< Optional handler to be called when line state changes. Set by client.
     vfs_file_t *file;                                       //!< File handle, non-null if streaming from a file.
 } io_stream_t;
 
 typedef struct {
     io_stream_state_t state;                                //!< Optional status flags such as connected status.
-    io_stream_flags_t flags;                                //!< Handler for getting stream connected status.
+    io_stream_flags_t flags;                                //!< Stream capability flags.
     uint32_t baud_rate;
     serial_format_t format;
 } io_stream_status_t;
