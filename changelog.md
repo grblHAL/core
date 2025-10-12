@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+<a name="20251012">20251012
+
+Core:
+
+* Added preprocessor code and symbols to allow easy assignment of unused/unclaimed limit inputs as auxiliary inputs.
+
+Drivers:
+
+* ESP32: updated board map for PiBot to assign unsed limit inputs as auxiliary inputs.
+
+Plugins:
+
+* WebUI: fix for badly formatted ESP400 response from v2 implementation. Added event hook to allow plugin code to trap regular commands originating from HTTP requests.
+
+---
+
 <a name="20251011">Build 20251011
 
 Core:
@@ -12,14 +28,14 @@ Drivers:
 
 * ESP32: fix for some unreported compilation failures, triggered by certain configuration options - due to unique build system.
 
-* iMXRT1062: addd tentative support for SPI based Trinamic drivers. Ref. issue [#101](https://github.com/grblHAL/iMXRT1062/issues/101).  
+* iMXRT1062: added tentative support for SPI based Trinamic drivers. Ref. issue [#101](https://github.com/grblHAL/iMXRT1062/issues/101).  
 A known issue is that PWM spindle cannot be enabled whith Trinamic drivers. Testing required.
 
 * STM32F4xx: updated board specific code to use new core helper code.
 
 Plugins:
 
-*all having configurable auxiliary ports: updated to use new core helper code.
+* All having configurable auxiliary ports: updated to use new core helper code.
 
 * SD card: fixed/improved error code returned on formatting errors.
 

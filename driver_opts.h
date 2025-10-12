@@ -86,6 +86,38 @@
 #define N_GANGED (X_GANGED + Y_GANGED + Z_GANGED)
 #define N_AUTO_SQUARED (X_AUTO_SQUARE + Y_AUTO_SQUARE + Z_AUTO_SQUARE)
 #define N_ABC_MOTORS (N_ABC_AXIS + N_GANGED)
+#define GANGED_MAP (((Z_GANGED<<2)|(Y_GANGED<<1)|X_GANGED)<<N_AXIS)
+#define AUTO_SQUARED_MAP (((Z_AUTO_SQUARE<<2)|(Y_AUTO_SQUARE<<1)|X_AUTO_SQUARE)<<N_AXIS)
+
+#if N_AXIS > 3 || (AUTO_SQUARED_MAP & 8)
+#define M3_LIMIT_ENABLE 1
+#else
+#define M3_LIMIT_ENABLE 0
+#endif
+
+#if N_AXIS > 4 || (AUTO_SQUARED_MAP & 16)
+#define M4_LIMIT_ENABLE 1
+#else
+#define M4_LIMIT_ENABLE 0
+#endif
+
+#if N_AXIS > 5 || (AUTO_SQUARED_MAP & 32)
+#define M5_LIMIT_ENABLE 1
+#else
+#define M5_LIMIT_ENABLE 0
+#endif
+
+#if N_AXIS > 6 || (AUTO_SQUARED_MAP & 64)
+#define M6_LIMIT_ENABLE 1
+#else
+#define M6_LIMIT_ENABLE 0
+#endif
+
+#if N_AXIS > 7 || (AUTO_SQUARED_MAP & 128)
+#define M7_LIMIT_ENABLE 1
+#else
+#define M7_LIMIT_ENABLE 0
+#endif
 
 #ifndef NEOPIXELS_ENABLE
 #define NEOPIXELS_ENABLE    0
@@ -694,8 +726,12 @@
 #define FS_ENABLE 0
 #endif
 
+#ifndef SDCARD_SDIO
+#define SDCARD_SDIO 0
+#endif
+
 #ifndef SPI_ENABLE
-#if SDCARD_ENABLE || TRINAMIC_SPI_ENABLE
+#if (SDCARD_ENABLE && !SDCARD_SDIO) || TRINAMIC_SPI_ENABLE
 #define SPI_ENABLE 1
 #else
 #define SPI_ENABLE 0

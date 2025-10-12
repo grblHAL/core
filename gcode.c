@@ -1154,7 +1154,7 @@ status_code_t gc_execute_block (char *block)
                             FAIL(Status_GcodeUnsupportedCommand); // [probing not supported by driver or unsupported G38.x command]
                         int_value += (mantissa / 10) + 100;
                         mantissa = 0; // Set to zero to indicate valid non-integer G command.
-                        //  No break. Continues to next line.
+                        // No break. Continues to next line.
 
                     case 0: case 1: case 2: case 3:
 #if GCODE_ADVANCED
@@ -3705,6 +3705,10 @@ status_code_t gc_execute_block (char *block)
 
         case NonModal_GoHome_0:
 #if N_AXIS > 3
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+#endif
             {
                 axes_signals_t wrap = { (axis_words.mask & settings.steppers.is_rotary.mask) & settings.steppers.rotary_wrap.mask };
                 if(gc_state.modal.distance_incremental && wrap.mask) {
@@ -3714,8 +3718,11 @@ status_code_t gc_execute_block (char *block)
                     }
                 }
             }
-            //  No break. Continues to next line.
+            // No break. Continues to next line.
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
 #endif
+#endif // N_AXIS > 3
 
         case NonModal_GoHome_1:
             // Move to intermediate position before going home. Obeys current coordinate system and offsets
@@ -3800,7 +3807,7 @@ status_code_t gc_execute_block (char *block)
         case NonModal_ResetCoordinateOffset: // G92.1
             if(!settings.flags.g92_is_volatile)
                 settings_write_coord_data(CoordinateSystem_G92, &null_vector.values); // Save G92 offsets to non-volatile storage
-            //  No break. Continues to next line.
+            // No break. Continues to next line.
 
         case NonModal_ClearCoordinateOffset: // G92.2
             add_offset(&null_vector);
