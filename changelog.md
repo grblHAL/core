@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+<a name="20251015">20251015
+
+Drivers:
+
+* STM32F4xx: SuperLongBoards, ensured toolsetter status is not added during probe configuration.
+
+Plugins:
+
+* Keypad, macros: "hardened" code to avoid hardfault when macros settings data is bad.
+
+---
+
 <a name="20251012">20251012
 
 Core:
@@ -8,7 +20,7 @@ Core:
 
 Drivers:
 
-* ESP32: updated board map for PiBot to assign unsed limit inputs as auxiliary inputs.
+* ESP32: updated board map for PiBot to assign unused limit inputs as auxiliary inputs.
 
 Plugins:
 
