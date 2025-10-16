@@ -183,7 +183,7 @@ bool protocol_main_loop (void)
         spindle_all_off();
         hal.coolant.set_state((coolant_state_t){0});
         sys.cold_start = false;
-		system_set_exec_state_flag(EXEC_RT_COMMAND);  // execute any statup up tasks
+		system_set_exec_state_flag(EXEC_RT_COMMAND);  // execute any startup up tasks
     }
 
     // ---------------------------------------------------------------------------------
@@ -918,17 +918,17 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(char c)
             break;
 
         case CMD_PROBE_CONNECTED_TOGGLE:
-            if(hal.probe.connected_toggle)
-                hal.probe.connected_toggle();
+            if((drop = !!hal.probe.connected_toggle))
+                task_add_immediate(probe_connected_event, (void *)2);
             break;
 
         case CMD_OPTIONAL_STOP_TOGGLE:
-            if((signals.stop_disable = !hal.signals_cap.stop_disable)) // Not available as realtime command if HAL supports physical switch
+            if((drop = (signals.stop_disable = !hal.signals_cap.stop_disable))) // Not available as realtime command if HAL supports physical switch
                 sys.flags.optional_stop_disable = !sys.flags.optional_stop_disable;
             break;
 
         case CMD_SINGLE_BLOCK_TOGGLE:
-            if((signals.single_block = !hal.signals_cap.single_block)) // Not available as realtime command if HAL supports physical switch
+            if((drop = (signals.single_block = !hal.signals_cap.single_block))) // Not available as realtime command if HAL supports physical switch
                 sys.flags.single_block = !sys.flags.single_block;
             break;
 

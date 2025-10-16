@@ -16,6 +16,7 @@ target_sources(grbl INTERFACE
  ${CMAKE_CURRENT_LIST_DIR}/nuts_bolts.c
  ${CMAKE_CURRENT_LIST_DIR}/override.c
  ${CMAKE_CURRENT_LIST_DIR}/planner.c
+ ${CMAKE_CURRENT_LIST_DIR}/probe.c
  ${CMAKE_CURRENT_LIST_DIR}/protocol.c
  ${CMAKE_CURRENT_LIST_DIR}/report.c
  ${CMAKE_CURRENT_LIST_DIR}/settings.c

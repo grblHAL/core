@@ -411,6 +411,9 @@ int grbl_enter (void)
     if(grbl.on_probe_toolsetter == NULL && hal.driver_cap.toolsetter && hal.probe.select)
         grbl.on_probe_toolsetter = onProbeToolsetter;
 
+    if(hal.driver_cap.probe && hal.signals_cap.probe_disconnected)
+        task_run_on_startup(probe_connected_event, hal.control.get_state().probe_disconnected ? NULL : (void *)1);
+
     // Initialization loop upon power-up or a system abort. For the latter, all processes
     // will return to this loop to be cleanly re-initialized.
     while(looping) {

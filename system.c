@@ -72,8 +72,13 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
        .motor_fault = On
     };
 
-    if(signals.deasserted)
+    if(signals.deasserted) {
+        if(signals.probe_disconnected) {
+            signals.probe_disconnected = Off;
+            task_add_immediate(probe_connected_event, (void *)1);
+        }
         signals.bits &= onoff_signals.bits;
+    }
 
     if(signals.bits) {
 
@@ -116,7 +121,8 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
                 if(sys.probing_state == Probing_Active && state_get() == STATE_CYCLE) {
                     system_set_exec_state_flag(EXEC_FEED_HOLD);
                     sys.alarm_pending = Alarm_ProbeProtect;
-                }
+                } else
+                    task_add_immediate(probe_connected_event, NULL);
             } else if(signals.feed_hold)
                 system_set_exec_state_flag(EXEC_FEED_HOLD);
             else if(signals.cycle_start)

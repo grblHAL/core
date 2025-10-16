@@ -1473,8 +1473,11 @@ void report_realtime_status (stream_write_ptr stream_write)
         if(report.tool)
             stream_write(appendbuf(2, "|T:", uitoa((uint32_t)gc_state.tool->tool_id)));
 
-        if(report.probe_id)
+        if(report.probe_id || report.probe_protect) {
             stream_write(appendbuf(2, "|P:", uitoa((uint32_t)probe_state.probe_id)));
+            if(report.probe_protect && !probe_state.is_probing && probe_state.irq_enabled)
+                stream_write(",P");
+        }
 
         if(report.tlo_reference)
             stream_write(appendbuf(2, "|TLR:", uitoa(sys.tlo_reference_set.mask != 0)));

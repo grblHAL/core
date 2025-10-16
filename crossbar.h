@@ -38,7 +38,7 @@ typedef enum {
     Input_MotorWarning,
     Input_LimitsOverride,
     Input_SingleBlock,
-    Input_Unassigned,
+    Input_ToolsetterOvertravel,
     Input_ProbeOvertravel,
     Input_Probe,
 // end control_signals_t sequence
@@ -56,7 +56,6 @@ typedef enum {
     Input_Probe2,
     Input_Probe2Overtravel,
     Input_Toolsetter,
-    Input_ToolsetterOvertravel,
     Input_MPGSelect,
     Input_ModeSelect = Input_MPGSelect, // Deprecated
     Input_LimitX,
@@ -726,22 +725,27 @@ typedef bool (*xbar_set_function_ptr)(struct xbar *pin, pin_function_t function)
 typedef void (*xbar_event_ptr)(bool on);
 typedef bool (*xbar_config_ptr)(struct xbar *pin, xbar_cfg_ptr_t cfg_data, bool persistent);
 
+// MCU port base address and pin number
 typedef struct {
-    pin_function_t function;
-    uint8_t aux_port;
-    pin_irq_mode_t irq_mode;
-    control_signals_t cap;
-    uint8_t pin;
-    void *port;
-    void *input;
+    void *port;     //!< MCU port address (may be NULL).
+    uint8_t pin;    //!< MCU pin number.
+} aux_gpio_t;
+
+typedef struct {
+    pin_function_t function;    //!< Pin function.
+    uint8_t port;               //!< Auxiliary port number, post claimed.
+    pin_irq_mode_t irq_mode;    //!< Required IRQ mode for the input.
+    control_signals_t signal;   //!< Set to the pin the input maps to, 0 if none.
+    aux_gpio_t gpio;            //!< MCU port base address (may be NULL) and pin number.
+    void *input;                //!< Pointer to the driver input array entry for the pin.
+    bool scan;                  //!< true if the pin is to be scanned when control state is requested.
 } aux_ctrl_t;
 
 typedef struct {
-    pin_function_t function;
-    uint8_t aux_port;
-    uint8_t pin;
-    void *port;
-    void *output;
+    pin_function_t function;    //!< Pin function.
+    uint8_t port;               //!< Auxiliary port number, post claimed.
+    aux_gpio_t gpio;            //!< MCU port base address (may be NULL) and pin number.
+    void *output;               //!< Pointer to the driver input array entry for the pin.
 } aux_ctrl_out_t;
 
 typedef struct xbar {
@@ -804,6 +808,11 @@ static inline stepper_state_t xbar_stepper_state_set (stepper_state_t *state, ui
 static inline bool xbar_stepper_state_get (stepper_state_t state, uint8_t axis, bool b)
 {
     return bit_istrue(b ? state.details.b.bits : state.details.a.bits, bit(axis));
+}
+
+static inline bool xbar_is_probe_in (pin_function_t fn)
+{
+    return fn == Input_Probe || fn == Input_Probe2 || fn == Input_Toolsetter;
 }
 
 void xbar_set_homing_source (void);

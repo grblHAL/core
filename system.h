@@ -158,31 +158,6 @@ typedef union {
     };
 } step_control_t;
 
-// NOTE: the pin_function_t enum must be kept in sync with any changes!
-typedef union {
-    uint16_t bits;
-    uint16_t mask;
-    uint16_t value;
-    struct {
-        uint16_t reset                :1,
-                 feed_hold            :1,
-                 cycle_start          :1,
-                 safety_door_ajar     :1,
-                 block_delete         :1,
-                 stop_disable         :1, //! M1
-                 e_stop               :1,
-                 probe_disconnected   :1,
-                 motor_fault          :1,
-                 motor_warning        :1,
-                 limits_override      :1,
-                 single_block         :1,
-                 tls_overtravel       :1, //! used for probe (toolsetter) protection
-                 probe_overtravel     :1, //! used for probe protection
-                 probe_triggered      :1, //! used for probe protection
-                 deasserted           :1; //! this flag is set if signals are deasserted.
-    };
-} control_signals_t;
-
 // Define spindle stop override control states.
 typedef union {
     uint8_t value;
@@ -229,9 +204,10 @@ typedef enum {
     Report_SpindleId = (1 << 17),
     Report_ProbeId = (1 << 18),
     Report_DistanceToGo = (1 << 19),
+    Report_ProbeProtect = (1 << 20),
     Report_ForceWCO = (1 << 29),
     Report_CycleStart = (1 << 30),
-    Report_All = 0x8003FFFF
+    Report_All = 0x801FFFFF
 } report_tracking_t;
 
 typedef union {
@@ -257,7 +233,8 @@ typedef union {
                  spindle_id     :1, //!< Spindle changed.
                  probe_id       :1, //!< Probe changed.
                  distance_to_go :1, //!< Distance to go.
-                 unassigned     :9, //
+                 probe_protect  :1, //!< Probe protection state changed.
+                 unassigned     :8, //
                  force_wco      :1, //!< Add work coordinates (due to WCO changed during motion).
                  cycle_start    :1, //!< Cycle start signal triggered. __NOTE:__ do __NOT__ add to Report_All enum above!
                  all            :1; //!< Set when CMD_STATUS_REPORT_ALL is requested, may be used by user code.

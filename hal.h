@@ -373,6 +373,12 @@ __NOTE:__ this function will be called from an interrupt context.
 */
 typedef probe_state_t (*probe_get_state_ptr)(void);
 
+/*! \brief Pointer to function for getting triggered status for a specific probe.
+\param probe_id probe number. 0 - default probe, 1 - toolsetter, ...
+\returns \a true if triggered, \a false otherwise.
+*/
+typedef bool (*probe_is_triggered_ptr)(probe_id_t probe_id);
+
 /*! \brief Pointer to function for setting probe operation mode.
 \param is_probe_away true if probing away from the workpiece, false otherwise. When probing away the signal must be inverted in the probe_get_state_ptr() implementation.
 \param probing true if probe cycle is active, false otherwise.
@@ -381,13 +387,17 @@ typedef void (*probe_configure_ptr)(bool is_probe_away, bool probing);
 
 /*! \brief Pointer to function for selecting probe input.
 \param probe_id probe number. 0 - default probe, 1 - toolsetter, ...
-\returns true if selectetion succeded, false otherwise.
+\returns true if selection succeded, false otherwise.
 */
 typedef bool (*probe_select_ptr)(probe_id_t probe_id);
 
+/*! \brief Pointer to function for getting probe capabilities.
+\param probe_id probe number. 0 - default probe, 1 - toolsetter, ...
+\returns a \a probe_flags_t struct.
+*/
+typedef probe_flags_t (*probe_get_caps_ptr)(probe_id_t probe_id);
+
 /*! \brief Pointer to function for toggling probe connected status.
-
-
 If the driver does not support a probe connected input signal this can be used to implement
 toggling of probe connected status via a #CMD_PROBE_CONNECTED_TOGGLE real time command.
 */
@@ -397,7 +407,9 @@ typedef void (*probe_connected_toggle_ptr)(void);
 typedef struct {
     probe_configure_ptr configure;                  //!< Optional handler for setting probe operation mode.
     probe_get_state_ptr get_state;                  //!< Optional handler for getting probe status. Called from interrupt context.
+    probe_is_triggered_ptr is_triggered;            //!< Optional handler for getting probe triggered status.
     probe_select_ptr select;                        //!< Optional handler for selecting probe to use.
+    probe_get_caps_ptr get_caps;                    //!< Optional handler for getting probe capabilities.
     probe_connected_toggle_ptr connected_toggle;    //!< Optional handler for toggling probe connected status.
 } probe_ptrs_t;
 

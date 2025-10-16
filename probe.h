@@ -22,7 +22,13 @@
 #ifndef _PROBE_H_
 #define _PROBE_H_
 
+#include "crossbar.h"
+
+#define N_PROBE_MAX 3
+
 // Values that define the probing state machine.
+
+typedef bool (*get_probe_input_ptr)(void *input);
 
 typedef enum {
     Probing_Off = 0, //!< 0
@@ -36,33 +42,33 @@ typedef enum {
 } probe_id_t;
 
 typedef union {
-    uint8_t value;
+    uint16_t value;
     struct {
-        uint8_t triggered     :1, //!< Set to true when probe or toolsetter is triggered.
-                connected     :1, //!< Set to true when probe is connected. Always set to true if the driver does not have a probe connected input.
-                inverted      :1, //!< For driver use
-                is_probing    :1, //!< For driver use
-                irq_enabled   :1, //!< For driver use
-                tls_triggered :1, //!< Set to true when toolsetter is triggered.
-                probe_id      :2; //!< Id of active probe (for now).
+        uint16_t triggered     :1, //!< Set to true when probe or toolsetter is triggered.
+                 connected     :1, //!< Set to true when probe is connected. Always set to true if the driver does not have a probe connected input.
+                 inverted      :1, //!< For driver use
+                 is_probing    :1, //!< For driver use
+                 was_probing   :1, //!< For driver use
+                 irq_enabled   :1, //!< For driver use
+                 irq_mode      :5, //!< pin_irq_mode_t - for driver use
+                 unused        :3,
+                 probe_id      :2; //!< Id of active probe (for now).
     };
 } probe_state_t;
 
 typedef union {
     uint8_t value;
     struct {
-        uint8_t connected     :1, //!< Set to true when probe is connected. Always set to true if the driver does not have a probe connected input.
+        uint8_t available     :1, //!< Set to true when probe input is available.
+                connected     :1, //!< Set to true when probe is connected. Always set to true if the driver does not have a probe connected input.
                 latchable     :1, //!< Set to true when probe input supports change rising/falling.
                 watchable     :1, //!< Set to true when probe input supports change interrupt.
-                unassigned    :5;
+                guarded       :1, //!< Set to true when probe protection is enabled.
+                unassigned    :3;
     };
 } probe_flags_t;
 
-typedef struct {
-    probe_id_t probe_id;
-    probe_flags_t flags;
-    uint8_t port;
-    void *input;
-} probe_t;
+void probe_connected_event (void *data);
+bool probe_add (probe_id_t probe_id, uint8_t port, pin_irq_mode_t irq_mode, void *input, get_probe_input_ptr get_input);
 
-#endif
+#endif // _PROBE_H_

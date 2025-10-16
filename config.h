@@ -736,7 +736,7 @@ If set to \ref Off or 0 the `|DTG:` distance-to-go element is not included in th
 \internal Bit 13 in settings.status_report.
 */
 #if !defined DEFAULT_REPORT_DISTANCE_TO_GO || defined __DOXYGEN__
-#define DEFAULT_REPORT_DISTANCE_TO_GO On // Default on. Set to \ref Off or 0 to disable.
+#define DEFAULT_REPORT_DISTANCE_TO_GO Off // Default off. Set to \ref On or 1 to enable.
 #endif
 
 ///@}
@@ -933,14 +933,13 @@ Enable this setting to feedrate override over a soft reset.
 ///@}
 
 
-
 // Control signals settings (Group_ControlSignals)
 
 #ifndef __DOXYGEN__ // For now do not include in documentation
 
 /*! @name Control signals bit definitions and mask.
 
-__NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
+__NOTE:__  Do __NOT__ change! Definitions MUST match #control_signals_t struct bit order.
 */
 ///@{
 #define SIGNALS_RESET_BIT (1<<0)
@@ -952,6 +951,12 @@ __NOTE:__ these definitions are only referenced in this file. Do __NOT__ change!
 #define SIGNALS_ESTOP_BIT (1<<6)
 #define SIGNALS_PROBE_CONNECTED_BIT (1<<7)
 #define SIGNALS_MOTOR_FAULT_BIT (1<<8)
+#define SIGNALS_MOTOR_WARNING_BIT (1<<9)
+#define SIGNALS_LIMITS_OVERRIDE_BIT (1<<10)
+#define SIGNALS_SINGLE_BLOCK_BIT (1<<11)
+#define SIGNALS_TLS_OVERTRAVEL_BIT (1<<12)
+#define SIGNALS_PROBE_OVERTRAVEL (1<<13)
+#define SIGNALS_PROBE_TRIGGERED_BIT (1<<14)
 #define SIGNALS_BITMASK (SIGNALS_RESET_BIT|SIGNALS_FEEDHOLD_BIT|SIGNALS_CYCLESTART_BIT|SIGNALS_SAFETYDOOR_BIT|SIGNALS_BLOCKDELETE_BIT|SIGNALS_STOPDISABLE_BIT|SIGNALS_ESTOP_BIT|SIGNALS_PROBE_CONNECTED_BIT|SIGNALS_MOTOR_FAULT_BIT)
 ///@}
 

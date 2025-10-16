@@ -409,10 +409,10 @@ static inline float interp (const float a, const float b, const float t)
 }
 
 /**
- * Compute a B�zier curve using the De Casteljau's algorithm (see
+ * Compute a Bezier curve using the De Casteljau's algorithm (see
  * https://en.wikipedia.org/wiki/De_Casteljau's_algorithm), which is
  * easy to code and has good numerical stability (very important,
- * since Arudino works with limited precision real numbers).
+ * since Arduino works with limited precision real numbers).
  */
 static inline float eval_bezier (const float a, const float b, const float c, const float d, const float t)
 {

@@ -426,8 +426,8 @@ static char homing_options[] = "Enable,Enable single axis commands,Homing on sta
 #else
 static char probe_signals[] = "Probe";
 #endif
-static char probing_options[] = "Allow feed override,Apply soft limits,N/A,Auto select toolsetter,Auto select probe 2";
-static char control_signals[] = "Reset,Feed hold,Cycle start,Safety door,Block delete,Optional stop,EStop,Probe connected,Motor fault,Motor warning,Limits override,Single step blocks";
+static char probing_options[] = "Allow feed override,Apply soft limits,N/A,Auto select toolsetter,Auto select probe 2,Probe protection";
+static char control_signals[] = "Reset,Feed hold,Cycle start,Safety door,Block delete,Optional stop,EStop,Probe disconnected,Motor fault,Motor warning,Limits override,Single step blocks,Toolsetter overtravel";
 static char spindle_signals[] = "Spindle enable,Spindle direction,PWM";
 static char coolant_signals[] = "Flood,Mist";
 static char ganged_axes[] = "X-Axis,Y-Axis,Z-Axis";
@@ -702,10 +702,17 @@ static status_code_t set_ngc_debug_out (setting_id_t id, uint_fast16_t int_value
 
 static status_code_t set_control_invert (setting_id_t id, uint_fast16_t int_value)
 {
-    settings.control_invert.mask = (int_value & hal.signals_cap.mask) | limits_override.mask;
+    int_value = (int_value & hal.signals_cap.mask) | limits_override.mask;
+
+    bool pd_changed = hal.probe.connected_toggle && settings.control_invert.probe_disconnected != (control_signals_t){ .value = int_value }.probe_disconnected;
+
+    settings.control_invert.mask = int_value;
 
     ioport_setting_changed(id);
     system_init_switches();
+
+    if(pd_changed)
+        hal.probe.connected_toggle();
 
     return Status_OK;
 }
@@ -1077,9 +1084,12 @@ static status_code_t set_probe_flags (setting_id_t id, uint_fast16_t int_value)
 {
     settings.probe.allow_feed_override = bit_istrue(int_value, bit(0));
     settings.probe.soft_limited = bit_istrue(int_value, bit(1));
-    settings.probe.enable_protection = bit_istrue(int_value, bit(2));
+//    settings.probe.? = bit_istrue(int_value, bit(2));
     settings.probe.toolsetter_auto_select = bit_istrue(int_value, bit(3)) && hal.driver_cap.toolsetter && hal.probe.select;
     settings.probe.probe2_auto_select = bit_istrue(int_value, bit(4)) && hal.driver_cap.probe2 && hal.probe.select;
+    settings.probe.enable_protection = bit_istrue(int_value, bit(5));
+
+    hal.probe.configure(false, false);
 
     return Status_OK;
 }
@@ -1601,9 +1611,10 @@ static uint32_t get_int (setting_id_t id)
         case Setting_ProbingFlags:
             value = settings.probe.allow_feed_override |
                     (settings.probe.soft_limited << 1) |
-                     (settings.probe.enable_protection << 2) |
+             //      (settings.probe.enable_protection << 2) |
                       (settings.probe.toolsetter_auto_select << 3) |
-                       (settings.probe.probe2_auto_select << 4);
+                       (settings.probe.probe2_auto_select << 4) |
+                        (settings.probe.enable_protection << 5);
             break;
 
         case Setting_ToolChangeMode:
@@ -3509,6 +3520,14 @@ void settings_init (void)
     setting_remove_elements(Setting_ProbePullUpDisable, mask);
 
     mask = 0b00011 | (hal.probe.select ? ((hal.driver_cap.toolsetter << 3) | (hal.driver_cap.probe2 << 4)) : 0);
+#if 0
+    if(hal.probe.get_caps) {
+        if(hal.probe.get_caps(Probe_Default).watchable)
+            mask |= (1 << 5);
+    }
+#else
+    settings.probe.enable_protection = Off;
+#endif
     setting_remove_elements(Setting_ProbingFlags, mask);
 
     if(!settings.flags.settings_downgrade && settings.version.build != (GRBL_BUILD - 20000000UL)) {

@@ -1,5 +1,28 @@
 ## grblHAL changelog
 
+<a name="20251016">Build 20251016
+
+Core:
+
+* Refactored assignment of of auxiliary I/O for "standard" inputs and outputs to make it more robust and easier to follow for developers.
+
+* Moved probe signal handling from drivers to the core, improved handling of probe disconnected signal.
+
+> [!NOTE]
+> The changes above are quite large, please verify probe operation after installation.
+
+Drivers:
+
+* All: updated for move of probe signal handling to the core.
+
+* RP2040: fixed "leak" of stepper signals between axes when plasma plugin is enabled, affects the PicoCNC board.
+
+* ESP32: fix for compilation failure for boards using the SDIO interface for SD card interface.
+
+* STM32F4xx: SuperLongBoards, now returns unambigous values for `_probe_state` and `_toolsetter_state` system parameters.
+
+---
+
 <a name="20251015">20251015
 
 Drivers:
@@ -8,7 +31,7 @@ Drivers:
 
 Plugins:
 
-* Keypad, macros: "hardened" code to avoid hardfault when macros settings data is bad.
+* Keypad, macros: "hardened" code to avoid hardfault when macros settings data are bad.
 
 ---
 

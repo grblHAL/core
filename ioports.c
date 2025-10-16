@@ -352,12 +352,12 @@ void ioport_assign_function (aux_ctrl_t *aux_ctrl, pin_function_t *function)
 {
     xbar_t *input;
 
-    if((input = hal.port.get_pin_info(Port_Digital, Port_Input, aux_ctrl->aux_port))) {
+    if((input = hal.port.get_pin_info(Port_Digital, Port_Input, aux_ctrl->port))) {
 
         *function = aux_ctrl->function;
         ports_cfg[Port_DigitalIn].bus.mask &= ~(1 << input->id);
         ports_cfg[Port_DigitalIn].count = ports_cfg[Port_DigitalIn].free = -1;
-        hal.signals_cap.mask |= aux_ctrl->cap.mask;
+        hal.signals_cap.mask |= aux_ctrl->signal.mask;
 
         if(aux_ctrl->function == Input_Probe || xbar_fn_to_signals_mask(aux_ctrl->function).mask)
             setting_remove_elements(Settings_IoPort_InvertIn, ports_cfg[Port_DigitalIn].bus.mask);
@@ -369,7 +369,7 @@ void ioport_assign_out_function (aux_ctrl_out_t *aux_ctrl, pin_function_t *funct
 {
     xbar_t *output;
 
-    if((output = hal.port.get_pin_info(Port_Digital, Port_Output, aux_ctrl->aux_port))) {
+    if((output = hal.port.get_pin_info(Port_Digital, Port_Output, aux_ctrl->port))) {
 
         *function = aux_ctrl->function;
         ports_cfg[Port_DigitalOut].bus.mask &= ~(1UL << output->id);
