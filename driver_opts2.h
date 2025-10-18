@@ -67,6 +67,22 @@
 #define FLASH_ENABLE 0
 #endif
 
+#ifndef SDCARD_SDIO
+#define SDCARD_SDIO 0
+#endif
+
+#ifndef SPI_ENABLE
+#if (SDCARD_ENABLE && !SDCARD_SDIO) || TRINAMIC_SPI_ENABLE
+#define SPI_ENABLE 1
+#else
+#define SPI_ENABLE 0
+#endif
+#endif
+
+#if SDCARD_ENABLE && !SDCARD_SDIO && !defined(SD_CS_PIN)
+#error SD card plugin not supported!
+#endif
+
 // Expand port shorthand names
 
 #ifdef ENABLE_PORT

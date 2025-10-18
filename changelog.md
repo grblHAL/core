@@ -1,5 +1,25 @@
 ## grblHAL changelog
 
+<a name="20251018">Build 20251018
+
+Core:
+
+* Fix for crash when selecting a tool \(with the `T` command\) outside the tool table range.
+
+* Fix for hang when `G65` sub call level is > 2.
+
+* Added `_probe2_state` system parameter, returns `-1` if probe 2 is not available, `1` if triggered and `0` if not.
+
+Drivers:
+
+* ESP32: Changed SPI and SD card pin symbols to "standard" naming convention.
+
+* RP2040: fix for analog out auxiliary I/O not working. Ref. issue [#154](https://github.com/grblHAL/RP2040/issues/154).
+
+* STM32F4xx: fix for board map typo \(Protoneer 3.x\).
+
+---
+
 <a name="20251016">Build 20251016
 
 Core:
@@ -15,7 +35,7 @@ Drivers:
 
 * All: updated for move of probe signal handling to the core.
 
-* RP2040: fixed "leak" of stepper signals between axes when plasma plugin is enabled, affects the PicoCNC board.
+* RP2040: fixed "leak" of stepper signals between axes when plasma plugin is enabled, affects the PicoCNC board. Ref issue [#152](https://github.com/grblHAL/RP2040/issues/152).
 
 * ESP32: fix for compilation failure for boards using the SDIO interface for SD card interface.
 

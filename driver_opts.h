@@ -726,16 +726,4 @@
 #define FS_ENABLE 0
 #endif
 
-#ifndef SDCARD_SDIO
-#define SDCARD_SDIO 0
-#endif
-
-#ifndef SPI_ENABLE
-#if (SDCARD_ENABLE && !SDCARD_SDIO) || TRINAMIC_SPI_ENABLE
-#define SPI_ENABLE 1
-#else
-#define SPI_ENABLE 0
-#endif
-#endif
-
 /*EOF*/

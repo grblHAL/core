@@ -101,6 +101,7 @@ typedef enum {
     NGCParam_selected_pocket,
     NGCParam_call_level,
     NGCParam_probe_state,
+    NGCParam_probe2_state,
     NGCParam_toolsetter_state,
     NGCParam_homed_state,
     NGCParam_homed_axes,

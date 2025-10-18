@@ -157,7 +157,7 @@ vfs_file_t *stream_redirect_read (char *filename, status_message_ptr status_hand
                     streams->next = rd_stream;
                     break;
                 }
-            } while((streams == streams->next));
+            } while((streams = streams->next));
         } else {
             vfs_close(file);
             file = NULL;

@@ -2505,28 +2505,29 @@ bool settings_read_coord_data (coord_system_id_t id, const float (*coord_data)[N
 static tool_data_t tool_data[N_TOOLS + 1];
 
 // Write selected tool data to persistent storage.
-static bool settings_set_tool_data (tool_data_t *tool_data)
+static bool settings_set_tool_data (tool_data_t *tool)
 {
-    assert(tool_data->tool_id > 0 && tool_data->tool_id <= N_TOOLS); // NOTE: idx 0 is a non-persistent entry for tools not in tool table
+    bool ok = tool->tool_id <= N_TOOLS;
 
-    if(hal.nvs.type != NVS_None)
-        hal.nvs.memcpy_to_nvs(NVS_ADDR_TOOL_TABLE + (tool_data->tool_id - 1) * (sizeof(tool_data_t) + NVS_CRC_BYTES), (uint8_t *)tool_data, sizeof(tool_data_t), true);
+    if(ok && tool->tool_id && hal.nvs.type != NVS_None)
+        hal.nvs.memcpy_to_nvs(NVS_ADDR_TOOL_TABLE + (tool->tool_id - 1) * (sizeof(tool_data_t) + NVS_CRC_BYTES), (uint8_t *)tool, sizeof(tool_data_t), true);
 
-    return true;
+    return ok;
 }
 
 // Read selected tool data from persistent storage.
 static tool_data_t *settings_get_tool_data (tool_id_t tool_id)
 {
-    assert(tool_id <= N_TOOLS); // NOTE: idx 0 is a non-persistent entry for tools not in tool table
+    tool_data_t *tool = tool_id <= N_TOOLS ? &tool_data[tool_id] : NULL;
 
-    if(tool_id && !(hal.nvs.type != NVS_None && hal.nvs.memcpy_from_nvs((uint8_t *)&tool_data[tool_id], NVS_ADDR_TOOL_TABLE + (tool_id - 1) * (sizeof(tool_data_t) + NVS_CRC_BYTES),
-                                                               sizeof(tool_data_t), true) == NVS_TransferResult_OK && tool_data[tool_id].tool_id == tool_id)) {
-        memset(&tool_data[tool_id], 0, sizeof(tool_data_t));
-        tool_data[tool_id].tool_id = tool_id;
+    if(tool_id && tool && !(hal.nvs.type != NVS_None &&
+                                  hal.nvs.memcpy_from_nvs((uint8_t *)tool, NVS_ADDR_TOOL_TABLE + (tool_id - 1) * (sizeof(tool_data_t) + NVS_CRC_BYTES),
+                                                            sizeof(tool_data_t), true) == NVS_TransferResult_OK && tool->tool_id == tool_id)) {
+        memset(tool, 0, sizeof(tool_data_t));
+        tool->tool_id = tool_id;
     }
 
-    return &tool_data[tool_id];
+    return tool;
 }
 
 // Clear all tool data in persistent storage.

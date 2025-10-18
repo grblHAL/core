@@ -400,6 +400,7 @@ PROGMEM static const ngc_named_ro_param_t ngc_named_ro_param[] = {
     { .name = "_selected_pocket",     .id = NGCParam_selected_pocket },
     { .name = "_call_level",          .id = NGCParam_call_level },
     { .name = "_probe_state",         .id = NGCParam_probe_state },
+    { .name = "_probe2_state",        .id = NGCParam_probe2_state },
     { .name = "_toolsetter_state",    .id = NGCParam_toolsetter_state },
     { .name = "_homed_state",         .id = NGCParam_homed_state },
     { .name = "_homed_axes",          .id = NGCParam_homed_axes },
@@ -613,6 +614,10 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
 
         case NGCParam_probe_state:
             value = hal.driver_cap.probe && hal.probe.is_triggered ? (float)hal.probe.is_triggered(Probe_Default) : -1.0f;
+            break;
+
+        case NGCParam_probe2_state:
+            value = hal.driver_cap.probe2 && hal.probe.is_triggered ? (float)hal.probe.is_triggered(Probe_2) : -1.0f;
             break;
 
         case NGCParam_toolsetter_state:
