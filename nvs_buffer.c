@@ -313,7 +313,7 @@ nvs_address_t nvs_alloc (size_t size)
 
     size += NVS_CRC_BYTES; // add room for checksum.
     if(hal.nvs.driver_area.size + size < (nvs_size_max - GRBL_NVS_SIZE)) {
-        mem_address = (uint8_t *)((uint32_t)(mem_address - 1) | 0x03) + 1; // Align to word boundary
+        mem_address = (uint8_t *)((uintptr_t)(mem_address - 1) | 0x03) + 1; // Align to word boundary
         addr = mem_address - nvsbuffer;
         mem_address += size;
         hal.nvs.driver_area.size = mem_address - hal.nvs.driver_area.mem_address;

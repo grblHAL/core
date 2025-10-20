@@ -242,12 +242,10 @@ static inline xbar_t *aux_ctrl_claim_port (aux_ctrl_t *aux_ctrl)
 
 static inline aux_ctrl_t *aux_ctrl_remap_explicit (aux_gpio_t gpio, uint8_t port, void *input)
 {
+    int_fast8_t idx;
     aux_ctrl_t *ctrl_pin = NULL;
 
     if(sizeof(aux_ctrl) / sizeof(aux_ctrl_t)) {
-
-        uint_fast8_t idx;
-
         for(idx = 0; ctrl_pin == NULL && idx < sizeof(aux_ctrl) / sizeof(aux_ctrl_t) && aux_ctrl[idx].gpio.pin != 0xFF; idx++) {
             if(aux_ctrl[idx].gpio.pin == gpio.pin && aux_ctrl[idx].gpio.port == gpio.port) {
                 ctrl_pin = &aux_ctrl[idx];
@@ -359,7 +357,7 @@ static inline control_signals_t aux_ctrl_scan_status (control_signals_t signals)
         if(aux_ctrl[idx].port != IOPORT_UNASSIGNED) {
   #ifdef GRBL_ESP32 // Snowflake guru workaround
             if(hal.port.wait_on_input(Port_Digital, aux_ctrl[idx].port, WaitMode_Immediate, FZERO) == 1)
-                signals.mask |= aux_ctrl[idx].cap.mask;
+                signals.mask |= aux_ctrl[idx].signal.mask;
   #else
             if(hal.port.wait_on_input(Port_Digital, aux_ctrl[idx].port, WaitMode_Immediate, 0.0f) == 1)
                 signals.mask |= aux_ctrl[idx].signal.mask;

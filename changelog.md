@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+<a name="20251020">20251020
+
+Core:
+
+* Updated some pointer casts to get warning free compilation for 64-bit targets.
+
+* A few tweaks to get rid of warnings for some driver/board/configuration combinations.
+
+Drivers:
+
+* STM32F4xx: added support for U and V axes, untested. Ref. issue [#260](https://github.com/grblHAL/STM32F4xx/issues/260).
+
+---
+
 <a name="20251018">Build 20251018
 
 Core:
@@ -12,7 +26,7 @@ Core:
 
 Drivers:
 
-* ESP32: Changed SPI and SD card pin symbols to "standard" naming convention.
+* ESP32: changed SPI and SD card pin symbols to "standard" naming convention.
 
 * RP2040: fix for analog out auxiliary I/O not working. Ref. issue [#154](https://github.com/grblHAL/RP2040/issues/154).
 

@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2024 Terje Io
+  Copyright (c) 2021-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
 #endif
 
 #if defined(STM32F401xC) || defined(STM32F401xE) || defined(STM32F407xx) || defined(STM32F411xE) || \
-    defined(STM32F412Vx) || defined(STM32F446xx)
+    defined(STM32F412Vx) || defined(STM32F429xx) || defined(STM32F446xx)
 #define STM32_F4_PLATFORM
 #endif
 
@@ -46,7 +46,7 @@
 #define STM32_PLATFORM
 #endif
 
-#if defined(STM32_PLATFORM) || defined(__LPC17XX__) ||  defined(__IMXRT1062__)
+#if defined(STM32_PLATFORM) || defined(__LPC17XX__) || defined(__IMXRT1062__) || defined(__SAM3X8E__)
 #define UINT32FMT "%lu"
 #define UINT32SFMT "lu"
 #else

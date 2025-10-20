@@ -215,7 +215,7 @@ bool probe_add (probe_id_t probe_id, uint8_t port, pin_irq_mode_t irq_mode, void
 void probe_connected_event (void *data)
 {
     if(hal.probe.connected_toggle) {
-        if((uint32_t)data == 2)
+        if((uintptr_t)data == 2)
             hal.probe.connected_toggle();
         else {
             probe_state_t state = hal.probe.get_state();
