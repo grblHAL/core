@@ -1372,17 +1372,14 @@ void report_realtime_status (stream_write_ptr stream_write)
 
         if((report.wco = wco_counter == 0 || report.wco)) {
 
+        if(wco_counter == 0 || report.wco || report.force_wco || report.gwco || report.all) {
+
             wco_counter = state & (STATE_HOMING|STATE_CYCLE|STATE_HOLD|STATE_JOG|STATE_SAFETY_DOOR)
                            ? (REPORT_WCO_REFRESH_BUSY_COUNT - 1) // Reset counter for slow refresh
                            : (REPORT_WCO_REFRESH_IDLE_COUNT - 1);
 
-            // If protocol_buffer_synchronize() is running
-            // delay outputting WCO until sync is completed
-            // unless requested from stepper_driver_interrupt_handler.
-            if(!report.all && (report.overrides || !report.force_wco)) {
-                report.wco = Off;
+            if(!(report.wco = !report.overrides || report.all || report.force_wco || report.gwco))
                 delayed_report.wco = On;
-            }
         } else
             wco_counter--;
 
