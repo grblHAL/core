@@ -1370,8 +1370,6 @@ void report_realtime_status (stream_write_ptr stream_write)
 
     if(settings.status_report.work_coord_offset) {
 
-        if((report.wco = wco_counter == 0 || report.wco)) {
-
         if(wco_counter == 0 || report.wco || report.force_wco || report.gwco || report.all) {
 
             wco_counter = state & (STATE_HOMING|STATE_CYCLE|STATE_HOLD|STATE_JOG|STATE_SAFETY_DOOR)
