@@ -1,5 +1,24 @@
 ## grblHAL changelog
 
+<a name="20251023">Build 20251023
+
+Core:
+
+* Workaround for POS (Power on self-test) failure messages(s) not output on "native" USB connect.
+
+* Fixed handling of NVS buffer allocation, size was not increased as expected when physical NVS is capable of holding more than 2 Kbytes.
+This could lead to POS failure or plugins not initializing when a large tool table is configured.
+
+Drivers:
+
+* Simulator: fix for double free bug, ref. issue [#17](https://github.com/grblHAL/Simulator/issues/17) and block reporting not working.
+
+Plugins:
+
+* SD card, macros: fix for lost parameter context when tool change commands that executes macros is run from `G65` macros.
+
+---
+
 <a name="20251020">20251020
 
 Core:

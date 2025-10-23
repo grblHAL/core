@@ -288,6 +288,13 @@ plan_block_t *plan_get_current_block (void)
 }
 
 
+// Returns address of the last block added, if available. Called by the grblHAL simulator.
+plan_block_t *plan_get_recent_block (void)
+{
+    return block_buffer_head == block_buffer_tail ? NULL : block_buffer_head->prev;
+}
+
+
 inline float plan_get_exec_block_exit_speed_sqr (void)
 {
     plan_block_t *block = block_buffer_tail->next;

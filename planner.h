@@ -170,6 +170,9 @@ plan_block_t *plan_get_system_motion_block (void);
 // Gets the current block. Returns NULL if buffer empty
 plan_block_t *plan_get_current_block (void);
 
+// Gets last added block. Returns NULL if buffer empty
+plan_block_t *plan_get_recent_block (void);
+
 // Called by step segment buffer when computing executing block velocity profile.
 float plan_get_exec_block_exit_speed_sqr (void);
 

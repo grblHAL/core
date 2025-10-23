@@ -105,6 +105,27 @@ __attribute__((weak)) void board_ports_init (void)
     // NOOP
 }
 
+__attribute__((always_inline)) static inline void task_free (core_task_t *task)
+{
+    task->fn = NULL;
+    task->next = NULL;
+    if(last_freed == NULL)
+        last_freed = task;
+}
+
+__attribute__((always_inline)) static inline core_task_t *task_run (core_task_t *task)
+{
+    core_task_t *t = task;
+    foreground_task_ptr fn = task->fn;
+    void *data = task->data;
+
+    task = task->next;
+    task_free(t);
+    fn(data);
+
+    return task;
+}
+
 void dummy_bool_handler (bool arg)
 {
     // NOOP
@@ -190,6 +211,20 @@ static void onLinestateChanged (serial_linestate_t state)
         on_linestate_changed(state);
 }
 
+static void print_pos_msg (void *data)
+{
+    hal.stream.write("grblHAL: power on self-test (POS) failed!" ASCII_EOL);
+
+    if(on_booted) do {
+    } while((on_booted = task_run(on_booted)));
+}
+
+static void onPosFailure (serial_linestate_t state)
+{
+    if(state.dtr) // delay a bit to let the USB stack come up
+        task_add_delayed(print_pos_msg, NULL, 50);
+}
+
 static bool onProbeToolsetter (tool_data_t *tool, coord_data_t *position, bool at_g59_3, bool on)
 {
     bool ok = false;
@@ -269,10 +304,6 @@ int grbl_enter (void)
 
     limits_init();
 
-#if NVSDATA_BUFFER_ENABLE
-    nvs_buffer_alloc(); // Allocate memory block for NVS buffer
-#endif
-
     settings_clear();
     report_init_fns();
 
@@ -281,6 +312,10 @@ int grbl_enter (void)
 #endif
 
     driver.init = driver_init();
+
+#if NVSDATA_BUFFER_ENABLE
+    nvs_buffer_alloc(); // Allocate memory block for NVS buffer
+#endif
 
 #ifdef DEBUGOUT
     debug_stream_init();
@@ -497,27 +532,6 @@ __attribute__((always_inline)) static inline core_task_t *task_alloc (void)
         if(task_pool[--idx].fn == NULL)
             task = &task_pool[idx];
     } while(task == NULL && idx);
-
-    return task;
-}
-
-__attribute__((always_inline)) static inline void task_free (core_task_t *task)
-{
-    task->fn = NULL;
-    task->next = NULL;
-    if(last_freed == NULL)
-        last_freed = task;
-}
-
-__attribute__((always_inline)) static inline core_task_t *task_run (core_task_t *task)
-{
-    core_task_t *t = task;
-    foreground_task_ptr fn = task->fn;
-    void *data = task->data;
-
-    task = task->next;
-    task_free(t);
-    fn(data);
 
     return task;
 }
@@ -752,9 +766,41 @@ ISR_CODE bool ISR_FUNC(task_run_on_startup)(foreground_task_ptr fn, void *data)
 // for core use only, called once from protocol.c on cold start
 void task_execute_on_startup (void)
 {
-    if(on_booted) do {
+    if(!sys.driver_started) {
+
+        // Clear task queues except startup warnings.
+
+        core_task_t *task, *prev = NULL;
+
+        if((task = on_booted)) do {
+            if(!(task->fn == report_warning)) {
+                if(prev)
+                    prev->next = task->next;
+                else {
+                    prev = NULL;
+                    on_booted = task->next;
+                }
+                task_free(task);
+            } else
+                prev = task;
+        } while((task = prev ? prev->next : on_booted));
+
+        while(next_task)
+            task_delete(next_task->fn, NULL);
+
+        while(systick_task)
+            task_delete_systick(systick_task->fn, NULL);
+    }
+
+    if(on_booted && (sys.driver_started || !hal.stream.state.linestate_event)) do {
     } while((on_booted = task_run(on_booted)));
 
-    if(!sys.driver_started)
-        while(true);
+    if(!sys.driver_started) {
+
+        if(hal.stream.state.linestate_event)
+            hal.stream.on_linestate_changed = onPosFailure;
+
+        while(true)
+            grbl.on_execute_realtime(state_get());
+    }
 }

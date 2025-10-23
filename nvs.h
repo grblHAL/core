@@ -30,6 +30,13 @@ Minimum 1024 bytes required, more if > 5 axes enabled, space for driver and/or p
 #define NVS_SIZE 2048
 #endif
 
+#ifndef NVS_SIZE_MAX
+/*! \brief Max size in bytes of the NVS buffer in RAM.
+Must be >= NVS_SIZE.
+*/
+#define NVS_SIZE_MAX 4096 // Limit to 4K for now
+#endif
+
 //! Number of bytes used for storing CRC values. Do not change this!
 #ifndef NVS_CRC_BYTES
 #define NVS_CRC_BYTES 2
