@@ -76,7 +76,8 @@ typedef union {
                  rtc                         :1,
                  rtc_set                     :1,
                  bltouch_probe               :1,
-                 unassigned                  :4;
+                 modbus_rtu                  :1, // Modbus RTU stream is enabled.
+                 unassigned                  :3;
     };
 } driver_cap_t;
 
@@ -522,6 +523,7 @@ typedef void (*timer_irq_handler_ptr)(void *context);
 typedef struct {
     void *context;                          //!< Pointer to data to be passed on to the interrupt handlers
     bool single_shot;                       //!< Set to true if timer is single shot
+    uint32_t period;                        //!< Current value for period register
     timer_irq_handler_ptr timeout_callback; //!< Pointer to main timeout callback
     uint32_t irq0;                          //!< Compare value for compare interrupt 0
     timer_irq_handler_ptr irq0_callback;    //!< Pointer to compare interrupt 0 callback

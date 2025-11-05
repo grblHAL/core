@@ -1,17 +1,33 @@
 ## grblHAL changelog
 
+<a name="20251105">20251105
+
+Core:
+
+* Added field for programmed timer period to HAL timer struct.
+
+Drivers:
+
+* STM32F4xx: implemented accurate continuous timer mode in timer HAL API. Fix for incorrect clock tree setup for BTT Octopus Board.
+
+Plugins:
+
+* Spindle, stepper: changed to use continuous timer mode, when available, for accurate RPM. Ref. issue [#41](https://github.com/grblHAL/Plugins_spindle/issues/41)
+
+---
+
 <a name="20251023">Build 20251023
 
 Core:
 
 * Workaround for POS (Power on self-test) failure messages(s) not output on "native" USB connect.
 
-* Fixed handling of NVS buffer allocation, size was not increased as expected when physical NVS is capable of holding more than 2 Kbytes.
+* Fixed handling of NVS buffer allocation, size was not increased as expected when physical NVS is capable of holding more than 2 Kbytes.  
 This could lead to POS failure or plugins not initializing when a large tool table is configured.
 
 Drivers:
 
-* Simulator: fix for double free bug, ref. issue [#17](https://github.com/grblHAL/Simulator/issues/17) and block reporting not working.
+* Simulator: fix for double free bug, ref. issue [#17](https://github.com/grblHAL/Simulator/issues/17), and block reporting not working.
 
 Plugins:
 
