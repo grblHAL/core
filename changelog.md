@@ -1,5 +1,41 @@
 ## grblHAL changelog
 
+<a name="20251106">Build 20251106
+
+Core:
+
+* Refactored `M70`-`M73` modal state handling, should now be fully compatible with LinuxCNC behaviour.
+
+* Added ADC/DAC resolution to `$pinstate` command, changed reported values to integer for ADC/DAC devices and float formatted for PWM devices.
+
+* Numeric settings can now be set via `G65P1Q<n>S<value>`, `<n>` is the setting number, `<value>` is the new value.
+
+* Changed alarm code for Modbus exceptions \(communication errors\) from 14 to 19.
+
+* Refactored MPG stream code to allow plugins to hook into MPG streams \(via event handler\).
+
+* Added `_free memory` system parameter, returns value in KBytes or -1 if not available from driver.
+
+Drivers:
+
+* iMRX1062: Decorated constant data with `PROGMEM` and some rarely used functions with `FLASHMEM` to reduce RAM footprint. Fixed buggy Laser PPI mode.
+
+Plugins:
+
+* Many: decoracted constant data with `PROGMEM` to reduce RAM footprint for Arduino based drivers \(iMXRT1062 and SAM3X8E\).
+
+* Keypad, macros: macros can now be executed via `M81<x>` commands, `<x>` is the macro number matching the `$49<x>` macro setting values.
+
+* Misc, FluidNC I/O Expander: new experimental plugin for the STM32 based I/O expander; adds up to 8 digtal inputs, 10 outputs and a RGB LED.
+
+<a name="20251107">20251107
+
+Plugins:
+
+* SD card: fix for not raising toolchange acknowledge event resulting in skipping of parts of the change sequence.
+
+---
+
 <a name="20251105">20251105
 
 Core:
@@ -12,7 +48,7 @@ Drivers:
 
 Plugins:
 
-* Spindle, stepper: changed to use continuous timer mode, when available, for accurate RPM. Ref. issue [#41](https://github.com/grblHAL/Plugins_spindle/issues/41)
+* Spindle, stepper: changed to use continuous timer mode, when available, for accurate RPM. Ref. issue [#41](https://github.com/grblHAL/Plugins_spindle/issues/41).
 
 ---
 
