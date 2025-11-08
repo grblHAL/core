@@ -139,11 +139,6 @@ typedef struct {
     char service_name[33];
 } bluetooth_settings_t;
 
-typedef struct {
-    uint32_t baud_rate;
-    uint32_t rx_timeout;
-} modbus_settings_t;
-
 #define MODBUS_TCP_SETTINGS_INCREMENT 5
 
 typedef enum {

@@ -106,6 +106,7 @@ typedef void (*on_global_settings_restore_ptr)(void);
 typedef void (*on_realtime_report_ptr)(stream_write_ptr stream_write, report_tracking_flags_t report);
 typedef void (*on_unknown_feedback_message_ptr)(stream_write_ptr stream_write);
 typedef void (*on_stream_changed_ptr)(stream_type_t type);
+typedef void (*on_mpg_registered_ptr)(io_stream_t *stream, bool tx_capable);
 typedef bool (*on_laser_ppi_enable_ptr)(uint_fast16_t ppi, uint_fast16_t pulse_length);
 typedef void (*on_homing_rate_set_ptr)(axes_signals_t axes, float rate, homing_mode_t mode);
 
@@ -251,6 +252,7 @@ typedef struct {
     on_get_commands_ptr on_get_commands;                        //!< Deprecated, use system_register_commands() to register new commands.
     on_user_command_ptr on_user_command;
     on_stream_changed_ptr on_stream_changed;
+    on_mpg_registered_ptr on_mpg_registered;
     on_homing_rate_set_ptr on_homing_rate_set;
     on_homing_completed_ptr on_homing_completed;
     on_probe_toolsetter_ptr on_probe_toolsetter;

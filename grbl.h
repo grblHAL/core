@@ -42,7 +42,7 @@
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_BUILD 20251023
+#define GRBL_BUILD 20251108
 
 #define GRBL_URL "https://github.com/grblHAL"
 
@@ -72,6 +72,10 @@
 #define ISR_FUNC(fn) __not_in_flash_func(fn)
 #else
 #define ISR_FUNC(fn) fn
+#endif
+
+#ifndef __IMXRT1062__
+#define FLASHMEM
 #endif
 
 #ifndef PROGMEM

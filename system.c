@@ -708,12 +708,12 @@ static status_code_t output_startup_lines (sys_state_t state, char *args)
 
 static status_code_t set_startup_line (sys_state_t state, char *args, uint_fast8_t lnr)
 {
-    // Store startup line [IDLE Only] Prevents motion during ALARM.
-    if (!(state == STATE_IDLE || (state & (STATE_ALARM|STATE_ESTOP|STATE_CHECK_MODE))))
-        return Status_IdleError;
-
     if(args == NULL)
         return Status_InvalidStatement;
+
+    // Store startup line [IDLE Only] Prevents motion during ALARM.
+    if(*args && !(state == STATE_IDLE || (state & (STATE_ALARM|STATE_ESTOP|STATE_CHECK_MODE))))
+        return Status_IdleError;
 
     status_code_t retval = Status_OK;
 

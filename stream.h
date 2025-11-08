@@ -149,7 +149,7 @@ typedef uint16_t (*get_stream_buffer_count_ptr)(void);
 /*! \brief Pointer to function for reading a single character from a input stream.
 \returns character or -1 if none available.
 */
-typedef int16_t (*stream_read_ptr)(void);
+typedef int32_t (*stream_read_ptr)(void);
 
 /*! \brief Pointer to function for writing a null terminated string to the output stream.
 \param s pointer to null terminated string.
@@ -162,20 +162,20 @@ typedef void (*stream_write_ptr)(const char *s);
 \param s pointer to string.
 \param len number of characters to write.
 */
-typedef void (*stream_write_n_ptr)(const char *s, uint16_t len);
+typedef void (*stream_write_n_ptr)(const uint8_t *s, uint16_t len);
 
 
 /*! \brief Pointer to function for writing a single character to the output stream.
 \param c the character to write.
 */
-typedef bool (*stream_write_char_ptr)(const char c);
+typedef bool (*stream_write_char_ptr)(const uint8_t c);
 
 /*! \brief Pointer to function for extracting real-time commands from the input stream and enqueue them for processing.
 This should be called by driver code prior to inserting a character into the input buffer.
 \param c character to check.
 \returns true if extracted, driver code should not insert the character into the input buffer if so.
 */
-typedef bool (*enqueue_realtime_command_ptr)(char c);
+typedef bool (*enqueue_realtime_command_ptr)(uint8_t c);
 
 /*! \brief Pointer to function for setting the transfer direction control signal for half-duplex connections (RS-485).
 \param tx \a true when transmitting, \a false when receiving.
@@ -190,7 +190,7 @@ __NOTE:__ Stream implementations should pass the character over the current hand
 
 User or plugin code should __not__ enqueue realtime command characters via this handler, it should call \a grbl.enqueue_realtime_command() instead.
 */
-typedef bool (*enqueue_realtime_command2_ptr)(char c);
+typedef bool (*enqueue_realtime_command2_ptr)(uint8_t c);
 
 
 /*! \brief Pointer to function for setting the enqueue realtime commands handler.
@@ -270,7 +270,8 @@ typedef union {
                 rx_only       :1,
                 modbus_ready  :1,
                 rts_handshake :1,
-                unused        :2;
+                init_ok       :1,
+                unused        :1;
     };
 } io_stream_flags_t;
 
@@ -321,6 +322,7 @@ typedef struct {
 } io_stream_status_t;
 
 typedef const io_stream_t *(*stream_claim_ptr)(uint32_t baud_rate);
+typedef bool (*stream_release_ptr)(uint8_t instance);
 typedef const io_stream_status_t *(*stream_get_status_ptr)(uint8_t instance);
 
 typedef struct {
@@ -328,6 +330,7 @@ typedef struct {
     uint8_t instance;                                       //!< Instance of stream type, starts from 0.
     io_stream_flags_t flags;
     stream_claim_ptr claim;
+    stream_release_ptr release;
     stream_get_status_ptr get_status;                       //!< Optional handler for getting stream status, for UART streams only
 } io_stream_properties_t;
 
@@ -347,30 +350,30 @@ typedef struct {
     volatile bool rts_state;
     bool overflow;
     bool backup;
-    char data[RX_BUFFER_SIZE];
+    uint8_t data[RX_BUFFER_SIZE];
 } stream_rx_buffer_t;
 
 typedef struct {
     volatile uint_fast16_t head;
     volatile uint_fast16_t tail;
-    char data[TX_BUFFER_SIZE];
+    uint8_t data[TX_BUFFER_SIZE];
 } stream_tx_buffer_t;
 
 typedef struct {
     uint_fast16_t length;
     uint_fast16_t max_length;
-    char *s;
-    char data[BLOCK_TX_BUFFER_SIZE];
+    uint8_t *s;
+    uint8_t data[BLOCK_TX_BUFFER_SIZE];
 } stream_block_tx_buffer_t;
 
 // double buffered tx stream
 typedef struct {
     uint_fast16_t length;
     uint_fast16_t max_length;
-    char *s;
+    uint8_t *s;
     bool use_tx2data;
-    char data[BLOCK_TX_BUFFER_SIZE];
-    char data2[BLOCK_TX_BUFFER_SIZE];
+    uint8_t data[BLOCK_TX_BUFFER_SIZE];
+    uint8_t data2[BLOCK_TX_BUFFER_SIZE];
 } stream_block_tx_buffer2_t;
 
 #ifdef __cplusplus
@@ -380,7 +383,7 @@ extern "C" {
 /*! \brief Dummy function for reading data from a virtual empty input buffer.
 \returns always -1 as there is no data available.
 */
-int16_t stream_get_null (void);
+int32_t stream_get_null (void);
 
 /*! \brief Function for blocking reads from or restoring an input buffer.
 \param rxbuffer pointer to a stream_rx_buffer_t.
@@ -403,11 +406,11 @@ void stream_mpg_set_mode (void *data);
 
 bool stream_mpg_check_enable (char c);
 
-bool stream_buffer_all (char c);
+bool stream_buffer_all (uint8_t c);
 
 bool stream_tx_blocking (void);
 
-bool stream_enqueue_realtime_command (char c);
+bool stream_enqueue_realtime_command (uint8_t c);
 
 void stream_register_streams (io_stream_details_t *details);
 
@@ -421,6 +424,8 @@ void stream_disconnect (const io_stream_t *stream);
 
 bool stream_connected (void);
 
+void stream_set_defaults (const io_stream_t *stream, uint32_t baud_rate);
+
 const io_stream_t *stream_get_base (void);
 
 io_stream_flags_t stream_get_flags (io_stream_t stream);
@@ -430,7 +435,7 @@ const io_stream_status_t *stream_get_uart_status (uint8_t instance);
 const io_stream_t *stream_null_init (uint32_t baud_rate);
 
 io_stream_t const *stream_open_instance (uint8_t instance, uint32_t baud_rate, stream_write_char_ptr rx_handler, const char *description);
-
+bool stream_close (io_stream_t const *stream);
 bool stream_set_description (const io_stream_t *stream, const char *description);
 
 void debug_printf(const char *fmt, ...);

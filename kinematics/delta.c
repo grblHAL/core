@@ -728,11 +728,11 @@ static const char *delta_set_axis_setting_unit (setting_id_t setting_id, uint_fa
     return unit == NULL && on_set_axis_setting_unit != NULL ? on_set_axis_setting_unit(setting_id, axis_idx) : unit;
 }
 
-static const setting_group_detail_t kinematics_groups [] = {
+PROGMEM static const setting_group_detail_t kinematics_groups [] = {
     { Group_Root, Group_Kinematics, "Delta robot"}
 };
 
-static const setting_detail_t kinematics_settings[] = {
+PROGMEM static const setting_detail_t kinematics_settings[] = {
     { Setting_Kinematics0, Group_Kinematics, "Segment length", "mm", Format_Decimal, "0.00", NULL, NULL, Setting_NonCore, &delta_settings.sl, NULL, NULL },
     { Setting_Kinematics1, Group_Kinematics, "Forearm length", "mm", Format_Decimal, "###0.000", NULL, NULL, Setting_NonCore, &delta_settings.re, NULL, NULL },
     { Setting_Kinematics2, Group_Kinematics, "Bicep length", "mm", Format_Decimal, "##0.000", NULL, NULL, Setting_NonCore, &delta_settings.rf, NULL, NULL },
@@ -744,9 +744,7 @@ static const setting_detail_t kinematics_settings[] = {
     { Setting_Kinematics8, Group_Kinematics, "Max angle", "deg", Format_Decimal, "-#0.000", "-90", "135", Setting_NonCore, &delta_settings.max_angle, NULL, NULL },
 };
 
-#ifndef NO_SETTINGS_DESCRIPTIONS
-
-static const setting_descr_t kinematics_settings_descr[] = {
+PROGMEM static const setting_descr_t kinematics_settings_descr[] = {
     { Setting_Kinematics0, "Size that moves are broken up into to compensate for the non-linear movement of a delta robot." },
     { Setting_Kinematics1, "Forearm length is the length of the connecting rod in millimeters." },
     { Setting_Kinematics2, "Bicep length is the length of the driven arm in millimeters." },
@@ -755,8 +753,6 @@ static const setting_descr_t kinematics_settings_descr[] = {
     { Setting_Kinematics6, "Home position in degrees from biceps paralell to the floor." },
     { Setting_Kinematics8, "Max travel in degrees from biceps paralell to the floor. Set to 0 to use calculated max." }
 };
-
-#endif
 
 static void delta_settings_changed (settings_t *settings, settings_changed_flags_t changed)
 {
@@ -888,10 +884,8 @@ void delta_robot_init (void)
         .n_groups = sizeof(kinematics_groups) / sizeof(setting_group_detail_t),
         .settings = kinematics_settings,
         .n_settings = sizeof(kinematics_settings) / sizeof(setting_detail_t),
-    #ifndef NO_SETTINGS_DESCRIPTIONS
         .descriptions = kinematics_settings_descr,
         .n_descriptions = sizeof(kinematics_settings_descr) / sizeof(setting_descr_t),
-    #endif
         .load = delta_settings_load,
         .restore = delta_settings_restore,
         .save = delta_settings_save,

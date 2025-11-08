@@ -80,7 +80,7 @@ static void probe_configure (bool is_probe_away, bool probing)
     } else
         probe_state.irq_mode = probe->flags.connected && probe->flags.watchable && settings.probe.enable_protection ? IRQ_Mode_Change : IRQ_Mode_None;
 
-    if(ioport_enable_irq(probe->port, probe_state.irq_mode, probe_irq_handler)) {
+    if(ioport_enable_irq(probe->port, (pin_irq_mode_t)probe_state.irq_mode, probe_irq_handler)) {
         probe_state.irq_enabled = probe_state.irq_mode != IRQ_Mode_None;
         probe->flags.guarded = !probing && probe_state.irq_enabled;
     }

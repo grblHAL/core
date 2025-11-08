@@ -91,6 +91,10 @@ extern void picohal_io_init (void);
     extern void thcad2_init (void);
 #endif
 
+#if FNC_EXPANDER_ENABLE
+    void fnc_expander_init (void);
+#endif
+
 //
 
 static inline void io_expanders_init (void)
@@ -115,6 +119,10 @@ static inline void io_expanders_init (void)
 
 #if PICOHAL_IO_ENABLE
     picohal_io_init();
+#endif
+
+#if FNC_EXPANDER_ENABLE
+    fnc_expander_init();
 #endif
 
 #if THCAD2_ENABLE

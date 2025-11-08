@@ -184,3 +184,8 @@ control_signals_t xbar_fn_to_signals_mask (pin_function_t fn)
 
     return signals;
 }
+
+const char *xbar_resolution_to_string (pin_cap_t cap)
+{
+    return !cap.analog || cap.pwm || cap.servo_pwm ? "?" : ((const char * const[]){"4", "8", "10", "12", "14", "16", "18", "20", "24", "32"})[cap.resolution];
+}

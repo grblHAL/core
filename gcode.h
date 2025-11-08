@@ -261,6 +261,16 @@ typedef enum {
     Probe_Stow = 402,                   //!< 402 - M402, Marlin format
     OpenPNP_SettingsReset = 502,        //!< 502 - M502
     Trinamic_ModeToggle = 569,          //!< 569 - M569, Marlin format
+    Macro_Execute0 = 810,               //!< 810 - M810, Marlin format
+    Macro_Execute1 = 811,               //!< 811 - M811, Marlin format
+    Macro_Execute2 = 812,               //!< 812 - M812, Marlin format
+    Macro_Execute3 = 813,               //!< 813 - M813, Marlin format
+    Macro_Execute4 = 814,               //!< 814 - M814, Marlin format
+    Macro_Execute5 = 815,               //!< 815 - M815, Marlin format
+    Macro_Execute6 = 816,               //!< 816 - M816, Marlin format
+    Macro_Execute7 = 817,               //!< 817 - M817, Marlin format
+    Macro_Execute8 = 818,               //!< 818 - M818, Marlin format
+    Macro_Execute9 = 819,               //!< 819 - M819, Marlin format
     Trinamic_StepperCurrent = 906,      //!< 906 - M906, Marlin format
     Trinamic_ReportPrewarnFlags = 911,  //!< 911 - M911, Marlin format
     Trinamic_ClearPrewarnFlags = 912,   //!< 912 - M912, Marlin format
@@ -511,13 +521,17 @@ typedef struct {
     cc_retract_mode_t retract_mode;      //!< {G98,G99}
     bool scaling_active;                 //!< {G50,G51}
     bool canned_cycle_active;
+#if ENABLE_ACCELERATION_PROFILES
+    float acceleration_factor;           //!< {G187} currently active factor of acceleration profile
+#endif
     float spline_pq[2];                  //!< {G5}
+//@}
+//!  @name The following variables are not copied to the parsers gc_block working copy!
+//@{
+    float tool_length_offset[N_AXIS];    //!< Tracks tool length offset when enabled
 #if NGC_PARAMETERS_ENABLE
     float feed_rate;                     //!< {F} NOTE: set in snapshot when saving modal state
     bool auto_restore;                   //!< {M73} NOTE: set in snapshot when saving modal state
-#endif
-#if ENABLE_ACCELERATION_PROFILES
-    float acceleration_factor;           //!< {G187} currently active factor of acceleration profile
 #endif
 } gc_modal_t;
 
@@ -613,7 +627,6 @@ typedef struct {
     float g92_coord_offset[N_AXIS];     //!< Retains the G92 coordinate offset (work coordinates) relative to
                                         //!< machine zero in mm. Persistent and loaded from non-volatile storage
                                         //!< on boot when COMPATIBILITY_LEVEL <= 1
-    float tool_length_offset[N_AXIS];   //!< Tracks tool length offset when enabled
     tool_data_t *tool;                  //!< Tracks tool number and tool offset
 } parser_state_t;
 

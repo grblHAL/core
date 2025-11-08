@@ -40,11 +40,11 @@ static on_report_handlers_init_ptr on_report_handlers_init;
 // File stream input function.
 // Reads character by character from a file and returns them when
 // requested by the foreground process.
-static int16_t stream_read_file (void)
+static int32_t stream_read_file (void)
 {
     static bool eol_ok = false;
 
-    char c;
+    uint8_t c;
 
     if(hal.stream.file) {
         if(vfs_read(&c, 1, 1, hal.stream.file) == 1) {
@@ -64,7 +64,7 @@ static int16_t stream_read_file (void)
     } else
         return SERIAL_NO_DATA; // TODO: close all streams?
 
-    return (int16_t)c;
+    return (int32_t)c;
 }
 
 static status_code_t onFileEnd (vfs_file_t *file, status_code_t status)
@@ -82,7 +82,7 @@ static status_code_t onFileEnd (vfs_file_t *file, status_code_t status)
     if(on_file_end)
         on_file_end(file, status);
 
-    return true;
+    return status;
 }
 
 // This code will be executed after each command is sent to the parser,

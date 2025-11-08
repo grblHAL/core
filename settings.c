@@ -2184,8 +2184,6 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_StepperEnableDelay, Group_Stepper, "Stepper enable delay", "ms", Format_Int16, "##0", NULL, "250", Setting_IsExtended, &settings.stepper_enable_delay, NULL, NULL },
 };
 
-#ifndef NO_SETTINGS_DESCRIPTIONS
-
 PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_PulseMicroseconds, "Step pulse length in microseconds.\\n"
                                  "Minimum depends on the processor and is typically in the range of 1 - 2.5.\\n\\n"
@@ -2396,18 +2394,14 @@ PROGMEM static const setting_descr_t setting_descr[] = {
 */
 };
 
-#endif
-
 static setting_details_t setting_details = {
     .is_core = true,
     .groups = setting_group_detail,
     .n_groups = sizeof(setting_group_detail) / sizeof(setting_group_detail_t),
     .settings = setting_detail,
     .n_settings = sizeof(setting_detail) / sizeof(setting_detail_t),
-#ifndef NO_SETTINGS_DESCRIPTIONS
     .descriptions = setting_descr,
     .n_descriptions = sizeof(setting_descr) / sizeof(setting_descr_t),
-#endif
     .save = settings_write_global
 };
 
@@ -2910,8 +2904,6 @@ const char *setting_get_description (setting_id_t id)
 {
     const char *description = NULL;
 
-#ifndef NO_SETTINGS_DESCRIPTIONS
-
     if(grbl.on_setting_get_description == NULL || (description = grbl.on_setting_get_description(id)) == NULL) {
 
         uint_fast16_t idx;
@@ -2933,8 +2925,6 @@ const char *setting_get_description (setting_id_t id)
             }
         } while(description == NULL && (settings = settings->next));
     }
-
-#endif
 
     return description;
 }

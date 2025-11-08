@@ -462,6 +462,7 @@ typedef enum {
     Setting_StepperEnableDelay = 680,
     Setting_ModBus_StreamFormat = 681,
     Setting_THC_FeedFactor = 682,
+    // 683 - 689 - reserved for Sienci
 
     Setting_SpindlePWMOptions1 = 709,
 
@@ -858,6 +859,12 @@ typedef union {
     };
 } macro_atc_flags_t;
 
+typedef struct {
+    uint8_t baud_rate;
+    uint8_t stream_format;
+    uint8_t rx_timeout;
+} modbus_rtu_settings_t;
+
 typedef union {
     uint32_t value;
     struct {
@@ -883,7 +890,7 @@ typedef struct {
     control_signals_t control_disable_pullup;
     axes_signals_t home_invert;
     coolant_settings_t coolant;
-    uint8_t modbus_baud;
+    uint8_t modbus_baud; // TODO: replace with modbus_rtu_settings_t modbus; in next version
     uint8_t canbus_baud;
     spindle_settings_t spindle;
     spindle_pwm_settings_t pwm_spindle;
@@ -908,7 +915,7 @@ typedef struct {
     stepper_spindle_settings_flags_t stepper_spindle_flags;
     uint16_t stepper_enable_delay; // Move to stepper_settings_t
     tool_id_t tool_id;
-    serial_format_t modbus_stream_format;
+    serial_format_t modbus_stream_format; // TODO: remove in next version
     char reserved[9];             // Reserved For future expansion
 } settings_t;
 
@@ -1087,10 +1094,8 @@ typedef struct setting_details {
     const setting_group_detail_t *groups;
     const uint16_t n_settings;
     const setting_detail_t *settings;
-#ifndef NO_SETTINGS_DESCRIPTIONS
     const uint16_t n_descriptions;
     const setting_descr_t *descriptions;
-#endif
 //    struct setting_details *(*on_get_settings)(void);
     struct setting_details *next;
     settings_changed_ptr on_changed;

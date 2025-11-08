@@ -149,7 +149,7 @@ static size_t fs_read (void *buffer, size_t size, size_t count, vfs_file_t *file
 
     if((rcount = min(rcount, size * count))) {
         while(rcount--)
-            *pos++ = iostream((io_stream_t **)&file->handle)->read();
+            *pos++ = (uint8_t)iostream((io_stream_t **)&file->handle)->read();
     }
 
     return rcount;
@@ -157,7 +157,7 @@ static size_t fs_read (void *buffer, size_t size, size_t count, vfs_file_t *file
 
 static size_t fs_write (const void *buffer, size_t size, size_t count, vfs_file_t *file)
 {
-    iostream((io_stream_t **)&file->handle)->write_n(buffer, size * count);
+    iostream((io_stream_t **)&file->handle)->write_n((uint8_t *)buffer, size * count);
 
     return size * count;
 }

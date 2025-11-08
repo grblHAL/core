@@ -171,7 +171,7 @@ static float tool_offset (ngc_param_id_t id)
 {
     uint_fast8_t axis = id % 10;
 
-    return axis <= N_AXIS ? gc_state.tool_length_offset[axis] : 0.0f;
+    return axis <= N_AXIS ? gc_state.modal.tool_length_offset[axis] : 0.0f;
 }
 
 static float g28_home (ngc_param_id_t id)
@@ -404,7 +404,8 @@ PROGMEM static const ngc_named_ro_param_t ngc_named_ro_param[] = {
     { .name = "_toolsetter_state",    .id = NGCParam_toolsetter_state },
     { .name = "_homed_state",         .id = NGCParam_homed_state },
     { .name = "_homed_axes",          .id = NGCParam_homed_axes },
-    { .name = "_tool_table_size",     .id = NGCParam_tool_table_size }
+    { .name = "_tool_table_size",     .id = NGCParam_tool_table_size },
+    { .name = "_free_memory",         .id = NGCParam_free_memory }
 };
 
 // Named parameters
@@ -640,6 +641,10 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             value = (float)grbl.tool_table.n_tools;
             break;
 
+        case NGCParam_free_memory:
+            value = hal.get_free_mem ? (float)hal.get_free_mem() / 1024.0f : -1.0f;
+            break;
+
         default:
             value = NAN;
     }
@@ -706,7 +711,7 @@ bool ngc_named_param_exists (char *name)
     return ngc_named_param_get(name, &value);
 }
 
-bool ngc_named_param_set (char *name, float value)
+float *ngc_named_param_set (char *name, float value)
 {
     bool ok = false;
     uint_fast8_t idx = sizeof(ngc_named_ro_param) / sizeof(ngc_named_ro_param_t);
@@ -715,7 +720,9 @@ bool ngc_named_param_set (char *name, float value)
 
     // Check if name is supplied, return false if not.
     if((*name == '_' ? *(name + 1) : *name) == '\0')
-        return false;
+        return NULL;
+
+    ngc_named_rw_param_t *rw_param = NULL;
 
     // Check if it is a (read only) predefined parameter.
     if(*name == '_') do {
@@ -727,32 +734,34 @@ bool ngc_named_param_set (char *name, float value)
     if(!ok && (ok = strlen(name) <= NGC_MAX_PARAM_LENGTH)) {
 
         void *context = *name == '_' ? NULL : call_context;
-        ngc_named_rw_param_t *rw_param = rw_global_params, *rw_param_last = rw_global_params;
+        ngc_named_rw_param_t *rw_param_last = rw_global_params;
 
-         while(rw_param) {
-             if(rw_param->context == context && !strcmp(rw_param->name, name)) {
+        rw_param = rw_global_params;
+
+        while(rw_param) {
+            if(rw_param->context == context && !strcmp(rw_param->name, name)) {
                  break;
-             } else {
-                 rw_param_last = rw_param;
-                 rw_param = rw_param->next;
-             }
-         }
+            } else {
+                rw_param_last = rw_param;
+                rw_param = rw_param->next;
+            }
+        }
 
-         if(rw_param == NULL && (rw_param = malloc(sizeof(ngc_named_rw_param_t)))) {
-             strcpy(rw_param->name, name);
-             rw_param->context = context;
-             rw_param->next = NULL;
-             if(rw_global_params == NULL)
-                 rw_global_params = rw_param;
-             else
-                 rw_param_last->next = rw_param;
+        if(rw_param == NULL && (rw_param = malloc(sizeof(ngc_named_rw_param_t)))) {
+            strcpy(rw_param->name, name);
+            rw_param->context = context;
+            rw_param->next = NULL;
+            if(rw_global_params == NULL)
+                rw_global_params = rw_param;
+            else
+                rw_param_last->next = rw_param;
          }
 
          if((ok = rw_param != NULL))
              rw_param->value = value;
-     }
+    }
 
-    return ok;
+    return ok ? &rw_param->value : NULL;
 }
 
 static ngc_string_param_t *sp_get_by_name (char *name)
@@ -903,6 +912,12 @@ void ngc_modal_state_invalidate (void)
     }
 }
 
+gc_modal_snapshot_t *ngc_modal_state_get (void)
+{
+    return call_level == -1 ? modal_state : call_levels[call_level].modal_state;
+}
+
+
 bool ngc_modal_state_restore (void)
 {
     return gc_modal_state_restore(call_level == -1 ? modal_state : call_levels[call_level].modal_state);
@@ -982,7 +997,7 @@ uint8_t ngc_float_decimals (void)
 	return settings.flags.report_inches ? N_DECIMAL_COORDVALUE_INCH : N_DECIMAL_COORDVALUE_MM;
 }
 
-static status_code_t macro_get_setting (void)
+static status_code_t macro_set_get_setting (void)
 {
     float setting_id;
     status_code_t status = Status_OK;
@@ -991,16 +1006,25 @@ static status_code_t macro_get_setting (void)
 
     if(!args.q)
         status = Status_GcodeValueWordMissing;
-    if(ngc_param_get(17 /* Q word */, &setting_id) && (setting = setting_get_details((setting_id_t)setting_id, NULL))) {
+    else if(ngc_param_get(17 /* Q word */, &setting_id) && (setting = setting_get_details((setting_id_t)setting_id, NULL))) {
 
         uint_fast8_t offset = (setting_id_t)setting_id - setting->id;
+        bool is_numeric = setting->datatype == Format_Decimal || setting_is_integer(setting) || setting_is_list(setting);
 
-        if(setting->datatype == Format_Decimal) {
-            ngc_named_param_set("_value", setting_get_float_value(setting, offset));
-            ngc_named_param_set("_value_returned", 1.0f);
-        } else if(setting_is_integer(setting) || setting_is_list(setting)) {
-            ngc_named_param_set("_value", (float)setting_get_int_value(setting, offset));
-            ngc_named_param_set("_value_returned", 1.0f);
+        if(args.s && is_numeric) {
+            float new_value;
+            if(ngc_param_get(19 /* S word */, &new_value))
+                status = settings_store_setting(setting->id + offset, setting->datatype == Format_Decimal ? ftoa(new_value, 6) : uitoa((uint32_t)new_value));
+        }
+
+        if(status == Status_OK) {
+            if(setting->datatype == Format_Decimal) {
+                ngc_named_param_set("_value", setting_get_float_value(setting, offset));
+                ngc_named_param_set("_value_returned", 1.0f);
+            } else if(is_numeric) {
+                ngc_named_param_set("_value", (float)setting_get_int_value(setting, offset));
+                ngc_named_param_set("_value_returned", 1.0f);
+            }
         }
     } else
         status = Status_GcodeValueOutOfRange;
@@ -1090,7 +1114,7 @@ static status_code_t onMacroExecute (macro_id_t macro_id)
     switch((g65_inbuilt_t)macro_id) {
 
         case G65Macro_GetSetting:
-            status = macro_get_setting();
+            status = macro_set_get_setting();
             break;
 
        case G65Macro_GetToolOffset:

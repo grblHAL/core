@@ -549,9 +549,9 @@ void report_tool_offsets (void)
 {
     hal.stream.write("[TLO:");
 #if TOOL_LENGTH_OFFSET_AXIS >= 0
-    hal.stream.write(get_axis_value(gc_state.tool_length_offset[TOOL_LENGTH_OFFSET_AXIS]));
+    hal.stream.write(get_axis_value(gc_state.modal.tool_length_offset[TOOL_LENGTH_OFFSET_AXIS]));
 #else
-    hal.stream.write(get_axis_values(gc_state.tool_length_offset));
+    hal.stream.write(get_axis_values(gc_state.modal.tool_length_offset));
 #endif
     hal.stream.write("]" ASCII_EOL);
 }
@@ -1008,9 +1008,7 @@ void report_build_info (char *line, bool extended)
         if(hal.driver_cap.spindle_sync)
             strcat(buf, "SS,");
 
-    #ifndef NO_SETTINGS_DESCRIPTIONS
         strcat(buf, "SED,");
-    #endif
 
         if(hal.driver_cap.rtc)
             strcat(buf, "RTC,");
@@ -1582,7 +1580,7 @@ static void write_name (const char *s, uint_fast8_t offset)
 
     if(q) {
         if(q != s)
-            hal.stream.write_n(s, q - s);
+            hal.stream.write_n((uint8_t *)s, q - s);
         hal.stream.write(uitoa(offset + 1));
         hal.stream.write(q + 1);
     } else
@@ -1665,7 +1663,6 @@ static void report_settings_detail (settings_format_t format, const setting_deta
                 if(setting->flags.reboot_required)
                     hal.stream.write(reboot_newline ? ASCII_EOL ASCII_EOL "Reboot required." : ", reboot required");
 
-#ifndef NO_SETTINGS_DESCRIPTIONS
                 // Add description if driver is capable of outputting it...
                 if(hal.stream.write_n) {
                     const char *description = setting_get_description((setting_id_t)(setting->id + offset));
@@ -1674,7 +1671,7 @@ static void report_settings_detail (settings_format_t format, const setting_deta
                         hal.stream.write(ASCII_EOL);
                         if((lf = strstr(description, "\\n"))) while(lf) {
                             hal.stream.write(ASCII_EOL);
-                            hal.stream.write_n(description, lf - description);
+                            hal.stream.write_n((uint8_t *)description, lf - description);
                             description = lf + 2;
                             lf = strstr(description, "\\n");
                         }
@@ -1689,7 +1686,6 @@ static void report_settings_detail (settings_format_t format, const setting_deta
                         hal.stream.write(SETTINGS_HARD_RESET_REQUIRED + 4);
                     }
                 }
-#endif
             }
             break;
 
@@ -1735,13 +1731,8 @@ static void report_settings_detail (settings_format_t format, const setting_deta
                     write_quoted(setting->unit, ",");
                 } else // TODO: output sensible unit from datatype
                     write_quoted("", ",");
-
-    #ifndef NO_SETTINGS_DESCRIPTIONS
                 const char *description = setting_get_description((setting_id_t)(setting->id + offset));
                 write_quoted(description ? description : "", ",");
-    #else
-                write_quoted("", NULL);
-    #endif
             }
             break;
 
@@ -1834,12 +1825,11 @@ static void report_settings_detail (settings_format_t format, const setting_deta
 
                 hal.stream.write("\t");
 
-    #ifndef NO_SETTINGS_DESCRIPTIONS
                 const char *description = setting_get_description((setting_id_t)(setting->id + offset));
                 hal.stream.write(description ? description : "");
                 if(setting->flags.reboot_required)
                     hal.stream.write(SETTINGS_HARD_RESET_REQUIRED + (description && *description != '\0' ? 0 : 4));
-    #endif
+
                 hal.stream.write("\t");
 
                 if(setting->min_value)
@@ -1964,8 +1954,6 @@ status_code_t report_settings_details (settings_format_t format, setting_id_t id
     return print_settings_details(format, group);
 }
 
-#ifndef NO_SETTINGS_DESCRIPTIONS
-
 status_code_t report_setting_description (settings_format_t format, setting_id_t id)
 {
     const setting_detail_t *setting;
@@ -1990,8 +1978,6 @@ status_code_t report_setting_description (settings_format_t format, setting_id_t
 
     return Status_OK;
 }
-
-#endif
 
 static int cmp_alarms (const void *a, const void *b)
 {
@@ -2454,9 +2440,6 @@ status_code_t report_uart_ports (sys_state_t state, char *args)
     return Status_OK;
 }
 
-
-#ifndef NO_SETTINGS_DESCRIPTIONS
-
 static char *irq_mode (pin_irq_mode_t mode)
 {
     switch(mode) {
@@ -2550,7 +2533,9 @@ static bool print_aux_ain (xbar_t *port, uint8_t pnum, void *data)
     hal.stream.write("|");
     hal.stream.write(uitoa(port->id));
     hal.stream.write("|||");
-    hal.stream.write(port->get_value ? ftoa((uint32_t)port->get_value(port), 2) : "?");
+    hal.stream.write(port->get_value ? uitoa((uint32_t)port->get_value(port)) : "?");
+    hal.stream.write("|");
+    hal.stream.write(xbar_resolution_to_string(port->cap));
     hal.stream.write("]" ASCII_EOL);
 
     return false;
@@ -2567,7 +2552,14 @@ static bool print_aux_aout (xbar_t *port, uint8_t pnum, void *data)
     hal.stream.write("|");
     hal.stream.write(port->cap.pwm ? "P" : (port->cap.servo_pwm ? "S" : "N"));
     hal.stream.write("|");
-    hal.stream.write(port->get_value ? ftoa((uint32_t)port->get_value(port), 2) : "?");
+    hal.stream.write(port->get_value ? (port->mode.pwm || port->mode.servo_pwm
+                                         ? ftoa(port->get_value(port), 2)
+                                         : uitoa((uint32_t)port->get_value(port)))
+                                     : "?");
+    if(!(port->mode.pwm || port->mode.servo_pwm)) {
+        hal.stream.write("|");
+        hal.stream.write(xbar_resolution_to_string(port->cap));
+    }
     hal.stream.write("]" ASCII_EOL);
 
     return false;
@@ -2582,8 +2574,6 @@ status_code_t report_pin_states (sys_state_t state, char *args)
 
     return Status_OK;
 }
-
-#endif
 
 static void print_uito2a (char *prefix, uint32_t v)
 {

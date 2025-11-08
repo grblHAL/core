@@ -33,6 +33,11 @@
 #include "state_machine.h"
 #include "modbus.h"
 
+typedef struct {
+    uint32_t baud_rate;
+    uint32_t rx_timeout;
+} rtu_settings_t;
+
 typedef enum {
     ModBus_Idle,
     ModBus_Silent,
@@ -80,7 +85,7 @@ static uint32_t rx_timeout = 0, silence_until = 0, silence_timeout;
 static int16_t exception_code = 0;
 static modbus_silence_timeout_t silence;
 static queue_entry_t queue[MODBUS_QUEUE_LENGTH];
-static modbus_settings_t modbus;
+static rtu_settings_t modbus;
 static volatile bool spin_lock = false, is_up = false;
 static volatile queue_entry_t *tail, *head, *packet = NULL;
 static volatile modbus_state_t state = ModBus_Idle;
@@ -147,7 +152,7 @@ static void tx_message (volatile queue_entry_t *msg)
     rx_timeout = modbus.rx_timeout;
 
     stream.flush_rx_buffer();
-    stream.write((char *)((queue_entry_t *)msg)->msg.adu, ((queue_entry_t *)msg)->msg.tx_length);
+    stream.write(((queue_entry_t *)msg)->msg.adu, ((queue_entry_t *)msg)->msg.tx_length);
 }
 
 // called once every ms
@@ -435,7 +440,7 @@ static const setting_detail_t modbus_settings[] = {
 
 static void modbus_settings_save (void)
 {
-    hal.nvs.memcpy_to_nvs(nvs_address, (uint8_t *)&modbus, sizeof(modbus_settings_t), true);
+    hal.nvs.memcpy_to_nvs(nvs_address, (uint8_t *)&modbus, sizeof(rtu_settings_t), true);
 }
 
 static void modbus_settings_restore (void)
@@ -443,12 +448,12 @@ static void modbus_settings_restore (void)
     modbus.rx_timeout = 50;
     modbus.baud_rate = baud[DEFAULT_MODBUS_STREAM_BAUD];
 
-    hal.nvs.memcpy_to_nvs(nvs_address, (uint8_t *)&modbus, sizeof(modbus_settings_t), true);
+    hal.nvs.memcpy_to_nvs(nvs_address, (uint8_t *)&modbus, sizeof(rtu_settings_t), true);
 }
 
 static void modbus_settings_load (void)
 {
-    if(hal.nvs.memcpy_from_nvs((uint8_t *)&modbus, nvs_address, sizeof(modbus_settings_t), true) != NVS_TransferResult_OK ||
+    if(hal.nvs.memcpy_from_nvs((uint8_t *)&modbus, nvs_address, sizeof(rtu_settings_t), true) != NVS_TransferResult_OK ||
          modbus.baud_rate != baud[get_baudrate(modbus.baud_rate)])
         modbus_settings_restore();
 
@@ -466,7 +471,7 @@ static void onReportOptions (bool newopt)
     on_report_options(newopt);
 
     if(!newopt)
-        report_plugin("MODBUS", "0.20");
+        report_plugin("MODBUS", "0.21");
 }
 
 static bool modbus_rtu_isup (void)
@@ -593,7 +598,7 @@ void modbus_rtu_init (int8_t instance, int8_t dir_aux)
 
     stream_instance = instance;
 
-    if(stream_enumerate_streams(claim_stream) && (nvs_address = nvs_alloc(sizeof(modbus_settings_t)))) {
+    if((hal.driver_cap.modbus_rtu = stream_enumerate_streams(claim_stream) && (nvs_address = nvs_alloc(sizeof(rtu_settings_t))))) {
 
         if(stream.set_direction == NULL && dir_aux != -2) {
 
@@ -609,38 +614,38 @@ void modbus_rtu_init (int8_t instance, int8_t dir_aux)
                 ioport_set_function(dir_pin, Output_RS485_Direction, NULL);
             }
 
-            if(stream.set_direction == NULL) {
-                task_run_on_startup(report_warning, "Modbus failed to initialize!");
-                system_raise_alarm(Alarm_SelftestFailed);
-                return;
-            }
+            hal.driver_cap.modbus_rtu = !!stream.set_direction;
         }
 
-        driver_reset = hal.driver_reset;
-        hal.driver_reset = modbus_reset;
+        if((hal.driver_cap.modbus_rtu = hal.driver_cap.modbus_rtu && task_add_systick(modbus_poll, NULL))) {
 
-        task_add_systick(modbus_poll, NULL);
+            driver_reset = hal.driver_reset;
+            hal.driver_reset = modbus_reset;
 
-        on_report_options = grbl.on_report_options;
-        grbl.on_report_options = onReportOptions;
+            hal.driver_cap.modbus_rtu = task_add_systick(modbus_poll, NULL);
 
-        //TODO: subscribe to grbl.on_reset event to terminate polling?
+            on_report_options = grbl.on_report_options;
+            grbl.on_report_options = onReportOptions;
 
-        settings_register(&setting_details);
+            //TODO: subscribe to grbl.on_reset event to terminate polling?
 
-        head = tail = &queue[0];
+            settings_register(&setting_details);
 
-        uint_fast8_t idx;
-        for(idx = 0; idx < MODBUS_QUEUE_LENGTH; idx++)
-            queue[idx].next = idx == MODBUS_QUEUE_LENGTH - 1 ? &queue[0] : &queue[idx + 1];
+            head = tail = &queue[0];
 
-        modbus_register_api(&api);
+            uint_fast8_t idx;
+            for(idx = 0; idx < MODBUS_QUEUE_LENGTH; idx++)
+                queue[idx].next = idx == MODBUS_QUEUE_LENGTH - 1 ? &queue[0] : &queue[idx + 1];
 
-        system_register_commands(&commands);
+            modbus_register_api(&api);
 
-        modbus_set_silence(NULL);
+            system_register_commands(&commands);
 
-    } else {
+            modbus_set_silence(NULL);
+        }
+    }
+
+    if(!hal.driver_cap.modbus_rtu) {
         task_run_on_startup(report_warning, "Modbus failed to initialize!");
         system_raise_alarm(Alarm_SelftestFailed);
     }

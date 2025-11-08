@@ -37,21 +37,21 @@ __attribute__((weak)) void stream_passthru_enter (void)
 
 // ****
 
-ISR_CODE static bool ISR_FUNC(forward_usb_rx)(char c)
+ISR_CODE static bool ISR_FUNC(forward_usb_rx)(uint8_t c)
 {
     dest.write_char(c);
 
     return true;
 }
 
-ISR_CODE static bool ISR_FUNC(sink_uart_rx)(char c)
+ISR_CODE static bool ISR_FUNC(sink_uart_rx)(uint8_t c)
 {
     return true;
 }
 
 static void forward_uart_rx (void *data)
 {
-    static char buf[64];
+    static uint8_t buf[64];
     static uint_fast8_t idx = 0;
 
     int16_t c;
@@ -62,7 +62,7 @@ static void forward_uart_rx (void *data)
         *buf = c;
 
         while(idx < sizeof(buf) && (c = dest.read()) != SERIAL_NO_DATA)
-            buf[idx++] = c;
+            buf[idx++] = (uint8_t)c;
 
         hal.stream.write_n(buf, idx);
     }

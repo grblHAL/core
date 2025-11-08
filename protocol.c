@@ -191,7 +191,7 @@ bool protocol_main_loop (void)
     // This is also where grblHAL idles while waiting for something to do.
     // ---------------------------------------------------------------------------------
 
-    int16_t c;
+    int32_t c;
     char eol = '\0';
     line_flags_t line_flags = {0};
 
@@ -819,7 +819,7 @@ static void protocol_exec_rt_suspend (sys_state_t state)
 // These characters are not passed into the main buffer,
 // but rather sets system state flag bits for later execution by protocol_exec_rt_system().
 // Called from input stream interrupt handler.
-ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(char c)
+ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(uint8_t c)
 {
     static bool esc = false;
 

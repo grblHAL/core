@@ -388,7 +388,7 @@ ISR_CODE static void ISR_FUNC(trap_control_cycle_start)(control_signals_t signal
     spin_lock--;
 }
 
-ISR_CODE static bool ISR_FUNC(trap_stream_cycle_start)(char c)
+ISR_CODE static bool ISR_FUNC(trap_stream_cycle_start)(uint8_t c)
 {
     bool drop = false;
 

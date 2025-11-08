@@ -27,7 +27,6 @@
 #include "core_handlers.h"
 
 PROGMEM static const alarm_detail_t alarm_detail[] = {
-#ifndef NO_SETTINGS_DESCRIPTIONS
     { Alarm_HardLimit, "Hard limit has been triggered. Machine position is likely lost due to sudden halt. Re-homing is highly recommended." },
     { Alarm_SoftLimit, "Soft limit alarm. G-code motion target exceeds machine travel. Machine position retained. Alarm may be safely unlocked." },
     { Alarm_AbortCycle, "Reset/E-stop while in motion. Machine position is likely lost due to sudden halt. Re-homing is highly recommended." },
@@ -45,8 +44,9 @@ PROGMEM static const alarm_detail_t alarm_detail[] = {
     { Alarm_HomingFailAutoSquaringApproach, "Homing fail. Could not find second limit switch for auto squared axis within search distances. Try increasing max travel, decreasing pull-off distance, or check wiring." },
     { Alarm_SelftestFailed, "Power on selftest (POS) failed." },
     { Alarm_MotorFault, "Motor fault." },
-    { Alarm_HomingFail, "Homing fail. Bad configuration." }
-#endif // NO_SETTINGS_DESCRIPTIONS
+    { Alarm_HomingFail, "Homing fail. Bad configuration." },
+    { Alarm_ModbusException, "Modbus exception. Timeout or message error." },
+    { Alarm_ExpanderException, "I/O expander communication failed." }
 };
 
 static alarm_details_t details = {

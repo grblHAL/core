@@ -99,9 +99,7 @@ status_code_t report_alarm_details (bool grbl_format);
 status_code_t report_error_details (bool grbl_format);
 status_code_t report_setting_group_details (bool by_id, char *prefix);
 status_code_t report_settings_details (settings_format_t format, setting_id_t setting, setting_group_t group);
-#ifndef NO_SETTINGS_DESCRIPTIONS
 status_code_t report_setting_description (settings_format_t format, setting_id_t id);
-#endif
 
 status_code_t report_last_signals_event (sys_state_t state, char *args);
 status_code_t report_current_limit_state (sys_state_t state, char *args);

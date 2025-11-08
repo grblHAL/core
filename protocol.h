@@ -59,7 +59,7 @@ void protocol_auto_cycle_start (void);
 // Block until all buffered steps are executed
 bool protocol_buffer_synchronize (void);
 
-bool protocol_enqueue_realtime_command (char c);
+bool protocol_enqueue_realtime_command (uint8_t c);
 bool protocol_enqueue_gcode (char *data);
 void protocol_message (char *message);
 

@@ -262,7 +262,7 @@ st2_motor_t *st2_motor_init (uint_fast8_t axis_idx, bool is_spindle)
 
         if(hal.timer.claim && (motor->step_inject_timer = hal.timer.claim((timer_cap_t){ .periodic = Off }, 1000))) {
             timer_cfg_t step_inject_cfg = {
-                .single_shot = true,
+                .single_shot = false,
                 .timeout_callback = motor_irq
             };
             step_inject_cfg.context = motor;

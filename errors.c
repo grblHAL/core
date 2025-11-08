@@ -27,7 +27,6 @@
 #include "core_handlers.h"
 
 PROGMEM static const status_detail_t status_detail[] = {
-#ifndef NO_SETTINGS_DESCRIPTIONS
     { Status_OK, NULL },
     { Status_ExpectedCommandLetter, "G-code words consist of a letter and a value. Letter was not found." },
     { Status_BadNumberFormat, "Missing the expected G-code word value or numeric value format is not valid." },
@@ -109,7 +108,6 @@ PROGMEM static const status_detail_t status_detail[] = {
     { Status_FileOpenFailed, "Could not open file." },
     { Status_UserException, "User defined error occured." },
     { Status_AuxiliaryPortUnusable, "Port is not usable." }
-#endif // NO_SETTINGS_DESCRIPTIONS
 };
 
 static error_details_t details = {

@@ -95,6 +95,11 @@ typedef union {
     };
 } modal_groups_t;
 
+typedef struct {
+    modal_groups_t command;
+    bool update_spindle[N_SYS_SPINDLE];
+} modal_restore_actions_t;
+
 typedef enum {
     AxisCommand_None = 0,
     AxisCommand_NonModal,
@@ -272,14 +277,14 @@ float gc_get_offset (uint_fast8_t idx, bool real_time)
     if(real_time &&
         !(settings.status_report.machine_position && settings.status_report.sync_on_wco_change) &&
           (offset_id = st_get_offset_id()) >= 0)
-        return gc_state.modal.coord_system.xyz[idx] + gc_state.offset_queue[offset_id].values[idx] + gc_state.tool_length_offset[idx];
+        return gc_state.modal.coord_system.xyz[idx] + gc_state.offset_queue[offset_id].values[idx] + gc_state.modal.tool_length_offset[idx];
     else
-        return gc_state.modal.coord_system.xyz[idx] + gc_state.g92_coord_offset[idx] + gc_state.tool_length_offset[idx];
+        return gc_state.modal.coord_system.xyz[idx] + gc_state.g92_coord_offset[idx] + gc_state.modal.tool_length_offset[idx];
 }
 
 inline static float gc_get_block_offset (parser_block_t *gc_block, uint_fast8_t idx)
 {
-    return gc_block->modal.coord_system.xyz[idx] + gc_state.g92_coord_offset[idx] + gc_state.tool_length_offset[idx];
+    return gc_block->modal.coord_system.xyz[idx] + gc_state.g92_coord_offset[idx] + gc_state.modal.tool_length_offset[idx];
 }
 
 void gc_set_tool_offset (tool_offset_mode_t mode, uint_fast8_t idx, int32_t offset)
@@ -292,8 +297,8 @@ void gc_set_tool_offset (tool_offset_mode_t mode, uint_fast8_t idx, int32_t offs
             idx = N_AXIS;
             do {
                 idx--;
-                tlo_changed |= gc_state.tool_length_offset[idx] != 0.0f;
-                gc_state.tool_length_offset[idx] = 0.0f;
+                tlo_changed |= gc_state.modal.tool_length_offset[idx] != 0.0f;
+                gc_state.modal.tool_length_offset[idx] = 0.0f;
                 if(grbl.tool_table.n_tools == 0)
                     gc_state.tool->offset.values[idx] = 0.0f;
             } while(idx);
@@ -302,8 +307,8 @@ void gc_set_tool_offset (tool_offset_mode_t mode, uint_fast8_t idx, int32_t offs
         case ToolLengthOffset_EnableDynamic:
             {
                 float new_offset = offset / settings.axis[idx].steps_per_mm;
-                tlo_changed |= gc_state.tool_length_offset[idx] != new_offset;
-                gc_state.tool_length_offset[idx] = new_offset;
+                tlo_changed |= gc_state.modal.tool_length_offset[idx] != new_offset;
+                gc_state.modal.tool_length_offset[idx] = new_offset;
                 if(grbl.tool_table.n_tools == 0)
                     gc_state.tool->offset.values[idx] = new_offset;
             }
@@ -608,6 +613,89 @@ parameter_words_t gc_get_g65_arguments (void)
     return g65_words;
 }
 
+static modal_restore_actions_t *get_state_restore_commands (gc_modal_t *modal, gc_modal_snapshot_t *snapshot)
+{
+    static modal_restore_actions_t actions = {0};
+
+    if(snapshot) {
+
+        bool cp_state;
+        int_fast8_t idx;
+
+        // M3,M4,M4 and S
+        for(idx = 0; idx < N_SYS_SPINDLE; idx++) {
+            cp_state = memcmp(&snapshot->modal.spindle[idx], &modal->spindle[idx], offsetof(spindle_t, hal)) != 0;
+            actions.update_spindle[idx] = gc_state.modal.spindle[idx].hal &&
+                                           (bit_istrue(modal->override_ctrl.spindle_rpm_disable, bit(idx)) != bit_istrue(snapshot->modal.override_ctrl.spindle_rpm_disable, bit(idx)) ||
+                                             modal->spindle[idx].hal->param->override_pct != snapshot->override.spindle_rpm[idx] ||
+                                              cp_state != 0);
+            if(cp_state != 0)
+                memcpy(&modal->spindle[idx], &snapshot->modal.spindle[idx], offsetof(spindle_t, hal));
+        }
+
+        // G17,G18,G19
+        if((actions.command.G2 = modal->plane_select != snapshot->modal.plane_select))
+            modal->plane_select = snapshot->modal.plane_select;
+
+        // G90,G91
+        if((actions.command.G3 = modal->distance_incremental != snapshot->modal.distance_incremental))
+            modal->distance_incremental = snapshot->modal.distance_incremental;
+
+        // G4 not supported: G90.1,G91.1
+
+        // G93,G94,G95
+        if((actions.command.G5 = modal->feed_mode != snapshot->modal.feed_mode))
+            modal->feed_mode = snapshot->modal.feed_mode;
+
+        // G20,G21
+        if((actions.command.G6 = modal->units_imperial != snapshot->modal.units_imperial))
+            modal->units_imperial = snapshot->modal.units_imperial;
+
+        // G7 not supported: G40,G41,G41.1,G42,G42.1
+
+        // G43,G43.1,G49
+        if((actions.command.G8 = modal->tool_offset_mode != snapshot->modal.tool_offset_mode))
+            modal->tool_offset_mode = snapshot->modal.tool_offset_mode;
+
+        if(memcmp(&snapshot->modal.tool_length_offset, &modal->tool_length_offset, sizeof(modal->tool_length_offset)) != 0) {
+            actions.command.G8 = On;
+            memcpy(&modal->tool_length_offset, &snapshot->modal.tool_length_offset, sizeof(modal->tool_length_offset));
+        }
+
+        // G98,G99
+        if((actions.command.G10 = modal->retract_mode != snapshot->modal.retract_mode))
+            modal->retract_mode = snapshot->modal.retract_mode;
+
+        // G54-G59.x
+        if((actions.command.G12 = modal->coord_system.id != snapshot->modal.coord_system.id))
+            settings_read_coord_data((modal->coord_system.id = snapshot->modal.coord_system.id), &modal->coord_system.xyz);
+
+#if ENABLE_PATH_BLENDING
+        // G61,G61.1,G64
+        if((actions.command.G13 = modal->control != snapshot->modal.control))
+            modal->control = snapshot->modal.control;
+#endif
+
+        // G96,G97
+        if((actions.command.G14 = modal->spindle->rpm_mode != snapshot->modal.spindle->rpm_mode)) // !!
+            modal->spindle->rpm_mode = snapshot->modal.spindle->rpm_mode;
+
+        // G7,G8
+        if((actions.command.G15 = modal->diameter_mode != snapshot->modal.diameter_mode))
+            modal->diameter_mode = snapshot->modal.diameter_mode;
+
+        // M7,M8,M9
+        if((actions.command.M8 = modal->coolant.value != snapshot->modal.coolant.value))
+            modal->coolant.value = snapshot->modal.coolant.value;
+
+        // M50-M53
+        if((actions.command.M9 = modal->override_ctrl.value != snapshot->modal.override_ctrl.value))
+            modal->override_ctrl.value = sys.override.control.value = snapshot->modal.override_ctrl.value;
+    }
+
+    return &actions;
+}
+
 bool gc_modal_state_restore (gc_modal_snapshot_t *snapshot)
 {
     bool ok = false;
@@ -615,32 +703,27 @@ bool gc_modal_state_restore (gc_modal_snapshot_t *snapshot)
     if((ok = !!snapshot && !ABORTED)) {
 
         uint_fast8_t idx;
-        bool update_spindle[N_SYS_SPINDLE];
+        modal_restore_actions_t *actions = get_state_restore_commands(&gc_state.modal, snapshot);
 
         gc_state.feed_rate = snapshot->modal.feed_rate;
         sys.override.control = snapshot->modal.override_ctrl;
 
-        snapshot->modal.motion = gc_state.modal.motion;
+        if(actions->command.M9)
+            plan_feed_override(snapshot->override.feed_rate, snapshot->override.rapid_rate);
 
-        plan_feed_override(snapshot->override.feed_rate, snapshot->override.rapid_rate);
+        if(actions->command.M8)
+            coolant_restore(gc_state.modal.coolant, settings.coolant.on_delay);
 
-        for(idx = 0; idx < N_SYS_SPINDLE; idx++)
-            update_spindle[idx] = gc_state.modal.spindle[idx].hal &&
-                                   (bit_istrue(gc_state.modal.override_ctrl.spindle_rpm_disable, bit(idx)) != bit_istrue(snapshot->modal.override_ctrl.spindle_rpm_disable, bit(idx)) ||
-                                     gc_state.modal.spindle[idx].hal->param->override_pct != snapshot->override.spindle_rpm[idx] ||
-                                      memcmp(&snapshot->modal.spindle[idx], &gc_state.modal.spindle[idx], offsetof(spindle_t, hal) != 0));
+        if(actions->command.G12) {
+            system_add_rt_report(Report_GWCO);
+            system_flag_wco_change();
+        }
 
-        if(snapshot->modal.coolant.value != gc_state.modal.coolant.value)
-            coolant_restore(snapshot->modal.coolant, settings.coolant.on_delay);
-
-        memcpy(&gc_state.modal, snapshot, sizeof(gc_modal_t));
-
-        // Only valid in snapshot
-        gc_state.modal.feed_rate = 0.0f;
-        gc_state.modal.auto_restore = false;
+        if(actions->command.G15)
+            system_add_rt_report(Report_LatheXMode);
 
         for(idx = 0; idx < N_SYS_SPINDLE; idx++) {
-            if(update_spindle[idx]) {
+            if(actions->update_spindle[idx]) {
                 if(!spindle_override_disable(gc_state.modal.spindle[idx].hal, bit_istrue(gc_state.modal.override_ctrl.spindle_rpm_disable, bit(idx))))
                     spindle_set_override(gc_state.modal.spindle[idx].hal, snapshot->override.spindle_rpm[idx]);
                 spindle_restore(gc_state.modal.spindle[idx].hal, gc_state.modal.spindle[idx].state, gc_state.modal.spindle[idx].rpm, settings.spindle.on_delay);
@@ -922,8 +1005,8 @@ status_code_t gc_execute_block (char *block)
      values struct, word tracking variables, and a non-modal commands tracker for the new
      block. This struct contains all of the necessary information to execute the block. */
 
-    memset(&gc_block, 0, sizeof(gc_block));                           // Initialize the parser block struct.
-    memcpy(&gc_block.modal, &gc_state.modal, sizeof(gc_state.modal)); // Copy current modes
+    memset(&gc_block, 0, sizeof(gc_block));                                             // Initialize the parser block struct.
+    memcpy(&gc_block.modal, &gc_state.modal, offsetof(gc_modal_t, tool_length_offset)); // Copy current modes
 
     int32_t spindle_id = 0;
     bool set_tool = false, spindle_event = false;
@@ -2090,10 +2173,11 @@ status_code_t gc_execute_block (char *block)
     } else if(sspindle)
         gc_block.spindle_modal.state = sspindle->state;
 
-    // [8. Coolant control ]: N/A
+    // [8. Coolant control ]:
+    command_words.M8 &= gc_block.modal.coolant.value != gc_state.modal.coolant.value;
 
     // [9. Override control ]:
-    if (command_words.M9) {
+    if(command_words.M9) {
 
         if(!gc_block.words.p)
             gc_block.values.p = 1.0f;
@@ -2158,6 +2242,8 @@ status_code_t gc_execute_block (char *block)
             default:
                 break;
         }
+
+        command_words.M9 = gc_block.modal.override_ctrl.value != gc_state.modal.override_ctrl.value;
     }
 
     // [10. Dwell ]: P value missing. NOTE: See below.
@@ -2192,12 +2278,7 @@ status_code_t gc_execute_block (char *block)
         }
     } while(idx);
 
-    if (command_words.G15 && gc_state.modal.diameter_mode != gc_block.modal.diameter_mode) {
-        gc_state.modal.diameter_mode = gc_block.modal.diameter_mode;
-        system_add_rt_report(Report_LatheXMode);
-    }
-
-    if(gc_state.modal.diameter_mode && bit_istrue(axis_words.mask, bit(X_AXIS)))
+    if(gc_block.modal.diameter_mode && bit_istrue(axis_words.mask, bit(X_AXIS)))
         gc_block.values.xyz[X_AXIS] /= 2.0f;
 
     // Scale axis words if commanded
@@ -2353,8 +2434,8 @@ status_code_t gc_execute_block (char *block)
     // NOTE: If NVS buffering is active then non-volatile storage reads/writes are buffered and updates
     // delayed until no cycle is active.
 
-    if (command_words.G12) { // Check if called in block
-        if (gc_state.modal.coord_system.id != gc_block.modal.coord_system.id && !settings_read_coord_data(gc_block.modal.coord_system.id, &gc_block.modal.coord_system.xyz))
+    if((command_words.G12 &= gc_block.modal.coord_system.id != gc_state.modal.coord_system.id)) { // Check if called in block
+        if(!settings_read_coord_data(gc_block.modal.coord_system.id, &gc_block.modal.coord_system.xyz))
             FAIL(Status_SettingReadFail);
     }
 
@@ -2371,6 +2452,9 @@ status_code_t gc_execute_block (char *block)
 #endif
 
     // [17. Set distance mode ]: N/A. Only G91.1. G90.1 NOT SUPPORTED.
+
+    command_words.G15 &= gc_block.modal.diameter_mode != gc_state.modal.diameter_mode;
+
     // [18. Set retract mode ]: N/A.
 
     // [19. Remaining non-modal actions ]: Check go to predefined position, set G10, or set axis offsets.
@@ -2433,7 +2517,7 @@ status_code_t gc_execute_block (char *block)
                             if (gc_block.values.l == 20)
                                 // L20: Update coordinate system axis at current position (with modifiers) with programmed value
                                 // WPos = MPos - WCS - G92 - TLO  ->  WCS = MPos - G92 - TLO - WPos
-                                gc_block.values.coord_data.xyz[idx] = gc_state.position[idx] - gc_block.values.xyz[idx] - gc_state.g92_coord_offset[idx] - gc_state.tool_length_offset[idx];
+                                gc_block.values.coord_data.xyz[idx] = gc_state.position[idx] - gc_block.values.xyz[idx] - gc_state.g92_coord_offset[idx] - gc_state.modal.tool_length_offset[idx];
                             else // L2: Update coordinate system axis to programmed value.
                                 gc_block.values.coord_data.xyz[idx] = gc_block.values.xyz[idx];
                         } // else, keep current stored value.
@@ -2477,9 +2561,9 @@ status_code_t gc_execute_block (char *block)
                                     tool_data->offset.values[idx] = g59_3_offset[idx] - gc_block.values.xyz[idx];
 #endif
     //                            if(gc_block.values.l != 1)
-    //                                tool_table[p_value].offset[idx] -= gc_state.tool_length_offset[idx];
+    //                                tool_table[p_value].offset[idx] -= gc_state.modal.tool_length_offset[idx];
                             } else if(gc_block.values.l == 10 || gc_block.values.l == 11)
-                                tool_data->offset.values[idx] = gc_state.tool_length_offset[idx];
+                                tool_data->offset.values[idx] = gc_state.modal.tool_length_offset[idx];
 
                             // else, keep current stored value.
                         } while(idx);
@@ -2508,7 +2592,7 @@ status_code_t gc_execute_block (char *block)
             do { // Axes indices are consistent, so loop may be used.
                 if (bit_istrue(axis_words.mask, bit(--idx))) {
             // WPos = MPos - WCS - G92 - TLO  ->  G92 = MPos - WCS - TLO - WPos
-                    gc_block.values.xyz[idx] = gc_state.position[idx] - gc_block.modal.coord_system.xyz[idx] - gc_block.values.xyz[idx] - gc_state.tool_length_offset[idx];
+                    gc_block.values.xyz[idx] = gc_state.position[idx] - gc_block.modal.coord_system.xyz[idx] - gc_block.values.xyz[idx] - gc_state.modal.tool_length_offset[idx];
                 } else
                     gc_block.values.xyz[idx] = gc_state.g92_coord_offset[idx];
             } while(idx);
@@ -3290,13 +3374,11 @@ status_code_t gc_execute_block (char *block)
         strcpy(plan_data.message, message);
 
     // [2. Set feed rate mode ]:
-    gc_state.modal.feed_mode = gc_block.modal.feed_mode;
-    if (gc_state.modal.feed_mode == FeedMode_InverseTime)
-        plan_data.condition.inverse_time = On; // Set condition flag for planner use.
+    if(command_words.G5)
+        gc_state.modal.feed_mode = gc_block.modal.feed_mode;
 
     // [3. Set feed rate ]:
     gc_state.feed_rate = gc_block.values.f; // Always copy this value. See feed rate error-checking.
-    plan_data.feed_rate = gc_state.feed_rate; // Record data for planner use.
 
     // [4. Set spindle speed ]:
 
@@ -3520,18 +3602,9 @@ status_code_t gc_execute_block (char *block)
     if(sspindle != NULL)
         gc_state.spindle = sspindle; // for now
 
-    plan_data.spindle.hal = gc_state.spindle->hal;
-    memcpy(&plan_data.spindle, gc_state.spindle, offsetof(spindle_t, rpm)); // Record data for planner use.
-
-// TODO: Recheck spindle running in CCS mode (is_rpm_pos_adjusted == On)?
-
-    plan_data.spindle.state = gc_state.spindle->state; // Set condition flag for planner use.
-    plan_data.condition.is_rpm_rate_adjusted = gc_state.is_rpm_rate_adjusted;
-    plan_data.condition.is_laser_ppi_mode = gc_state.is_rpm_rate_adjusted && gc_state.is_laser_ppi_mode;
-
 #if NGC_PARAMETERS_ENABLE
 
-    // [7a. Modal state actions ]:
+    // [7.1 Modal state actions ]:
     switch(gc_block.state_action) {
 
         case ModalState_Save:
@@ -3545,6 +3618,7 @@ status_code_t gc_execute_block (char *block)
                 if(gc_state.modal.spindle[idx].hal)
                     override.spindle_rpm[idx] = gc_state.modal.spindle[idx].hal->param->override_pct;
             }
+
             if(!ngc_modal_state_save(&gc_state.modal, &override, gc_state.feed_rate, gc_block.state_action == ModalState_SaveAutoRestore))
                 FAIL(Status_FlowControlOutOfMemory); // [Out of memory] TODO: allocate memory during validation? Static allocation?
             break;
@@ -3553,8 +3627,49 @@ status_code_t gc_execute_block (char *block)
             ngc_modal_state_invalidate();
             break;
 
-        case ModalState_Restore:
-            ngc_modal_state_restore();
+        case ModalState_Restore:;
+            gc_modal_snapshot_t *snapshot;
+
+            if((snapshot = ngc_modal_state_get())) {
+
+                modal_restore_actions_t *actions = get_state_restore_commands(&gc_block.modal, snapshot);
+
+                gc_state.feed_rate = snapshot->modal.feed_rate;
+
+                if(actions->command.G5)
+                    gc_state.modal.feed_mode = gc_block.modal.feed_mode;
+
+                if(actions->command.G8) {
+
+                    actions->command.G8 = Off;
+                    system_flag_wco_change();
+                    system_add_rt_report(Report_ToolOffset);
+
+                    gc_state.modal.tool_offset_mode = gc_block.modal.tool_offset_mode;
+                    memcpy(&gc_state.modal.tool_length_offset, &snapshot->modal.tool_length_offset, sizeof(gc_state.modal.tool_length_offset));
+                }
+
+                if(actions->command.M9) {
+                    actions->command.M9 = Off;
+                    plan_feed_override(snapshot->override.feed_rate, snapshot->override.rapid_rate);
+                }
+
+                if(actions->command.M8) {
+                    actions->command.M8 = Off;
+                    coolant_restore((gc_state.modal.coolant = gc_block.modal.coolant), settings.coolant.on_delay);
+                }
+
+                for(idx = 0; idx < N_SYS_SPINDLE; idx++) {
+                    if(actions->update_spindle[idx]) {
+                        memcpy(&gc_state.modal.spindle[idx], &gc_block.modal.spindle[idx], offsetof(spindle_t, hal));
+                        if(!spindle_override_disable(gc_state.modal.spindle[idx].hal, bit_istrue(gc_state.modal.override_ctrl.spindle_rpm_disable, bit(idx))))
+                            spindle_set_override(gc_state.modal.spindle[idx].hal, snapshot->override.spindle_rpm[idx]);
+                        spindle_restore(gc_state.modal.spindle[idx].hal, gc_state.modal.spindle[idx].state, gc_state.modal.spindle[idx].rpm, settings.spindle.on_delay);
+                    }
+                }
+
+                command_words.mask |= actions->command.mask;
+            }
             break;
 
         default:
@@ -3563,8 +3678,24 @@ status_code_t gc_execute_block (char *block)
 
 #endif // NGC_PARAMETERS_ENABLE
 
+    // Record data for planner use.
+
+    plan_data.feed_rate = gc_state.feed_rate;
+
+    if(gc_state.modal.feed_mode == FeedMode_InverseTime)
+        plan_data.condition.inverse_time = On; // Set condition flag for planner use.
+
+    plan_data.spindle.hal = gc_state.spindle->hal;
+    memcpy(&plan_data.spindle, gc_state.spindle, offsetof(spindle_t, rpm)); // Record data for planner use.
+
+// TODO: Recheck spindle running in CCS mode (is_rpm_pos_adjusted == On)?
+
+    plan_data.spindle.state = gc_state.spindle->state; // Set condition flag for planner use.
+    plan_data.condition.is_rpm_rate_adjusted = gc_state.is_rpm_rate_adjusted;
+    plan_data.condition.is_laser_ppi_mode = gc_state.is_rpm_rate_adjusted && gc_state.is_laser_ppi_mode;
+
     // [8. Coolant control ]:
-    if (gc_parser_flags.set_coolant && gc_state.modal.coolant.value != gc_block.modal.coolant.value) {
+    if(command_words.M8) {
     // NOTE: Coolant M-codes are modal. Only one command per line is allowed. But, multiple states
     // can exist at the same time, while coolant disable clears all states.
         if(coolant_set_state_synced(gc_block.modal.coolant))
@@ -3576,7 +3707,7 @@ status_code_t gc_execute_block (char *block)
     sys.override_delay.flags = 0;
 
     // [9. Override control ]:
-    if(command_words.M9 && gc_state.modal.override_ctrl.value != gc_block.modal.override_ctrl.value) {
+    if(command_words.M9) {
 
         gc_state.modal.override_ctrl = gc_block.modal.override_ctrl;
 
@@ -3602,14 +3733,16 @@ status_code_t gc_execute_block (char *block)
     }
 
     // [10. Dwell ]:
-    if (gc_block.non_modal_command == NonModal_Dwell)
+    if(gc_block.non_modal_command == NonModal_Dwell)
         mc_dwell(gc_block.values.p);
 
     // [11. Set active plane ]:
-    gc_state.modal.plane_select = gc_block.modal.plane_select;
+    if(command_words.G2)
+        gc_state.modal.plane_select = gc_block.modal.plane_select;
 
     // [12. Set length units ]:
-    gc_state.modal.units_imperial = gc_block.modal.units_imperial;
+    if(command_words.G6)
+        gc_state.modal.units_imperial = gc_block.modal.units_imperial;
 
     // [13. Cutter radius compensation ]: G41/42 NOT SUPPORTED
     // gc_state.modal.cutter_comp = gc_block.modal.cutter_comp; // NOTE: Not needed since always disabled.
@@ -3636,26 +3769,26 @@ status_code_t gc_execute_block (char *block)
             switch(gc_state.modal.tool_offset_mode) {
 
                 case ToolLengthOffset_Cancel: // G49
-                    tlo_changed |= gc_state.tool_length_offset[idx] != 0.0f;
-                    gc_state.tool_length_offset[idx] = 0.0f;
+                    tlo_changed |= gc_state.modal.tool_length_offset[idx] != 0.0f;
+                    gc_state.modal.tool_length_offset[idx] = 0.0f;
                     break;
 
                 case ToolLengthOffset_Enable: // G43
-                    if(gc_state.tool_length_offset[idx] != tool_data->offset.values[idx]) {
+                    if(gc_state.modal.tool_length_offset[idx] != tool_data->offset.values[idx]) {
                         tlo_changed = true;
-                        gc_state.tool_length_offset[idx] = tool_data->offset.values[idx];
+                        gc_state.modal.tool_length_offset[idx] = tool_data->offset.values[idx];
                     }
                     break;
 
                 case ToolLengthOffset_ApplyAdditional: // G43.2
                     tlo_changed |= tool_data->offset.values[idx] != 0.0f;
-                    gc_state.tool_length_offset[idx] += tool_data->offset.values[idx];
+                    gc_state.modal.tool_length_offset[idx] += tool_data->offset.values[idx];
                     break;
 
                 case ToolLengthOffset_EnableDynamic: // G43.1
-                    if(bit_istrue(axis_words.mask, bit(idx)) && gc_state.tool_length_offset[idx] != gc_block.values.xyz[idx]) {
+                    if(bit_istrue(axis_words.mask, bit(idx)) && gc_state.modal.tool_length_offset[idx] != gc_block.values.xyz[idx]) {
                         tlo_changed = true;
-                        gc_state.tool_length_offset[idx] = gc_block.values.xyz[idx];
+                        gc_state.modal.tool_length_offset[idx] = gc_block.values.xyz[idx];
                     }
                     break;
 
@@ -3671,7 +3804,7 @@ status_code_t gc_execute_block (char *block)
     }
 
     // [15. Coordinate system selection ]:
-    if (gc_state.modal.coord_system.id != gc_block.modal.coord_system.id) {
+    if(command_words.G12) {
         memcpy(&gc_state.modal.coord_system, &gc_block.modal.coord_system, sizeof(gc_state.modal.coord_system));
         system_add_rt_report(Report_GWCO);
         system_flag_wco_change();
@@ -3680,14 +3813,22 @@ status_code_t gc_execute_block (char *block)
     // [16. Set path control mode ]: G61.1/G64 NOT SUPPORTED
     // gc_state.modal.control = gc_block.modal.control; // NOTE: Always default.
 #if ENABLE_PATH_BLENDING
-    gc_state.modal.control = gc_block.modal.control;
+    if(command_words.G13)
+        gc_state.modal.control = gc_block.modal.control;
 #endif
 
     // [17. Set distance mode ]:
-    gc_state.modal.distance_incremental = gc_block.modal.distance_incremental;
+    if(command_words.G3)
+        gc_state.modal.distance_incremental = gc_block.modal.distance_incremental;
+
+    if(command_words.G15) {
+        gc_state.modal.diameter_mode = gc_block.modal.diameter_mode;
+        system_add_rt_report(Report_LatheXMode);
+    }
 
     // [18. Set retract mode ]:
-    gc_state.modal.retract_mode = gc_block.modal.retract_mode;
+    if(command_words.G10)
+        gc_state.modal.retract_mode = gc_block.modal.retract_mode;
 
     // [19. Go to predefined position, Set G10, or Set axis offsets ]:
     switch(gc_block.non_modal_command) {

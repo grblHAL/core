@@ -1,6 +1,6 @@
 ## grblHAL changelog
 
-<a name="20251106">Build 20251106
+<a name="20251108">Build 20251108
 
 Core:
 
@@ -16,17 +16,24 @@ Core:
 
 * Added `_free memory` system parameter, returns value in KBytes or -1 if not available from driver.
 
+* Changed basic stream data type from `char` to `uint8_t`, added HAL function and core API for releasing/closing UART streams.
+
 Drivers:
+
+* All: updated for core stream changes.
 
 * iMRX1062: Decorated constant data with `PROGMEM` and some rarely used functions with `FLASHMEM` to reduce RAM footprint. Fixed buggy Laser PPI mode.
 
 Plugins:
 
 * Many: decoracted constant data with `PROGMEM` to reduce RAM footprint for Arduino based drivers \(iMXRT1062 and SAM3X8E\).
+Updated for core stream changes.
 
 * Keypad, macros: macros can now be executed via `M81<x>` commands, `<x>` is the macro number matching the `$49<x>` macro setting values.
 
 * Misc, FluidNC I/O Expander: new experimental plugin for the STM32 based I/O expander; adds up to 8 digtal inputs, 10 outputs and a RGB LED.
+
+---
 
 <a name="20251107">20251107
 

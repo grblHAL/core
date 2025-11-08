@@ -106,6 +106,7 @@ typedef enum {
     NGCParam_homed_state,
     NGCParam_homed_axes,
     NGCParam_tool_table_size,
+    NGCParam_free_memory,
     NGCParam_Last
 } ncg_name_param_id_t;
 
@@ -126,7 +127,7 @@ bool ngc_param_is_rw (ngc_param_id_t id);
 bool ngc_param_exists (ngc_param_id_t id);
 bool ngc_named_param_get (char *name, float *value);
 float ngc_named_param_get_by_id (ncg_name_param_id_t id);
-bool ngc_named_param_set (char *name, float value);
+float *ngc_named_param_set (char *name, float value);
 bool ngc_named_param_exists (char *name);
 
 bool ngc_string_param_set (ngc_param_id_t id, char *value);
@@ -139,6 +140,7 @@ bool ngc_call_push (void *context);
 bool ngc_call_pop (void);
 uint_fast8_t ngc_call_level (void);
 bool ngc_modal_state_save (gc_modal_t *state, gc_override_values_t *overrides, float feed_rate, bool auto_restore);
+gc_modal_snapshot_t *ngc_modal_state_get (void);
 bool ngc_modal_state_restore (void);
 void ngc_modal_state_invalidate (void);
 

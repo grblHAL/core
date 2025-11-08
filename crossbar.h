@@ -322,7 +322,6 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Input_LimitZ_Max,           .name = "Z limit max" },
     { .function = Input_HomeZ,                .name = "Z home" },
     { .function = Input_HomeZ_2,              .name = "Z home 2" },
-#ifndef NO_SETTINGS_DESCRIPTIONS
     { .function = Input_SpindleIndex,         .name = "Spindle index" },
     { .function = Input_SpindlePulse,         .name = "Spindle pulse" },
     { .function = Input_Aux0,                 .name = "Aux in 0" },
@@ -357,7 +356,6 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Input_Analog_Aux5,          .name = "Aux analog in 5" },
     { .function = Input_Analog_Aux6,          .name = "Aux analog in 6" },
     { .function = Input_Analog_Aux7,          .name = "Aux analog in 7" },
-#endif
     { .function = Output_StepX,               .name = "X step" },
     { .function = Output_StepX2,              .name = "X2 step" },
     { .function = Output_StepY,               .name = "Y step" },
@@ -422,7 +420,6 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Input_HomeV,                .name = "V home" },
     { .function = Input_MotorFaultV,          .name = "V motor fault" },
 #endif
-#ifndef NO_SETTINGS_DESCRIPTIONS
     { .function = Output_MotorChipSelect,     .name = "Motor CS" },
     { .function = Output_MotorChipSelectX,    .name = "Motor CSX" },
     { .function = Output_MotorChipSelectY,    .name = "Motor CSY" },
@@ -511,7 +508,6 @@ PROGMEM static const pin_name_t pin_names[] = {
     { .function = Bidirectional_MotorUARTM5,  .name = "UART M5" },
     { .function = Bidirectional_MotorUARTM6,  .name = "UART M6" },
     { .function = Bidirectional_MotorUARTM7,  .name = "UART M7" }
-#endif
 };
 
 typedef enum {
@@ -815,12 +811,18 @@ static inline bool xbar_is_probe_in (pin_function_t fn)
     return fn == Input_Probe || fn == Input_Probe2 || fn == Input_Toolsetter;
 }
 
+#define N_AUX_AIN_MAX (Input_Analog_AuxMax - Input_Analog_Aux0 + 1)
+#define N_AUX_AOUT_MAX (Output_Analog_AuxMax - Output_Analog_Aux0 + 1)
+#define N_AUX_DIN_MAX (Input_AuxMax - Input_Aux0 + 1)
+#define N_AUX_DOUT_MAX (Output_AuxMax - Output_Aux0 + 1)
+
 void xbar_set_homing_source (void);
 limit_signals_t xbar_get_homing_source (void);
 limit_signals_t xbar_get_homing_source_from_cycle (axes_signals_t homing_cycle);
 axes_signals_t xbar_fn_to_axismask (pin_function_t id);
 const char *xbar_fn_to_pinname (pin_function_t id);
 const char *xbar_group_to_description ( pin_group_t group);
+const char *xbar_resolution_to_string (pin_cap_t cap);
 control_signals_t xbar_fn_to_signals_mask (pin_function_t id);
 
 #endif
