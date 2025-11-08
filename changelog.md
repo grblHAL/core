@@ -1,5 +1,13 @@
 ## grblHAL changelog
 
+<a name="20251109">Build 20251109
+
+Core:
+
+* Fix for regression causing MPG mode switch malfunction. Ref. issue [#846](https://github.com/grblHAL/core/issues/846).
+
+---
+
 <a name="20251108">Build 20251108
 
 Core:

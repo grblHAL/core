@@ -155,7 +155,7 @@ static aux_ctrl_t aux_ctrl[] = {
     add_aux_input(Input_I2CStrobe, I2C_STROBE, IRQ_Mode_Change, 0)
 #endif
 #if MPG_ENABLE == 1 && defined(MPG_MODE_PIN)
-    add_aux_input(Input_MPGSelect, MPG_MODE, IRQ_Mode_RisingFalling, 0)
+    add_aux_input(Input_MPGSelect, MPG_MODE, IRQ_Mode_Change, 0)
 #endif
 #if QEI_SELECT_ENABLE && defined(QEI_SELECT_PIN)
     add_aux_input(Input_QEI_Select, QEI_SELECT, IRQ_Mode_RisingFalling, 0)
@@ -182,7 +182,7 @@ static aux_ctrl_t aux_ctrl[] = {
     add_aux_input_scan(Input_ToolsetterOvertravel, IRQ_Mode_Change, SIGNALS_TLS_OVERTRAVEL_BIT)
 #endif
 #if LIMITS_OVERRIDE_ENABLE
-    add_aux_input_scan(Input_LimitsOverride, IRQ_Mode_Change, SIGNALS_LIMITS_OVERRIDE_BIT)
+    add_aux_input_scan(Input_LimitsOverride, IRQ_Mode_None, SIGNALS_LIMITS_OVERRIDE_BIT)
 #endif
 #if STOP_DISABLE_ENABLE
     add_aux_input_scan(Input_StopDisable, IRQ_Mode_Change, SIGNALS_STOPDISABLE_BIT)
