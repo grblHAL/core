@@ -31,6 +31,8 @@ Updated for core stream changes.
 
 * Keypad, macros: macros can now be executed via `M81<x>` commands, `<x>` is the macro number matching the `$49<x>` macro setting values.
 
+* Networking: refactored http daemon code in attempt to root out underlying cause for null pointer dereferenced crash. Ref. PR [#15](https://github.com/grblHAL/Plugin_networking/pull/15).
+
 * Misc, FluidNC I/O Expander: new experimental plugin for the STM32 based I/O expander; adds up to 8 digtal inputs, 10 outputs and a RGB LED.
 
 ---
