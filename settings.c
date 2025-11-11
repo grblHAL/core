@@ -358,6 +358,10 @@ PROGMEM const settings_t defaults = {
     .safety_door.spindle_on_delay = DEFAULT_SAFETY_DOOR_SPINDLE_DELAY,
     .safety_door.coolant_on_delay = DEFAULT_SAFETY_DOOR_COOLANT_DELAY,
 
+    .fs_options.sd_mount_on_boot = DEFAULT_FS_SD_AUTOMOUNT,
+    .fs_options.lfs_hidden = DEFAULT_FS_LITLLEFS_HIDDEN,
+    .fs_options.hierarchical_listing = DEFAULT_FS_HIERACHICAL_LISTING,
+
     .modbus_baud = DEFAULT_MODBUS_STREAM_BAUD,
     .modbus_stream_format.value = (DEFAULT_MODBUS_STREAM_PARITY << 4),
 
@@ -455,7 +459,7 @@ static char ganged_axes[] = "X-Axis,Y-Axis,Z-Axis";
 
 static on_file_demarcate_ptr on_file_demarcate;
 static char step_us_min[4];
-static char fs_options[] = "Auto mount SD card,Hide LittleFS";
+static char fs_options[] = "Auto mount SD card,Hide LittleFS,Hierarchical listing";
 static char spindle_types[100] = "";
 static char axis_dist[4] = "mm";
 static char axis_rate[8] = "mm/min";
@@ -2510,18 +2514,22 @@ static bool settings_set_tool_data (tool_data_t *tool)
 }
 
 // Read selected tool data from persistent storage.
-static tool_data_t *settings_get_tool_data (tool_id_t tool_id)
+static tool_table_entry_t *settings_get_tool_data (tool_id_t tool_id)
 {
-    tool_data_t *tool = tool_id <= N_TOOLS ? &tool_data[tool_id] : NULL;
+    static tool_table_entry_t tool = {0};
 
-    if(tool_id && tool && !(hal.nvs.type != NVS_None &&
-                                  hal.nvs.memcpy_from_nvs((uint8_t *)tool, NVS_ADDR_TOOL_TABLE + (tool_id - 1) * (sizeof(tool_data_t) + NVS_CRC_BYTES),
-                                                            sizeof(tool_data_t), true) == NVS_TransferResult_OK && tool->tool_id == tool_id)) {
-        memset(tool, 0, sizeof(tool_data_t));
-        tool->tool_id = tool_id;
+    tool.data = tool_id <= N_TOOLS ? &tool_data[tool_id] : NULL;
+
+    if(tool_id && tool.data && !(hal.nvs.type != NVS_None &&
+                                  hal.nvs.memcpy_from_nvs((uint8_t *)tool.data, NVS_ADDR_TOOL_TABLE + (tool_id - 1) * (sizeof(tool_data_t) + NVS_CRC_BYTES),
+                                                            sizeof(tool_data_t), true) == NVS_TransferResult_OK && tool.data->tool_id == tool_id)) {
+        memset(tool.data, 0, sizeof(tool_data_t));
+        tool.data->tool_id = tool_id;
     }
 
-    return tool;
+    tool.pocket = (pocket_id_t)(tool.data ? tool_id : -1);
+
+    return &tool;
 }
 
 // Clear all tool data in persistent storage.
@@ -2550,13 +2558,20 @@ static bool settings_set_tool_data (tool_data_t *tool_data)
 }
 
 // Read selected tool data from persistent storage.
-static tool_data_t *settings_get_tool_data (tool_id_t tool_id)
+static tool_table_entry_t *settings_get_tool_data (tool_id_t tool_id)
 {
+    static tool_table_entry_t tool = {0};
 
-	if(tool_id <= MAX_TOOL_NUMBER)
+	if(tool_id <= MAX_TOOL_NUMBER) {
     	tool_data.tool_id = tool_id;
+        tool.pocket = (pocket_id_t)tool_id;
+    	tool.data = &tool_data;
+	} else {
+        tool.data = NULL;
+        tool.pocket = (pocket_id_t)-1;
+	}
 
-    return tool_id <= MAX_TOOL_NUMBER ? &tool_data : NULL;
+    return &tool;
 }
 
 // Clear all tool data in persistent storage.
@@ -2568,11 +2583,6 @@ static bool settings_clear_tool_data (void)
 }
 
 #endif // N_TOOLS
-
-static pocket_id_t settings_get_tool_pocket (tool_id_t tool_id)
-{
-    return (pocket_id_t)tool_id;
-}
 
 // Sanity check of settings, board map could have been changed...
 static void sanity_check (void)
@@ -3412,7 +3422,6 @@ void settings_init (void)
         grbl.tool_table.get_tool = settings_get_tool_data;
         grbl.tool_table.get_tool_by_idx = (get_tool_by_idx_ptr)settings_get_tool_data;
         grbl.tool_table.set_tool = settings_set_tool_data;
-        grbl.tool_table.get_pocket = settings_get_tool_pocket;
         grbl.tool_table.clear = settings_clear_tool_data;
     }
 

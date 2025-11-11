@@ -515,6 +515,8 @@ bool stream_close (io_stream_t const *stream)
 
 void stream_set_defaults (const io_stream_t *stream, uint32_t baud_rate)
 {
+    stream->set_enqueue_rt_handler(protocol_enqueue_realtime_command);
+
     if(stream->set_baud_rate)
         stream->set_baud_rate(baud_rate);
 
@@ -528,7 +530,6 @@ void stream_set_defaults (const io_stream_t *stream, uint32_t baud_rate)
         stream->reset_write_buffer();
 
     stream->reset_read_buffer();
-    stream->set_enqueue_rt_handler(protocol_enqueue_realtime_command);
 }
 
 // MPG stream

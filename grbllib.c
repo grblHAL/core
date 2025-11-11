@@ -432,7 +432,7 @@ int grbl_enter (void)
         task_add_delayed(auto_realtime_report, NULL, settings.report_interval);
 
     if(hal.driver_cap.sd_card || hal.driver_cap.littlefs) {
-        fs_options_t fs_options = {0};
+        fs_options_t fs_options = { .hierarchical_listing = On };
         fs_options.lfs_hidden = hal.driver_cap.littlefs;
         fs_options.sd_mount_on_boot = hal.driver_cap.sd_card;
         setting_remove_elements(Setting_FSOptions, fs_options.mask);

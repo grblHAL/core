@@ -589,9 +589,17 @@ typedef struct {
     tool_id_t tool_id;      //!< Tool number
 } tool_data_t;
 
+//! Tool table entry.
+typedef struct {
+    const char *name;
+    tool_data_t *data;
+    pocket_id_t pocket;
+} tool_table_entry_t;
+
 typedef struct {
     tool_data_t tool;
     pocket_id_t pocket_id;
+    char name[101];
 } tool_pocket_t;
 
 /*! \brief Parser state

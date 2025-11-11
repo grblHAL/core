@@ -136,10 +136,9 @@ typedef status_code_t (*on_macro_execute_ptr)(macro_id_t macro); // macro implem
 typedef void (*on_macro_return_ptr)(void);
 typedef void (*on_file_demarcate_ptr)(bool start);
 
-typedef tool_data_t *(*get_tool_ptr)(tool_id_t tool_id);
-typedef tool_data_t *(*get_tool_by_idx_ptr)(uint32_t idx);
+typedef tool_table_entry_t *(*get_tool_ptr)(tool_id_t tool_id);
+typedef tool_table_entry_t *(*get_tool_by_idx_ptr)(uint32_t idx);
 typedef bool (*set_tool_data_ptr)(tool_data_t *tool_data);
-typedef pocket_id_t (*get_pocket_ptr)(tool_id_t tool_id);
 typedef bool (*clear_tool_data_ptr)(void);
 
 typedef struct {
@@ -147,7 +146,6 @@ typedef struct {
     get_tool_ptr get_tool;
     get_tool_by_idx_ptr get_tool_by_idx;
     set_tool_data_ptr set_tool;
-    get_pocket_ptr get_pocket;
     clear_tool_data_ptr clear;
 } tool_table_t;
 

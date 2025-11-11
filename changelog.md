@@ -1,5 +1,31 @@
 ## grblHAL changelog
 
+<a name="20251111">Build 20251111
+
+Core:
+
+* Refactored the tool table HAL API a bit to improve functionality.
+Added tool name, pocket number and some lathe specific data fields to the `$#` tool output when available from the tool table.
+If name is available it will be output as a push message on `M6` if there is no message in the same block.
+
+* Added support for directory up, `..`, to VFS.
+
+* Added new option to `$650` - _File systems options_ to enable hierarchical listing of files and directories via `$F` and `$F+` commands.
+When enabled directories are added to the output with file size set to `-1` and only the contents of the current directory is reported.
+The `$F=<dirname>` command can then be used to set the current working direcory \(CWD\). `$F=..` can be used to move up one level and `$F=/` to move to the root directory.
+Files or directory names for `$F`, `$F+` `$F<` and `$FD` commands not starting with `/` will executed be relative to the CWD.
+
+Plugins:
+
+* Misc, tooltable: removed limit on max number of tools, it is now constrained by available RAM. Added name \(remark, comment\) to imported data and
+a new command, `$TTLOAD`, that can be used to reload the tool table after it has been updated. 
+
+* EEPROM: added experimental code that allows mounting unused part of large EEPROM as littlefs file system. This may then be used to store a file based tooltable etc.
+
+* SD Card, littlefs VFS wrapper: added support for `vfs_chdir()` \(change directory\) to allow ftp access to subdirectories.
+
+---
+
 <a name="20251109">Build 20251109
 
 Core:

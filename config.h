@@ -542,7 +542,7 @@ Set to \ref On or 1 to enable experimental support for expressions.
 Some LinuxCNC extensions are supported, conditionals and subroutines are not.
 */
 #if !defined NGC_EXPRESSIONS_ENABLE || defined __DOXYGEN__
-#define NGC_EXPRESSIONS_ENABLE Off
+#define NGC_EXPRESSIONS_ENABLE On
 #endif
 
 /*! \def NGC_PARAMETERS_ENABLE
@@ -1467,11 +1467,14 @@ and less range over the total 255 PWM levels to signal different spindle speeds.
 // Homing settings (Group_Homing)
 
 /*! @name $22 - Setting_HomingEnable
-\brief Enable homing.
+\brief Enable and control homing functionality.
 Requires homing cycles to be defined by \ref DEFAULT_HOMING_CYCLE_0 - \ref DEFAULT_HOMING_CYCLE_2 +.
-\internal Bit 0 in settings.homing.flags.
 */
 ///@{
+/*! /def DEFAULT_HOMING_ENABLE
+\brief Enables homing overall.
+\internal Bit 0 in settings.homing.flags.
+*/
 #if !defined DEFAULT_HOMING_ENABLE || defined __DOXYGEN__
 #define DEFAULT_HOMING_ENABLE Off // Default disabled. Set to \ref On or 1 to enable.
 #endif
@@ -2118,6 +2121,46 @@ Default stream format settings for ModBus RTU stream.
 #define DEFAULT_MODBUS_STREAM_PARITY 0 // 0 = None, 1 = Even, 2 = Odd
 #endif
 ///@}
+
+/*! @name $681 - Setting_ModBus_StreamFormat
+Default stream format settings for ModBus RTU stream.
+*/
+///@{
+#if !defined DEFAULT_MODBUS_STREAM_PARITY || defined __DOXYGEN__
+#define DEFAULT_MODBUS_STREAM_PARITY 0 // 0 = None, 1 = Even, 2 = Odd
+#endif
+///@}
+
+/*! @name $650 - Setting_FSOptions
+Filing systems options.
+*/
+///@{
+/*! /def DEFAULT_FS_SD_AUTOMOUNT
+\brief Auto mount SD card on startup.
+\internal Bit 0 in settings.fs_options.mask.
+*/
+#if !defined DEFAULT_FS_SD_AUTOMOUNT || defined __DOXYGEN__
+#define DEFAULT_FS_SD_AUTOMOUNT Off // Default disabled. Set to \ref On or 1 to enable.
+#endif
+
+/*! /def DEFAULT_FS_LITLLEFS_HIDDEN
+\brief Hides LittleFS mount from directory listings.
+\internal Bit 1 in settings.fs_options.mask.
+*/
+#if !defined DEFAULT_FS_LITLLEFS_HIDDEN || defined __DOXYGEN__
+#define DEFAULT_FS_LITLLEFS_HIDDEN Off // Default disabled. Set to \ref On or 1 to enable.
+#endif
+
+/*! /def DEFAULT_FS_HIERACHICAL_LISTING
+\brief
+Adds directory entries in $F and $F+ output to allow hierarchical navigation of the directoy tree.
+\internal Bit 2 in settings.fs_options.mask.
+*/
+#if !defined DEFAULT_FS_HIERACHICAL_LISTING || defined __DOXYGEN__
+#define DEFAULT_FS_HIERACHICAL_LISTING Off // Default disabled. Set to \ref On or 1 to enable.
+#endif
+///@}
+
 
 // Axis settings (Group_XAxis - Group_VAxis)
 

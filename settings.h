@@ -773,9 +773,10 @@ typedef union {
     uint8_t value;
     uint8_t mask;
     struct {
-        uint8_t sd_mount_on_boot  :1,
-                lfs_hidden        :1,
-                unused            :6;
+        uint8_t sd_mount_on_boot     :1,
+                lfs_hidden           :1,
+                hierarchical_listing :1,
+                unused               :5;
     };
 } fs_options_t;
 

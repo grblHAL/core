@@ -596,7 +596,7 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             break;
 
         case NGCParam_current_pocket:
-            value = (float)grbl.tool_table.get_pocket(gc_state.tool->tool_id);
+            value = (float)grbl.tool_table.get_tool(gc_state.tool->tool_id)->pocket;
             break;
 
         case NGCParam_selected_tool:
@@ -604,7 +604,7 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             break;
 
         case NGCParam_selected_pocket:
-            value = gc_state.tool_pending != gc_state.tool->tool_id ? (float)grbl.tool_table.get_pocket(gc_state.tool_pending) : -1.0f;
+            value = gc_state.tool_pending != gc_state.tool->tool_id ? (float)grbl.tool_table.get_tool(gc_state.tool_pending)->pocket : -1.0f;
             break;
 
         case NGCParam_call_level:
@@ -1094,7 +1094,7 @@ static status_code_t macro_get_tool_offset (void)
         status = Status_GcodeValueWordMissing;
     else if(grbl.tool_table.n_tools && ngc_param_get(17 /* Q word */, &tool_id) && ngc_param_get(18 /* R word */, &axis_id)) {
 
-        tool_data_t *tool_data = grbl.tool_table.get_tool((tool_id_t)tool_id);
+        tool_data_t *tool_data = grbl.tool_table.get_tool((tool_id_t)tool_id)->data;
 
         if(tool_data && (uint8_t)axis_id < N_AXIS) {
             ngc_named_param_set("_value", tool_data->offset.values[(uint8_t)axis_id]);

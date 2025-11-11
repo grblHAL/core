@@ -27,6 +27,10 @@
 #include "hal.h"
 #include "vfs.h"
 
+#ifndef VFS_CWD_LENGTH
+#define VFS_CWD_LENGTH 100
+#endif
+
 #ifdef ARDUINO_SAM_DUE
 #undef feof
 #endif
@@ -202,7 +206,7 @@ static vfs_mount_t root = {
     .next = NULL
 };
 static vfs_mount_t *cwdmount = &root;
-static char cwd[100] = "/";
+static char cwd[VFS_CWD_LENGTH] = "/";
 
 volatile int vfs_errno = 0;
 vfs_events_t vfs = {0};
@@ -381,8 +385,12 @@ int vfs_rmdir (const char *path)
 int vfs_chdir (const char *path)
 {
     int ret;
+    char *p;
 
     vfs_errno = 0;
+
+    if(!strcmp("..", path) && strcmp("/", (path = cwd)) && (p = strrchr(cwd, '/')))
+        *(p + (p == cwd ? 1 : 0)) = '\0';
 
     if(*path != '/' && strcmp(cwd, "/")) {
         if(strcmp(path, "..")) {
@@ -511,11 +519,20 @@ int vfs_chmod (const char *filename, vfs_st_mode_t attr, vfs_st_mode_t mask)
 
 int vfs_stat (const char *filename, vfs_stat_t *st)
 {
+    char tmp[VFS_CWD_LENGTH], *p;
+
+    if(!strcmp("..", filename)) {
+        strcpy(tmp, cwd);
+        if((p = strrchr(tmp, '/')))
+            *(p + (p == tmp ? 1 : 0)) = '\0';
+        filename = tmp;
+    }
+
     vfs_mount_t *mount = get_mount(filename);
 
     int ret = mount ? mount->vfs->fstat(get_filename(mount, filename), st) : -1;
 
-    if(ret == -1 && strchr(filename, '/') == NULL && !strcmp("/", cwd)) {
+    if(ret == -1 && (!strcmp("/", filename) || (strchr(filename, '/') == NULL && !strcmp("/", cwd)))) {
 
         strcat(cwd, filename);
         mount = get_mount(cwd);

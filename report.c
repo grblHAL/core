@@ -646,9 +646,10 @@ void report_ngc_parameters (void)
     hal.stream.write("]" ASCII_EOL);
 
     tool_data_t *tool_data;
+    tool_table_entry_t *tool;
 
     for (idx = 1; idx <= grbl.tool_table.n_tools; idx++) {
-        if((tool_data = grbl.tool_table.get_tool_by_idx((uint32_t)idx)) &&
+        if((tool_data = (tool = grbl.tool_table.get_tool_by_idx((uint32_t)idx))->data) &&
             (settings.macro_atc_flags.random_toolchanger ? tool_data->tool_id >= 0 : tool_data->tool_id > 0)) {
             hal.stream.write("[T:");
             hal.stream.write(uitoa(tool_data->tool_id));
@@ -656,7 +657,15 @@ void report_ngc_parameters (void)
             hal.stream.write(get_axis_values(tool_data->offset.values));
             hal.stream.write("|");
             hal.stream.write(get_axis_value(tool_data->radius));
+            hal.stream.write("|6,0,0|");
+            hal.stream.write(tool->name ? tool->name : ""); // TODO: sanitize name? (| not allowed)
+            if(tool->pocket >= 0) {
+                hal.stream.write("|");
+                hal.stream.write(uitoa((uint32_t)tool->pocket));
+            }
             hal.stream.write("]" ASCII_EOL);
+            if(tool->name)
+                hal.delay_ms(5, NULL);
         }
     }
 
