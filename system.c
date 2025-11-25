@@ -404,8 +404,13 @@ static status_code_t disable_lock (sys_state_t state, char *args)
             retval = Status_Reset;
         else if(settings.limits.flags.hard_enabled && settings.limits.flags.check_at_init && limit_signals_merge(hal.limits.get_state()).value)
             retval = Status_LimitsEngaged;
-        else if(limits_homing_required())
-            retval = Status_HomingRequired;
+        else if(limits_homing_required()) {
+            state_set(STATE_IDLE);
+            grbl.report.feedback_message(Message_None);
+            //retval = Status_HomingRequired;
+            sys.alarm = Alarm_HomingRequired;
+            state_set(STATE_ALARM);
+        }
         else {
             grbl.report.feedback_message(Message_AlarmUnlock);
             state_set(STATE_IDLE);
