@@ -198,14 +198,6 @@
 #define SPINDLE_SYNC_ENABLE 0
 #endif
 
-#ifndef SPINDLE_ENCODER_ENABLE
-#if SPINDLE_SYNC_ENABLE
-#define SPINDLE_ENCODER_ENABLE  1
-#else
-#define SPINDLE_ENCODER_ENABLE  0
-#endif
-#endif
-
 #ifndef TRINAMIC_ENABLE
   #define TRINAMIC_ENABLE   0
 #endif
@@ -448,6 +440,14 @@
   #else
     #define STEP_INJECT_ENABLE 0
   #endif
+#endif
+
+#ifndef SPINDLE_ENCODER_ENABLE
+#if SPINDLE_SYNC_ENABLE && !(SPINDLE_ENABLE & (1 << SPINDLE_STEPPER))
+#define SPINDLE_ENCODER_ENABLE  1
+#else
+#define SPINDLE_ENCODER_ENABLE  0
+#endif
 #endif
 
 #ifndef QEI_ENABLE

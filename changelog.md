@@ -1,5 +1,36 @@
 ## grblHAL changelog
 
+<a name="20251130">Build 20251130
+
+Core:
+
+* Updated to allow Bluetooth serial streams to be used for MPG/pendants.
+
+* Parking mode improvements.
+
+* Removed requirement for external encoder for spindle sync if stepper spindle is enabled. 
+
+* Improved handling of `$680` stepper enable delay.
+
+Drivers:
+
+* ESP32, RP2040: Updated native Bluetooth implementations to allow Bluetooth serial streams to be used for MPG/pendants.
+
+* RP2040: updated LED strip code to use non-blocking DMA.
+Extended spindle PWM frequency range down to ~10Hz. Ref. discussion [#155](https://github.com/grblHAL/RP2040/discussions/155).
+
+* STM32F3xx: fixed compiler errors and warnings for generic board, ref. issue [#5](https://github.com/grblHAL/STM32F3xx/issues/5).
+
+* STM32F4xx: refactored LED strip drivers, now supports up to two strips via DMA based PWM.
+
+Plugins:
+
+* Bluetooth: updated to allow use for MPG/pendants.
+
+* Misc, FNC Expander: added compile time option for PWM outputs, some general improvements.
+
+---
+
 <a name="20251111">Build 20251111
 
 Core:

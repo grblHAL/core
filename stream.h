@@ -131,8 +131,10 @@ typedef union {
     uint8_t value;
     struct {
         uint8_t dtr    :1,
+                dsr    :1,
                 rts    :1,
-                unused :6;
+                cts    :1,
+                unused :4;
     };
 } serial_linestate_t;
 
@@ -282,7 +284,9 @@ typedef union {
                 is_usb          :1,
                 linestate_event :1, //!< Set when driver supports on_linestate_changed event.
                 passthru        :1, //!< Set when stream is in passthru mode.
-                unused          :4;
+                utf8            :1, //!< Set when stream is in UTF8 mode.
+                eof             :1, //!< Set when a file stream reaches end-of-file.
+                unused          :2;
     };
 } io_stream_state_t;
 
@@ -334,7 +338,7 @@ typedef struct {
     stream_get_status_ptr get_status;                       //!< Optional handler for getting stream status, for UART streams only
 } io_stream_properties_t;
 
-typedef bool (*stream_enumerate_callback_ptr)(io_stream_properties_t const *properties);
+typedef bool (*stream_enumerate_callback_ptr)(io_stream_properties_t const *properties, void *data);
 
 typedef struct io_stream_details {
     uint8_t n_streams;
@@ -380,6 +384,11 @@ typedef struct {
 extern "C" {
 #endif
 
+static inline bool stream_is_uart (stream_type_t type)
+{
+    return type == StreamType_Serial || type == StreamType_Bluetooth;
+}
+
 /*! \brief Dummy function for reading data from a virtual empty input buffer.
 \returns always -1 as there is no data available.
 */
@@ -404,7 +413,7 @@ bool stream_mpg_enable (bool on);
 
 void stream_mpg_set_mode (void *data);
 
-bool stream_mpg_check_enable (char c);
+bool stream_mpg_check_enable (uint8_t c);
 
 bool stream_buffer_all (uint8_t c);
 
@@ -414,7 +423,7 @@ bool stream_enqueue_realtime_command (uint8_t c);
 
 void stream_register_streams (io_stream_details_t *details);
 
-bool stream_enumerate_streams (stream_enumerate_callback_ptr callback);
+bool stream_enumerate_streams (stream_enumerate_callback_ptr callback, void *data);
 
 bool stream_connect (const io_stream_t *stream);
 

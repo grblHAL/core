@@ -2366,86 +2366,121 @@ status_code_t report_pins (sys_state_t state, char *args)
     return Status_OK;
 }
 
+typedef struct {
+    uint32_t idx;
+    const io_stream_properties_t *port;
+} port_data_t;
+
+typedef struct {
+    uint8_t instance;
+    uint32_t n_pins;
+    pin_info_t data[2];
+} port_pins_t;
+
 static void get_uart_pins (xbar_t *pin, void *data)
 {
-    if(pin->group >= PinGroup_UART && pin->group <= PinGroup_UART4)
-        get_pin_info(pin, &((pin_data_t *)data)->pins[((pin_data_t *)data)->idx++]);
+    if(pin->group == PinGroup_UART + ((port_pins_t *)data)->instance)
+        get_pin_info(pin, &((port_pins_t *)data)->data[((port_pins_t *)data)->n_pins++]);
 }
 
-static void count_uart_pins (xbar_t *pin, void *data)
+static bool report_port_info (const io_stream_properties_t *port, void *data)
 {
-    if(pin->group >= PinGroup_UART && pin->group <= PinGroup_UART4)
-        ((pin_data_t *)data)->n_pins++;
-}
+    if(!stream_is_uart(port->type))
+        return false;
 
-static void report_port_info (pin_info_t *pin)
-{
+    port_pins_t pins = {0};
     const io_stream_status_t *status;
 
-    if(pin->function == Input_RX) {
-        strcpy(buf, pin->port);
-        strcat(buf, uitoa(pin->pin));
-        strcat(buf, ",");
-        strcat(buf, xbar_fn_to_pinname(Input_RX));
-        strcat(buf, "|");
+    hal.stream.write("[PORT:");
+    hal.stream.write(uitoa(port->instance));
+    hal.stream.write("|");
+    if(port->type == StreamType_Bluetooth) {
+        hal.stream.write("BT||");
     } else {
-
-        uint8_t instance = (pin->sortkey >> 16) - PinGroup_UART;
-
-        hal.stream.write("[PORT:");
-        hal.stream.write(uitoa(instance));
-        hal.stream.write("|");
-        hal.stream.write(pin->description);
-        hal.stream.write("|");
-        hal.stream.write(*buf ? buf : "-|");
-        if(*pin->port)
-            hal.stream.write(pin->port);
-        hal.stream.write(uitoa(pin->pin));
-        hal.stream.write(",");
-        hal.stream.write(xbar_fn_to_pinname(pin->function));
-        if(hal.stream.write_char && (status = stream_get_uart_status(instance))) {
-            hal.stream.write("|");
-            hal.stream.write(uitoa(status->baud_rate));
-            hal.stream.write(",");
-            hal.stream.write_char("87"[status->format.width]);
-            hal.stream.write(",");
-            hal.stream.write_char("NEOMS"[status->format.parity]);
-            hal.stream.write(",");
-            hal.stream.write(((const char * const[]){"1", "1.5", "2", "0.5"})[status->format.stopbits]);
-            if(status->flags.rts_handshake)
-                hal.stream.write(",P");
-            hal.stream.write("|");
-            hal.stream.write_char("FC"[status->flags.claimed]);
-        }
-        hal.stream.write("]" ASCII_EOL);
-        *buf = '\0';
+        uint32_t idx = 0;
+        pins.instance = port->instance;
+        if(hal.enumerate_pins)
+            hal.enumerate_pins(false, get_uart_pins, &pins);
+        if(pins.n_pins) {
+            hal.stream.write(pins.data[0].description);
+            for(idx = 0; idx < pins.n_pins; idx++) {
+                hal.stream.write("|");
+                if(*pins.data[idx].port)
+                    hal.stream.write(pins.data[idx].port);
+                hal.stream.write(uitoa(pins.data[idx].pin));
+                hal.stream.write(",");
+                hal.stream.write(xbar_fn_to_pinname(pins.data[idx].function));
+            }
+            for(; idx < 2; idx++)
+                hal.stream.write("|");
+        } else
+            hal.stream.write("UART||");
     }
+
+    if(hal.stream.write_char && (status = stream_get_uart_status(port->instance))) {
+        hal.stream.write("|");
+        hal.stream.write(uitoa(status->baud_rate));
+        hal.stream.write(",");
+        hal.stream.write_char("87"[status->format.width]);
+        hal.stream.write(",");
+        hal.stream.write_char("NEOMS"[status->format.parity]);
+        hal.stream.write(",");
+        hal.stream.write(((const char * const[]){"1", "1.5", "2", "0.5"})[status->format.stopbits]);
+        if(status->flags.rts_handshake)
+            hal.stream.write(",P");
+        hal.stream.write("|");
+        hal.stream.write_char("FC"[status->flags.claimed]);
+    }
+
+    hal.stream.write("]" ASCII_EOL);
+
+    return false;
+}
+
+bool get_ports (io_stream_properties_t const *port, void *data)
+{
+    if(stream_is_uart(port->type)) {
+        ((port_data_t *)data)[((port_data_t *)data)->idx].port = port;
+        ((port_data_t *)data)->idx++;
+    }
+
+    return false;
+}
+
+bool count_ports (io_stream_properties_t const *port, void *data)
+{
+    if(stream_is_uart(port->type))
+        (*(uint32_t *)data)++;
+
+    return false;
+}
+
+static int cmp_ports (const void *a, const void *b)
+{
+    return ((port_data_t *)a)->port->instance - ((port_data_t *)b)->port->instance;
 }
 
 status_code_t report_uart_ports (sys_state_t state, char *args)
 {
-    pin_data_t pin_data = {0};
+    uint32_t n_ports = 0;
+    port_data_t *port_data;
 
-    if(hal.enumerate_pins) {
+    stream_enumerate_streams(count_ports, &n_ports);
+    if(n_ports) {
+        if((port_data = malloc(n_ports * sizeof(port_data_t)))) {
 
-        hal.enumerate_pins(false, count_uart_pins, (void *)&pin_data);
+            port_data->idx = 0;
+            stream_enumerate_streams(get_ports, port_data);
 
-        if((pin_data.pins = malloc(pin_data.n_pins * sizeof(pin_info_t)))) {
+            qsort(port_data, n_ports, sizeof(port_data_t), cmp_ports);
+            for(port_data->idx = 0; port_data->idx < n_ports; port_data->idx++)
+                report_port_info(port_data[port_data->idx].port, NULL);
 
-            *buf = '\0';
-
-            hal.enumerate_pins(false, get_uart_pins, (void *)&pin_data);
-
-            qsort(pin_data.pins, pin_data.n_pins, sizeof(pin_info_t), cmp_pins);
-            for(pin_data.idx = 0; pin_data.idx < pin_data.n_pins; pin_data.idx++)
-                report_port_info(&pin_data.pins[pin_data.idx]);
-
-            free(pin_data.pins);
-
+            free(port_data);
         } else
-            hal.enumerate_pins(false, report_pin, NULL);
-    }
-
+            stream_enumerate_streams(report_port_info, NULL);   
+    } 
+  
     return Status_OK;
 }
 

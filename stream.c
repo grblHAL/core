@@ -89,7 +89,7 @@ void stream_register_streams (io_stream_details_t *details)
     }
 }
 
-bool stream_enumerate_streams (stream_enumerate_callback_ptr callback)
+bool stream_enumerate_streams (stream_enumerate_callback_ptr callback, void *data)
 {
     if(callback == NULL)
         return false;
@@ -100,7 +100,7 @@ bool stream_enumerate_streams (stream_enumerate_callback_ptr callback)
     while(details && !claimed) {
         uint_fast8_t idx;
         for(idx = 0; idx < details->n_streams; idx++) {
-            if((claimed = callback(&details->streams[idx])))
+            if((claimed = callback(&details->streams[idx], data)))
                 break;
         }
         details = details->next;
@@ -134,7 +134,8 @@ const io_stream_status_t *stream_get_uart_status (uint8_t instance)
     while(details) {
         uint_fast8_t idx;
         for(idx = 0; idx < details->n_streams; idx++) {
-            if(details->streams[idx].type == StreamType_Serial && details->streams[idx].instance == instance) {
+            if(details->streams[idx].instance == instance &&
+               stream_is_uart(details->streams[idx].type)) {
                 if(details->streams[idx].get_status)
                     status = details->streams[idx].get_status(instance);
                 break;
@@ -439,33 +440,38 @@ bool stream_connect (const io_stream_t *stream)
 {
     bool ok;
 
-    if((ok = stream_select(stream, true)))
+    if((ok = stream && stream_select(stream, true)))
         stream_set_description(stream, "Primary UART");
 
     return ok;
 }
 
-static struct {
+typedef struct {
     uint8_t instance;
     uint32_t baud_rate;
     io_stream_t const *stream;
-} connection;
+} connection_t;
 
-static bool _open_instance (io_stream_properties_t const *stream)
+static bool _open_instance (io_stream_properties_t const *stream, void *data)
 {
-    if(stream->type == StreamType_Serial && (connection.instance == 255 || stream->instance == connection.instance) && stream->flags.claimable && !stream->flags.claimed)
-        connection.stream = stream->claim(connection.baud_rate);
+    connection_t *connection = (connection_t *)data;
 
-    return connection.stream != NULL;
+    if(stream_is_uart(stream->type) &&
+        (connection->instance == 255 || stream->instance == connection->instance) &&
+          stream->flags.claimable && !stream->flags.claimed)
+        connection->stream = stream->claim(connection->baud_rate);
+
+    return connection->stream != NULL;
 }
 
 bool stream_connect_instance (uint8_t instance, uint32_t baud_rate)
 {
-    connection.instance = instance;
-    connection.baud_rate = baud_rate;
-    connection.stream = NULL;
+    connection_t connection = {
+        .instance = instance,
+        .baud_rate = baud_rate
+    };
 
-    return stream_enumerate_streams(_open_instance) && stream_connect(connection.stream);
+    return stream_enumerate_streams(_open_instance, &connection) && stream_connect(connection.stream);
 }
 
 void stream_disconnect (const io_stream_t *stream)
@@ -476,11 +482,12 @@ void stream_disconnect (const io_stream_t *stream)
 
 io_stream_t const *stream_open_instance (uint8_t instance, uint32_t baud_rate, stream_write_char_ptr rx_handler, const char *description)
 {
-    connection.instance = instance;
-    connection.baud_rate = baud_rate;
-    connection.stream = NULL;
+    connection_t connection = {
+        .instance = instance,
+        .baud_rate = baud_rate
+    };
 
-    if(stream_enumerate_streams(_open_instance)) {
+    if(stream_enumerate_streams(_open_instance, &connection)) {
         connection.stream->set_enqueue_rt_handler(rx_handler);
         if(description)
             stream_set_description(connection.stream, description);
@@ -539,7 +546,7 @@ void stream_mpg_set_mode (void *data)
     stream_mpg_enable(data != NULL);
 }
 
-ISR_CODE bool ISR_FUNC(stream_mpg_check_enable)(char c)
+ISR_CODE bool ISR_FUNC(stream_mpg_check_enable)(uint8_t c)
 {
     if(c == CMD_MPG_MODE_TOGGLE)
     	task_add_immediate(stream_mpg_set_mode, (void *)1);
@@ -554,7 +561,7 @@ ISR_CODE bool ISR_FUNC(stream_mpg_check_enable)(char c)
 
 bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stream_write_char_ptr write_char)
 {
-    if(stream == NULL || stream->type != StreamType_Serial || stream->disable_rx == NULL)
+    if(stream == NULL || !stream_is_uart(stream->type) || stream->disable_rx == NULL)
         return false;
 
 //    base.flags.is_up = On;
@@ -630,8 +637,11 @@ bool stream_mpg_enable (bool on)
             hal.stream.read = mpg.stream.read;
             mpg.stream.disable_rx(false);
             mpg.stream.set_enqueue_rt_handler(hal.stream.set_enqueue_rt_handler(NULL));
-            if(mpg.flags.is_mpg_tx)
+            if(mpg.flags.is_mpg_tx) {
                 hal.stream.write = mpg.stream.write;
+                hal.stream.write_n = mpg.stream.write_n;
+                hal.stream.write_char = mpg.stream.write_char;
+            }
             hal.stream.get_rx_buffer_free = mpg.stream.get_rx_buffer_free;
             hal.stream.cancel_read_buffer = mpg.stream.cancel_read_buffer;
             hal.stream.reset_read_buffer = mpg.stream.reset_read_buffer;

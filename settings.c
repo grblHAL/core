@@ -434,6 +434,7 @@ static char probing_options[] = "Allow feed override,Apply soft limits,N/A,Auto 
 static char control_signals[] = "Reset,Feed hold,Cycle start,Safety door,Block delete,Optional stop,EStop,Probe disconnected,Motor fault,Motor warning,Limits override,Single step blocks,Toolsetter overtravel";
 static char spindle_signals[] = "Spindle enable,Spindle direction,PWM";
 static char coolant_signals[] = "Flood,Mist";
+static char door_options[] = "Ignore when idle,Keep coolant state on door open";
 static char ganged_axes[] = "X-Axis,Y-Axis,Z-Axis";
 #if !AXIS_REMAP_ABC2UVW
   #if N_AXIS == 4
@@ -949,6 +950,8 @@ static status_code_t set_parking_enable (setting_id_t id, uint_fast16_t int_valu
 
     if(settings.parking.flags.deactivate_upon_init)
         settings.parking.flags.enable_override_control = On;
+
+    //setting_remove_elements(Setting_ProbePullUpDisable, mask);
 
     return Status_OK;
 }
@@ -1951,7 +1954,7 @@ static bool is_setting_available (const setting_detail_t *setting, uint_fast16_t
 #ifndef NO_SAFETY_DOOR_SUPPORT
 
         case Setting_DoorOptions:
-            available = hal.signals_cap.safety_door_ajar;
+            available = hal.signals_cap.safety_door_ajar || !settings.parking.flags.enabled;
             break;
 
         case Setting_DoorSpindleOnDelay:
@@ -2106,7 +2109,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_ParkingFastRate, Group_SafetyDoor, "Parking fast rate", "mm/min", Format_Decimal, "###0.0", NULL, NULL, Setting_IsExtended, &settings.parking.rate, NULL, NULL },
      { Setting_RestoreOverrides, Group_General, "Restore overrides", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_restore_overrides, get_int, NULL },
 #ifndef NO_SAFETY_DOOR_SUPPORT
-     { Setting_DoorOptions, Group_SafetyDoor, "Safety door options", NULL, Format_Bitfield, "Ignore when idle,Keep coolant state on open", NULL, NULL, Setting_IsExtended, &settings.safety_door.flags.value, NULL, is_setting_available },
+     { Setting_DoorOptions, Group_SafetyDoor, "Safety door options", NULL, Format_Bitfield, door_options, NULL, NULL, Setting_IsExtended, &settings.safety_door.flags.value, NULL, is_setting_available },
 #endif
      { Setting_SleepEnable, Group_General, "Sleep enable", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_sleep_enable, get_int, is_setting_available },
      { Setting_HoldActions, Group_General, "Feed hold actions", NULL, Format_Bitfield, "Disable laser during hold,Restore spindle and coolant state on resume", NULL, NULL, Setting_IsExtendedFn, set_hold_actions, get_int, NULL },
@@ -2287,7 +2290,8 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_ParkingFastRate, "Parking fast rate to target after pull-out in mm/min." },
     { Setting_RestoreOverrides, "Restore overrides to default values at program end." },
 #ifndef NO_SAFETY_DOOR_SUPPORT
-    { Setting_DoorOptions, "Enable this if it is desirable to open the safety door when in IDLE mode (eg. for jogging)." },
+    { Setting_DoorOptions, "Ignore when idle: disregard door signal in IDLE state to allow jogging etc. Available when controller has door input.\n"
+    		               "Keep coolant state on open: do not turn off coolant if on." },
 #endif
     { Setting_SleepEnable, "Enable sleep mode." },
     { Setting_HoldActions, "Actions taken during feed hold and on resume from feed hold." },
@@ -3518,6 +3522,9 @@ void settings_init (void)
     uint32_t mask = 0b001 | (hal.driver_cap.toolsetter << 1) | (hal.driver_cap.probe2 << 2);
     setting_remove_elements(Setting_InvertProbePin, mask);
     setting_remove_elements(Setting_ProbePullUpDisable, mask);
+#ifndef NO_SAFETY_DOOR_SUPPORT
+    setting_remove_elements(Setting_DoorOptions, ((!settings.parking.flags.enabled || hal.signals_cap.safety_door_ajar) << 1) | hal.signals_cap.safety_door_ajar);
+#endif
 
     mask = 0b00011 | (hal.probe.select ? ((hal.driver_cap.toolsetter << 3) | (hal.driver_cap.probe2 << 4)) : 0);
 #if 0

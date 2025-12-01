@@ -462,10 +462,7 @@ bool protocol_exec_rt_system (void)
             hal.driver_reset();
 
         // Halt everything upon a critical event flag. Currently hard and soft limits flag this.
-        if((sys.blocking_event = (alarm_code_t)rt_exec == Alarm_HardLimit ||
-                                  (alarm_code_t)rt_exec == Alarm_SoftLimit ||
-                                   (alarm_code_t)rt_exec == Alarm_EStop ||
-                                    (alarm_code_t)rt_exec == Alarm_MotorFault)) {
+        if((sys.blocking_event = alarm_is_critical((alarm_code_t)rt_exec))) {
 
             static const control_signals_t blocking_signals = { .e_stop = On, .motor_fault = On };
 
@@ -894,9 +891,9 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(uint8_t c)
             break;
 
         case CMD_SAFETY_DOOR:
-            if(state_get() != STATE_SAFETY_DOOR) {
+            if((drop = state_get() != STATE_SAFETY_DOOR)) {
+            	sys.flags.is_parking = settings.parking.flags.enabled;
                 system_set_exec_state_flag(EXEC_SAFETY_DOOR);
-                drop = true;
             }
             break;
 

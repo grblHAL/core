@@ -3,22 +3,22 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2023 Terje Io
+  Copyright (c) 2017-2025 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
-  Grbl is free software: you can redistribute it and/or modify
+  grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
 
-  Grbl is distributed in the hope that it will be useful,
+  grblHAL is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   GNU General Public License for more details.
 
   You should have received a copy of the GNU General Public License
-  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef _ALARMS_H_
@@ -67,5 +67,13 @@ alarm_details_t *alarms_get_details (void);
 const char *alarms_get_description (alarm_code_t id);
 void alarms_register (alarm_details_t *details);
 
-#endif
+static inline bool alarm_is_critical (alarm_code_t alarm)
+{
+	return alarm == Alarm_HardLimit ||
+			alarm == Alarm_SoftLimit ||
+			 alarm == Alarm_EStop ||
+			  alarm == Alarm_MotorFault ||
+			   alarm == Alarm_ExpanderException;
+}
 
+#endif

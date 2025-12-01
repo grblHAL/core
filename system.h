@@ -274,7 +274,8 @@ typedef union {
                  auto_reporting          :1, //!< Set to true when auto real time reporting is enabled.
                  travel_changed          :1, //!< Set to true when maximum travel settings has changed.
                  is_homing               :1,
-                 unused                  :4;
+				 is_parking			     :1, //!< Set to true when CMD_SAFETY_DOOR is received.
+                 unused                  :3;
     };
 } system_flags_t;
 
@@ -331,6 +332,7 @@ typedef struct system {
     bool cold_start;                        //!< Set to true on boot, is false on subsequent soft resets.
     bool ioinit_pending;
     bool driver_started;                    //!< Set to true when driver initialization is completed.
+    bool steppers_enabled;                  //!< Set to true when all steppers are enabled.
     bool mpg_mode;                          //!< To be moved to system_flags_t
     signal_event_t last_event;              //!< Last signal events (control and limits signal).
     int32_t position[N_AXIS];               //!< Real-time machine (aka home) position vector in steps.

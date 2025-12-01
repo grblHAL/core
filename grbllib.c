@@ -95,6 +95,7 @@ static driver_startup_t driver = { .ok = 0xFF };
 static core_task_t *next_task = NULL, *immediate_task = NULL, *on_booted = NULL, *systick_task = NULL, *last_freed = NULL;
 static on_linestate_changed_ptr on_linestate_changed;
 static settings_changed_ptr hal_settings_changed;
+static stepper_enable_ptr stepper_enable;
 
 #ifdef KINEMATICS_API
 kinematics_t kinematics;
@@ -209,6 +210,14 @@ static void onLinestateChanged (serial_linestate_t state)
 
     if(on_linestate_changed)
         on_linestate_changed(state);
+}
+
+static void stepperEnable (axes_signals_t enable, bool hold)
+{
+    if(stepper_enable)
+        stepper_enable(enable, hold);
+
+    sys.steppers_enabled = /*!hold &&*/ enable.bits == AXES_BITMASK;
 }
 
 static void print_pos_msg (void *data)
@@ -353,6 +362,9 @@ int grbl_enter (void)
     memset(sys.position, 0, sizeof(sys.position)); // Clear machine position.
 
 // check and configure driver
+
+    stepper_enable = hal.stepper.enable;
+    hal.stepper.enable = stepperEnable;
 
 #if ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
     driver.amass = hal.driver_cap.amass_level >= MAX_AMASS_LEVEL;

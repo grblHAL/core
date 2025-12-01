@@ -246,6 +246,26 @@
 #define TRINAMIC_MOTOR_ENABLE 0
 #endif
 
+#if MPG_ENABLE && !defined(MPG_STREAM)
+#if USB_SERIAL_CDC
+#define MPG_STREAM          0
+#else
+#define MPG_STREAM          1
+#endif
+#if (MODBUS_ENABLE & MODBUS_RTU_ENABLED) && defined(MODBUS_RTU_STREAM) && MODBUS_RTU_STREAM == MPG_STREAM
+#undef MPG_STREAM
+#define MPG_STREAM (MODBUS_RTU_STREAM + 1)
+#endif
+#endif
+
+#if MPG_ENABLE && MPG_ENABLE != 2 && MPG_STREAM == 20 && BLUETOOTH_ENABLE != 1
+#error "MPG can only be used with native Bluetooth and character mode switching!"
+#endif
+
+#if BLUETOOTH_ENABLE == 2 && !defined(BLUETOOTH_STREAM)
+#define BLUETOOTH_STREAM 255 // Select first free UART stream
+#endif
+
 #if USB_SERIAL_CDC && defined(SERIAL_PORT)
 #define SP0 1
 #else
@@ -276,34 +296,36 @@
 #define TRINAMIC_TEST 0
 #endif
 
-#if KEYPAD_ENABLE == 2 && MPG_ENABLE == 0
+#if MPG_ENABLE && MPG_STREAM != 20
+#define MPG_TEST 1
+#else
+#define MPG_TEST 0
+#endif
+
+#if KEYPAD_ENABLE == 2 && !MPG_TEST
 #define KEYPAD_TEST 1
 #else
 #define KEYPAD_TEST 0
 #endif
 
-#if (MODBUS_TEST + KEYPAD_TEST + (MPG_ENABLE ? 1 : 0) + TRINAMIC_TEST + (BLUETOOTH_ENABLE == 2 ? 1 : 0)) > (SP0 + SP1 + SP2)
-#error "Too many options that uses a serial port are enabled!"
+#if BLUETOOTH_ENABLE == 2 && (!MPG_ENABLE || MPG_STREAM != BLUETOOTH_STREAM)
+#define BT_TEST 1
+#else
+#define BT_TEST 0
+#endif
+
+#if (MODBUS_TEST + KEYPAD_TEST + MPG_TEST + TRINAMIC_TEST + BT_TEST) > (SP0 + SP1 + SP2)
+#error "Too many options that requires a serial port are enabled!"
 #endif
 
 #undef SP0
 #undef SP1
 #undef SP2
+#undef BT_TEST
 #undef MODBUS_TEST
+#undef MPG_TEST
 #undef KEYPAD_TEST
 #undef TRINAMIC_TEST
-
-#if MPG_ENABLE && !defined(MPG_STREAM)
-#if USB_SERIAL_CDC
-#define MPG_STREAM          0
-#else
-#define MPG_STREAM          1
-#endif
-#if (MODBUS_ENABLE & MODBUS_RTU_ENABLED) && defined(MODBUS_RTU_STREAM) && MODBUS_RTU_STREAM == MPG_STREAM
-#undef MPG_STREAM
-#define MPG_STREAM (MODBUS_RTU_STREAM + 1)
-#endif
-#endif
 
 #if KEYPAD_ENABLE == 2 && !defined(KEYPAD_STREAM)
 #if MPG_ENABLE

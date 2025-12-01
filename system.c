@@ -92,6 +92,7 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
         } else {
 #ifndef NO_SAFETY_DOOR_SUPPORT
             if(signals.safety_door_ajar && hal.signals_cap.safety_door_ajar && !gc_state.tool_change) {
+            	sys.flags.is_parking = false;
                 if(settings.safety_door.flags.ignore_when_idle) {
                     // Only stop the spindle (laser off) when idle or jogging,
                     // this to allow positioning the controlled point (spindle) when door is open.
@@ -1254,11 +1255,7 @@ void system_raise_alarm (alarm_code_t alarm)
         system_set_exec_alarm(alarm);
     else if(sys.alarm != alarm) {
         sys.alarm = alarm;
-        sys.blocking_event = sys.alarm == Alarm_HardLimit ||
-                              sys.alarm == Alarm_SoftLimit ||
-                               sys.alarm == Alarm_EStop ||
-                                sys.alarm == Alarm_MotorFault;
-        state_set(alarm == Alarm_EStop ? STATE_ESTOP : STATE_ALARM);
+        sys.blocking_event = alarm_is_critical(sys.alarm);
         if(sys.driver_started || sys.alarm == Alarm_SelftestFailed)
             grbl.report.alarm_message(alarm);
     }

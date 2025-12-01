@@ -39,6 +39,7 @@ target_sources(grbl INTERFACE
  ${CMAKE_CURRENT_LIST_DIR}/ngc_flowctrl.c
  ${CMAKE_CURRENT_LIST_DIR}/regex.c
  ${CMAKE_CURRENT_LIST_DIR}/ioports.c
+ ${CMAKE_CURRENT_LIST_DIR}/utf8.c
  ${CMAKE_CURRENT_LIST_DIR}/vfs.c
  ${CMAKE_CURRENT_LIST_DIR}/canbus.c
  ${CMAKE_CURRENT_LIST_DIR}/pid.c

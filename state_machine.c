@@ -576,16 +576,17 @@ static void state_await_hold (uint_fast16_t rt_exec)
                         // Parking motion not possible. Just disable the spindle and coolant.
                         // NOTE: Laser mode does not start a parking motion to ensure the laser stops immediately.
                         spindle_all_off(); // De-energize
-                        if (!settings.safety_door.flags.keep_coolant_on || sys_state == STATE_SLEEP)
+                        if(sys.flags.is_parking || sys_state == STATE_SLEEP || !settings.safety_door.flags.keep_coolant_on)
                             hal.coolant.set_state((coolant_state_t){0}); // De-energize
                         sys.parking_state = hal.control.get_state().safety_door_ajar ? Parking_DoorAjar : Parking_DoorClosed;
                     }
                 } else {
                     spindle_all_off(); // De-energize
-                    if (!settings.safety_door.flags.keep_coolant_on || sys_state == STATE_SLEEP)
+                    if(sys.flags.is_parking || sys_state == STATE_SLEEP || !settings.safety_door.flags.keep_coolant_on)
                         hal.coolant.set_state((coolant_state_t){0}); // De-energize
                     sys.parking_state = hal.control.get_state().safety_door_ajar ? Parking_DoorAjar : Parking_DoorClosed;
                 }
+                sys.flags.is_parking = false;
                 break;
 
             default:

@@ -519,7 +519,7 @@ static void modbus_set_direction (bool tx)
     ioport_digital_out(dir_port, tx);
 }
 
-static bool claim_stream (io_stream_properties_t const *sstream)
+static bool claim_stream (io_stream_properties_t const *sstream, void *data)
 {
     io_stream_t const *claimed = NULL;
 
@@ -598,7 +598,7 @@ void modbus_rtu_init (int8_t instance, int8_t dir_aux)
 
     stream_instance = instance;
 
-    if((hal.driver_cap.modbus_rtu = stream_enumerate_streams(claim_stream) && (nvs_address = nvs_alloc(sizeof(rtu_settings_t))))) {
+    if((hal.driver_cap.modbus_rtu = stream_enumerate_streams(claim_stream, NULL) && (nvs_address = nvs_alloc(sizeof(rtu_settings_t))))) {
 
         if(stream.set_direction == NULL && dir_aux != -2) {
 
