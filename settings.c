@@ -2188,7 +2188,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_MotorFaultsEnable, Group_Stepper, "Motor fault inputs enable", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.motor_fault_enable, NULL, is_setting_available },
      { Setting_MotorFaultsInvert, Group_Stepper, "Invert motor fault inputs", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.motor_fault_invert, NULL, is_setting_available },
      { Setting_ResetActions, Group_General, "Reset actions", NULL, Format_Bitfield, "Clear homed status if position was lost,Clear offsets (except G92),Clear rapids override,Clear feed override", NULL, NULL, Setting_IsExtendedFn, set_reset_actions, get_int, NULL },
-     { Setting_StepperEnableDelay, Group_Stepper, "Stepper enable delay", "ms", Format_Int16, "##0", NULL, "250", Setting_IsExtended, &settings.stepper_enable_delay, NULL, NULL },
+     { Setting_StepperEnableDelay, Group_Stepper, "Stepper enable delay", "ms", Format_Int16, "##0", NULL, "500", Setting_IsExtended, &settings.stepper_enable_delay, NULL, NULL },
 };
 
 PROGMEM static const setting_descr_t setting_descr[] = {

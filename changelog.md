@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+<a name="20251202">Build 20251202
+
+Core:
+
+* Fix for copy paste error introduced in build 20251130 causing alarms to be ignored.
+
+* Increased `$680`, stepper enable delay limit to 500ms.
+
+Drivers:
+
+* STM32F3xx: fixed typo in generic board, ref. issue [#5](https://github.com/grblHAL/STM32F3xx/issues/5).
+
+---
+
 <a name="20251130">Build 20251130
 
 Core:

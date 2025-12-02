@@ -118,10 +118,10 @@ uint16_t utf32_to_utf8 (uint8_t *buffer, uint32_t code_point)
 //    assert(code_point <= 0x10FFFF);
 //    assert(code_point < 0xD800 || code_point > 0xDFFF);
 
-	if(code_point > 0x10FFFF)
-		return 0;
+    if(code_point > 0x10FFFF)
+        return 0;
 
-	uint16_t idx, length = 1;
+    uint16_t idx, length = 1;
     uint32_t first_byte = code_point, mask;
 
     if(code_point <= 0x7F) {
