@@ -2257,28 +2257,28 @@ Adds directory entries in $F and $F+ output to allow hierarchical navigation of 
 */
 ///@{
 #if !defined DEFAULT_X_JERK|| defined __DOXYGEN__
-#define DEFAULT_X_JERK 100.0f // mm/sec^3
+#define DEFAULT_X_JERK (DEFAULT_X_ACCELERATION * 10.0f) // mm/sec^3
 #endif
 #if !defined DEFAULT_Y_JERK|| defined __DOXYGEN__
-#define DEFAULT_Y_JERK 100.0f // mm/sec^3
+#define DEFAULT_Y_JERK (DEFAULT_Y_ACCELERATION * 10.0f) // mm/sec^3
 #endif
 #if !defined DEFAULT_Z_JERK || defined __DOXYGEN__
-#define DEFAULT_Z_JERK 100.0f // mm/sec^3
+#define DEFAULT_Z_JERK (DEFAULT_Z_ACCELERATION * 10.0f) // mm/sec^3
 #endif
 #if (defined A_AXIS && !defined DEFAULT_A_JERK) || defined __DOXYGEN__
-#define DEFAULT_A_JERK 100.0f // mm/sec^3
+#define DEFAULT_A_JERK (DEFAULT_A_ACCELERATION * 10.0f) // mm/sec^3
 #endif
 #if (defined B_AXIS && !defined DEFAULT_B_JERK) || defined __DOXYGEN__
-#define DEFAULT_B_JERK 100.0f // mm/sec^3
+#define DEFAULT_B_JERK (DEFAULT_B_ACCELERATION * 10.0f) // mm/sec^3
 #endif
 #if (defined C_AXIS && !defined DEFAULT_C_JERK) || defined __DOXYGEN__
-#define DEFAULT_C_JERK 100.0f // mm/sec^3
+#define DEFAULT_C_JERK (DEFAULT_C_ACCELERATION * 10.0f) // mm/sec^3
 #endif
 #if (defined U_AXIS && !defined DEFAULT_U_JERK) || defined __DOXYGEN__
-#define DEFAULT_U_JERK 100.0f // mm/sec^3
+#define DEFAULT_U_JERK (DEFAULT_U_ACCELERATION * 10.0f) // mm/sec^3
 #endif
 #if (defined V_AXIS && !defined DEFAULT_V_JERK) || defined __DOXYGEN__
-#define DEFAULT_V_JERK 100.0f // mm/sec^3
+#define DEFAULT_V_JERK (DEFAULT_V_ACCELERATION * 10.0f) // mm/sec^3
 #endif
 ///@}
 

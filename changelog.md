@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+<a name="20251207">Build 20251207
+
+Core:
+
+* Final fix for handling of `$680` stepper enable delay.
+
+Drivers:
+
+* STM32F3xx: added missed commit for the SuperLongBoards causing compilation failure, ref. issue [#863](https://github.com/grblHAL/core/issues/863).
+
+---
+
 <a name="20251202">Build 20251202
 
 Core:

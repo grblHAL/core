@@ -201,8 +201,10 @@ void st_wake_up (void)
 
     hal.stepper.go_idle(true); // Reset step & dir outputs
 
-    if(!sys.steppers_enabled && settings.stepper_enable_delay)
+    if(!sys.steppers_enabled && settings.stepper_enable_delay) {
+        hal.stepper.enable((axes_signals_t){AXES_BITMASK}, false);
         hal.delay_ms(settings.stepper_enable_delay, NULL);
+    }
 
     hal.stepper.wake_up();
 }
