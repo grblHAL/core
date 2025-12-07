@@ -778,6 +778,16 @@ static status_code_t rtc_action (sys_state_t state, char *args)
     return retval;
 }
 
+static status_code_t reboot_system (sys_state_t state, char *args)
+{
+    report_message("Rebooting controller, communication may be lost", Message_Warning);
+    hal.delay_ms(100, NULL);
+
+    hal.reboot();
+    
+    return Status_OK;
+}
+
 #ifdef DEBUG
 
 #include "nvs_buffer.h"
@@ -887,6 +897,11 @@ const char *help_homing (const char *cmd)
     return NULL;
 }
 
+const char *help_reboot (const char *cmd)
+{
+    return hal.reboot ? "reboot (hard reset) controller" : NULL;
+}
+
 /*! \brief Command dispatch table
  */
 PROGMEM static const sys_command_t sys_commands[] = {
@@ -980,6 +995,7 @@ PROGMEM static const sys_command_t sys_commands[] = {
     { "SD", report_spindle_data, { .help_fn = On }, { .fn = help_spindle } },
     { "SR", spindle_reset_data, { .help_fn = On }, { .fn = help_spindle } },
     { "SDS", report_stepper_status, { .noargs = On, .allow_blocking = On, .help_fn = On }, { .fn = help_steppers } },
+    { "REBOOT", reboot_system, { .noargs = On, .allow_blocking = On, .help_fn = On }, { .fn = help_reboot } },
     { "RTC", rtc_action, { .allow_blocking = On, .help_fn = On }, { .fn = help_rtc } },
     { "DWNGRD", settings_downgrade, { .noargs = On, .allow_blocking = On }, { .str = "toggle setting flags for downgrade" } },
 #ifdef DEBUG
