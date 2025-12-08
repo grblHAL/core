@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+<a name="20251208">Build 20251208
+
+Core:
+
+* Added `$REBOOT` command for hard resetting controller. Available for drivers supporting the required HAL API. Ref. PR [#865](https://github.com/grblHAL/core/pull/865).
+> [!NOTE]
+> Communication with the controller will be lost if the connection is via native USB or network \(WiFi, Ethernet or Bluetooth\).
+
+Drivers:
+
+* iMRXT1062: fix for incorrect step timing \(too long pulse off minimum\). Ref. issue [#104](https://github.com/grblHAL/iMXRT1062/issues/104).
+
+---
+
 <a name="20251207">Build 20251207
 
 Core:
@@ -8,7 +22,7 @@ Core:
 
 Drivers:
 
-* STM32F3xx: added missed commit for the SuperLongBoards causing compilation failure, ref. issue [#863](https://github.com/grblHAL/core/issues/863).
+* STM32F3xx: added missed commit for the SuperLongBoards causing compilation failure, ref. issue [#268](https://github.com/grblHAL/STM32F4xx/issues/268).
 
 ---
 
@@ -23,6 +37,7 @@ Core:
 Drivers:
 
 * STM32F3xx: fixed typo in generic board, ref. issue [#5](https://github.com/grblHAL/STM32F3xx/issues/5).
+>! [NOTE]
 
 ---
 
