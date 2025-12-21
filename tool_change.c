@@ -139,18 +139,20 @@ static void reset (void)
 // Restore coolant and spindle status, return controlled point to original position.
 static bool restore (void)
 {
-    bool ok;
+    bool ok = true;
     plan_line_data_t plan_data;
 
     plan_data_init(&plan_data);
     plan_data.condition.rapid_motion = On;
 
-    if(!(ok = (target.values[plane.axis_0] == previous.values[plane.axis_0] &&
-                target.values[plane.axis_1] == previous.values[plane.axis_1]))) {
+    // Always move Z to home position first (unless full restore is disabled)
+    target.values[plane.axis_linear] = sys.home_position[plane.axis_linear];
+    ok = mc_line(target.values, &plan_data);
 
-        target.values[plane.axis_linear] = sys.home_position[plane.axis_linear];
-
-        if((ok = mc_line(target.values, &plan_data)) && !settings.flags.no_restore_position_after_M6) {
+    // Then move XY to previous position if needed and full restore is enabled
+    if(ok && !settings.flags.no_restore_position_after_M6) {
+        if(target.values[plane.axis_0] != previous.values[plane.axis_0] ||
+           target.values[plane.axis_1] != previous.values[plane.axis_1]) {
             memcpy(&target, &previous, sizeof(coord_data_t));
             target.values[plane.axis_linear] = sys.home_position[plane.axis_linear];
             ok = mc_line(target.values, &plan_data);
