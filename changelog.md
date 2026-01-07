@@ -1,5 +1,13 @@
 ## grblHAL changelog
 
+<a name="20260107">Build 20260107
+
+Core:
+
+Fix for regression causing loss of tool offset on soft reset when `$676` option is to keep offsets.
+
+---
+
 <a name="20251208">Build 20251208
 
 Core:
@@ -37,7 +45,6 @@ Core:
 Drivers:
 
 * STM32F3xx: fixed typo in generic board, ref. issue [#5](https://github.com/grblHAL/STM32F3xx/issues/5).
->! [NOTE]
 
 ---
 
@@ -355,7 +362,7 @@ Plugins:
 
 * Embroidery: fix for bug causing streaming of DST files to hang on first jump command. Ref. issue [#6](https://github.com/grblHAL/Plugin_embroidery/issues/6).
 
-* WebUI: switched to core JSON serializer, reduces memory usage /(RAM/) significantly. 
+* WebUI: switched to core JSON serializer, reduces memory usage \(RAM\) significantly. 
 
 * SD card: added `$FF=yes` command for formatting SD cards, requires FatFS `f_mkfs` option enabled.
 
@@ -363,7 +370,7 @@ Drivers:
 
 * Simulator: fix for crash on hard limits triggered, tuned code, ref issue [#16](https://github.com/grblHAL/Simulator/issues/16).
 > [!NOTE]
-> Hard limit events may not result in alarm 1 as they should due to a compiler bug /(not handling volatiles correctly/). At least the Web Builder Windows version is affected.
+> Hard limit events may not result in alarm 1 as they should due to a compiler bug \(not handling volatiles correctly\). At least the Web Builder Windows version is affected.
 
 ---
 

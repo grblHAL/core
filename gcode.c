@@ -390,10 +390,14 @@ void gc_init (bool stop)
         }
     } else {
 
+        coord_data_t tlo;
         coord_system_id_t coord_system_id = gc_state.modal.coord_system.id;
         tool_offset_mode_t tool_offset_mode = gc_state.modal.tool_offset_mode;
 
+        memcpy(&tlo, gc_state.modal.tool_length_offset, sizeof(coord_data_t));
         memset(&gc_state, 0, offsetof(parser_state_t, g92_coord_offset));
+        memcpy(gc_state.modal.tool_length_offset, &tlo, sizeof(coord_data_t));
+
         gc_state.tool_pending = gc_state.tool->tool_id;
         if(hal.tool.select)
             hal.tool.select(gc_state.tool, false);
