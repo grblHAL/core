@@ -62,7 +62,7 @@ typedef enum {
     NonModal_ClearCoordinateOffset = 112,   //!< 112 - G92.2
  #if ENABLE_ACCELERATION_PROFILES
     NonModal_RestoreCoordinateOffset = 122, //!< 122 - G92.3
-    NonModal_SetAccelerationProfile = 187   //!< 187 - G187 
+    NonModal_SetAccelerationProfile = 187   //!< 187 - G187
  #else
     NonModal_RestoreCoordinateOffset = 122 //!< 122 - G92.3
  #endif
@@ -277,6 +277,7 @@ typedef enum {
     Trinamic_HybridThreshold = 913,     //!< 913 - M913, Marlin format
     Trinamic_HomingSensitivity = 914,   //!< 914 - M914, Marlin format
     Trinamic_ChopperTiming = 919,       //!< 919 - M919, Marlin format
+    Sienci_Atci_Enable = 960,           //!< 960 - M960
     Spindle_Select = UserMCode_Generic4 //!< Value to be assigned later!
 } user_mcode_t;
 

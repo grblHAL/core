@@ -238,6 +238,12 @@
     event_out_init();
 #endif
 
+#if ATCI_ENABLE
+  extern void atci_init(void);
+  atci_init();
+#endif
+
+
 // End third party plugin definitions.
 
 #if ODOMETER_ENABLE
