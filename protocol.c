@@ -585,6 +585,10 @@ bool protocol_exec_rt_system (void)
             st_reset();
             sync_position();
 
+            // If we were parked, adjust gc_state position back to pre-park position.
+            // The machine physically moved for parking but the logical work position hasn't changed.
+            state_await_parking_adjustment();
+
             // Kill spindle and coolant. TODO: Check Mach3 behaviour?
             gc_spindle_off();
             gc_coolant((coolant_state_t){0});
