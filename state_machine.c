@@ -29,6 +29,7 @@
 #include "motion_control.h"
 #include "state_machine.h"
 #include "override.h"
+#include "gcode.h"
 
 static void state_idle (uint_fast16_t new_state);
 static void state_cycle (uint_fast16_t rt_exec);
@@ -184,6 +185,20 @@ static bool initiate_hold (uint_fast16_t new_state)
 bool state_door_reopened (void)
 {
     return settings.parking.flags.enabled && park.flags.restart;
+}
+
+// Applies parking position adjustment to gc_state if currently parked.
+// When stopping while parked, gc_state.position needs to be adjusted back to the
+// original position before parking, since the machine physically moved for parking but
+// the logical work position hasn't changed.
+// Must be called after sync_position() and before state_set(STATE_IDLE) clears park flags.
+void state_await_parking_adjustment (void)
+{
+    if (settings.parking.flags.enabled && park.flags.active && park.flags.motion) {
+        float current_pos[N_AXIS];
+        system_convert_array_steps_to_mpos(current_pos, sys.position);
+        gc_state.position[settings.parking.axis] += park.restore_target[settings.parking.axis] - current_pos[settings.parking.axis];
+    }
 }
 
 void state_update (rt_exec_t rt_exec)
