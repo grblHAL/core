@@ -670,7 +670,8 @@ typedef union {
         uint8_t enabled                 :1,
                 deactivate_upon_init    :1,
                 enable_override_control :1,
-                unassigned              :5;
+                rehome_on_park_stop     :1,
+                unassigned              :4;
     };
 } parking_setting_flags_t;
 

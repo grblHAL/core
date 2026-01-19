@@ -30,6 +30,6 @@ void state_set (sys_state_t state);
 void state_update (rt_exec_t rt_exec);
 bool state_door_reopened (void);
 void state_suspend_manager (void);
-void state_await_parking_adjustment (void);
+bool state_get_parking_state (void);
 
 #endif

@@ -1785,6 +1785,9 @@ are used the logic of the input signals should be be inverted with the \ref axis
 #if !defined DEFAULT_ENABLE_PARKING_OVERRIDE_CONTROL || defined __DOXYGEN__
 #define DEFAULT_ENABLE_PARKING_OVERRIDE_CONTROL Off // bit 2
 #endif
+#if !defined DEFAULT_REHOME_ON_PARK_STOP || defined __DOXYGEN__
+#define DEFAULT_REHOME_ON_PARK_STOP Off // bit 3
+#endif
 ///@}
 
 /*! @name $42 - Setting_ParkingAxis
