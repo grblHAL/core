@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2025 Terje Io
+  Copyright (c) 2021-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -360,7 +360,7 @@ void ioport_assign_function (aux_ctrl_t *aux_ctrl, pin_function_t *function)
         hal.signals_cap.mask |= aux_ctrl->signal.mask;
 
         if(aux_ctrl->function == Input_Probe || xbar_fn_to_signals_mask(aux_ctrl->function).mask)
-            setting_remove_elements(Settings_IoPort_InvertIn, ports_cfg[Port_DigitalIn].bus.mask);
+            setting_remove_elements(Settings_IoPort_InvertIn, ports_cfg[Port_DigitalIn].bus.mask, false);
     }
 }
 
@@ -375,7 +375,7 @@ void ioport_assign_out_function (aux_ctrl_out_t *aux_ctrl, pin_function_t *funct
         ports_cfg[Port_DigitalOut].bus.mask &= ~(1UL << output->id);
         ports_cfg[Port_DigitalOut].count = ports_cfg[Port_DigitalOut].free = -1;
 
-        setting_remove_elements(Settings_IoPort_InvertOut, ports_cfg[Port_DigitalOut].bus.mask);
+        setting_remove_elements(Settings_IoPort_InvertOut, ports_cfg[Port_DigitalOut].bus.mask, false);
     }
 }
 
@@ -402,7 +402,7 @@ bool ioport_set_function (xbar_t *pin, pin_function_t function, driver_caps_t ca
                     if(caps.control)
                         hal.signals_cap.mask |= caps.control->mask;
                     if(function == Input_Probe || function == Input_Probe2 || function == Input_Toolsetter || xbar_fn_to_signals_mask(function).mask)
-                        setting_remove_elements(Settings_IoPort_InvertIn, cfg->bus.mask);
+                        setting_remove_elements(Settings_IoPort_InvertIn, cfg->bus.mask, false);
                     break;
 
                 case Port_DigitalOut:
@@ -418,7 +418,7 @@ bool ioport_set_function (xbar_t *pin, pin_function_t function, driver_caps_t ca
 
                         default: break;
                     }
-                    setting_remove_elements(Settings_IoPort_InvertOut, cfg->bus.mask);
+                    setting_remove_elements(Settings_IoPort_InvertOut, cfg->bus.mask, false);
                     break;
 
                 default: break;
@@ -744,11 +744,15 @@ static bool io_analog_out (uint8_t port, float value)
     io_ports_list_t *io_port = ports;
     io_ports_private_t *cfg = get_port_data(Port_Analog, Port_Output);
 
-    port = cfg->map[port];
+    uint8_t pn = cfg->map[port];
 
     do {
-        if(io_port->hal.analog_out && is_match(io_port, Port_Analog, Port_Output, port))
-            return io_port->hal.analog_out(port - io_port->ports_id->cfg[Port_Output].n_start, value);
+        if(io_port->hal.analog_out && is_match(io_port, Port_Analog, Port_Output, pn)) {
+            bool ok = io_port->hal.analog_out(pn - io_port->ports_id->cfg[Port_Output].n_start, value);
+            if(ok && grbl.on_port_out && !(cfg->claimed.mask & (1 << pn)))
+                grbl.on_port_out(port, Port_Analog, value);
+            return ok;
+        }
     } while((io_port = io_port->next));
 
     return false;
@@ -759,11 +763,13 @@ static void io_digital_out (uint8_t port, bool on)
     io_ports_list_t *io_port = ports;
     io_ports_private_t *cfg = get_port_data(Port_Digital, Port_Output);
 
-    port = cfg->map[port];
+    uint8_t pn = cfg->map[port];
 
     do {
-        if(io_port->hal.digital_out && is_match(io_port, Port_Digital, Port_Output, port)) {
-            io_port->hal.digital_out(port - io_port->ports_id->cfg[Port_Output].n_start, on);
+        if(io_port->hal.digital_out && is_match(io_port, Port_Digital, Port_Output, pn)) {
+            io_port->hal.digital_out(pn - io_port->ports_id->cfg[Port_Output].n_start, on);
+            if(grbl.on_port_out && !(cfg->claimed.mask & (1 << pn)))
+                grbl.on_port_out(port, Port_Digital, (float)on);
             break;
         }
     } while((io_port = io_port->next));
@@ -886,8 +892,10 @@ static uint8_t add_ports (io_ports_detail_t *ports, uint8_t *map, io_port_type_t
         if(p_data->ports == NULL)
             p_data->ports = ports;
         p_data->count = -1;
-    } else
+    } else {
         ports->n_start = 255;
+        ports->idx_last = 0;
+    }
 
     p_data->n_ports += n_ports;
     ports->n_ports = n_ports;
@@ -1553,7 +1561,7 @@ static void ioports_configure (settings_t *settings)
                 out_config.open_drain = !!(settings->ioport.od_enable_out.mask & (1 << port));
                 xbar->config(xbar, &out_config, false);
             } else // TODO: same for inputs?
-                setting_remove_elements(Settings_IoPort_InvertOut, cfg->bus.mask & ~(1 << port));
+                setting_remove_elements(Settings_IoPort_InvertOut, cfg->bus.mask & ~(1 << port), false);
         }
     } while(port);
 

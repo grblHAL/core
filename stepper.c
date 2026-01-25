@@ -89,11 +89,6 @@ static float cycles_per_min;
 // Step segment ring buffer pointers
 static volatile segment_t *segment_buffer_tail, *segment_buffer_head;
 
-#if ENABLE_JERK_ACCELERATION
-// Static storage for acceleration value of last computed segment.
-static float last_segment_accel = 0.0f;
-#endif
-
 // Pointers for the step segment being prepped from the planner buffer. Accessed only by the
 // main program. Pointers may be planning segments or planner blocks ahead of what being executed.
 static plan_block_t *pl_block;     // Pointer to the planner block being prepped
@@ -102,9 +97,13 @@ static st_block_t st_hold_block;   // Copy of stepper block data for block put o
 
 // Segment preparation data struct. Contains all the necessary information to compute new segments
 // based on the current executing planner block.
-typedef struct {
+DCRAM static struct {
     prep_flags_t recalculate;
-
+    ramp_type_t ramp_type;      // Current segment ramp state
+#if ENABLE_JERK_ACCELERATION
+    bool jerk;
+    float last_accel;   // Acceleration of last computed segment.
+#endif
     float dt_remainder;
     uint32_t steps_remaining;
     float steps_per_mm;
@@ -115,7 +114,6 @@ typedef struct {
     float last_steps_per_mm;
     float last_dt_remainder;
 
-    ramp_type_t ramp_type;  // Current segment ramp state
     float mm_complete;      // End of velocity profile from end of current planner block in (mm).
                             // NOTE: This value must coincide with a step(no mantissa) when converted.
     float current_speed;    // Current speed at the end of the segment buffer (mm/min)
@@ -130,11 +128,56 @@ typedef struct {
     float target_feed;      //
     float inv_feedrate;     // Used by PWM laser mode to speed up segment calculations.
     float current_spindle_rpm;
-} st_prep_t;
+} prep;
 
 //! \endcond
 
-DCRAM static st_prep_t prep;
+//DCRAM static st_prep_t prep;
+
+#ifdef JERK_LOG
+
+jlog_t jlog;
+
+static status_code_t jlog_out (sys_state_t state, char *args)
+{
+    uint32_t idx;
+
+    hal.stream.write("[JLOG:");
+    hal.stream.write(trim_float(ftoa(jlog.max_accel, 6)));
+    hal.stream.write(",");
+    hal.stream.write(trim_float(ftoa(jlog.accel, 6)));
+    hal.stream.write(",");
+    hal.stream.write(trim_float(ftoa(jlog.jerk, 6)));
+    hal.stream.write("]" ASCII_EOL);
+
+    for(idx = 0; idx < jlog.idx; idx++) {
+        hal.stream.write("[");
+        hal.stream.write(trim_float(ftoa(jlog.data[idx].s0, 6)));
+        hal.stream.write(",");
+        hal.stream.write(trim_float(ftoa(jlog.data[idx].s, 6)));
+        hal.stream.write(",");
+        hal.stream.write(trim_float(ftoa(jlog.data[idx].v0, 6)));
+        hal.stream.write(",");
+        hal.stream.write(trim_float(ftoa(jlog.data[idx].v, 6)));
+        hal.stream.write(",");
+        hal.stream.write(trim_float(ftoa(jlog.data[idx].a0, 6)));
+        hal.stream.write(",");
+        hal.stream.write(trim_float(ftoa(jlog.data[idx].da, 6)));
+        hal.stream.write(",");
+        hal.stream.write(trim_float(ftoa(jlog.data[idx].t, 6)));
+        hal.stream.write(",");
+        hal.stream.write(trim_float(ftoa(jlog.data[idx].v, 6)));
+        hal.stream.write(",");
+        hal.stream.write(trim_float(ftoa(jlog.data[idx].mm_remaining, 6)));
+        hal.stream.write(",");
+        hal.stream.write(trim_float(ftoa(jlog.data[idx].time_var, 6)));
+        hal.stream.write("]" ASCII_EOL);
+    }
+
+    return Status_OK;
+}
+
+#endif
 
 extern void gc_output_message (char *message);
 
@@ -498,6 +541,9 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
                 #ifdef V_AXIS
                   = st.counter.v
                 #endif
+                #ifdef W_AXIS
+                  = st.counter.w
+                #endif
                   = st.step_event_count >> 1;
 
               #if !ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
@@ -557,8 +603,8 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
 
     // Execute step displacement profile by Bresenham line algorithm
 
-    st.counter.x += st.steps.value[X_AXIS];
-    if (st.counter.x > st.step_event_count) {
+    st.counter.x += st.steps.x;
+    if(st.counter.x > st.step_event_count) {
         step_out.x = On;
         st.counter.x -= st.step_event_count;
 #if ENABLE_BACKLASH_COMPENSATION
@@ -567,8 +613,8 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
             sys.position[X_AXIS] = sys.position[X_AXIS] + (st.dir_out.x ? -1 : 1);
     }
 
-    st.counter.y += st.steps.value[Y_AXIS];
-    if (st.counter.y > st.step_event_count) {
+    st.counter.y += st.steps.y;
+    if(st.counter.y > st.step_event_count) {
         step_out.y = On;
         st.counter.y -= st.step_event_count;
 #if ENABLE_BACKLASH_COMPENSATION
@@ -578,76 +624,88 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
     }
 
     if(st.steps.value[Z_AXIS]) {
-    st.counter.z += st.steps.value[Z_AXIS];
-    if (st.counter.z > st.step_event_count) {
-        step_out.z = On;
-        st.counter.z -= st.step_event_count;
+        st.counter.z += st.steps.z;
+        if(st.counter.z > st.step_event_count) {
+            step_out.z = On;
+            st.counter.z -= st.step_event_count;
 #if ENABLE_BACKLASH_COMPENSATION
-        if(!backlash_motion)
+            if(!backlash_motion)
 #endif
-            sys.position[Z_AXIS] = sys.position[Z_AXIS] + (st.dir_out.z ? -1 : 1);
-    }
+                sys.position[Z_AXIS] = sys.position[Z_AXIS] + (st.dir_out.z ? -1 : 1);
+        }
     }
 
-  #ifdef A_AXIS
-      st.counter.a += st.steps.value[A_AXIS];
-      if (st.counter.a > st.step_event_count) {
+#ifdef A_AXIS
+      st.counter.a += st.steps.a;
+      if(st.counter.a > st.step_event_count) {
           step_out.a = On;
           st.counter.a -= st.step_event_count;
-#if ENABLE_BACKLASH_COMPENSATION
+  #if ENABLE_BACKLASH_COMPENSATION
         if(!backlash_motion)
-#endif
-              sys.position[A_AXIS] = sys.position[A_AXIS] + (st.dir_out.a ? -1 : 1);
-      }
   #endif
+            sys.position[A_AXIS] = sys.position[A_AXIS] + (st.dir_out.a ? -1 : 1);
+      }
+#endif
 
-  #ifdef B_AXIS
-      st.counter.b += st.steps.value[B_AXIS];
-      if (st.counter.b > st.step_event_count) {
+#ifdef B_AXIS
+      st.counter.b += st.steps.b;
+      if(st.counter.b > st.step_event_count) {
           step_out.b = On;
           st.counter.b -= st.step_event_count;
-#if ENABLE_BACKLASH_COMPENSATION
+  #if ENABLE_BACKLASH_COMPENSATION
         if(!backlash_motion)
-#endif
-              sys.position[B_AXIS] = sys.position[B_AXIS] + (st.dir_out.b ? -1 : 1);
-      }
   #endif
+            sys.position[B_AXIS] = sys.position[B_AXIS] + (st.dir_out.b ? -1 : 1);
+      }
+#endif
 
-  #ifdef C_AXIS
-      st.counter.c += st.steps.value[C_AXIS];
-      if (st.counter.c > st.step_event_count) {
+#ifdef C_AXIS
+      st.counter.c += st.steps.c;
+      if(st.counter.c > st.step_event_count) {
           step_out.c = On;
           st.counter.c -= st.step_event_count;
-#if ENABLE_BACKLASH_COMPENSATION
+  #if ENABLE_BACKLASH_COMPENSATION
         if(!backlash_motion)
-#endif
-              sys.position[C_AXIS] = sys.position[C_AXIS] + (st.dir_out.c ? -1 : 1);
-      }
   #endif
+            sys.position[C_AXIS] = sys.position[C_AXIS] + (st.dir_out.c ? -1 : 1);
+      }
+#endif
 
-  #ifdef U_AXIS
-    st.counter.u += st.steps.value[U_AXIS];
-    if (st.counter.u > st.step_event_count) {
+#ifdef U_AXIS
+    st.counter.u += st.steps.u;
+    if(st.counter.u > st.step_event_count) {
         step_out.u = On;
         st.counter.u -= st.step_event_count;
 #if ENABLE_BACKLASH_COMPENSATION
       if(!backlash_motion)
 #endif
-            sys.position[U_AXIS] = sys.position[U_AXIS] + (st.dir_out.u ? -1 : 1);
+          sys.position[U_AXIS] = sys.position[U_AXIS] + (st.dir_out.u ? -1 : 1);
     }
   #endif
 
-  #ifdef V_AXIS
-    st.counter.v += st.steps.value[V_AXIS];
-    if (st.counter.v > st.step_event_count) {
+#ifdef V_AXIS
+    st.counter.v += st.steps.v;
+    if(st.counter.v > st.step_event_count) {
         step_out.v = On;
         st.counter.v -= st.step_event_count;
-#if ENABLE_BACKLASH_COMPENSATION
+  #if ENABLE_BACKLASH_COMPENSATION
       if(!backlash_motion)
-#endif
-            sys.position[V_AXIS] = sys.position[V_AXIS] + (st.dir_out.v ? -1 : 1);
-    }
   #endif
+          sys.position[V_AXIS] = sys.position[V_AXIS] + (st.dir_out.v ? -1 : 1);
+    }
+#endif
+
+#ifdef W_AXIS
+    st.counter.w += st.steps.w;
+    if (st.counter.w > st.step_event_count) {
+        step_out.w = On;
+        st.counter.w -= st.step_event_count;
+  #if ENABLE_BACKLASH_COMPENSATION
+      if(!backlash_motion)
+  #endif
+          sys.position[W_AXIS] = sys.position[W_AXIS] + (st.dir_out.w ? -1 : 1);
+    }
+#endif
 
     st.step_out.bits = step_out.bits;
 
@@ -699,7 +757,7 @@ void st_reset (void)
     pl_block = NULL;  // Planner block pointer used by segment buffer
     segment_buffer_tail = segment_buffer_head = &segment_buffer[0]; // empty = tail
 
-    memset(&prep, 0, sizeof(st_prep_t));
+    memset(&prep, 0, sizeof(prep));
     memset(&st, 0, sizeof(stepper_t));
 
 #if ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
@@ -712,6 +770,27 @@ void st_reset (void)
 #endif
 
     cycles_per_min = (float)hal.f_step_timer * 60.0f;
+
+#ifdef JERK_LOG
+    static bool ok = false;
+
+    memset(&jlog, 0, sizeof(jlog_t));
+
+    if(!ok) {
+        ok = true;
+
+        static const sys_command_t jerk_command_list[] = {
+            {"JLOG", jlog_out, { .noargs = On }, { .str = "output jerk log" } },
+        };
+
+        static sys_commands_t jerk_commands = {
+            .n_commands = sizeof(jerk_command_list) / sizeof(sys_command_t),
+            .commands = jerk_command_list
+        };
+
+        system_register_commands(&jerk_commands);
+    }
+#endif
 }
 
 // Called by spindle_set_state() to inform about RPM changes.
@@ -838,6 +917,14 @@ void st_prep_buffer (void)
 
                 st_prep_block = st_prep_block->next;
 
+#ifdef JERK_LOG
+                memset(&jlog, 0, sizeof(jlog_t));
+
+                jlog.accel = pl_block->acceleration;
+                jlog.max_accel = pl_block->max_acceleration;
+                jlog.jerk = pl_block->jerk;
+#endif
+
                 uint_fast8_t idx = N_AXIS;
 #if ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
                 // With AMASS enabled, simply bit-shift multiply all Bresenham data by the max AMASS
@@ -874,6 +961,9 @@ void st_prep_buffer (void)
                 prep.steps_remaining = pl_block->step_event_count;
                 prep.req_mm_increment = REQ_MM_INCREMENT_SCALAR / prep.steps_per_mm;
                 prep.dt_remainder = prep.target_position = 0.0f; // Reset for new segment block
+#if ENABLE_JERK_ACCELERATION
+                prep.jerk = pl_block->condition.jerk;
+#endif
 #ifdef KINEMATICS_API
                 prep.rate_multiplier = pl_block->rate_multiplier;
 #endif
@@ -1026,10 +1116,6 @@ void st_prep_buffer (void)
         float speed_var; // Speed worker variable
         float mm_remaining = pl_block->millimeters; // New segment distance from end of block.
         float minimum_mm = mm_remaining - prep.req_mm_increment; // Guarantee at least one step.
-#if ENABLE_JERK_ACCELERATION
-        float time_to_jerk;     // time needed for jerk ramp
-        float jerk_rampdown;    // calculated startpoint of jerk rampdown
-#endif
 
         if (minimum_mm < 0.0f)
             minimum_mm = 0.0f;
@@ -1050,26 +1136,48 @@ void st_prep_buffer (void)
                         mm_remaining -= time_var * (prep.current_speed - 0.5f * speed_var);
                         prep.current_speed -= speed_var;
                     }
+#if ENABLE_JERK_ACCELERATION
+                    prep.last_accel = 0.0f;  // reset acceleration variable to 0 for next accel ramp
+#endif
                     break;
 
                 case Ramp_Accel:
                     // NOTE: Acceleration ramp only computes during first do-while loop.
 #if ENABLE_JERK_ACCELERATION
-                    time_to_jerk = last_segment_accel / pl_block->jerk;
-                    jerk_rampdown =time_to_jerk * (prep.current_speed + (0.5f * last_segment_accel * time_to_jerk) + (pl_block->jerk * time_to_jerk * time_to_jerk) / 6.0f);  //Distance to 0 acceleration at speed (mm == V(0)*T + 1/2 A0*T^2 + 1/6 J*T^3)
-                    if ((mm_remaining - prep.accelerate_until) > jerk_rampdown) {
-                        //+1.0f to avoid divide by 0 speed, minor effect on jerk ramp
-                        // Check if we are on ramp up or ramp down. Ramp down if distance to end of acceleration is less than distance needed to reach 0 acceleration.
-                        // Then limit acceleration change by jerk up to max acceleration and update for next segment.
-                        // Minimum acceleration jerk per time_var to ensure acceleration completes. Acceleration change at end of ramp is in acceptable jerk range.
-                        last_segment_accel = min(last_segment_accel + pl_block->jerk * time_var, pl_block->max_acceleration);
-                    } else {
-                        last_segment_accel = max(last_segment_accel - pl_block->jerk * time_var, pl_block->jerk * time_var);
-                    }
-                    speed_var = last_segment_accel * time_var;
-#else
-                    speed_var = pl_block->acceleration * time_var;
+                    if(prep.jerk) {
+                        float accel_var = pl_block->jerk * time_var; // Delta acceleration
+                        float time_to_jerk = prep.last_accel / pl_block->jerk;
+                        //Distance to 0 acceleration at speed (mm == V(0)*T + 1/2 A0*T^2 + 1/6 J*T^3)
+                        float jerk_rampdown = time_to_jerk * (prep.current_speed +
+                                                              (0.5f * prep.last_accel * time_to_jerk) +
+                                                                pl_block->jerk * time_to_jerk * time_to_jerk * (1.0f / 6.0f));
+#ifdef JERK_LOG
+                        jlog.data[jlog.idx].s0 = mm_remaining - prep.accelerate_until;
+                        jlog.data[jlog.idx].v0 = prep.current_speed;
+                        jlog.data[jlog.idx].a0 = prep.last_accel;
+                        jlog.data[jlog.idx].da = jlog.idx == 0 ? prep.last_accel : (prep.last_accel - jlog.data[jlog.idx-1].a0);
+                        jlog.data[jlog.idx].s = jerk_rampdown;
+                        jlog.data[jlog.idx].t = time_to_jerk;
 #endif
+                        //Distance to 0 acceleration at speed (mm == V(0)*T + 1/2 A0*T^2 + 1/6 J*T^3)
+                        if((mm_remaining - prep.accelerate_until) > jerk_rampdown) {
+                            //+1.0f to avoid divide by 0 speed, minor effect on jerk ramp - ??
+                            // Check if we are on ramp up or ramp down. Ramp down if distance to end of acceleration is less than distance needed to reach 0 acceleration.
+                            // Then limit acceleration change by jerk up to max acceleration and update for next segment.
+                            // Minimum acceleration jerk per time_var to ensure acceleration completes. Acceleration change at end of ramp is in acceptable jerk range.
+                            prep.last_accel = min(prep.last_accel + accel_var, pl_block->max_acceleration);
+                        } else {
+#ifdef JERK_LOG
+                            if(jlog.rd == 0) jlog.rd = jlog.idx;
+                            jlog.data[jlog.idx].ramp_down = true;
+#endif
+                            prep.last_accel = max(prep.last_accel - accel_var, accel_var);
+                        }
+                        speed_var = prep.last_accel * time_var;
+                    } else
+#endif // ENABLE_JERK_ACCELERATION
+                    speed_var = pl_block->acceleration * time_var;
+
                     mm_remaining -= time_var * (prep.current_speed + 0.5f * speed_var);
                     if (mm_remaining < prep.accelerate_until) { // End of acceleration ramp.
                         // Acceleration-cruise, acceleration-deceleration ramp junction, or end of block.
@@ -1078,10 +1186,21 @@ void st_prep_buffer (void)
                         prep.ramp_type = mm_remaining == prep.decelerate_after ? Ramp_Decel : Ramp_Cruise;
                         prep.current_speed = prep.maximum_speed;
 #if ENABLE_JERK_ACCELERATION
-                        last_segment_accel = 0.0f;  // reset acceleration variable to 0 for next accel ramp
+                        if(prep.jerk) {
+                            prep.last_accel = 0.0f;  // reset acceleration variable to 0 for next accel ramp
+#ifdef JERK_LOG
+                            if(prep.ramp_type == Ramp_Decel) jlog.d = jlog.idx;
 #endif
+                        }
+#endif // ENABLE_JERK_ACCELERATION
                     } else // Acceleration only.
                         prep.current_speed += speed_var;
+#ifdef JERK_LOG
+                    jlog.data[jlog.idx].accel = prep.ramp_type == Ramp_Accel;
+                    jlog.data[jlog.idx].v0 = prep.current_speed;
+                    jlog.data[jlog.idx].time_var = time_var;
+                    jlog.data[jlog.idx].mm_remaining = mm_remaining;
+#endif
                     break;
 
                 case Ramp_Cruise:
@@ -1094,6 +1213,9 @@ void st_prep_buffer (void)
                         time_var = (mm_remaining - prep.decelerate_after) / prep.maximum_speed;
                         mm_remaining = prep.decelerate_after; // NOTE: 0.0 at EOB
                         prep.ramp_type = Ramp_Decel;
+#ifdef JERK_LOG
+                        if(jlog.d == 0) jlog.d = jlog.idx;
+#endif
                     } else // Cruising only.
                         mm_remaining = mm_var;
                     break;
@@ -1101,20 +1223,37 @@ void st_prep_buffer (void)
                 default: // case Ramp_Decel:
                     // NOTE: mm_var used as a misc worker variable to prevent errors when near zero speed.
 #if ENABLE_JERK_ACCELERATION
-                    time_to_jerk = last_segment_accel / pl_block->jerk;
-                    jerk_rampdown = prep.exit_speed + time_to_jerk * (last_segment_accel - (0.5f * pl_block->jerk * time_to_jerk)); // Speedpoint to start ramping down deceleration. (V = a * t - 1/2 j * t^2)
-                    if (prep.current_speed > jerk_rampdown) {
-                        // Check if we are on ramp up or ramp down. Ramp down if speed is less than speed needed for reaching 0 acceleration.
-                        // Then limit acceleration change by jerk up to max acceleration and update for next segment.
-                        // Minimum acceleration of jerk per time_var to ensure deceleration completes. Acceleration change at end of ramp is in acceptable jerk range.
-                        last_segment_accel = min(last_segment_accel + pl_block->jerk * time_var, pl_block->max_acceleration);
-                    } else {
-                        last_segment_accel = max(last_segment_accel - pl_block->jerk * time_var, pl_block->jerk * time_var);
-                    }
-                    speed_var = last_segment_accel * time_var; // Used as delta speed (mm/min)
-#else
-                    speed_var = pl_block->acceleration * time_var; // Used as delta speed (mm/min)
+                    if(prep.jerk) {
+                        float accel_var = pl_block->jerk * time_var; // Delta acceleration
+                        float time_to_jerk = prep.last_accel == 0.0f ? accel_var : (prep.last_accel / pl_block->jerk);
+                        float jerk_rampdown = prep.exit_speed +
+                                               time_to_jerk * (prep.last_accel -
+                                                               (0.5f * pl_block->jerk * time_to_jerk)); // Speedpoint to start ramping down deceleration. (V = a * t - 1/2 j * t^2)
+#ifdef JERK_LOG
+                        jlog.data[jlog.idx].s0 = prep.decelerate_after - mm_remaining;
+                        jlog.data[jlog.idx].v0 = prep.current_speed;
+                        jlog.data[jlog.idx].a0 = prep.last_accel;
+                        jlog.data[jlog.idx].da = jlog.idx == 0 ? prep.last_accel : (prep.last_accel - jlog.data[jlog.idx-1].a0);
+                        jlog.data[jlog.idx].s = jerk_rampdown;
+                        jlog.data[jlog.idx].t = time_to_jerk;
 #endif
+                        if(prep.current_speed > jerk_rampdown) {
+                            // Check if we are on ramp up or ramp down. Ramp down if speed is less than speed needed for reaching 0 acceleration.
+                            // Then limit acceleration change by jerk up to max acceleration and update for next segment.
+                            // Minimum acceleration of jerk per time_var to ensure deceleration completes. Acceleration change at end of ramp is in acceptable jerk range.
+                            prep.last_accel = min(prep.last_accel + accel_var, pl_block->max_acceleration);
+                        } else {
+#ifdef JERK_LOG
+                            if(jlog.ru == 0) jlog.ru = jlog.idx;
+                            jlog.data[jlog.idx].ramp_down = true;
+#endif
+                            prep.last_accel = max(prep.last_accel - accel_var, accel_var);
+                        }
+                        speed_var = prep.last_accel * time_var; // Used as delta speed (mm/min)
+                    } else
+#endif //ENABLE_JERK_ACCELERATION
+                    speed_var = pl_block->acceleration * time_var; // Used as delta speed (mm/min)
+
                     if (prep.current_speed > speed_var) { // Check if at or below zero speed.
                         // Compute distance from end of segment to end of block.
                         mm_var = mm_remaining - time_var * (prep.current_speed - 0.5f * speed_var); // (mm)
@@ -1125,13 +1264,24 @@ void st_prep_buffer (void)
                         }
                     }
                     // Otherwise, at end of block or end of forced-deceleration.
+#if ENABLE_JERK_ACCELERATION
+                    if(prep.jerk) {
+                        time_var = 2.0f * (mm_remaining - prep.mm_complete) / (prep.current_speed + prep.exit_speed);
+//                        prep.last_accel = 0.0f;  // reset acceleration variable to 0 for next accel ramp
+                    } else
+#endif
                     time_var = 2.0f * (mm_remaining - prep.mm_complete) / (prep.current_speed + prep.exit_speed);
+
                     mm_remaining = prep.mm_complete;
                     prep.current_speed = prep.exit_speed;
-#if ENABLE_JERK_ACCELERATION
-                    last_segment_accel = 0.0f;  // reset acceleration variable to 0 for next accel ramp
-#endif
             }
+
+#ifdef JERK_LOG
+            jlog.data[jlog.idx].v = prep.current_speed;
+            jlog.data[jlog.idx].accel = prep.ramp_type == Ramp_Accel;
+            jlog.data[jlog.idx].time_var = time_var;
+            jlog.data[jlog.idx].mm_remaining = mm_remaining;
+#endif
 
             dt += time_var; // Add computed ramp time to total segment time.
 
@@ -1233,6 +1383,16 @@ void st_prep_buffer (void)
             prep_segment->cruising = prep.ramp_type == Ramp_Cruise;
             prep_segment->target_position = prep.target_position; //st_prep_block->millimeters - pl_block->millimeters;
         }
+
+
+#ifdef JERK_LOG
+if(jlog.idx < sizeof(jlog.data) - 1 && prep.ramp_type != Ramp_Cruise) {
+    jlog.data[jlog.idx].n_step = prep_segment->n_step;
+    jlog.data[jlog.idx].acc_step = jlog.idx == 0 ? prep_segment->n_step : jlog.data[jlog.idx-1].acc_step + prep_segment->n_step;
+    jlog.data[jlog.idx].time = cycles;
+    jlog.idx++;
+}
+#endif
 
 #if ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
         // Compute step timing and multi-axis smoothing level.

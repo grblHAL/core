@@ -3,7 +3,7 @@
 
   Calls the init function of enabled plugins, may be included at the end of the drivers driver_init() implementation.
 
-  These are NOT referenced in the core grbl code
+  These are NOT referenced in the core grblHAL code
 
   Part of grblHAL
 
@@ -166,7 +166,7 @@
     embroidery_init();
 #endif
 
-#if RGB_LED_ENABLE
+#if RGB_LED_ENABLE > 1
     extern void rgb_led_init (void);
     rgb_led_init();
 #endif
@@ -239,10 +239,14 @@
 #endif
 
 #if ATCI_ENABLE
-  extern void atci_init(void);
+  extern void atci_init (void);
   atci_init();
 #endif
 
+#if M800_ENABLE
+  extern void keyway_init (void);
+  keyway_init();
+#endif
 
 // End third party plugin definitions.
 

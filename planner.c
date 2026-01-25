@@ -321,10 +321,10 @@ float plan_compute_profile_nominal_speed (plan_block_t *block)
         nominal_speed *= (0.01f * (float)sys.override.rapid_rate);
     else {
         if(sys.override.feed_rate != 100 && !block->condition.no_feed_override) {
-			if(nominal_speed > block->rapid_rate)
-				nominal_speed = block->rapid_rate;
+            if(nominal_speed > block->rapid_rate)
+                nominal_speed = block->rapid_rate;
             nominal_speed *= (0.01f * (float)sys.override.feed_rate);
-		}
+        }
         if(nominal_speed > block->rapid_rate)
             nominal_speed = block->rapid_rate;
     }
@@ -424,6 +424,10 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
     block->offset_id = pl_data->offset_id;
     block->output_commands = pl_data->output_commands;
     block->message = pl_data->message;
+#if PLANNER_ADD_MOTION_MODE
+    if((block->motion_mode = pl_data->motion_mode) == MotionMode_Seek && !block->condition.rapid_motion)
+        block->motion_mode = MotionMode_Linear;
+#endif
     memcpy(block->target_mm, target, sizeof(float) * N_AXIS);
 
     // Copy position data based on type of motion being planned.
@@ -528,24 +532,28 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
 #endif
 
     block->millimeters = convert_delta_vector_to_unit_vector(unit_vec);
-#if ENABLE_JERK_ACCELERATION
-    block->max_acceleration = limit_acceleration_by_axis_maximum(unit_vec);
-    block->jerk = limit_jerk_by_axis_maximum(unit_vec);
-#else
-    block->acceleration = limit_acceleration_by_axis_maximum(unit_vec);
+#if ENABLE_ACCELERATION_PROFILES // recalculate the acceleration limits when enabled.
+//    block->acceleration_factor = pl_data->acceleration_factor;
 #endif
+#if ENABLE_JERK_ACCELERATION
+    if((block->condition.jerk = !(block->condition.jog_motion || block->condition.system_motion || block->spindle.state.synchronized))) {
+        block->max_acceleration = limit_acceleration_by_axis_maximum(unit_vec);
+        block->jerk = limit_jerk_by_axis_maximum(unit_vec);
+  #if ENABLE_ACCELERATION_PROFILES
+        block->max_acceleration *= pl_data->acceleration_factor;
+        block->jerk *= pl_data->acceleration_factor;
+  #endif
+    } else
+#endif // ENABLE_JERK_ACCELERATION
+    {
+        block->acceleration = limit_acceleration_by_axis_maximum(unit_vec);
+#if ENABLE_ACCELERATION_PROFILES
+        block->acceleration *= pl_data->acceleration_factor;
+#endif
+    }
     block->rapid_rate = limit_max_rate_by_axis_maximum(unit_vec);
 #ifdef KINEMATICS_API
     block->rate_multiplier = pl_data->rate_multiplier;
-#endif
-#if ENABLE_ACCELERATION_PROFILES                                 // recalculate the acceleration limits when enabled.
-    block->acceleration_factor = pl_data->acceleration_factor;
-#if ENABLE_JERK_ACCELERATION
-    block->max_acceleration *= block->acceleration_factor;
-    block->jerk *= block->acceleration_factor;
-#else
-    block->acceleration *= block->acceleration_factor;
-#endif
 #endif
 
     // Store programmed rate.
@@ -556,23 +564,28 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
         if (block->condition.inverse_time)
             block->programmed_rate *= block->millimeters;
     }
+
 #if ENABLE_JERK_ACCELERATION
+
     // Calculate effective acceleration over block. Since jerk acceleration takes longer to execute due to ramp up and 
     // ramp down of the acceleration at the start and end of a ramp we need to adjust the acceleration value the planner 
     // uses so it still calculates reasonable entry speeds, exit speeds and times to decelerate/accelerate. 
     // 2 general cases emerge: 
-    //     -slow speed regime: uncomplete jerk ramp (max_acceleration is not reached)
+    //     -slow speed regime: incomplete jerk ramp (max_acceleration is not reached)
     //     -high speed regime: complete jerk ramp + time at max_axcel to reach desired programmed_rates
     // Profiles are calculated as symmetrical (calculate to 1/2 programmed rate, then double)
-    float time_to_max_accel = block->max_acceleration / block->jerk;    // unit: min - time it takes to reach max acceleration 
-    float speed_after_jerkramp = 0.5f * block->jerk * time_to_max_accel * time_to_max_accel;   // unit: mm / min - velocity after one completed jerk ramp up - Vt = V0 + A0T + 1/2 jerk*T
-    if(0.5f * block->programmed_rate > speed_after_jerkramp)
-        // Profile time = 2x (1 complete jerk ramp + additional time at max_accel to reach desired speed)
-        block->acceleration = block->programmed_rate / (2.0f *(time_to_max_accel + (0.5f * block->programmed_rate - speed_after_jerkramp) / block->max_acceleration));     
-    else 
-        // Max Accel is not reached. time_to_halfvelocity = sqrt( 0.5 programmed_rate * 2 / jerk) -> derived from Vt = V0 + A0T + 1/2 jerk*T (v0 and a0t == 0 in this case)
-        block->acceleration = block->programmed_rate / (2.0f * sqrt(block->programmed_rate / block->jerk));  
-#endif
+    if(block->condition.jerk) {
+        float time_to_max_accel = block->max_acceleration / block->jerk;    // unit: min - time it takes to reach max acceleration
+        float speed_after_jerkramp = 0.5f * block->jerk * time_to_max_accel * time_to_max_accel;   // unit: mm / min - velocity after one completed jerk ramp up - Vt = V0 + A0T + 1/2 jerk*T
+        if(0.5f * block->programmed_rate > speed_after_jerkramp)
+            // Profile time = 2x (1 complete jerk ramp + additional time at max_accel to reach desired speed)
+            block->acceleration = block->programmed_rate / (2.0f * (time_to_max_accel + (0.5f * block->programmed_rate - speed_after_jerkramp) / block->max_acceleration));
+        else
+            // Max Accel is not reached. time_to_halfvelocity = sqrt(0.5 * programmed_rate * 2 / jerk) -> derived from Vt = V0 + A0T + 1/2 jerk*T (v0 and a0t == 0 in this case)
+            block->acceleration = block->programmed_rate / (2.0f * sqrt(block->programmed_rate / block->jerk));
+    }
+
+#endif // ENABLE_JERK_ACCELERATION
 
     // TODO: Need to check this method handling zero junction speeds when starting from rest.
     if ((block_buffer_head == block_buffer_tail) || (block->condition.system_motion)) {
@@ -594,8 +607,8 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
         // from path, but used as a robust way to compute cornering speeds, as it takes into account the
         // nonlinearities of both the junction angle and junction velocity.
         //
-        // NOTE: If the junction deviation value is finite, Grbl executes the motions in an exact path
-        // mode (G61). If the junction deviation value is zero, Grbl will execute the motion in an exact
+        // NOTE: If the junction deviation value is finite, grblHAL executes the motions in an exact path
+        // mode (G61). If the junction deviation value is zero, grblHAL will execute the motion in an exact
         // stop mode (G61.1) manner. In the future, if continuous mode (G64) is desired, the math here
         // is exactly the same. Instead of motioning all the way to junction point, the machine will
         // just follow the arc circle defined here. The Arduino doesn't have the CPU cycles to perform

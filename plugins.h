@@ -3,7 +3,7 @@
 
   Some data structures and function declarations for plugins that require driver code
 
-  These are NOT referenced in the core grbl code
+  These are NOT referenced in the core grblHAL code
 
   Part of grblHAL
 
@@ -112,6 +112,7 @@ typedef struct {
     const char *interface;
     bool is_ethernet;
     bool link_up;
+    bool dhcp; // TODO: move to network_services_t in next settings revision.
     uint16_t mbps;
     char mac[18];
     char mqtt_client_id[18];
@@ -167,6 +168,9 @@ typedef enum {
     Encoder_MPG_A,
     Encoder_MPG_B,
     Encoder_MPG_C,
+    Encoder_MPG_U,
+    Encoder_MPG_V,
+    Encoder_MPG_W,
     Encoder_Spindle_Position
 } encoder_mode_t;
 

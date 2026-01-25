@@ -75,7 +75,7 @@ void mc_sync_backlash_position (void)
 // Execute linear motion in absolute millimeter coordinates. Feed rate given in millimeters/second
 // unless invert_feed_rate is true. Then the feed_rate means that the motion should be completed in
 // (1 minute)/feed_rate time.
-// NOTE: This is the primary gateway to the grbl planner. All line motions, including arc line
+// NOTE: This is the primary gateway to the grblHAL planner. All line motions, including arc line
 // segments, must pass through this routine before being passed to the planner. The separation of
 // mc_line and plan_buffer_line is done primarily to place non-planner-type functions from being
 // in the planner and to let backlash compensation or canned cycle integration simple and direct.
@@ -1006,7 +1006,7 @@ gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_f
         sys.probe_position[idx] = lroundf(target[idx] * settings.axis[idx].steps_per_mm);
     } while(idx);
 
-    sys.probe_coordsys_id = gc_state.modal.coord_system.id;
+    sys.probe_coordsys_id = gc_state.modal.g5x_offset.id;
 
     // Finish all queued commands and empty planner buffer before starting probe cycle.
     if (!protocol_buffer_synchronize())

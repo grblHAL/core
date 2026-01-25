@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2025 Terje Io
+  Copyright (c) 2017-2026 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -388,7 +388,7 @@ void protocol_auto_cycle_start (void)
 // from various check points in the main program, primarily where there may be a while loop waiting
 // for a buffer to clear space or any point where the execution time from the last check point may
 // be more than a fraction of a second. This is a way to execute realtime commands asynchronously
-// (aka multitasking) with grbl's g-code parsing and planning functions. This function also serves
+// (aka multitasking) with grblHAL's g-code parsing and planning functions. This function also serves
 // as an interface for the interrupts to set the system realtime flags, where only the main program
 // handles them, removing the need to define more computationally-expensive volatile variables. This
 // also provides a controlled way to execute certain tasks without having two or more instances of
@@ -499,7 +499,7 @@ bool protocol_exec_rt_system (void)
 
                 if(bit_istrue(sys.rt_exec_state, EXEC_STATUS_REPORT)) {
                     system_clear_exec_state_flag(EXEC_STATUS_REPORT);
-                    report_realtime_status(hal.stream.write_all);
+                    report_realtime_status(hal.stream.write_all, system_get_rt_report_flags());
                 }
 
                 protocol_poll_cmd();
@@ -599,10 +599,10 @@ bool protocol_exec_rt_system (void)
 
         // Execute and print status to output stream
         if (rt_exec & EXEC_STATUS_REPORT)
-            report_realtime_status(hal.stream.write_all);
+            report_realtime_status(hal.stream.write_all, system_get_rt_report_flags());
 
         if(rt_exec & EXEC_GCODE_REPORT)
-            report_gcode_modes();
+            report_gcode_modes(hal.stream.write);
 
         if(rt_exec & EXEC_TLO_REPORT)
             report_tool_offsets();
@@ -860,16 +860,7 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(uint8_t c)
 #endif
 
         case CMD_STATUS_REPORT_ALL: // Add all statuses to report
-            {
-                report_tracking_flags_t report;
-
-                report.value = (uint32_t)Report_All;
-                report.tool_offset = sys.report.tool_offset;
-                report.m66result = sys.var5399 > -2;
-                report.probe_id = !!hal.probe.select;
-
-                system_add_rt_report((report_tracking_t)report.value);
-            }
+            system_add_rt_report(report_get_rt_flags_all().value);
             system_set_exec_state_flag(EXEC_STATUS_REPORT);
             drop = true;
             break;

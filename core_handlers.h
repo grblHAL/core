@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2020-2025 Terje Io
+  Copyright (c) 2020-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -31,6 +31,7 @@
 #include "errors.h"
 #include "settings.h"
 #include "report.h"
+#include "ioports.h"
 #include "planner.h"
 #include "machine_limits.h"
 #include "vfs.h"
@@ -44,13 +45,13 @@ typedef enum {
     OverrideChanged_FanState = 0
 } override_changed_t;
 
-/* TODO: add to grbl pointers so that a different formatting (xml, json etc) of reports may be implemented by a plugin?
+/* TODO: add to grblHAL pointers so that a different formatting (xml, json etc) of reports may be implemented by a plugin?
 typedef struct {
     void (*report_echo_line_received)(char *line);
-    void (*report_realtime_status)(stream_write_ptr stream_write);
+    void (*report_realtime_status)(stream_write_ptr stream_write, );
     void (*report_probe_parameters)(void);
     void (*report_ngc_parameters)(void);
-    void (*report_gcode_modes)(void);
+    void (*report_gcode_modes)(stream_write_ptr stream_write);
     void (*report_startup_line)(uint8_t n, char *line);
     void (*report_execute_startup_message)(char *line, status_code_t status_code);
 } grbl_report_t;
@@ -89,8 +90,9 @@ typedef void (*on_state_change_ptr)(sys_state_t state);
 typedef void (*on_override_changed_ptr)(override_changed_t override);
 typedef void (*on_spindle_programmed_ptr)(spindle_ptrs_t *spindle, spindle_state_t state, float rpm, spindle_rpm_mode_t mode);
 typedef void (*on_spindle_at_speed_ptr)(spindle_ptrs_t *spindle, spindle_state_t state);
+typedef void (*on_port_out_ptr)(uint8_t port, io_port_type_t type, float value);
 typedef void (*on_wco_changed_ptr)(void);
-typedef void (*on_wco_saved_ptr)(coord_system_id_t id, coord_data_t *data);
+typedef void (*on_wco_saved_ptr)(coord_system_id_t id, coord_system_data_t *data);
 typedef void (*on_program_completed_ptr)(program_flow_t program_flow, bool check_mode);
 typedef void (*on_execute_realtime_ptr)(sys_state_t state);
 typedef void (*on_unknown_accessory_override_ptr)(uint8_t cmd);
@@ -132,7 +134,7 @@ typedef status_code_t (*on_file_end_ptr)(vfs_file_t *handle, status_code_t statu
 typedef status_code_t (*on_unknown_sys_command_ptr)(sys_state_t state, char *line); // return Status_Unhandled.
 typedef status_code_t (*on_user_command_ptr)(char *line);
 typedef sys_commands_t *(*on_get_commands_ptr)(void);
-typedef status_code_t (*on_macro_execute_ptr)(macro_id_t macro); // macro implementations _must_ claim hal.stream.read to stream macros!
+typedef status_code_t (*on_macro_execute_ptr)(macro_id_t macro, parameter_words_t args, uint32_t repeats); // macro implementations _must_ claim hal.stream.read to stream macros!
 typedef void (*on_macro_return_ptr)(void);
 typedef void (*on_file_demarcate_ptr)(bool start);
 
@@ -225,6 +227,7 @@ typedef struct {
     on_report_handlers_init_ptr on_report_handlers_init;
     on_spindle_programmed_ptr on_spindle_programmed;
     on_spindle_at_speed_ptr on_spindle_at_speed;
+    on_port_out_ptr on_port_out;                                //!< Might be called from interrupt context, only for unclaimed ports.
     on_wco_changed_ptr on_wco_changed;
     on_wco_saved_ptr on_wco_saved;
     on_program_completed_ptr on_program_completed;
@@ -247,7 +250,6 @@ typedef struct {
     on_control_signals_changed_ptr on_control_signals_changed;  //!< Called from interrupt context. NOTE: this is only for cycle start and some of the optional signals.
     on_unknown_realtime_cmd_ptr on_unknown_realtime_cmd;        //!< Called from interrupt context.
     on_unknown_sys_command_ptr on_unknown_sys_command;          //!< Return Status_Unhandled if not handled.
-    on_get_commands_ptr on_get_commands;                        //!< Deprecated, use system_register_commands() to register new commands.
     on_user_command_ptr on_user_command;
     on_stream_changed_ptr on_stream_changed;
     on_mpg_registered_ptr on_mpg_registered;

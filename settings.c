@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2025 Terje Io
+  Copyright (c) 2017-2026 Terje Io
   Copyright (c) 2011-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -146,6 +146,15 @@ PROGMEM const settings_t defaults = {
     .homing.cycle[0].mask = DEFAULT_HOMING_CYCLE_0,
     .homing.cycle[1].mask = DEFAULT_HOMING_CYCLE_1,
     .homing.cycle[2].mask = DEFAULT_HOMING_CYCLE_2,
+#if N_AXIS > 3
+    .homing.cycle[3].mask = DEFAULT_HOMING_CYCLE_3,
+#endif
+#if N_AXIS > 4
+    .homing.cycle[4].mask = DEFAULT_HOMING_CYCLE_4,
+#endif
+#if N_AXIS > 5
+    .homing.cycle[5].mask = DEFAULT_HOMING_CYCLE_5,
+#endif
     .homing.dual_axis.fail_length_percent = DEFAULT_DUAL_AXIS_HOMING_FAIL_AXIS_LENGTH_PERCENT,
     .homing.dual_axis.fail_distance_min = DEFAULT_DUAL_AXIS_HOMING_FAIL_DISTANCE_MIN,
     .homing.dual_axis.fail_distance_max = DEFAULT_DUAL_AXIS_HOMING_FAIL_DISTANCE_MAX,
@@ -277,7 +286,6 @@ PROGMEM const settings_t defaults = {
 #if ENABLE_BACKLASH_COMPENSATION
     .axis[A_AXIS].backlash = 0.0f,
 #endif
-    .homing.cycle[3].mask = DEFAULT_HOMING_CYCLE_3,
 #endif
 
 #ifdef B_AXIS
@@ -292,7 +300,6 @@ PROGMEM const settings_t defaults = {
 #if ENABLE_BACKLASH_COMPENSATION
     .axis[B_AXIS].backlash = 0.0f,
 #endif
-    .homing.cycle[4].mask = DEFAULT_HOMING_CYCLE_4,
 #endif
 
 #ifdef C_AXIS
@@ -307,9 +314,9 @@ PROGMEM const settings_t defaults = {
 #if ENABLE_BACKLASH_COMPENSATION
     .axis[C_AXIS].backlash = 0.0f,
 #endif
-    .homing.cycle[5].mask = DEFAULT_HOMING_CYCLE_5,
 #endif
 
+#if !LATHE_UVW_OPTION
 #ifdef U_AXIS
     .axis[U_AXIS].steps_per_mm = DEFAULT_U_STEPS_PER_MM,
     .axis[U_AXIS].acceleration = (DEFAULT_U_ACCELERATION * 60.0f * 60.0f),
@@ -338,6 +345,21 @@ PROGMEM const settings_t defaults = {
 #endif
 #endif
 
+#ifdef W_AXIS
+    .axis[W_AXIS].steps_per_mm = DEFAULT_W_STEPS_PER_MM,
+    .axis[W_AXIS].acceleration = (DEFAULT_W_ACCELERATION * 60.0f * 60.0f),
+    .axis[W_AXIS].jerk = (DEFAULT_W_JERK * 60.0f * 60.0f * 60.0f),
+    .axis[W_AXIS].max_rate = DEFAULT_W_MAX_RATE,
+    .axis[W_AXIS].max_travel = (-DEFAULT_W_MAX_TRAVEL),
+    .axis[W_AXIS].dual_axis_offset = 0.0f,
+    .axis[W_AXIS].homing_feed_rate = DEFAULT_HOMING_FEED_RATE,
+    .axis[W_AXIS].homing_seek_rate = DEFAULT_HOMING_SEEK_RATE,
+#if ENABLE_BACKLASH_COMPENSATION
+    .axis[W_AXIS].backlash = 0.0f,
+#endif
+#endif
+#endif // !LATHE_UVW_OPTION
+
     .tool_change.mode = (toolchange_mode_t)DEFAULT_TOOLCHANGE_MODE,
     .tool_change.probing_distance = DEFAULT_TOOLCHANGE_PROBING_DISTANCE,
     .tool_change.feed_rate = DEFAULT_TOOLCHANGE_FEED_RATE,
@@ -363,7 +385,9 @@ PROGMEM const settings_t defaults = {
     .fs_options.hierarchical_listing = DEFAULT_FS_HIERACHICAL_LISTING,
 
     .modbus_baud = DEFAULT_MODBUS_STREAM_BAUD,
-    .modbus_stream_format.value = (DEFAULT_MODBUS_STREAM_PARITY << 4),
+    .modbus_stream_format.width = DEFAULT_MODBUS_STREAM_DATA_BITS,
+    .modbus_stream_format.stopbits = DEFAULT_MODBUS_STREAM_STOP_BITS,
+    .modbus_stream_format.parity = DEFAULT_MODBUS_STREAM_PARITY,
 
     .rgb_strip.length0 = DEFAULT_RGB_STRIP0_LENGTH,
     .rgb_strip.length1 = DEFAULT_RGB_STRIP1_LENGTH
@@ -394,32 +418,23 @@ PROGMEM static const setting_group_detail_t setting_group_detail [] = {
      { Group_Axis, Group_XAxis, "X-axis", group_is_available },
      { Group_Axis, Group_YAxis, "Y-axis", group_is_available },
      { Group_Axis, Group_ZAxis, "Z-axis", group_is_available },
-#if !AXIS_REMAP_ABC2UVW
-  #ifdef A_AXIS
-     { Group_Axis, Group_AAxis, "A-axis", group_is_available },
+#ifdef A_AXIS
+     { Group_Axis, Group_Axis0 + A_AXIS, "A-axis", group_is_available },
+#endif
+#ifdef B_AXIS
+     { Group_Axis, Group_Axis0 + B_AXIS, "B-axis", group_is_available },
+#endif
+#ifdef C_AXIS
+     { Group_Axis, Group_Axis0 + C_AXIS, "C-axis", group_is_available },
+#endif
+#ifdef U_AXIS
+     { Group_Axis, Group_Axis0 + U_AXIS, "U-axis", group_is_available },
   #endif
-  #ifdef B_AXIS
-     { Group_Axis, Group_BAxis, "B-axis", group_is_available },
-  #endif
-  #ifdef C_AXIS
-     { Group_Axis, Group_CAxis, "C-axis", group_is_available },
-  #endif
-  #ifdef U_AXIS
-     { Group_Axis, Group_UAxis, "U-axis", group_is_available },
-  #endif
-  #ifdef V_AXIS
-     { Group_Axis, Group_VAxis, "V-axis", group_is_available }
-  #endif
-#else
-  #ifdef A_AXIS
-     { Group_Axis, Group_AAxis, "U-axis", group_is_available },
-  #endif
-  #ifdef B_AXIS
-     { Group_Axis, Group_BAxis, "V-axis", group_is_available },
-  #endif
-  #ifdef C_AXIS
-     { Group_Axis, Group_CAxis, "W-axis", group_is_available },
-  #endif
+#ifdef V_AXIS
+     { Group_Axis, Group_Axis0 + V_AXIS, "V-axis", group_is_available },
+#endif
+#ifdef W_AXIS
+     { Group_Axis, Group_Axis0 + W_AXIS, "W-axis", group_is_available }
 #endif
 };
 
@@ -436,26 +451,16 @@ static char spindle_signals[] = "Spindle enable,Spindle direction,PWM";
 static char coolant_signals[] = "Flood,Mist";
 static char door_options[] = "Ignore when idle,Keep coolant state on door open";
 static char ganged_axes[] = "X-Axis,Y-Axis,Z-Axis";
-#if !AXIS_REMAP_ABC2UVW
-  #if N_AXIS == 4
-   static const char rotary_axes[] = "A-Axis";
-  #elif N_AXIS == 5
-   static const char rotary_axes[] = "A-Axis,B-Axis";
-  #elif N_AXIS == 6
-   static const char rotary_axes[] = "A-Axis,B-Axis,C-Axis";
-  #elif N_AXIS == 7
-   static const char rotary_axes[] = "A-Axis,B-Axis,C-Axis,U-Axis";
-  #elif N_AXIS == 8
-   static const char rotary_axes[] = "A-Axis,B-Axis,C-Axis,U-Axis,V-Axis";
-  #endif
-#else
-  #if N_AXIS == 4
-     static const char rotary_axes[] = "U-Axis";
-  #elif N_AXIS == 5
-     static const char rotary_axes[] = "U-Axis,V-Axis";
-  #elif N_AXIS == 6
-     static const char rotary_axes[] = "U-Axis,V-Axis,W-Axis";
-  #endif
+#if N_AXIS == 4
+static char rotary_axes[] = "A-Axis";
+#elif N_AXIS == 5
+static char rotary_axes[] = "A-Axis,B-Axis";
+#elif N_AXIS == 6
+static char rotary_axes[] = "A-Axis,B-Axis,C-Axis";
+#elif N_AXIS == 7
+static char rotary_axes[] = "A-Axis,B-Axis,C-Axis,U-Axis";
+#elif N_AXIS == 8
+static char rotary_axes[] = "A-Axis,B-Axis,C-Axis,U-Axis,V-Axis";
 #endif
 
 static on_file_demarcate_ptr on_file_demarcate;
@@ -951,7 +956,7 @@ static status_code_t set_parking_enable (setting_id_t id, uint_fast16_t int_valu
     if(settings.parking.flags.deactivate_upon_init)
         settings.parking.flags.enable_override_control = On;
 
-    //setting_remove_elements(Setting_ProbePullUpDisable, mask);
+    //setting_remove_elements(Setting_ProbePullUpDisable, mask, true);
 
     return Status_OK;
 }
@@ -1267,7 +1272,7 @@ setting_id_t settings_get_axis_base (setting_id_t id, uint_fast8_t *idx)
     return *idx < N_AXIS ? base : Setting_SettingsMax;
 }
 
-static status_code_t set_float (setting_id_t setting, float value)
+FLASHMEM static status_code_t set_float (setting_id_t setting, float value)
 {
     status_code_t status = Status_OK;
 
@@ -1296,7 +1301,7 @@ static status_code_t set_float (setting_id_t setting, float value)
     return status;
 }
 
-static status_code_t set_axis_setting (setting_id_t setting, float value)
+FLASHMEM static status_code_t set_axis_setting (setting_id_t setting, float value)
 {
     uint_fast8_t idx;
     status_code_t status = Status_OK;
@@ -1384,7 +1389,7 @@ static status_code_t set_axis_setting (setting_id_t setting, float value)
     return status;
 }
 
-static float get_float (setting_id_t setting)
+FLASHMEM static float get_float (setting_id_t setting)
 {
     float value = 0.0f;
 
@@ -1482,7 +1487,7 @@ static float get_float (setting_id_t setting)
     return value;
 }
 
-static uint32_t get_int (setting_id_t id)
+FLASHMEM static uint32_t get_int (setting_id_t id)
 {
     uint32_t value = 0;
 
@@ -1872,7 +1877,7 @@ static bool is_group_available (const setting_detail_t *setting, uint_fast16_t o
     return settings_is_group_available(setting->group);
 }
 
-static bool is_setting_available (const setting_detail_t *setting, uint_fast16_t offset)
+FLASHMEM static bool is_setting_available (const setting_detail_t *setting, uint_fast16_t offset)
 {
     bool available = false;
 
@@ -1991,6 +1996,14 @@ static bool is_setting_available (const setting_detail_t *setting, uint_fast16_t
             available = hal.driver_cap.spindle_encoder && spindle_get_count() > 1;
             break;
 
+        case Setting_RGB_StripLengt0:
+            available = hal.rgb0.flags.is_strip;
+            break;
+
+        case Setting_RGB_StripLengt1:
+            available = hal.rgb1.flags.is_strip;
+            break;
+
         case Setting_FSOptions:
             available = hal.driver_cap.sd_card || hal.driver_cap.littlefs;
             break;
@@ -2094,13 +2107,13 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_HomingCycle_1, Group_Homing, "Axes homing, first phase", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_homing_cycle, get_int, NULL },
      { Setting_HomingCycle_2, Group_Homing, "Axes homing, second phase", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_homing_cycle, get_int, NULL },
      { Setting_HomingCycle_3, Group_Homing, "Axes homing, third phase", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_homing_cycle, get_int, NULL },
-#ifdef A_AXIS
+#if N_AXIS > 3
      { Setting_HomingCycle_4, Group_Homing, "Axes homing, fourth phase", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_homing_cycle, get_int, NULL },
 #endif
-#ifdef B_AXIS
+#if N_AXIS > 4
      { Setting_HomingCycle_5, Group_Homing, "Axes homing, fifth phase", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_homing_cycle, get_int, NULL },
 #endif
-#ifdef C_AXIS
+#if N_AXIS > 5
      { Setting_HomingCycle_6, Group_Homing, "Axes homing, sixth phase", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_homing_cycle, get_int, NULL },
 #endif
      { Setting_ParkingPulloutIncrement, Group_SafetyDoor, "Parking pull-out distance", "mm", Format_Decimal, "###0.0", NULL, NULL, Setting_IsExtended, &settings.parking.pullout_increment, NULL, NULL },
@@ -2176,6 +2189,8 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_OffsetLock, Group_General, "Lock coordinate systems", NULL, Format_Bitfield, "G59.1,G59.2,G59.3", NULL, NULL, Setting_IsExtended, &settings.offset_lock.mask, NULL, NULL },
 #endif
      { Setting_EncoderSpindle, Group_Spindle, "Encoder spindle", NULL, Format_RadioButtons, spindle_types, NULL, NULL, Setting_IsExtendedFn, set_encoder_spindle, get_int, is_setting_available },
+     { Setting_RGB_StripLengt0, Group_AuxPorts, "LED strip 1 length", NULL, Format_Int8, "##0", NULL, "255", Setting_NonCore, &settings.rgb_strip.length0, NULL, is_setting_available },
+     { Setting_RGB_StripLengt1, Group_AuxPorts, "LED strip 2 length", NULL, Format_Int8, "##0", NULL, "255", Setting_NonCore, &settings.rgb_strip.length1, NULL, is_setting_available },
 #if N_AXIS > 3
      { Setting_RotaryWrap, Group_Stepper, "Fast rotary go to G28", NULL, Format_Bitfield, rotary_axes, NULL, NULL, Setting_IsExtendedFn, set_rotary_wrap_axes, get_int, NULL },
 #endif
@@ -2269,13 +2284,13 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_HomingCycle_1, "Axes to home in first phase." },
     { Setting_HomingCycle_2, "Axes to home in second phase." },
     { Setting_HomingCycle_3, "Axes to home in third phase." },
-#ifdef A_AXIS
+#if N_AXIS > 3
     { Setting_HomingCycle_4, "Axes to home in fourth phase." },
 #endif
-#ifdef B_AXIS
+#if N_AXIS > 4
     { Setting_HomingCycle_5, "Axes to home in fifth phase." },
 #endif
-#ifdef C_AXIS
+#if N_AXIS > 5
     { Setting_HomingCycle_6, "Axes to home in sixth phase." },
 #endif
     { Setting_JogStepSpeed, "Step jogging speed in millimeters per minute." },
@@ -2332,8 +2347,8 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_AxisHomingFeedRate, "Feed rate to slowly engage limit switch to determine its location accurately." },
     { Setting_AxisHomingSeekRate, "Seek rate to quickly find the limit switch before the slower locating phase." },
     { Setting_SpindleAtSpeedTolerance, "Spindle at speed tolerance as percentage deviation from programmed speed, set to 0 to disable.\\n"
-                                       "If not within tolerance after timeout set by spindle on delay ($394) alarm 14 is raised.\\n"
-                                       "NOTE: if the spindle on delay is set to 0 the timeout defaults to one minute."
+                                       "If not within tolerance after timeout set by spindle delays ($392, $394 or $539) alarm 14 is raised.\\n"
+                                       "NOTE: if the delay is set to 0 the timeout defaults to one minute."
     },
     { Setting_ToolChangeMode, "Normal: allows jogging for manual touch off. Set new position manually.\\n\\n"
                               "Manual touch off: rapids to tool change position, use jogging or $TPW for touch off.\\n\\n"
@@ -2382,6 +2397,8 @@ PROGMEM static const setting_descr_t setting_descr[] = {
                                "If spindle supports \"at speed\" functionality it is the time to wait before alarm 14 is raised."
     },
     { Setting_EncoderSpindle, "Specifies which spindle has the encoder attached." },
+    { Setting_RGB_StripLengt0, "Number of LEDS in strip 1." },
+    { Setting_RGB_StripLengt1, "Number of LEDS in strip 2." },
 #if N_AXIS > 3
     { Setting_RotaryWrap, "Perform fast move to angle stored in G28 position.\\n"
                           "Use:\\n"
@@ -2473,7 +2490,7 @@ bool settings_read_startup_line (uint8_t idx, char *line)
 }
 
 // Write selected coordinate data to persistent storage.
-void settings_write_coord_data (coord_system_id_t id, const float (*coord_data)[N_AXIS])
+void settings_write_coord_data (coord_system_id_t id, coord_system_data_t *data)
 {
     assert(id <= N_CoordinateSystems);
 
@@ -2482,23 +2499,24 @@ void settings_write_coord_data (coord_system_id_t id, const float (*coord_data)[
 #endif
 
     if(grbl.on_wco_saved)
-        grbl.on_wco_saved(id, (coord_data_t *)coord_data);
+        grbl.on_wco_saved(id, data);
 
     if(hal.nvs.type != NVS_None)
-        hal.nvs.memcpy_to_nvs(NVS_ADDR_PARAMETERS + id * (sizeof(coord_data_t) + NVS_CRC_BYTES), (uint8_t *)coord_data, sizeof(coord_data_t), true);
+        hal.nvs.memcpy_to_nvs(NVS_ADDR_PARAMETERS + id * (sizeof(coord_system_data_t) + NVS_CRC_BYTES), (uint8_t *)data, sizeof(coord_system_data_t), true);
 }
 
 // Read selected coordinate data from persistent storage.
-bool settings_read_coord_data (coord_system_id_t id, const float (*coord_data)[N_AXIS])
+bool settings_read_coord_data (coord_system_id_t id, coord_system_data_t *data)
 {
     assert(id <= N_CoordinateSystems);
 
-    if (!(hal.nvs.type != NVS_None && hal.nvs.memcpy_from_nvs((uint8_t *)coord_data, NVS_ADDR_PARAMETERS + id * (sizeof(coord_data_t) + NVS_CRC_BYTES), sizeof(coord_data_t), true) == NVS_TransferResult_OK)) {
-        // Reset with default zero vector
-        memcpy((float *)coord_data, null_vector.values, sizeof(coord_data_t));
-        settings_write_coord_data(id, coord_data);
+    if(!(hal.nvs.type != NVS_None && hal.nvs.memcpy_from_nvs((uint8_t *)data, NVS_ADDR_PARAMETERS + id * (sizeof(coord_system_data_t) + NVS_CRC_BYTES), sizeof(coord_system_data_t), true) == NVS_TransferResult_OK)) {
+        // Reset with zero vector
+        memset(data, 0, sizeof(coord_system_data_t));
+        settings_write_coord_data(id, data);
         return false;
     }
+
     return true;
 }
 
@@ -2718,14 +2736,13 @@ void settings_restore (settings_restore_t restore)
     }
 
     if(restore.parameters) {
-        float coord_data[N_AXIS];
-        memset(coord_data, 0, sizeof(coord_data));
-#if COMPATIBILITY_LEVEL <= 1
+        coord_system_data_t coord_data = {0};
         for(idx = 0; idx <= N_WorkCoordinateSystems; idx++) {
+#if COMPATIBILITY_LEVEL <= 1
             if(idx < CoordinateSystem_G59_1 || idx > CoordinateSystem_G59_3 || bit_isfalse(settings.offset_lock.mask, bit(idx - CoordinateSystem_G59_1)))
+#endif
                 settings_write_coord_data((coord_system_id_t)idx, &coord_data);
         }
-#endif
         settings_write_coord_data(CoordinateSystem_G92, &coord_data); // Clear G92 offsets
 
 #if N_TOOLS
@@ -3100,7 +3117,7 @@ static void setting_remove_element (setting_id_t id, uint_fast8_t pos)
 
 // Flag setting elements for bitfields as N/A according to a mask
 // Note: setting format string has to reside in RAM.
-void setting_remove_elements (setting_id_t id, uint32_t mask)
+void setting_remove_elements (setting_id_t id, uint32_t mask, bool trim)
 {
     const setting_detail_t *setting;
 
@@ -3116,7 +3133,7 @@ void setting_remove_elements (setting_id_t id, uint32_t mask)
         }
 
         // Strip trailing N/A's
-        while((s = strrchr(format, ','))) {
+        if(trim) while((s = strrchr(format, ','))) {
             if(strncmp(s, ",N/A", 4))
                 break;
             *s = '\0';
@@ -3250,7 +3267,7 @@ static bool settings_changed_spindle (void)
 }
 
 // A helper method to set settings from command line
-status_code_t settings_store_setting (setting_id_t id, char *svalue)
+FLASHMEM status_code_t settings_store_setting (setting_id_t id, char *svalue)
 {
     uint_fast8_t set_idx = 0;
     uint32_t int_value = 0;
@@ -3483,27 +3500,30 @@ void settings_init (void)
         spindle_state.ccw = spindle_cap.direction;
         spindle_state.pwm = spindle_cap.pwm_invert;
 
-        setting_remove_elements(Setting_SpindleInvertMask, spindle_state.mask);
+        setting_remove_elements(Setting_SpindleInvertMask, spindle_state.mask, true);
     }
 
-    setting_remove_elements(Setting_ControlInvertMask, hal.signals_cap.mask & ~limits_override.mask);
+    setting_remove_elements(Setting_ControlInvertMask, hal.signals_cap.mask & ~limits_override.mask, true);
 
     if(hal.stepper.get_ganged)
-        setting_remove_elements(Setting_GangedDirInvertMask, hal.stepper.get_ganged(false).mask);
+        setting_remove_elements(Setting_GangedDirInvertMask, hal.stepper.get_ganged(false).mask, true);
 
-    setting_remove_elements(Setting_CoolantInvertMask, hal.coolant_cap.mask);
+    setting_remove_elements(Setting_CoolantInvertMask, hal.coolant_cap.mask, true);
 
 #if COMPATIBILITY_LEVEL <= 1
     if(hal.homing.get_state == NULL) {
         homing_settings_flags_t homing;
         homing.value = (uint16_t)-1;
         homing.use_limit_switches = Off;
-        setting_remove_elements(Setting_HomingEnable, homing.value);
+        setting_remove_elements(Setting_HomingEnable, homing.value, true);
     }
 #endif
 
-#if ENABLE_JERK_ACCELERATION
+#if N_AXIS > 3 || ENABLE_JERK_ACCELERATION
     uint_fast8_t idx = N_AXIS;
+#endif
+
+#if ENABLE_JERK_ACCELERATION
     do {
         if(settings.axis[--idx].jerk == 0.0f)
             settings.axis[idx].jerk = settings.axis[idx].acceleration * 60.0f * 10.0f;
@@ -3520,10 +3540,14 @@ void settings_init (void)
     } while((details = details->next));
 
     uint32_t mask = 0b001 | (hal.driver_cap.toolsetter << 1) | (hal.driver_cap.probe2 << 2);
-    setting_remove_elements(Setting_InvertProbePin, mask);
-    setting_remove_elements(Setting_ProbePullUpDisable, mask);
+    setting_remove_elements(Setting_InvertProbePin, mask, true);
+    setting_remove_elements(Setting_ProbePullUpDisable, mask, true);
 #ifndef NO_SAFETY_DOOR_SUPPORT
-    setting_remove_elements(Setting_DoorOptions, ((!settings.parking.flags.enabled || hal.signals_cap.safety_door_ajar) << 1) | hal.signals_cap.safety_door_ajar);
+    setting_remove_elements(Setting_DoorOptions, ((!settings.parking.flags.enabled || hal.signals_cap.safety_door_ajar) << 1) | hal.signals_cap.safety_door_ajar, true);
+#endif
+#if N_AXIS > 3
+    for(idx = 3; idx < N_AXIS; idx++)
+        *(rotary_axes + (idx - 3) * 7) = *axis_letter[idx];
 #endif
 
     mask = 0b00011 | (hal.probe.select ? ((hal.driver_cap.toolsetter << 3) | (hal.driver_cap.probe2 << 4)) : 0);
@@ -3535,7 +3559,7 @@ void settings_init (void)
 #else
     settings.probe.enable_protection = Off;
 #endif
-    setting_remove_elements(Setting_ProbingFlags, mask);
+    setting_remove_elements(Setting_ProbingFlags, mask, true);
 
     if(!settings.flags.settings_downgrade && settings.version.build != (GRBL_BUILD - 20000000UL)) {
 

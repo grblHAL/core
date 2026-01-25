@@ -96,6 +96,30 @@ typedef struct stepper {
     segment_t *exec_segment;        //!< Pointer to the segment being executed.
 } stepper_t;
 
+#if ENABLE_JERK_ACCELERATION
+
+//#define JERK_LOG 400
+
+#ifdef JERK_LOG
+
+typedef struct {
+    uint32_t idx, rd, d, ru;
+    float accel, max_accel, jerk;
+    struct {
+        float s, s0, v, v0, a0, da, t, mm_remaining, time_var;
+        uint32_t time;
+        uint32_t n_step;
+        uint32_t acc_step;
+        bool accel;   // accelerating
+        bool ramp_down; // accel ramp down
+    } data[400];
+
+} jlog_t;
+
+#endif
+
+#endif
+
 // Initialize and setup the stepper motor subsystem
 void stepper_init (void);
 

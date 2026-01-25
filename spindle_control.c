@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2025 Terje Io
+  Copyright (c) 2017-2026 Terje Io
   Copyright (c) 2012-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -1261,7 +1261,7 @@ void spindle1_settings_register (spindle_cap_t cap, spindle1_settings_changed_pt
     spindle_state.ccw = cap.direction;
     spindle_state.pwm = cap.pwm_invert;
 
-    setting_remove_elements(Setting_SpindleInvertMask1, spindle_state.mask);
+    setting_remove_elements(Setting_SpindleInvertMask1, spindle_state.mask, true);
 }
 
 #endif // N_SPINDLE > 1

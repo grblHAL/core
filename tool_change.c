@@ -62,12 +62,12 @@ static void onHomingComplete (axes_signals_t homing_cycle, bool success)
         system_clear_tlo_reference(homing_cycle);
 }
 
-static void onWcoSaved (coord_system_id_t id, coord_data_t *offset)
+static void onWcoSaved (coord_system_id_t id, coord_system_data_t *data)
 {
     if(on_wco_saved)
-        on_wco_saved(id, offset);
+        on_wco_saved(id, data);
 
-    if(id == gc_state.modal.coord_system.id && block_cycle_start)
+    if(id == gc_state.modal.g5x_offset.id && block_cycle_start)
         block_cycle_start = change_at_g30;
 }
 
@@ -198,8 +198,11 @@ static bool go_linear_home (plan_line_data_t *pl_data)
 
 static bool go_toolsetter (plan_line_data_t *pl_data)
 {
+    coord_system_data_t g59_3_offset;
+
     // G59.3 contains offsets to toolsetter.
-    settings_read_coord_data(CoordinateSystem_G59_3, &target.values);
+    settings_read_coord_data(CoordinateSystem_G59_3, &g59_3_offset);
+	memcpy(target.values, g59_3_offset.coord.values, sizeof(float) * 3); // move only XYZ
 
     float tmp_pos = target.values[plane.axis_linear];
 
@@ -294,27 +297,27 @@ static void execute_probe (void *data)
 {
 #if COMPATIBILITY_LEVEL <= 1
     bool ok;
-    coord_data_t offset;
     plan_line_data_t plan_data;
     gc_parser_flags_t flags = {};
+    coord_system_data_t g59_3_offset;
 
     // G59.3 contains offsets to position of TLS.
-    settings_read_coord_data(CoordinateSystem_G59_3, &offset.values);
+    settings_read_coord_data(CoordinateSystem_G59_3, &g59_3_offset);
 
     plan_data_init(&plan_data);
     plan_data.condition.rapid_motion = On;
 
     ok = !change_at_g30 || go_linear_home(&plan_data);
 
-    target.values[plane.axis_0] = offset.values[plane.axis_0];
-    target.values[plane.axis_1] = offset.values[plane.axis_1];
+    target.values[plane.axis_0] = g59_3_offset.coord.values[plane.axis_0];
+    target.values[plane.axis_1] = g59_3_offset.coord.values[plane.axis_1];
 
     if(probe_toolsetter)
         grbl.on_probe_toolsetter(next_tool, &target, false, true);
 
     if((ok = ok && mc_line(target.values, &plan_data))) {
 
-        target.values[plane.axis_linear] = offset.values[plane.axis_linear];
+        target.values[plane.axis_linear] = g59_3_offset.coord.values[plane.axis_linear];
         ok = mc_line(target.values, &plan_data);
 
         plan_data.feed_rate = settings.tool_change.seek_rate;
@@ -508,9 +511,11 @@ static status_code_t tool_change (parser_state_t *parser_state)
     //    tool_change_position = ?
     //else
 
-    if((change_at_g30 = (settings.flags.tool_change_at_g30) && (sys.homed.mask & (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT)) == (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT)))
-        settings_read_coord_data(CoordinateSystem_G30, &change_position.values);
-    else
+    if((change_at_g30 = settings.flags.tool_change_at_g30 && (sys.homed.mask & (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT)) == (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT))) {
+        coord_system_data_t g30_offset;
+        settings_read_coord_data(CoordinateSystem_G30, &g30_offset);
+        memcpy(change_position.values, g30_offset.coord.values, sizeof(float) * 3); // move only XYZ
+    } else
         change_position.values[plane.axis_linear] = sys.home_position[plane.axis_linear]; // - settings.homing.flags.force_set_origin ? LINEAR_AXIS_HOME_OFFSET : 0.0f;
 
     // Rapid to home position of linear axis.

@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2025 Terje Io
+  Copyright (c) 2017-2026 Terje Io
   Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -438,7 +438,7 @@ static bool homing_cycle (axes_signals_t cycle, axes_signals_t auto_square)
 
                 if(rt_exec == EXEC_STATUS_REPORT) {
                     system_clear_exec_state_flag(EXEC_STATUS_REPORT);
-                    report_realtime_status(hal.stream.write_all);
+                    report_realtime_status(hal.stream.write_all, system_get_rt_report_flags());
                 } else {
 
                     // Homing failure condition: Reset issued during cycle.

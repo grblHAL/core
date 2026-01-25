@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2025 Terje Io
+  Copyright (c) 2017-2026 Terje Io
   Copyright (c) 2015-2016 Sungeun K. Jeon for Gnea Research LLC
 
   grblHAL is free software: you can redistribute it and/or modify
@@ -42,7 +42,7 @@
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_BUILD 20260107
+#define GRBL_BUILD 20260126
 
 #define GRBL_URL "https://github.com/grblHAL"
 
@@ -94,7 +94,7 @@
 // Do not change unless you know what you are doing!
 
 // Define realtime command special characters. These characters are 'picked-off' directly from the
-// serial read data stream and are not passed to the grbl line execution parser. Select characters
+// serial read data stream and are not passed to the grblHAL line execution parser. Select characters
 // that do not and must not exist in the streamed g-code program. ASCII control characters may be
 // used, if they are available per user setup. Also, extended ASCII codes (>127), which are never in
 // g-code programs, maybe selected for interface programs.

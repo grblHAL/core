@@ -103,6 +103,7 @@ typedef enum {
     NGCParam_probe_state,
     NGCParam_probe2_state,
     NGCParam_toolsetter_state,
+    NGCParam_active_probe,
     NGCParam_homed_state,
     NGCParam_homed_axes,
     NGCParam_tool_table_size,
@@ -116,7 +117,8 @@ typedef enum {
     G65Macro_ParameterRW         = 3,
     G65Macro_GetMachineState     = 4,
     G65Macro_SelectProbe         = 5,
-    G65Macro_SpindleDelayDisable = 6
+    G65Macro_SpindleDelayDisable = 6,
+    G65Macro_LastInbuilt         = G65Macro_SpindleDelayDisable
 } g65_inbuilt_t;
 
 void ngc_params_init (void);

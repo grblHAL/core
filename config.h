@@ -65,6 +65,13 @@ If more than 3 axes are configured a compliant driver and board map file is need
 #define N_SYS_SPINDLE 1
 #endif
 
+/*! \def PLANNER_ADD_MOTION_MODE
+\brief Enables passing the motion mode used to the planner.
+*/
+#if !defined PLANNER_ADD_MOTION_MODE || defined __DOXYGEN__
+#define PLANNER_ADD_MOTION_MODE Off  // Default disabled. Set to \ref On or 1 to enable.
+#endif
+
 /*! \def BUILD_INFO
 \brief Defines string to be output as part of the `$I` or `$I+` command response.
 */
@@ -1673,7 +1680,7 @@ greater.
 /*! @name $47 - Setting_HomingCycle_4
 */
 ///@{
-#if (defined A_AXIS && !defined DEFAULT_HOMING_CYCLE_3) || defined __DOXYGEN__
+#if (N_AXIS > 3 && !defined DEFAULT_HOMING_CYCLE_3) || defined __DOXYGEN__
 #define DEFAULT_HOMING_CYCLE_3 0                        // OPTIONAL: Uncomment and add axes mask to enable
 #endif
 ///@}
@@ -1682,7 +1689,7 @@ greater.
 \ref axismask
  */
 ///@{
-#if (defined B_AXIS && !defined DEFAULT_HOMING_CYCLE_4) || defined __DOXYGEN__
+#if (N_AXIS > 4 && !defined DEFAULT_HOMING_CYCLE_4) || defined __DOXYGEN__
 #define DEFAULT_HOMING_CYCLE_4 0                        // OPTIONAL: Uncomment and add axes mask to enable
 #endif
 ///@}
@@ -1690,7 +1697,7 @@ greater.
 /*! @name $49 - Setting_HomingCycle_6
 */
 ///@{
-#if (defined C_AXIS && !defined DEFAULT_HOMING_CYCLE_5) || defined __DOXYGEN__
+#if (N_AXIS > 5 && !defined DEFAULT_HOMING_CYCLE_5) || defined __DOXYGEN__
 #define DEFAULT_HOMING_CYCLE_5 0                        // OPTIONAL: Uncomment and add axes mask to enable
 #endif
 ///@}
@@ -1992,8 +1999,36 @@ Set steps/mm for the axes to the value that represent the desired movement per u
 For the controller the distance is unitless and and can be in degrees, radians, rotations, ...
 */
 ///@{
+
+#define IS_ROTARY_LETTER(c) (c == 'A' || c == 'B' || c == 'C')
+
 #if !defined DEFAULT_AXIS_ROTATIONAL_MASK || defined __DOXYGEN__
-#define DEFAULT_AXIS_ROTATIONAL_MASK 0
+#if N_AXIS > 3 && IS_ROTARY_LETTER(AXIS3_LETTER)
+#define RA3 (1<<3)
+#else
+#define RA3 0
+#endif
+#if N_AXIS > 4 && IS_ROTARY_LETTER(AXIS4_LETTER)
+#define RA4 (1<<4)
+#else
+#define RA4 0
+#endif
+#if N_AXIS > 5 && IS_ROTARY_LETTER(AXIS5_LETTER)
+#define RA5 (1<<5)
+#else
+#define RA5 0
+#endif
+#if N_AXIS > 6 && IS_ROTARY_LETTER(AXIS6_LETTER)
+#define RA6 (1<<6)
+#else
+#define RA6 0
+#endif
+#if N_AXIS > 7 && IS_ROTARY_LETTER(AXIS7_LETTER)
+#define RA7 (1<<7)
+#else
+#define RA7 0
+#endif
+#define DEFAULT_AXIS_ROTATIONAL_MASK (RA3|RA4|RA5|RA6|RA7)
 #endif
 ///@}
 
@@ -2117,20 +2152,19 @@ Default baud rate for ModBus RTU stream.
 Default stream format settings for ModBus RTU stream.
 */
 ///@{
-#if !defined DEFAULT_MODBUS_STREAM_PARITY || defined __DOXYGEN__
-#define DEFAULT_MODBUS_STREAM_PARITY 0 // 0 = None, 1 = Even, 2 = Odd
+#if !defined DEFAULT_MODBUS_STREAM_DATA_BITS || defined __DOXYGEN__
+#define DEFAULT_MODBUS_STREAM_DATA_BITS 0 // 0 = 8, 1 = 7
 #endif
 ///@}
-
-/*! @name $681 - Setting_ModBus_StreamFormat
-Default stream format settings for ModBus RTU stream.
-*/
 ///@{
+#if !defined DEFAULT_MODBUS_STREAM_STOP_BITS || defined __DOXYGEN__
+#define DEFAULT_MODBUS_STREAM_STOP_BITS 0 // 0 = 1, 1 = 1.5, 2 = 2, 3 = 0.5
+#endif
+///@}///@{
 #if !defined DEFAULT_MODBUS_STREAM_PARITY || defined __DOXYGEN__
 #define DEFAULT_MODBUS_STREAM_PARITY 0 // 0 = None, 1 = Even, 2 = Odd
 #endif
 ///@}
-
 /*! @name $650 - Setting_FSOptions
 Filing systems options.
 */
@@ -2192,6 +2226,9 @@ Adds directory entries in $F and $F+ output to allow hierarchical navigation of 
 #if (defined V_AXIS && !defined DEFAULT_V_STEPS_PER_MM) || defined __DOXYGEN__
 #define DEFAULT_V_STEPS_PER_MM 250.0f
 #endif
+#if (defined W_AXIS && !defined DEFAULT_W_STEPS_PER_MM) || defined __DOXYGEN__
+#define DEFAULT_W_STEPS_PER_MM 250.0f
+#endif
 ///@}
 
 /*! @name $11x - Setting_AxisMaxRate
@@ -2222,6 +2259,9 @@ Adds directory entries in $F and $F+ output to allow hierarchical navigation of 
 #if (defined V_AXIS && !defined DEFAULT_V_MAX_RATE) || defined __DOXYGEN__
 #define DEFAULT_V_MAX_RATE 500.0f // mm/min
 #endif
+#if (defined W_AXIS && !defined DEFAULT_W_MAX_RATE) || defined __DOXYGEN__
+#define DEFAULT_W_MAX_RATE 500.0f // mm/min
+#endif
 ///@}
 
 /*! @name 12x - Setting_AxisAcceleration
@@ -2251,6 +2291,9 @@ Adds directory entries in $F and $F+ output to allow hierarchical navigation of 
 #if (defined V_AXIS && !defined DEFAULT_V_ACCELERATION) || defined __DOXYGEN__
 #define DEFAULT_V_ACCELERATION 10.0f // mm/sec^2
 #endif
+#if (defined W_AXIS && !defined DEFAULT_W_ACCELERATION) || defined __DOXYGEN__
+#define DEFAULT_W_ACCELERATION 10.0f // mm/sec^2
+#endif
 ///@}
 
 /*! @name 22x - Setting_AxisJerk
@@ -2279,6 +2322,9 @@ Adds directory entries in $F and $F+ output to allow hierarchical navigation of 
 #endif
 #if (defined V_AXIS && !defined DEFAULT_V_JERK) || defined __DOXYGEN__
 #define DEFAULT_V_JERK (DEFAULT_V_ACCELERATION * 10.0f) // mm/sec^3
+#endif
+#if (defined W_AXIS && !defined DEFAULT_W_JERK) || defined __DOXYGEN__
+#define DEFAULT_W_JERK (DEFAULT_W_ACCELERATION * 10.0f) // mm/sec^3
 #endif
 ///@}
 
@@ -2310,6 +2356,9 @@ __NOTE:__ Must be a positive values.
 #if (defined V_AXIS && !defined DEFAULT_V_MAX_TRAVEL) || defined __DOXYGEN__
 #define DEFAULT_V_MAX_TRAVEL 200.0f // mm
 #endif
+#if (defined W_AXIS && !defined DEFAULT_W_MAX_TRAVEL) || defined __DOXYGEN__
+#define DEFAULT_W_MAX_TRAVEL 200.0f // mm
+#endif
 ///@}
 
 /*! @name 14x - Setting_AxisStepperCurrent
@@ -2339,6 +2388,9 @@ __NOTE:__ Must be a positive values.
 #endif
 #if (defined V_AXIS && !defined DEFAULT_V_CURRENT) || defined __DOXYGEN__
 #define DEFAULT_V_CURRENT 500.0f // mA RMS
+#endif
+#if (defined W_AXIS && !defined DEFAULT_W_CURRENT) || defined __DOXYGEN__
+#define DEFAULT_W_CURRENT 500.0f // mA RMS
 #endif
 ///@}
 
@@ -2389,7 +2441,7 @@ __NOTE:__ Must be a positive values.
 #error "Cannot enable laser and lathe mode at the same time!"
 #endif
 
-#if LATHE_UVW_OPTION && (N_AXIS > 6 || AXIS_REMAP_ABC2UVW)
+#if LATHE_UVW_OPTION && AXIS_REMAP_ABC2UVW
 #warning "Cannot enable lathe UVW option when N_AXIS > 6 or ABC words are remapped!"
 #undef LATHE_UVW_OPTION
 #define LATHE_UVW_OPTION Off

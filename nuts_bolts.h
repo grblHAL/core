@@ -53,6 +53,9 @@
 #define TAN30_2 0.28867513459481288225f
 
 #define ABORTED (sys.abort || sys.cancel)
+#define IS_AXIS_LETTER(c) (AXIS3_LETTER == c || AXIS4_LETTER == c || AXIS5_LETTER == c || AXIS6_LETTER == c || AXIS7_LETTER == c)
+#define IS_AXIS_LETTER_VALID(c) (c == 'A' || c == 'B' || c == 'C' || c == 'U' || c == 'V' || c == 'W')
+//#define AXIS_LETTER_FN_IDX(c) ((c >= 'X' && c <= 'Z') ? ((c - 'X') << 1) : ((c >= 'A' && c <= 'C') ? c - 'A' + 6 : ((c >= 'U' && c <= 'W') ? c - 'U' + 9 : -1)))
 
 // Convert character to uppercase
 #define CAPS(c) ((c >= 'a' && c <= 'z') ? (c & 0x5F) : c)
@@ -72,52 +75,172 @@
 #define Y_AXIS_BIT bit(Y_AXIS)
 #define Z_AXIS_BIT bit(Z_AXIS)
 #if N_AXIS > 3
-#define A_AXIS 3
-#define A_AXIS_BIT bit(A_AXIS)
+#define AXIS3_IDX 3
+#define AXIS3_BIT bit(AXIS3_IDX)
 #endif
 #if N_AXIS > 4
-#define B_AXIS 4
-#define B_AXIS_BIT bit(B_AXIS)
+#define AXIS4_IDX 4
+#define AXIS4_BIT bit(AXIS4_IDX)
 #endif
 #if N_AXIS > 5
-#define C_AXIS 5
-#define C_AXIS_BIT bit(C_AXIS)
+#define AXIS5_IDX 5
+#define AXIS5_BIT bit(AXIS5_IDX)
 #endif
 #if N_AXIS > 6
-#define U_AXIS 6
-#define U_AXIS_BIT bit(U_AXIS)
+#define AXIS6_IDX 6
+#define AXIS6_BIT bit(AXIS6_IDX)
 #endif
 #if N_AXIS == 8
-#define V_AXIS 7
-#define V_AXIS_BIT bit(V_AXIS)
+#define AXIS7_IDX 7
+#define AXIS7_BIT bit(AXIS7_IDX)
 #endif
 
 #if N_AXIS == 3
 #define AXES_BITMASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT)
 #elif N_AXIS == 4
-#define AXES_BITMASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT|A_AXIS_BIT)
+#define AXES_BITMASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT|AXIS3_BIT)
 #elif N_AXIS == 5
-#define AXES_BITMASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT|A_AXIS_BIT|B_AXIS_BIT)
+#define AXES_BITMASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT|AXIS3_BIT|AXIS4_BIT)
 #elif N_AXIS == 6
-#define AXES_BITMASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT|A_AXIS_BIT|B_AXIS_BIT|C_AXIS_BIT)
+#define AXES_BITMASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT|AXIS3_BIT|AXIS4_BIT|AXIS5_BIT)
 #elif N_AXIS == 7
-#define AXES_BITMASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT|A_AXIS_BIT|B_AXIS_BIT|C_AXIS_BIT|U_AXIS_BIT)
+#define AXES_BITMASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT|AXIS3_BIT|AXIS4_BIT|AXIS5_BIT|AXIS6_BIT)
 #else
-#define AXES_BITMASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT|A_AXIS_BIT|B_AXIS_BIT|C_AXIS_BIT|U_AXIS_BIT|V_AXIS_BIT)
+#define AXES_BITMASK (X_AXIS_BIT|Y_AXIS_BIT|Z_AXIS_BIT|AXIS3_BIT|AXIS4_BIT|AXIS5_BIT|AXIS6_BIT|AXIS7_BIT)
 #endif
 
-#ifdef V_AXIS
+#ifdef AXIS7_IDX
 #define N_ABC_AXIS 5
-#elif defined(U_AXIS)
+#elif defined(AXIS6_IDX)
 #define N_ABC_AXIS 4
-#elif defined(C_AXIS)
+#elif defined(AXIS5_IDX)
 #define N_ABC_AXIS 3
-#elif defined(B_AXIS)
+#elif defined(AXIS4_IDX)
 #define N_ABC_AXIS 2
-#elif defined(A_AXIS)
+#elif defined(AXIS3_IDX)
 #define N_ABC_AXIS 1
 #else
 #define N_ABC_AXIS 0
+#endif
+
+#define AXIS0_LETTER 'X'
+#define AXIS1_LETTER 'Y'
+#define AXIS2_LETTER 'Z'
+
+#if N_AXIS > 3
+  #if AXIS_REMAP_ABC2UVW
+    #define AXIS3_LETTER 'U'
+  #elif !defined(AXIS3_LETTER)
+    #define AXIS3_LETTER 'A'
+  #elif !IS_AXIS_LETTER_VALID(AXIS3_LETTER)
+    #error "Illegal axis letter assigned!"
+  #endif
+#else
+    #define AXIS3_LETTER 0
+#endif
+
+#if N_AXIS > 4
+  #if AXIS_REMAP_ABC2UVW
+    #define AXIS4_LETTER 'V'
+  #elif !defined(AXIS4_LETTER)
+    #define AXIS4_LETTER 'B'
+  #elif !IS_AXIS_LETTER_VALID(AXIS4_LETTER)
+    #error "Illegal axis letter assigned!"
+  #endif
+#else
+  #define AXIS4_LETTER 0
+#endif
+
+#if N_AXIS > 5
+  #if AXIS_REMAP_ABC2UVW
+    #define AXIS5_LETTER 'W'
+  #elif !defined(AXIS5_LETTER)
+    #define AXIS5_LETTER 'C'
+  #elif !IS_AXIS_LETTER_VALID(AXIS5_LETTER)
+    #error "Illegal axis letter assigned!"
+  #endif
+#else
+  #define AXIS5_LETTER 0
+#endif
+
+#if N_AXIS > 6
+  #if !defined(AXIS6_LETTER)
+    #define AXIS6_LETTER 'U'
+  #elif !IS_AXIS_LETTER_VALID(AXIS6_LETTER)
+    #error "Illegal axis letter assigned!"
+  #endif
+#else
+  #define AXIS6_LETTER 0
+#endif
+
+#if N_AXIS > 7
+  #if !defined(AXIS7_LETTER)
+    #define AXIS7_LETTER 'V'
+  #elif !IS_AXIS_LETTER_VALID(AXIS7_LETTER)
+    #error "Illegal axis letter assigned!"
+  #endif
+#else
+  #define AXIS7_LETTER 0
+#endif
+
+#if N_AXIS == 4
+#define AXIS_LETTER_TO_IDX(c) AXIS3_IDX
+#elif N_AXIS == 5
+#define AXIS_LETTER_TO_IDX(c) \
+(c == AXIS3_LETTER ? AXIS3_IDX : \
+(c == AXIS4_LETTER ? AXIS4_IDX : -1))
+#elif N_AXIS == 6
+#define AXIS_LETTER_TO_IDX(c) \
+(c == AXIS3_LETTER ? AXIS3_IDX : \
+(c == AXIS4_LETTER ? AXIS4_IDX : \
+(c == AXIS5_LETTER ? AXIS5_IDX : -1)))
+#elif N_AXIS == 7
+#define AXIS_LETTER_TO_IDX(c) \
+(c == AXIS3_LETTER ? AXIS3_IDX : \
+(c == AXIS4_LETTER ? AXIS4_IDX : \
+(c == AXIS5_LETTER ? AXIS5_IDX : \
+(c == AXIS6_LETTER ? AXIS6_IDX : -1))))
+#elif N_AXIS == 8
+#define AXIS_LETTER_TO_IDX(c) \
+(c == AXIS3_LETTER ? AXIS3_IDX : \
+(c == AXIS4_LETTER ? AXIS4_IDX : \
+(c == AXIS5_LETTER ? AXIS5_IDX : \
+(c == AXIS6_LETTER ? AXIS6_IDX : \
+(c == AXIS7_LETTER ? AXIS7_IDX : -1)))))
+#endif
+
+#if IS_AXIS_LETTER('A')
+#define A_AXIS AXIS_LETTER_TO_IDX('A')
+#define A_AXIS_BIT bit(A_AXIS)
+#endif
+
+#if IS_AXIS_LETTER('B')
+#define B_AXIS AXIS_LETTER_TO_IDX('B')
+#define B_AXIS_BIT bit(B_AXIS)
+#endif
+
+#if IS_AXIS_LETTER('C')
+#define C_AXIS AXIS_LETTER_TO_IDX('C')
+#define C_AXIS_BIT bit(C_AXIS)
+#endif
+
+#if !LATHE_UVW_OPTION
+
+#if IS_AXIS_LETTER('U')
+#define U_AXIS AXIS_LETTER_TO_IDX('U')
+#define U_AXIS_BIT bit(U_AXIS)
+#endif
+
+#if IS_AXIS_LETTER('V')
+#define V_AXIS AXIS_LETTER_TO_IDX('V')
+#define V_AXIS_BIT bit(V_AXIS)
+#endif
+
+#if IS_AXIS_LETTER('W')
+#define W_AXIS AXIS_LETTER_TO_IDX('W')
+#define W_AXIS_BIT bit(W_AXIS)
+#endif
+
 #endif
 
 typedef union {
@@ -127,12 +250,38 @@ typedef union {
     struct {
         uint8_t x :1,
                 y :1,
-                z :1,
-                a :1,
-                b :1,
-                c :1,
-                u :1,
-                v :1;
+                z :1
+#if N_AXIS > 3
+  #ifdef A_AXIS
+              , a :1
+  #endif
+  #ifdef B_AXIS
+              , b :1
+  #endif
+  #ifdef C_AXIS
+              , c :1
+  #endif
+  #ifdef U_AXIS
+              , u :1
+  #endif
+  #ifdef V_AXIS
+              , v :1
+  #endif
+  #ifdef W_AXIS
+              , w :1
+  #endif
+#endif
+;
+    };
+    struct {
+        uint8_t a0 :1,
+                a1 :1,
+                a2 :1,
+                a3 :1,
+                a4 :1,
+                a5 :1,
+                a6 :1,
+                a7 :1;
     };
 } axes_signals_t;
 
@@ -143,43 +292,36 @@ typedef union {
         float x;
         float y;
         float z;
-#ifdef A_AXIS
-        float a;
-#endif
-#ifdef B_AXIS
-        float b;
-#endif
-#ifdef C_AXIS
-        float c;
-#endif
-#ifdef U_AXIS
-        float u;
-#endif
-#ifdef V_AXIS
-        float v;
-#endif
-    };
-    struct {
-        float m0;
-        float m1;
-        float m2;
 #if N_AXIS > 3
-        float m3;
-#endif
-#if N_AXIS > 4
-        float m4;
-#endif
-#if N_AXIS > 5
-        float m5;
-#endif
-#if N_AXIS > 6
-        float m6;
-#endif
-#if N_AXIS == 8
-        float m7;
+  #ifdef A_AXIS
+        float a;
+  #endif
+  #ifdef B_AXIS
+        float b;
+  #endif
+  #ifdef C_AXIS
+        float c;
+  #endif
+  #ifdef U_AXIS
+        float u;
+  #endif
+  #ifdef V_AXIS
+        float v;
+  #endif
+  #ifdef W_AXIS
+        float w;
+  #endif
 #endif
     };
 } coord_data_t;
+
+//! Coordinate system data.
+typedef struct {
+    coord_data_t coord;
+#ifdef ROTATION_ENABLE
+    float rotation;
+#endif
+} coord_system_data_t;
 
 typedef union {
     int32_t value[N_AXIS];
@@ -187,20 +329,25 @@ typedef union {
         int32_t x;
         int32_t y;
         int32_t z;
-#ifdef A_AXIS
+#if N_AXIS > 3
+  #ifdef B_AXIS
         int32_t a;
-#endif
-#ifdef B_AXIS
+  #endif
+  #ifdef B_AXIS
         int32_t b;
-#endif
-#ifdef C_AXIS
+  #endif
+  #ifdef C_AXIS
         int32_t c;
-#endif
-#ifdef U_AXIS
+  #endif
+  #ifdef U_AXIS
         int32_t u;
-#endif
-#ifdef V_AXIS
+  #endif
+  #ifdef V_AXIS
         int32_t v;
+  #endif
+  #ifdef W_AXIS
+        int32_t w;
+  #endif
 #endif
     };
 } mpos_t;
@@ -212,6 +359,25 @@ typedef union {
         float y;
     };
 } point_2d_t;
+
+typedef union {
+    float values[3];
+    struct {
+        float x;
+        float y;
+        float z;
+    };
+} point_3d_t;
+
+//! Axis index to plane assignment.
+typedef union {
+    uint8_t axis[3];
+    struct {
+        uint8_t axis_0;
+        uint8_t axis_1;
+        uint8_t axis_linear;
+    };
+} plane_t;
 
 #pragma pack(push, 1)
 
@@ -334,6 +500,8 @@ bool read_float (const char *line, uint_fast8_t *char_counter, float *float_ptr)
 bool delay_sec (float seconds, delaymode_t mode);
 
 float convert_delta_vector_to_unit_vector(float *vector);
+
+void rotate (coord_data_t *pt, plane_t plane, float angle /*rad*/);
 
 // parse ISO8601 datetime
 struct tm *get_datetime (const char *s);

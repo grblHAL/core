@@ -24,7 +24,8 @@
 #ifndef _ALARMS_H_
 #define _ALARMS_H_
 
-// Alarm executor codes. Valid values (1-255). Zero is reserved.
+// Alarm codes. Valid values (1-255). Zero is reserved.
+// Code 0 - 9 is equal to legacy Grbl codes, 15 equals to legacy Grbl code 10
 typedef enum {
     Alarm_None = 0,                             //!< 0
     Alarm_HardLimit = 1,                        //!< 1
@@ -47,8 +48,9 @@ typedef enum {
     Alarm_HomingFail = 18,                      //!< 18
     Alarm_ModbusException = 19,                 //!< 19
     Alarm_ExpanderException = 20,               //!< 20
-    Alarm_AlarmMax = Alarm_ExpanderException
-} alarm_code_t;
+    Alarm_NVS_Failed = 21,                      //!< 21
+    Alarm_AlarmMax = Alarm_NVS_Failed
+} __attribute__ ((__packed__)) alarm_code_t;
 
 typedef struct {
     alarm_code_t id;

@@ -27,6 +27,7 @@
 #include <stddef.h>
 
 // Define grblHAL status codes. Valid values (0-255)
+// Code 0 - 38 is equal to legacy Grbl codes
 typedef enum {
     Status_OK = 0,
     Status_ExpectedCommandLetter = 1,

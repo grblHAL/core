@@ -5,7 +5,7 @@
   io_expanders_init() should be called at the end of the drivers driver_init() implementation,
   just before the driver claims ports.
 
-  These are NOT referenced in the core grbl code
+  These are NOT referenced in the core grblHAL code
 
   Part of grblHAL
 

@@ -57,6 +57,8 @@ typedef enum {
     NonModal_SetHome_1 = 40,                //!< 40 - G30.1
     NonModal_AbsoluteOverride = 53,         //!< 53 - G53
     NonModal_MacroCall = 65,                //!< 65 - G65
+    Modal_MacroCall = 66,                   //!< 66 - G66
+    Modal_MacroEnd = 67,                    //!< 67 - G67
     NonModal_SetCoordinateOffset = 92,      //!< 92 - G92
     NonModal_ResetCoordinateOffset = 102,   //!< 102 - G92.1
     NonModal_ClearCoordinateOffset = 112,   //!< 112 - G92.2
@@ -92,13 +94,13 @@ typedef enum {
     MotionMode_RigidTapping = 331,          //!< 331 - G33.1
     MotionMode_DrillChipBreak = 73,         //!< 73 - G73
     MotionMode_Threading = 76,              //!< 76 - G76
-    MotionMode_CannedCycle81 = 81,          //!< 81 - G81
-    MotionMode_CannedCycle82 = 82,          //!< 82 - G82
-    MotionMode_CannedCycle83 = 83,          //!< 83 - G83
-    MotionMode_CannedCycle84 = 84,          //!< 83 - G83
-    MotionMode_CannedCycle85 = 85,          //!< 85 - G85
-    MotionMode_CannedCycle86 = 86,          //!< 86 - G86
-    MotionMode_CannedCycle89 = 89,          //!< 89 - G89
+    MotionMode_CannedCycle81 = 81,          //!< 81 - G81, drill
+    MotionMode_CannedCycle82 = 82,          //!< 82 - G82, drill with dwell
+    MotionMode_CannedCycle83 = 83,          //!< 83 - G83, peck drill
+    MotionMode_CannedCycle84 = 84,          //!< 83 - G84, right hand tapping - experimental
+    MotionMode_CannedCycle85 = 85,          //!< 85 - G85, not implemented
+    MotionMode_CannedCycle86 = 86,          //!< 86 - G86, not implemented
+    MotionMode_CannedCycle89 = 89,          //!< 89 - G89, not implemented
     MotionMode_ProbeToward = 140,           //!< 140 - G38.2
     MotionMode_ProbeTowardNoError = 141,    //!< 141 - G38.3
     MotionMode_ProbeAway = 142,             //!< 142 - G38.4
@@ -365,67 +367,56 @@ typedef union {
 
 //! Coordinate data including id.
 typedef struct {
-    float xyz[N_AXIS];
     coord_system_id_t id;
+    coord_system_data_t data;
 } coord_system_t;
-
-//! Axis index to plane assignment.
-typedef union {
-    uint8_t axis[3];
-    struct {
-        uint8_t axis_0;
-        uint8_t axis_1;
-        uint8_t axis_linear;
-    };
-} plane_t;
 
 /*! \brief G- and M-code parameter values
 
 After the parameters in a block is parsed into the parser blocks (parser_block_t) \a values its
 corresponding \a words (#parameter_words_t) union holds which parameters were found.
 
-__NOTE:__ Do not use single-meaning words in user defined M-codes.
+__NOTE:__ Avoid using single-meaning words in user defined M-codes.
 */
 typedef struct {
-    float d;                   //!< Max spindle RPM in Constant Surface Speed Mode (G96)
-    float e;                   //!< Thread taper length (G76), M67 output number
-    float f;                   //!< Feed rate - single-meaning word
-    float ijk[3];              //!< I,J,K Axis arc offsets
-    float k;                   //!< G33 distance per revolution
-    float m;                   //!< G65 argument.
-    float p;                   //!< G10, 664 or dwell parameters
-    float q;                   //!< User defined M-code parameter, M67 output value, G64 naive CAM tolerance, G83 delta increment
-    float r;                   //!< Arc radius or retract position
-    float s;                   //!< Spindle speed - single-meaning word
+    float d;                        //!< Max spindle RPM in Constant Surface Speed Mode (G96)
+    float e;                        //!< Thread taper length (G76), M67 output number
+    float f;                        //!< Feed rate - single-meaning word
+    float h;                        //!< Tool number or number of G76 thread spring passes
+    float ijk[3];                   //!< I,J,K Axis arc offsets
+    float k;                        //!< G33 distance per revolution
+    float m;                        //!< G65 argument.
+    float p;                        //!< G10, 664 or dwell parameters
+    float q;                        //!< User defined M-code parameter, M67 output value, G64 naive CAM tolerance, G83 delta increment
+    float r;                        //!< Arc radius or retract position
+    float s;                        //!< Spindle speed - single-meaning word
+    float t;                        //!< Tool selection - single-meaning word               //
 #ifndef A_AXIS
-    float a;
+    float a;                        //!< G65 argument.
 #endif
 #ifndef B_AXIS
-    float b;
+    float b;                        //!< G65 argument.
 #endif
 #ifndef C_AXIS
-    float c;
+    float c;                        //!< G65 argument.
 #endif
-#if !defined(U_AXIS) && !AXIS_REMAP_ABC2UVW
-    float u;
+#ifndef U_AXIS
+    float u;                        //!< G65 argument.
 #endif
-#if !defined(V_AXIS) && !AXIS_REMAP_ABC2UVW
-    float v;
+#ifndef V_AXIS
+    float v;                        //!< G65 argument.
 #endif
-#if !AXIS_REMAP_ABC2UVW
-    float w;
+#ifndef W_AXIS
+    float w;                        //!< G65 argument.
 #endif
-    float xyz[N_AXIS];         //!< X,Y,Z (and A,B,C,U,V when enabled) translational axes
+    float xyz[N_AXIS];              //!< X,Y,Z (and A,B,C,U,V when enabled) translational axes
 #if LATHE_UVW_OPTION
-    float uvw[3];              //!< U,V,W lathe mode incremental mode motion
+    float uvw[3];                   //!< U,V,W lathe mode incremental mode motion
 #endif
-    coord_system_t coord_data; //!< Coordinate data
-    int32_t $;                 //!< Spindle id - single-meaning word
-    int32_t n;                 //!< Line number - single-meaning word
-    uint32_t o;                //!< Subroutine identifier - single-meaning word
-    uint32_t h;                //!< Tool number or number of G76 thread spring passes
-    tool_id_t t;               //!< Tool selection - single-meaning word
-    uint8_t l;                 //!< G10 or canned cycles parameters
+    int32_t $;                      //!< Spindle id - single-meaning word
+    int32_t n;                      //!< Line number - single-meaning word
+    uint32_t o;                     //!< Subroutine identifier - single-meaning word
+    uint32_t l;                     //!< G10, G65, G66 or canned cycles parameters
 } gc_values_t;
 
 //! Parameter words found by parser - do NOT change order!
@@ -434,9 +425,9 @@ typedef union {
     uint32_t value;     //!< Synonymous with \a mask.
     struct {
         uint32_t $ :1, //!< Spindle id.
-                 a :1, //!< A-axis.
-                 b :1, //!< B-axis.
-                 c :1, //!< C-axis.
+                 a :1, //!< A-axis or G65 argument.
+                 b :1, //!< B-axis or G65 argument.
+                 c :1, //!< C-axis or G65 argument.
                  i :1, //!< X-axis offset for arcs.
                  j :1, //!< Y-axis offset for arcs.
                  k :1, //!< Z-axis offset for arcs.
@@ -454,27 +445,14 @@ typedef union {
                  r :1, //!< Arc radius, canned cycle retract level.
                  s :1, //!< Spindle speed.
                  t :1, //!< Tool number.
-                 u :1, //!< U-axis.
-                 v :1, //!< V-axis.
-                 w :1, //!< W-axis.
+                 u :1, //!< U-axis or G65 argument.
+                 v :1, //!< V-axis or G65 argument.
+                 w :1, //!< W-axis or G65 argument.
                  x :1, //!< X-axis.
                  y :1, //!< Y-axis.
                  z :1; //!< Z-axis.
     };
 } parameter_words_t;
-
-typedef enum {
-    ValueType_NA = 0,
-    ValueType_UInt8,
-    ValueType_UInt32,
-    ValueType_Int32,
-    ValueType_Float
-} gc_value_type_t;
-
-typedef struct {
-    const void *value;
-    const gc_value_type_t type;
-} gc_value_ptr_t;
 
 typedef union {
     uint8_t value;
@@ -511,7 +489,7 @@ typedef struct {
     plane_select_t plane_select;         //!< {G17,G18,G19}
     //< uint8_t cutter_comp;             //!< {G40} NOTE: Don't track. Only default supported.
     tool_offset_mode_t tool_offset_mode; //!< {G43,G43.1,G49}
-    coord_system_t coord_system;         //!< {G54,G55,G56,G57,G58,G59,G59.1,G59.2,G59.3}
+    coord_system_t g5x_offset;           //!< {G54,G55,G56,G57,G58,G59,G59.1,G59.2,G59.3}
 #if ENABLE_PATH_BLENDING
     control_mode_t control;              //!< {G61} NOTE: Don't track. Only default supported.
 #endif
@@ -603,40 +581,60 @@ typedef struct {
     char name[101];
 } tool_pocket_t;
 
+typedef struct {
+    float angle;
+    point_2d_t offsets;
+} rotation_t;
+
+#if NGC_PARAMETERS_ENABLE
+
+typedef struct g66_arguments
+{
+    uint32_t call_level;
+    gc_values_t values;
+    parameter_words_t words;
+    struct g66_arguments *prev;
+} g66_arguments_t;
+
+#endif
+
 /*! \brief Parser state
 
 */
 typedef struct {
     gc_modal_t modal;
     gc_canned_t canned;
-    spindle_t *spindle;                 //!< Last referenced spindle
-    float feed_rate;                    //!< Millimeters/min
-    float distance_per_rev;             //!< Millimeters/rev
-    float position[N_AXIS];             //!< Where the interpreter considers the tool to be at this point in the code
+    spindle_t *spindle;             //!< Last referenced spindle
+    float feed_rate;                //!< Millimeters/min
+    float distance_per_rev;         //!< Millimeters/rev
+    float position[N_AXIS];         //!< Where the interpreter considers the tool to be at this point in the code
 #if ENABLE_PATH_BLENDING
-    float path_tolerance;               //!< Path blending tolerance
-    float cam_tolerance;                //!< Naive CAM tolerance
+    float path_tolerance;           //!< Path blending tolerance
+    float cam_tolerance;            //!< Naive CAM tolerance
 #endif
-    int32_t line_number;                //!< Last line number sent
-    tool_id_t tool_pending;             //!< Tool to be selected on next M6
+    uint32_t line_number;                   //!< Last line number sent
+    tool_id_t tool_pending;         //!< Tool to be selected on next M6
 #if NGC_EXPRESSIONS_ENABLE
-    uint32_t g43_pending;               //!< Tool offset to be selected on next M6, for macro ATC
+    uint32_t g43_pending;           //!< Tool offset to be selected on next M6, for macro ATC
 #endif
-    bool file_run;                      //!< Tracks % command
-    bool file_stream;                   //!< Tracks streaming from file
+    bool file_run;                  //!< Tracks % command
+    bool file_stream;               //!< Tracks streaming from file
     bool is_laser_ppi_mode;
     bool is_rpm_rate_adjusted;
     bool tool_change;
-    bool skip_blocks;                   //!< true if skipping conditional blocks
-    status_code_t last_error;           //!< last return value from parser
-    offset_id_t offset_id;              //!< id(x) of last G92 coordinate offset (into circular buffer)
+    bool skip_blocks;               //!< true if skipping conditional blocks
+    status_code_t last_error;       //!< last return value from parser
+    offset_id_t offset_id;          //!< id(x) of last G92 coordinate offset (into circular buffer)
     coord_data_t offset_queue[MAX_OFFSET_ENTRIES];
     //!< The following variables are not cleared upon warm restart when COMPATIBILITY_LEVEL <= 1
-    bool g92_coord_offset_applied;      //!< true when G92 offset applied
-    float g92_coord_offset[N_AXIS];     //!< Retains the G92 coordinate offset (work coordinates) relative to
-                                        //!< machine zero in mm. Persistent and loaded from non-volatile storage
-                                        //!< on boot when COMPATIBILITY_LEVEL <= 1
-    tool_data_t *tool;                  //!< Tracks tool number and tool offset
+    bool g92_offset_applied;        //!< true when G92 offset applied
+    coord_system_data_t g92_offset; //!< Retains the G92 coordinate offset (work coordinates) relative to
+                                    //!< machine zero in mm. Persistent and loaded from non-volatile storage
+                                    //!< on boot when COMPATIBILITY_LEVEL <= 1
+    tool_data_t *tool;              //!< Tracks tool number and tool offset
+#if NGC_PARAMETERS_ENABLE
+    g66_arguments_t *g66_args;      //!< Linked list with G66 arguments, NULL if G66 is not active.
+#endif
 } parser_state_t;
 
 typedef struct {
@@ -662,6 +660,7 @@ typedef struct {
     parameter_words_t words;            //!< Bitfield for tracking found parameter values.
     output_command_t output_command;    //!< Details about M62-M68 output command to execute if present in block.
     uint32_t arc_turns;                 //
+    parameter_words_t g65_words;        //!< Parameter words to pass to G65 macro.
 #if NGC_PARAMETERS_ENABLE
     modal_state_action_t state_action;  //!< M70-M73 modal state action
 #endif
@@ -675,8 +674,31 @@ static inline axes_signals_t gc_paramwords_to_axes (parameter_words_t p_words)
 {
 #if N_AXIS == 3
     return (axes_signals_t){ (uint8_t)(p_words.mask >> 24) };
-#else
+#elif N_AXIS == 7
     return (axes_signals_t){ (uint8_t)(((p_words.mask >> 24) | ((p_words.mask << 2) & 0b00111000) | ((p_words.mask >> (21 - 6)) & 0b11000000)) & AXES_BITMASK) };
+#else
+    axes_signals_t axes = (axes_signals_t){ (uint8_t)(p_words.mask >> 24) };
+
+  #ifdef A_AXIS
+    axes.a = p_words.a;
+  #endif
+  #ifdef B_AXIS
+    axes.b = p_words.b;
+  #endif
+  #ifdef C_AXIS
+    axes.c = p_words.c;
+  #endif
+  #ifdef U_AXIS
+    axes.u = p_words.u;
+  #endif
+  #ifdef V_AXIS
+    axes.v = p_words.v;
+  #endif
+  #ifdef W_AXIS
+    axes.w = p_words.w;
+  #endif
+
+    return axes;
 #endif
 }
 
@@ -718,6 +740,7 @@ void gc_coolant (coolant_state_t state);
 
 void gc_set_tool_offset (tool_offset_mode_t mode, uint_fast8_t idx, int32_t offset);
 plane_t *gc_get_plane_data (plane_t *plane, plane_select_t select);
+axes_signals_t gc_claim_axis_words (parser_block_t *gc_block, axes_signals_t validate);
 
 #if NGC_PARAMETERS_ENABLE
 parameter_words_t gc_get_g65_arguments (void);

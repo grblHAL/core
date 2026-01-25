@@ -37,20 +37,24 @@ axes_signals_t xbar_fn_to_axismask (pin_function_t fn)
             mask.x = mask.y = On;
             break;
 
-#if N_AXIS > 3
+#if defined(A_AXIS) || defined(B_AXIS)
         case Output_StepperEnableAB:
+#ifdef A_AXIS
             mask.a = On;
-#if N_AXIS > 4
+#endif
+#ifdef B_AXIS
             mask.b = On;
 #endif
             break;
 #endif
+
         case Input_LimitX:
         case Input_LimitX_Max:
         case Input_LimitX_2:
         case Input_HomeX:
         case Input_MotorFaultX:
         case Input_MotorFaultX_2:
+        case Output_StepperEnableX:
             mask.x = On;
             break;
 
@@ -60,6 +64,7 @@ axes_signals_t xbar_fn_to_axismask (pin_function_t fn)
         case Input_HomeY:
         case Input_MotorFaultY:
         case Input_MotorFaultY_2:
+        case Output_StepperEnableY:
             mask.y = On;
             break;
 
@@ -69,53 +74,65 @@ axes_signals_t xbar_fn_to_axismask (pin_function_t fn)
         case Input_HomeZ:
         case Input_MotorFaultZ:
         case Input_MotorFaultZ_2:
+        case Output_StepperEnableZ:
             mask.z = On;
             break;
 
-#if N_AXIS > 3
+#ifdef A_AXIS
         case Input_LimitA:
         case Input_LimitA_Max:
         case Input_HomeA:
         case Input_MotorFaultA:
+        case Output_StepperEnableA:
             mask.a = On;
             break;
 #endif
-#if N_AXIS > 4
+#ifdef B_AXIS
         case Input_LimitB:
         case Input_LimitB_Max:
         case Input_HomeB:
         case Input_MotorFaultB:
+        case Output_StepperEnableB:
             mask.b = On;
             break;
 #endif
-#if N_AXIS > 5
+#ifdef C_AXIS
         case Input_LimitC:
         case Input_LimitC_Max:
         case Input_HomeC:
         case Input_MotorFaultC:
+        case Output_StepperEnableC:
             mask.c = On;
             break;
 #endif
-#if N_AXIS > 6
+#ifdef U_AXIS
         case Input_LimitU:
         case Input_LimitU_Max:
         case Input_HomeU:
         case Input_MotorFaultU:
+        case Output_StepperEnableU:
             mask.u = On;
             break;
 #endif
-#if N_AXIS == 8
+#ifdef V_AXIS
         case Input_LimitV:
         case Input_LimitV_Max:
         case Input_HomeV:
         case Input_MotorFaultV:
+        case Output_StepperEnableV:
             mask.v = On;
             break;
 #endif
-
+#ifdef W_AXIS
+        case Input_LimitW:
+        case Input_LimitW_Max:
+        case Input_HomeW:
+        case Input_MotorFaultW:
+        case Output_StepperEnableW:
+            mask.w = On;
+            break;
+#endif
         default:
-            if(fn >= Output_StepperEnableX && fn <= Output_StepperEnableV)
-                mask.bits = (1 << (fn - Output_StepperEnableX));
             break;
     }
 

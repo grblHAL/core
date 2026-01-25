@@ -1,5 +1,5 @@
 /*
-  protocol.h - controls Grbl execution protocol and procedures
+  protocol.h - controls grblHAL execution protocol and procedures
 
   Part of grblHAL
 

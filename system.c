@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2025 Terje Io
+  Copyright (c) 2017-2026 Terje Io
   Copyright (c) 2014-2016 Sungeun K. Jeon for Gnea Research LLC
 
   grblHAL is free software: you can redistribute it and/or modify
@@ -324,7 +324,7 @@ static status_code_t output_all_settings (sys_state_t state, char *args)
 
 static status_code_t output_parser_state (sys_state_t state, char *args)
 {
-    report_gcode_modes();
+    report_gcode_modes(hal.stream.write);
     system_add_rt_report(Report_Homed); // Report homed state on next realtime report
 
     return Status_OK;
@@ -532,6 +532,13 @@ static status_code_t home_u (sys_state_t state, char *args)
 static status_code_t home_v (sys_state_t state, char *args)
 {
     return go_home(state, (axes_signals_t){V_AXIS_BIT});
+}
+#endif
+
+#ifdef W_AXIS
+static status_code_t home_w (sys_state_t state, char *args)
+{
+    return go_home(state, (axes_signals_t){W_AXIS_BIT});
 }
 #endif
 
@@ -930,32 +937,23 @@ PROGMEM static const sys_command_t sys_commands[] = {
     { "HX", home_x },
     { "HY", home_y },
     { "HZ", home_z },
-#if AXIS_REMAP_ABC2UVW
-  #ifdef A_AXIS
-    { "HU", home_a },
-  #endif
-  #ifdef B_AXIS
-    { "HV", home_b },
-  #endif
-  #ifdef C_AXIS
-    { "HW", home_c },
-  #endif
-#else
-  #ifdef A_AXIS
+#ifdef A_AXIS
     { "HA", home_a },
-  #endif
-  #ifdef B_AXIS
+#endif
+#ifdef B_AXIS
     { "HB", home_b },
-  #endif
-  #ifdef C_AXIS
+#endif
+#ifdef C_AXIS
     { "HC", home_c },
-  #endif
 #endif
 #ifdef U_AXIS
     { "HU", home_u },
 #endif
 #ifdef V_AXIS
     { "HV", home_v },
+#endif
+#ifdef W_AXIS
+    { "HW", home_w },
 #endif
     { "HSS", report_current_home_signal_state, { .noargs = On, .allow_blocking = On }, { .str = "report homing switches status" } },
     { "HELP", output_help, { .allow_blocking = On }, {
@@ -1133,26 +1131,6 @@ status_code_t system_execute_line (char *line)
         cmd = retval == Status_Unhandled ? cmd->next : NULL;
     } while(cmd);
 
-    // deprecated, to be removed
-    if(retval == Status_Unhandled && (cmd = grbl.on_get_commands ? grbl.on_get_commands() : NULL)) {
-
-        do {
-            for(idx = 0; idx < cmd->n_commands; idx++) {
-                if(!strcmp(line, cmd->commands[idx].command)) {
-                    if(sys.blocking_event && !cmd->commands[idx].flags.allow_blocking) {
-                        retval = Status_NotAllowedCriticalEvent;
-                        break;
-                    } else if(!cmd->commands[idx].flags.noargs || args == NULL) {
-                        if((retval = cmd->commands[idx].execute(state_get(), args)) != Status_Unhandled)
-                            break;
-                    }
-                }
-            }
-            cmd = retval == Status_Unhandled && cmd->on_get_commands ? cmd->on_get_commands() : NULL;
-        } while(cmd);
-    }
-    // end of to be removed
-
     // Let user code have a peek at system commands before check for global setting
     if(retval == Status_Unhandled && grbl.on_unknown_sys_command) {
         if(args)
@@ -1252,11 +1230,12 @@ bool system_xy_at_fixture (coord_system_id_t id, float tolerance)
 {
     bool ok = false;
 
-    coord_data_t target, position;
+    coord_data_t position;
+    coord_system_data_t target;
 
-    if(tolerance > 0.0f && settings_read_coord_data(id, &target.values)) {
+    if(tolerance > 0.0f && settings_read_coord_data(id, &target)) {
         system_convert_array_steps_to_mpos(position.values, sys.position);
-        ok = hypot_f(position.x - target.x, position.y - target.y) <= tolerance;
+        ok = hypot_f(position.x - target.coord.x, position.y - target.coord.y) <= tolerance;
     }
 
     return ok;

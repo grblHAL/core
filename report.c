@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2025 Terje Io
+  Copyright (c) 2017-2026 Terje Io
   Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
 
   grblHAL is free software: you can redistribute it and/or modify
@@ -598,7 +598,7 @@ status_code_t report_named_ngc_parameter (char *arg)
 void report_ngc_parameters (void)
 {
     uint_fast8_t idx;
-    float coord_data[N_AXIS];
+    coord_system_data_t offset;
 
     if(gc_state.modal.scaling_active) {
         hal.stream.write("[G51:");
@@ -606,16 +606,16 @@ void report_ngc_parameters (void)
         hal.stream.write("]" ASCII_EOL);
     }
 
-    for (idx = 0; idx < N_CoordinateSystems; idx++) {
+    for(idx = 0; idx < N_CoordinateSystems; idx++) {
 
-        if (!(settings_read_coord_data((coord_system_id_t)idx, &coord_data))) {
+        if(!(settings_read_coord_data((coord_system_id_t)idx, &offset))) {
             grbl.report.status_message(Status_SettingReadFail);
             return;
         }
 
         hal.stream.write("[G");
 
-        switch (idx) {
+        switch(idx) {
 
             case CoordinateSystem_G28:
                 hal.stream.write("28");
@@ -635,14 +635,20 @@ void report_ngc_parameters (void)
 
         if(idx != CoordinateSystem_G92) {
             hal.stream.write(":");
-            hal.stream.write(get_axis_values(coord_data));
+            hal.stream.write(get_axis_values(offset.coord.values));
+#ifdef ROTATION_ENABLE
+            if(idx < N_WorkCoordinateSystems) {
+                hal.stream.write(":");
+                hal.stream.write(ftoa(offset.rotation * DEGRAD, 2));
+            }
+#endif
             hal.stream.write("]" ASCII_EOL);
         }
     }
 
     // Print G92, G92.1 which are not persistent in memory
     hal.stream.write("92:");
-    hal.stream.write(get_axis_values(gc_state.g92_coord_offset));
+    hal.stream.write(get_axis_values(gc_state.g92_offset.coord.values));
     hal.stream.write("]" ASCII_EOL);
 
     tool_data_t *tool_data;
@@ -695,66 +701,83 @@ static inline bool is_g92_active (void)
 
     do {
         idx--;
-        active = !(gc_state.g92_coord_offset[idx] == 0.0f || gc_state.g92_coord_offset[idx] == -0.0f);
+        active = !(gc_state.g92_offset.coord.values[idx] == 0.0f || gc_state.g92_offset.coord.values[idx] == -0.0f);
     } while(idx && !active);
 
     return active;
 }
 
-// Print current gcode parser mode state
-void report_gcode_modes (void)
+// Convert motion mode (G0, G1, ...) to string.
+static char *motionmode_to_str (char *buf, motion_mode_t mode)
 {
-    hal.stream.write("[GC:G");
-    if (gc_state.modal.motion >= MotionMode_ProbeToward) {
-        hal.stream.write("38.");
-        hal.stream.write(uitoa((uint32_t)(gc_state.modal.motion - (MotionMode_ProbeToward - 2))));
-    } else
-        hal.stream.write(uitoa((uint32_t)gc_state.modal.motion));
+    strcpy(buf, "G");
 
-    hal.stream.write(" ");
-    hal.stream.write(gc_coord_system_to_str(gc_state.modal.coord_system.id));
+    if(mode == MotionMode_QuadraticSpline || mode == MotionMode_RigidTapping) {
+        strcat(buf, uitoa(mode / 10));
+        strcat(buf, ".1");
+    } else if(mode >= MotionMode_ProbeToward) {
+        strcat(buf, "38.");
+        strcat(buf, uitoa((uint32_t)(mode - (MotionMode_ProbeToward - 2))));
+    } else
+        strcat(buf, uitoa((uint32_t)mode));
+
+    return buf;
+}
+
+// Print current gcode parser mode state
+void report_gcode_modes (stream_write_ptr stream_write)
+{
+    stream_write("[GC:");
+    stream_write(motionmode_to_str(buf, gc_state.modal.motion));
+    stream_write(" ");
+    stream_write(gc_coord_system_to_str(gc_state.modal.g5x_offset.id));
 
 #if COMPATIBILITY_LEVEL < 10
 
     if(is_g92_active())
-        hal.stream.write(" G92");
+        stream_write(" G92");
 
 #endif
 
     if(settings.mode == Mode_Lathe)
-        hal.stream.write(gc_state.modal.diameter_mode ? " G7" : " G8");
+        stream_write(gc_state.modal.diameter_mode ? " G7" : " G8");
 
-    hal.stream.write(" G");
-    hal.stream.write(uitoa((uint32_t)(gc_state.modal.plane_select + 17)));
+    stream_write(" G");
+    stream_write(uitoa((uint32_t)(gc_state.modal.plane_select + 17)));
 
-    hal.stream.write(gc_state.modal.units_imperial ? " G20" : " G21");
+    stream_write(gc_state.modal.units_imperial ? " G20" : " G21");
 
-    hal.stream.write(gc_state.modal.distance_incremental ? " G91" : " G90");
+#if NGC_PARAMETERS_ENABLE
+    if(gc_state.g66_args)
+        stream_write(" G66");
+#endif
 
-    hal.stream.write(" G");
-    hal.stream.write(uitoa((uint32_t)(93 + (gc_state.modal.feed_mode == FeedMode_UnitsPerRev ? 2 : gc_state.modal.feed_mode ^ 1))));
+    stream_write(gc_state.modal.distance_incremental ? " G91" : " G90");
+
+    stream_write(" G");
+    stream_write(uitoa((uint32_t)(93 + (gc_state.modal.feed_mode == FeedMode_UnitsPerRev ? 2 : gc_state.modal.feed_mode ^ 1))));
 
     if(settings.mode == Mode_Lathe && gc_spindle_get(0)->hal->cap.variable)
-        hal.stream.write(gc_spindle_get(0)->rpm_mode == SpindleSpeedMode_RPM ? " G97" : " G96");
+        stream_write(gc_spindle_get(0)->rpm_mode == SpindleSpeedMode_RPM ? " G97" : " G96");
 
 #if COMPATIBILITY_LEVEL < 10
 
     if(gc_state.modal.tool_offset_mode == ToolLengthOffset_Cancel)
-        hal.stream.write(" G49");
+        stream_write(" G49");
     else {
-        hal.stream.write(" G43");
+        stream_write(" G43");
         if(gc_state.modal.tool_offset_mode != ToolLengthOffset_Enable)
-            hal.stream.write(gc_state.modal.tool_offset_mode == ToolLengthOffset_EnableDynamic ? ".1" : ".2");
+            stream_write(gc_state.modal.tool_offset_mode == ToolLengthOffset_EnableDynamic ? ".1" : ".2");
     }
 
-    hal.stream.write(gc_state.modal.retract_mode == CCRetractMode_RPos ? " G99" : " G98");
+    stream_write(gc_state.modal.retract_mode == CCRetractMode_RPos ? " G99" : " G98");
 
     if(gc_state.modal.scaling_active) {
-        hal.stream.write(" G51:");
+        stream_write(" G51:");
         axis_signals_tostring(buf, gc_get_g51_state());
-        hal.stream.write(buf);
+        stream_write(buf);
     } else
-        hal.stream.write(" G50");
+        stream_write(" G50");
 
 #endif
 
@@ -763,23 +786,23 @@ void report_gcode_modes (void)
         switch (gc_state.modal.program_flow) {
 
             case ProgramFlow_Paused:
-                hal.stream.write(" M0");
+                stream_write(" M0");
                 break;
 
             case ProgramFlow_OptionalStop:
-                hal.stream.write(" M1");
+                stream_write(" M1");
                 break;
 
             case ProgramFlow_CompletedM2:
-                hal.stream.write(" M2");
+                stream_write(" M2");
                 break;
 
             case ProgramFlow_CompletedM30:
-                hal.stream.write(" M30");
+                stream_write(" M30");
                 break;
 
             case ProgramFlow_CompletedM60:
-                hal.stream.write(" M60");
+                stream_write(" M60");
                 break;
 
             default:
@@ -787,42 +810,42 @@ void report_gcode_modes (void)
         }
     }
 
-    hal.stream.write(gc_spindle_get(0)->state.on ? (gc_spindle_get(0)->state.ccw ? " M4" : " M3") : " M5");
+    stream_write(gc_spindle_get(0)->state.on ? (gc_spindle_get(0)->state.ccw ? " M4" : " M3") : " M5");
 
     if(gc_state.tool_change)
-        hal.stream.write(" M6");
+        stream_write(" M6");
 
     if (gc_state.modal.coolant.value) {
 
         if (gc_state.modal.coolant.mist)
-             hal.stream.write(" M7");
+             stream_write(" M7");
 
         if (gc_state.modal.coolant.flood)
-            hal.stream.write(" M8");
+            stream_write(" M8");
 
     } else
-        hal.stream.write(" M9");
+        stream_write(" M9");
 
     if (sys.override.control.feed_rates_disable)
-        hal.stream.write(" M50");
+        stream_write(" M50");
 
     if (sys.override.control.spindle_rpm_disable)
-        hal.stream.write(" M51");
+        stream_write(" M51");
 
     if (sys.override.control.feed_hold_disable)
-        hal.stream.write(" M53");
+        stream_write(" M53");
 
     if (settings.parking.flags.enable_override_control && sys.override.control.parking_disable)
-        hal.stream.write(" M56");
+        stream_write(" M56");
 
-    hal.stream.write(appendbuf(2, " T", uitoa((uint32_t)gc_state.tool->tool_id)));
+    stream_write(appendbuf(2, " T", uitoa((uint32_t)gc_state.tool->tool_id)));
 
-    hal.stream.write(appendbuf(2, " F", get_rate_value(gc_state.feed_rate)));
+    stream_write(appendbuf(2, " F", get_rate_value(gc_state.feed_rate)));
 
     if(gc_spindle_get(0)->hal->cap.variable)
-        hal.stream.write(appendbuf(2, " S", ftoa(gc_spindle_get(0)->rpm, N_DECIMAL_RPMVALUE)));
+        stream_write(appendbuf(2, " S", ftoa(gc_spindle_get(0)->rpm, N_DECIMAL_RPMVALUE)));
 
-    hal.stream.write("]" ASCII_EOL);
+    stream_write("]" ASCII_EOL);
 }
 
 // Prints specified startup line
@@ -1139,12 +1162,17 @@ void report_echo_line_received (char *line)
 
 #if N_SYS_SPINDLE == 1 && N_SPINDLE > 1
 
+typedef struct {
+    spindle_id_t spindle_id;
+    stream_write_ptr stream_write;
+} spindle_r_t;
+
 static bool report_spindle_num (spindle_info_t *spindle, void *data)
 {
     bool ok;
 
-    if((ok = spindle->id == *((spindle_id_t *)data)))
-        hal.stream.write_all(appendbuf(2, "|S:", uitoa((uint32_t)spindle->num)));
+    if((ok = spindle->id == ((spindle_r_t *)data)->spindle_id))
+        ((spindle_r_t *)data)->stream_write(appendbuf(2, "|S:", uitoa((uint32_t)spindle->num)));
 
     return ok;
 }
@@ -1156,13 +1184,13 @@ static bool report_spindle_num (spindle_info_t *spindle, void *data)
  // specific needs, but the desired real-time data report must be as short as possible. This is
  // requires as it minimizes the computational overhead and allows grblHAL to keep running smoothly,
  // especially during g-code programs with fast, short line segments and high frequency reports (5-20Hz).
-void report_realtime_status (stream_write_ptr stream_write)
+void report_realtime_status (stream_write_ptr stream_write, report_tracking_flags_t report)
 {
     static bool probing = false;
 
     uint_fast8_t idx;
     float print_position[N_AXIS], wco[N_AXIS], dist_remaining[N_AXIS];
-    report_tracking_flags_t report = system_get_rt_report_flags(), delayed_report = {};
+    report_tracking_flags_t delayed_report = {0};
     probe_state_t probe_state = {
         .connected = On,
         .triggered = Off
@@ -1234,7 +1262,7 @@ void report_realtime_status (stream_write_ptr stream_write)
     system_convert_array_steps_to_mpos(print_position, sys.position);
 
     if((report.distance_to_go = settings.status_report.distance_to_go)) {
-        // Calulate distance-to-go in current block (i.e., difference between target / end-of-block) and current position)
+        // Calculate distance-to-go in current block (i.e., difference between target / end-of-block) and current position)
         plan_block_t *cur_block = plan_get_current_block();
         if((report.distance_to_go = !!cur_block)) {
             for(idx = 0; idx < N_AXIS; idx++) {
@@ -1267,8 +1295,9 @@ void report_realtime_status (stream_write_ptr stream_write)
     if(settings.status_report.line_numbers) {
         // Report current line number
         plan_block_t *cur_block = plan_get_current_block();
-        if (cur_block != NULL && cur_block->line_number > 0)
-            stream_write(appendbuf(2, "|Ln:", uitoa((uint32_t)cur_block->line_number)));
+        uint32_t line_number = cur_block ? cur_block->line_number : gc_state.line_number;
+        if(line_number)
+            stream_write(appendbuf(2, "|Ln:", uitoa(line_number)));
     }
 
     if(report.distance_to_go) {
@@ -1311,8 +1340,13 @@ void report_realtime_status (stream_write_ptr stream_write)
     }
 
 #elif N_SPINDLE > 1
-    if(report.spindle_id)
-        spindle_enumerate_spindles(report_spindle_num, &spindle_0->id);
+    if(report.spindle_id) {
+        spindle_r_t data = {
+            .spindle_id = spindle_0->id,
+            .stream_write = stream_write
+        };
+        spindle_enumerate_spindles(report_spindle_num, &data);
+    }
 #endif
 
     if(settings.status_report.pin_state) {
@@ -1402,11 +1436,15 @@ void report_realtime_status (stream_write_ptr stream_write)
             }
             stream_write("|WCO:");
             stream_write(get_axis_values(wco));
+#ifdef ROTATION_ENABLE
+//            stream_write(":");
+//            stream_write(ftoa(gc_state.modal.g5x_offset.data.rotation, 2));
+#endif
         }
 
         if(report.gwco) {
             stream_write("|WCS:");
-            stream_write(gc_coord_system_to_str(gc_state.modal.coord_system.id));
+            stream_write(gc_coord_system_to_str(gc_state.modal.g5x_offset.id));
         }
 
         if(report.overrides) {
@@ -1509,15 +1547,28 @@ void report_realtime_status (stream_write_ptr stream_write)
         static float feed_rate, spindle_rpm;
         static gc_modal_t last_state;
         static bool g92_active;
+#if NGC_PARAMETERS_ENABLE
+        static bool g66_active;
+#endif
 
         spindle_t *spindle = gc_spindle_get(0);
-        bool is_changed = feed_rate != gc_state.feed_rate || spindle_rpm != spindle->rpm || tool_id != gc_state.tool->tool_id;
+        bool is_changed = feed_rate != gc_state.feed_rate ||
+                           spindle_rpm != spindle->rpm ||
+                            tool_id != gc_state.tool->tool_id
+#if NGC_PARAMETERS_ENABLE
+                             || g66_active != !!gc_state.g66_args;
+#else
+;
+#endif
 
         if(is_changed) {
             feed_rate = gc_state.feed_rate;
             tool_id = gc_state.tool->tool_id;
             spindle_rpm = spindle->rpm;
-        } else if ((is_changed = g92_active != is_g92_active()))
+#if NGC_PARAMETERS_ENABLE
+            g66_active = !!gc_state.g66_args;
+#endif
+        } else if((is_changed = g92_active != is_g92_active()))
             g92_active = !g92_active;
         else if(memcmp(&last_state, &gc_state.modal, sizeof(gc_modal_t))) {
             last_state = gc_state.modal;
@@ -1533,10 +1584,12 @@ void report_realtime_status (stream_write_ptr stream_write)
 
     stream_write(">" ASCII_EOL);
 
-    system_add_rt_report(Report_ClearAll);
+    if(stream_write == hal.stream.write_all) {
+        system_add_rt_report(Report_ClearAll);
 
-    if(delayed_report.wco)
-        system_add_rt_report(Report_WCO); // Set to report on next request
+        if(delayed_report.wco)
+            system_add_rt_report(Report_WCO); // Set to report on next request
+    }
 }
 
 static void report_bitfield (const char *format, bool bitmap)
@@ -2844,4 +2897,16 @@ void report_init_fns (void)
 
     if(grbl.on_report_handlers_init)
         grbl.on_report_handlers_init();
+}
+
+report_tracking_flags_t report_get_rt_flags_all (void)
+{
+    report_tracking_flags_t report;
+
+    report.value = (uint32_t)Report_All;
+    report.tool_offset = sys.report.tool_offset;
+    report.m66result = sys.var5399 > -2;
+    report.probe_id = !!hal.probe.select;
+
+    return report;
 }

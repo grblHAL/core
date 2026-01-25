@@ -61,36 +61,45 @@ static const float froundvalues[MAX_PRECISION + 1] =
 
 const coord_data_t null_vector = {0};
 
-char const *const axis_letter[N_AXIS] = {
-    "X",
-    "Y",
-    "Z"
+static const char axis_letters[] = {
+    AXIS0_LETTER, '\0',
+    AXIS1_LETTER, '\0',
+    AXIS2_LETTER, '\0',
 #if N_AXIS > 3
-  #if !AXIS_REMAP_ABC2UVW
-    ,"A"
-  #else
-    ,"U"
-  #endif
+    AXIS3_LETTER, '\0',
 #endif
 #if N_AXIS > 4
-  #if !AXIS_REMAP_ABC2UVW
-    ,"B"
-  #else
-    ,"V"
-  #endif
+    AXIS4_LETTER, '\0',
 #endif
 #if N_AXIS > 5
- #if !AXIS_REMAP_ABC2UVW
-    ,"C"
-  #else
-    ,"W"
-  #endif
+    AXIS5_LETTER, '\0',
 #endif
 #if N_AXIS > 6
-    ,"U"
+    AXIS6_LETTER, '\0',
 #endif
 #if N_AXIS > 7
-    ,"V"
+    AXIS7_LETTER, '\0',
+#endif
+};
+
+char const *const axis_letter[N_AXIS] = {
+    &axis_letters[0 << 1],
+    &axis_letters[1 << 1],
+    &axis_letters[2 << 1],
+#if N_AXIS > 3
+    &axis_letters[3 << 1],
+#endif
+#if N_AXIS > 4
+    &axis_letters[4 << 1],
+#endif
+#if N_AXIS > 5
+    &axis_letters[5 << 1],
+#endif
+#if N_AXIS > 6
+    &axis_letters[6 << 1],
+#endif
+#if N_AXIS > 7
+    &axis_letters[7 << 1],
 #endif
 };
 
@@ -350,6 +359,16 @@ float convert_delta_vector_to_unit_vector (float *vector)
     } while(idx);
 
     return magnitude;
+}
+
+void rotate (coord_data_t *pt, plane_t plane, float angle /*rad*/)
+{
+    float cos = cosf(angle), sin = sinf(angle),
+          t0 = pt->values[plane.axis_0] * cos - pt->values[plane.axis_1] * sin,
+          t1 = pt->values[plane.axis_0] * sin + pt->values[plane.axis_1] * cos;
+
+    pt->values[plane.axis_0] = t0;
+    pt->values[plane.axis_1] = t1;
 }
 
 // parse ISO8601 datetime: YYYY-MM-DDTHH:MM:SSZxxx

@@ -31,4 +31,6 @@ void task_delete (foreground_task_ptr fn, void *data);
 bool task_add_systick (foreground_task_ptr fn, void *data);
 void task_delete_systick (foreground_task_ptr fn, void *data);
 
+void task_raise_alarm (void *data);
+
 #endif // _CORE_TASK_H_

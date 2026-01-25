@@ -1,5 +1,55 @@
 ## grblHAL changelog
 
+<a name="20260125">Build 20260125
+
+Core:
+
+* Refactored offset handling, for improved readability and in preparation for rotation support.
+
+* Added experimental support for `G66` \(modal macro call\) and `G67` \(end modal macro call\).
+
+* Made axis letter to axis/motor assignment for axes ABCUVW freely changeable at compile time.
+Axes configurations such as XYZC and XYZAW is now possible.
+> [!NOTE]
+> Axis letter to motor assignment has to be in ascending order, e.g. XYZWA will not work.
+> Max. number of axes is still limited to 8, capped by the board map.
+
+* Fix for some `G65` arguments being incorrectly validated for normal use \(sign, range\).
+
+* Added repeat support to `G65` macro call via the optional `L` parameter word.
+
+* Changed default setting for ABC-axes to rotary.
+
+* Changed defaults for jerk settings to 10x acceleration settings.
+
+* Disabled jerk for jog, probe and spindle synchronized motion. 
+
+* Added `_active_probe` system parameter, returns -1 if no probe inputs available.
+
+* Minor bug fix, `G5.1` and `G33.1` motion commands were not coverted to the correct string equivalent in `$G` output.
+
+Drivers:
+
+* All: updated for new axis letter assigment scheme.  
+For boards with EEPROM/FRAM an alarm will now be raised if the EEPROM/FRAM cannot be accessed.
+
+* RP2040: fix for LED strips not working. Ref. issue [#167](https://github.com/grblHAL/RP2040/issues/167).  
+Fix for second serial port not working on the RP23U5XBB board. Ref. issue [#160](https://github.com/grblHAL/RP2040/issues/160).
+
+Plugins:
+
+* Some: updated for new axis letter assigment scheme and other core changes.
+
+* Networking: ftpd - changed CWD \(Current Working Directory\) handling to be per connection. Ref. PR [#17](https://github.com/grblHAL/Plugin_networking/pull/17).  
+httpd - added CORS support and some new content types. Ref. PR [#19](https://github.com/grblHAL/Plugin_networking/pull/19). 
+Some minor bugfixes and general improvements.
+ 
+* 3rd party: added M800 plugin to core list. Ref. issue [#30](https://github.com/grblHAL/plugins/issues/30).
+
+* Misc: removed LED strip configuration plugin, settings `$536` and `$537` are now handled by the core.
+
+---
+
 <a name="20260107">Build 20260107
 
 Core:

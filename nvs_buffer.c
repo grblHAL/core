@@ -58,7 +58,7 @@ typedef struct {
 #define NVS_GROUP_STARTUP 3
 #define NVS_GROUP_BUILD 4
 
-#define PARAMETER_ADDR(n) (NVS_ADDR_PARAMETERS + n * (sizeof(coord_data_t) + NVS_CRC_BYTES))
+#define PARAMETER_ADDR(n) (NVS_ADDR_PARAMETERS + n * (sizeof(coord_system_data_t) + NVS_CRC_BYTES))
 #define STARTLINE_ADDR(n) (NVS_ADDR_STARTUP_BLOCK + n * (sizeof(stored_line_t) + NVS_CRC_BYTES))
 #if N_TOOLS
 #define TOOL_ADDR(n) (NVS_ADDR_TOOL_TABLE + n * (sizeof(tool_data_t) + NVS_CRC_BYTES))
@@ -352,8 +352,8 @@ void nvs_buffer_sync_physical (void)
         idx = N_CoordinateSystems;
         if(settings_dirty.coord_data) do {
             if(bit_istrue(settings_dirty.coord_data, bit(idx))) {
-                offset = NVS_ADDR_PARAMETERS + idx * (sizeof(coord_data_t) + NVS_CRC_BYTES);
-                if(physical_nvs.memcpy_to_nvs(offset, (uint8_t *)(nvsbuffer.addr + offset), sizeof(coord_data_t) + NVS_CRC_BYTES, false) == NVS_TransferResult_OK)
+                offset = NVS_ADDR_PARAMETERS + idx * (sizeof(coord_system_data_t) + NVS_CRC_BYTES);
+                if(physical_nvs.memcpy_to_nvs(offset, (uint8_t *)(nvsbuffer.addr + offset), sizeof(coord_system_data_t) + NVS_CRC_BYTES, false) == NVS_TransferResult_OK)
                     bit_false(settings_dirty.coord_data, bit(idx));
             }
         } while(idx--);
@@ -425,7 +425,7 @@ void nvs_memmap (void)
     strcat(buf, " ");
     strcat(buf, uitoa(NVS_SIZE_PARAMETERS));
     strcat(buf, " ");
-    strcat(buf, uitoa(NVS_ADDR_PARAMETERS + N_CoordinateSystems * (sizeof(coord_data_t) + NVS_CRC_BYTES)));
+    strcat(buf, uitoa(NVS_ADDR_PARAMETERS + N_CoordinateSystems * (sizeof(coord_system_data_t) + NVS_CRC_BYTES)));
     report_message(buf, Message_Plain);
 
     strcpy(buf, "Startup block: ");

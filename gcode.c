@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2025 Terje Io
+  Copyright (c) 2017-2026 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -390,14 +390,10 @@ void gc_init (bool stop)
         }
     } else {
 
-        coord_data_t tlo;
         coord_system_id_t coord_system_id = gc_state.modal.coord_system.id;
         tool_offset_mode_t tool_offset_mode = gc_state.modal.tool_offset_mode;
 
-        memcpy(&tlo, gc_state.modal.tool_length_offset, sizeof(coord_data_t));
         memset(&gc_state, 0, offsetof(parser_state_t, g92_coord_offset));
-        memcpy(gc_state.modal.tool_length_offset, &tlo, sizeof(coord_data_t));
-
         gc_state.tool_pending = gc_state.tool->tool_id;
         if(hal.tool.select)
             hal.tool.select(gc_state.tool, false);
@@ -965,6 +961,16 @@ status_code_t gc_execute_block (char *block)
     uint_fast8_t ngc_param_count = 0;
 
 #endif // NGC_EXPRESSIONS_ENABLE
+
+#ifdef ROTATION_ENABLE
+
+    static const axes_signals_t rotate_axes[] = {
+        { .x = On, .y = On },
+        { .x = On, .z = On },
+        { .y = On, .z = On }
+    };
+
+#endif
 
     char *message = NULL;
     status_code_t status = Status_OK;
@@ -3156,6 +3162,11 @@ status_code_t gc_execute_block (char *block)
                                     gc_block.values.ijk[idx] *= scale_factor.ijk[idx];
                             } while(idx);
                         }
+
+#ifdef ROTATION_ENABLE
+                        if(gc_block.modal.g5x_offset.data.rotation != 0.0f)
+                            rotate((coord_data_t *)gc_block.values.ijk, plane, gc_block.modal.g5x_offset.data.rotation);
+#endif
 
                         // Arc radius from center to target
                         x -= gc_block.values.ijk[plane.axis_0]; // Delta x between circle center and target

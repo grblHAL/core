@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2025 Terje Io
+  Copyright (c) 2021-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -546,14 +546,39 @@ void stream_mpg_set_mode (void *data)
     stream_mpg_enable(data != NULL);
 }
 
+static void stream_mpg_write (void *cmd)
+{
+    switch((uint32_t)cmd) {
+
+        case CMD_STATUS_REPORT_ALL:
+            report_realtime_status(mpg.stream.write, report_get_rt_flags_all());
+            break;
+
+        case CMD_GCODE_REPORT:
+            report_gcode_modes(mpg.stream.write);
+            break;
+    }
+}
+
 ISR_CODE bool ISR_FUNC(stream_mpg_check_enable)(uint8_t c)
 {
-    if(c == CMD_MPG_MODE_TOGGLE)
-    	task_add_immediate(stream_mpg_set_mode, (void *)1);
-    else {
-        protocol_enqueue_realtime_command(c);
-        if((c == CMD_CYCLE_START || c == CMD_CYCLE_START_LEGACY) && settings.status_report.pin_state)
-            sys.report.cycle_start |= state_get() == STATE_IDLE;
+    switch(c) {
+
+        case CMD_MPG_MODE_TOGGLE:
+            task_add_immediate(stream_mpg_set_mode, (void *)1);
+            break;
+
+        case CMD_GCODE_REPORT:
+        case CMD_STATUS_REPORT_ALL:
+            if(mpg.flags.is_mpg_tx)
+                task_add_immediate(stream_mpg_write, (void *)((uint32_t)c));
+            break;
+
+        default:
+            protocol_enqueue_realtime_command(c);
+            if((c == CMD_CYCLE_START || c == CMD_CYCLE_START_LEGACY) && settings.status_report.pin_state)
+                sys.report.cycle_start |= state_get() == STATE_IDLE;
+            break;
     }
 
     return true;

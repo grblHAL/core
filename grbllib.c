@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2025 Terje Io
+  Copyright (c) 2017-2026 Terje Io
   Copyright (c) 2011-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -447,7 +447,7 @@ int grbl_enter (void)
         fs_options_t fs_options = { .hierarchical_listing = On };
         fs_options.lfs_hidden = hal.driver_cap.littlefs;
         fs_options.sd_mount_on_boot = hal.driver_cap.sd_card;
-        setting_remove_elements(Setting_FSOptions, fs_options.mask);
+        setting_remove_elements(Setting_FSOptions, fs_options.mask, true);
     }
 
     if(hal.stream.state.linestate_event && !hal.stream.state.passthru) {
@@ -815,4 +815,9 @@ void task_execute_on_startup (void)
         while(true)
             grbl.on_execute_realtime(state_get());
     }
+}
+
+void task_raise_alarm (void *data)
+{
+    system_raise_alarm((alarm_code_t)data);
 }

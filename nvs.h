@@ -42,14 +42,14 @@ Must be >= NVS_SIZE.
 #define NVS_CRC_BYTES 2
 #endif
 
-#define NVS_SIZE_PARAMETERS     ((sizeof(coord_data_t) + NVS_CRC_BYTES) * N_CoordinateSystems)
+#define NVS_SIZE_PARAMETERS     ((sizeof(coord_system_data_t) + NVS_CRC_BYTES) * N_CoordinateSystems)
 #define NVS_SIZE_BUILD_INFO     (sizeof(stored_line_t) + NVS_CRC_BYTES)
 #define NVS_SIZE_STARTUP_BLOCK  (N_STARTUP_LINE * (sizeof(stored_line_t) + NVS_CRC_BYTES))
 
 /*! \brief Number of bytes at the start of the NVS area reserved for core settings and parameters.
 Minimum 1024 bytes required, more if > 5 axes enabled.
 */
-#if N_AXIS > 5
+#if N_AXIS > 5 || (N_AXIS > 4 && defined(ROTATION_ENABLE))
 #define GRBL_NVS_END (NVS_ADDR_GLOBAL + ((sizeof(settings_t) + NVS_CRC_BYTES + 4) & 0xFFFC) + NVS_SIZE_PARAMETERS + NVS_SIZE_BUILD_INFO + NVS_SIZE_STARTUP_BLOCK + 1)
 #else
 #define GRBL_NVS_END 1023
@@ -69,7 +69,7 @@ __NOTE:__ 1024 bytes of persistent storage is the minimum required.
 */
 ///@{
 #define NVS_ADDR_GLOBAL         1U
-#if N_AXIS > 5
+#if N_AXIS > 5 || (N_AXIS > 4 && defined(ROTATION_ENABLE))
 #define NVS_ADDR_PARAMETERS     ((sizeof(settings_t) + NVS_CRC_BYTES + 4) & 0xFFFC) // align to word boundary
 #else
 #define NVS_ADDR_PARAMETERS     512U

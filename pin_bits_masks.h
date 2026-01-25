@@ -330,10 +330,12 @@ static inline void aux_ctrl_claim_ports (aux_claim_explicit_ptr aux_claim_explic
 
             pin_cap_t cap = { .irq_mode = aux_ctrl[idx].irq_mode, .claimable = On };
 
-            if(aux_ctrl[idx].gpio.pin == 0xFE) // Toolsetter and Probe2
-                ioports_enumerate(Port_Digital, Port_Input, cap, __find_in_port, (void *)&aux_ctrl[idx]);
+            // Toolsetter and Probe2
+            if(aux_ctrl[idx].gpio.pin == 0xFE && ioports_enumerate(Port_Digital, Port_Input, cap, __find_in_port, (void *)&aux_ctrl[idx]))
+                aux_claim_explicit(&aux_ctrl[idx]);
+
 #ifdef STM32_PLATFORM
-            if(aux_ctrl[idx].irq_mode == IRQ_Mode_None && !(aux_ctrl[idx].function == Input_Probe || aux_ctrl[idx].function == Input_LimitsOverride))
+            if(aux_ctrl[idx].irq_mode == IRQ_Mode_None && !(aux_ctrl_is_probe(aux_ctrl[idx].function) || aux_ctrl[idx].function == Input_LimitsOverride))
                 continue;
 #endif
             if(aux_ctrl[idx].gpio.pin == 0xFF) {
@@ -617,7 +619,72 @@ static inline void aux_ctrl_claim_out_ports (aux_claim_explicit_out_ptr aux_clai
 #define DEVICES_IRQ_MASK_SUM (SPI_IRQ_BIT+SPINDLE_INDEX_BIT+QEI_A_BIT+QEI_B_BIT+SD_DETECT_BIT)
 #endif
 
-// Auxillary input signals
+#ifdef STM32_PLATFORM
+
+// Used for validating pins that requires IRQ capabilities 
+
+#ifdef RESET_PIN
+#define RESET_BIT (1<<RESET_PIN)
+#else
+#define RESET_BIT 0
+#endif
+
+#ifdef FEED_HOLD_PIN
+#define FEED_HOLD_BIT (1<<FEED_HOLD_PIN)
+#else
+#define FEED_HOLD_BIT 0
+#endif
+
+#ifdef CYCLE_START_PIN
+#define CYCLE_START_BIT (1<<CYCLE_START_PIN)
+#else
+#define CYCLE_START_BIT 0
+#endif
+
+#ifdef PROBE_DISCONNECT_PIN
+#define PROBE_DISCONNECT_BIT (1<<PROBE_DISCONNECT_PIN)
+#else
+#define PROBE_DISCONNECT_BIT 0
+#endif
+
+#ifdef STOP_DISABLE_PIN
+#define STOP_DISABLE_BIT (1<<STOP_DISABLE_PIN)
+#else
+#define STOP_DISABLE_BIT 0
+#endif
+
+#ifdef BLOCK_DELETE_PIN
+#define BLOCK_DELETE_BIT (1<<BLOCK_DELETE_PIN)
+#else
+#define BLOCK_DELETE_BIT 0
+#endif
+
+#ifdef SINGLE_BLOCK_PIN
+#define SINGLE_BLOCK_BIT (1<<SINGLE_BLOCK_PIN)
+#else
+#define SINGLE_BLOCK_BIT 0
+#endif
+
+#ifdef MOTOR_FAULT_PIN
+#define MOTOR_FAULT_BIT (1<<MOTOR_FAULT_PIN)
+#else
+#define MOTOR_FAULT_BIT 0
+#endif
+
+#ifdef MOTOR_WARNING_PIN
+#define MOTOR_WARNING_BIT (1<<MOTOR_WARNING_PIN)
+#else
+#define MOTOR_WARNING_BIT 0
+#endif
+
+#ifndef CONTROL_MASK
+#define CONTROL_MASK (RESET_BIT|FEED_HOLD_BIT|CYCLE_START_BIT|PROBE_DISCONNECT_BIT|STOP_DISABLE_BIT|BLOCK_DELETE_BIT|SINGLE_BLOCK_BIT|MOTOR_FAULT_BIT|MOTOR_WARNING_BIT)
+#define CONTROL_MASK_SUM (RESET_BIT+FEED_HOLD_BIT+CYCLE_START_BIT+PROBE_DISCONNECT_BIT+STOP_DISABLE_BIT+BLOCK_DELETE_BIT+SINGLE_BLOCK_BIT+MOTOR_FAULT_BIT+MOTOR_WARNING_BIT)
+#endif
+
+#endif // STM32_PLATFORM
+
+// Auxiliary input signals
 
 #ifdef AUXINPUT0_PIN
 #define AUXINPUT0_BIT (1<<AUXINPUT0_PIN)

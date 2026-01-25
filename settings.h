@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2025 Terje Io
+  Copyright (c) 2017-2026 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -969,21 +969,12 @@ typedef enum {
     Group_XAxis = Group_Axis0,  //!< 44
     Group_YAxis,                //!< 45
     Group_ZAxis,                //!< 46
-#ifdef A_AXIS
     Group_AAxis,                //!< 47
-#endif
-#ifdef B_AXIS
     Group_BAxis,                //!< 48
-#endif
-#ifdef C_AXIS
     Group_CAxis,                //!< 49
-#endif
-#ifdef U_AXIS
     Group_UAxis,                //!< 50
-#endif
-#ifdef V_AXIS
     Group_VAxis,                //!< 51
-#endif
+    Group_WAxis,                //!< 52
     Group_Unknown = 99,         //!< 99
     Group_All = Group_Root      //!< 0
 } setting_group_t;
@@ -1140,10 +1131,10 @@ void settings_write_build_info(char *line);
 bool settings_read_build_info(char *line);
 
 // Writes selected coordinate data to persistent storage
-void settings_write_coord_data(coord_system_id_t id, const float (*coord_data)[N_AXIS]);
+void settings_write_coord_data(coord_system_id_t id, coord_system_data_t *data);
 
 // Reads selected coordinate data from persistent storage
-bool settings_read_coord_data(coord_system_id_t id, const float (*coord_data)[N_AXIS]);
+bool settings_read_coord_data(coord_system_id_t id, coord_system_data_t *data);
 
 // Temporarily override acceleration, if 0 restore to configured setting value
 bool settings_override_acceleration (uint8_t axis, float acceleration);
@@ -1168,7 +1159,7 @@ float setting_get_float_value (const setting_detail_t *setting, uint_fast16_t of
 setting_id_t settings_get_axis_base (setting_id_t id, uint_fast8_t *idx);
 bool setting_is_list (const setting_detail_t *setting);
 bool setting_is_integer (const setting_detail_t *setting);
-void setting_remove_elements (setting_id_t id, uint32_t mask);
+void setting_remove_elements (setting_id_t id, uint32_t mask, bool trim);
 bool settings_add_spindle_type (const char *type);
 limit_signals_t settings_get_homing_source (void);
 
