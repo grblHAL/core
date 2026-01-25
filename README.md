@@ -1,6 +1,6 @@
 ## grblHAL ##
 
-Latest build date is 20251208, see the [changelog](changelog.md) for details.  
+Latest build date is 20260125, see the [changelog](changelog.md) for details.  
 
 > [!NOTE]
 >  A settings reset will be performed on an update of builds prior to 20241208. Backup and restore of settings is recommended.  
@@ -51,7 +51,7 @@ This is a port/rewrite of [grbl 1.1f](https://github.com/gnea/grbl) and should b
 #### Supported G-Codes:
 
 ```
-  - Non-Modal Commands: G4, G10L2, G10L20, G28, G30, G28.1, G30.1, G53, G65*****, G92, G92.1
+  - Non-Modal Commands: G4, G10L2, G10L20, G28, G30, G28.1, G30.1, G53, G65*****, G66*****, G67*****, G92, G92.1
   - Additional Non-Modal Commands: G10L1*, G10L10*, G10L11*
   - Motion Modes: G0, G1, G2****, G3****, G5, G5.1, G38.2, G38.3, G38.4, G38.5, G80, G33*
   - Canned cycles: G73, G81, G82, G83, G85, G86, G89, G98, G99
@@ -81,7 +81,7 @@ This is a port/rewrite of [grbl 1.1f](https://github.com/gnea/grbl) and should b
   ** requires compatible GCode sender due to protocol extensions, new state and RT command.
   *** number of inputs and outputs supported dependent on driver implementation.
   **** supports multi turn arcs from build 20220718.
-  ***** requires keypad macros plugin or SD card plugin. Nesting is not allowed.
+  ***** requires keypad macros plugin or SD card plugin.
 ```
 
 G/M-codes not supported by [legacy Grbl](https://github.com/gnea/grbl/wiki) are documented [here](https://github.com/grblHAL/core/wiki/Additional-G--and-M-codes).
@@ -89,4 +89,4 @@ G/M-codes not supported by [legacy Grbl](https://github.com/gnea/grbl/wiki) are 
 Some [plugins](https://github.com/grblHAL/plugins) implements additional M-codes.
 
 ---
-20251109
+20260125
