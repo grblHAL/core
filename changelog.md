@@ -1,15 +1,23 @@
 ## grblHAL changelog
 
+<a name="20260128">20260131
+
+Plugins:
+
+* Networking: added code guard to prevent compiler error for some drivers.
+
+---
+
 <a name="20260128">20260128
 
 Drivers:
-
-* ESP32: fix for issue [#187](https://github.com/grblHAL/ESP32/issues/187), compiler error when VFD spindle enabled.
 
 * STM32F4xx, STM32F7xx: fix for analog inputs not working when no analog outputs are defined.
 Added support for on-chip DACs.
 
 Plugins:
+
+* Spindle: fix for ESP32 issue [#187](https://github.com/grblHAL/ESP32/issues/187), compiler error when VFD spindle enabled.
 
 * Networking: improved WebDAV implementation.
 
