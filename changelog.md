@@ -13,6 +13,8 @@ Ref. discussion [789](https://github.com/grblHAL/core/discussions/789).
 > If a subroutine is not found in the main program it is assumed to be an external routine.  
 > Internal subroutines must be located _after_ the main program part which has to be terminated by `M2` or `M30`.
 
+* Fixed incorrect motor assignments for some axes in default configuration. Ref. issue [#902](https://github.com/grblHAL/core/issues/902).
+
 Drivers:
 
 * ESP32, S3: fix for compilation error when USB serial comms is enabled.

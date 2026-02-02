@@ -631,11 +631,11 @@
 #define B_AXIS_IDX 3
 #elif B_AXIS == 4
 #define B_AXIS_IDX 4
-#elif B_AXIS == 4
+#elif B_AXIS == 5
 #define B_AXIS_IDX 5
-#elif B_AXIS == 4
+#elif B_AXIS == 6
 #define B_AXIS_IDX 6
-#elif B_AXIS == 4
+#elif B_AXIS == 7
 #define B_AXIS_IDX 7
 #endif
 
@@ -683,11 +683,11 @@
 #define C_AXIS_IDX 3
 #elif C_AXIS == 4
 #define C_AXIS_IDX 4
-#elif C_AXIS == 4
-#define C_AXIS_IDX 5
 #elif C_AXIS == 5
-#define C_AXIS_IDX 6
+#define C_AXIS_IDX 5
 #elif C_AXIS == 6
+#define C_AXIS_IDX 6
+#elif C_AXIS == 7
 #define C_AXIS_IDX 7
 #endif
 
