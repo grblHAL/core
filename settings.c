@@ -916,6 +916,13 @@ static status_code_t set_enable_legacy_rt_commands (setting_id_t id, uint_fast16
     return Status_OK;
 }
 
+static status_code_t set_suboptions (setting_id_t id, uint_fast16_t int_value)
+{
+    settings.flags.m98_prescan_enable = int_value != 0;
+
+    return Status_OK;
+}
+
 #if !LATHE_UVW_OPTION
 
 static status_code_t set_mode (setting_id_t id, uint_fast16_t int_value)
@@ -1693,6 +1700,10 @@ FLASHMEM static uint32_t get_int (setting_id_t id)
                        ((!settings.flags.keep_feed_override_on_reset) << 3);
             break;
 
+        case Setting_SubroutineOptions:
+            value = settings.flags.m98_prescan_enable;
+            break;
+
         default:
             break;
     }
@@ -2005,6 +2016,7 @@ FLASHMEM static bool is_setting_available (const setting_detail_t *setting, uint
             break;
 
         case Setting_FSOptions:
+        case Setting_SubroutineOptions:
             available = hal.driver_cap.sd_card || hal.driver_cap.littlefs;
             break;
 
@@ -2204,6 +2216,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_MotorFaultsInvert, Group_Stepper, "Invert motor fault inputs", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.motor_fault_invert, NULL, is_setting_available },
      { Setting_ResetActions, Group_General, "Reset actions", NULL, Format_Bitfield, "Clear homed status if position was lost,Clear offsets (except G92),Clear rapids override,Clear feed override", NULL, NULL, Setting_IsExtendedFn, set_reset_actions, get_int, NULL },
      { Setting_StepperEnableDelay, Group_Stepper, "Stepper enable delay", "ms", Format_Int16, "##0", NULL, "500", Setting_IsExtended, &settings.stepper_enable_delay, NULL, NULL },
+     { Setting_SubroutineOptions, Group_General, "Subroutine options", NULL, Format_Bitfield, "Prescan for internal M98 subroutines", NULL, NULL, Setting_IsExtendedFn, set_suboptions, get_int, is_setting_available }
 };
 
 PROGMEM static const setting_descr_t setting_descr[] = {
@@ -2410,7 +2423,8 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_HomePinsInvertMask, "Inverts the axis home input signals." },
     { Setting_CoolantOnDelay, "Delay to allow coolant to start. 0 or 0.5 - 20s." },
     { Setting_ResetActions, "Controls actions taken on a soft reset." },
-    { Setting_StepperEnableDelay, "Delay from stepper enable to first step output. The driver typically adds ~2ms to this." }
+    { Setting_StepperEnableDelay, "Delay from stepper enable to first step output. The driver typically adds ~2ms to this." },
+//    { Setting_SubroutineOptions, "Enable prescan for internal M98 subroutines." }
 /*
     { Setting_MotorWarningsEnable, "Motor warning enable" },
     { Setting_MotorWarningsInvert, "Invert motor warning inputs" },

@@ -435,7 +435,6 @@ typedef enum {
     Setting_Stepper4  = 654,
     Setting_Stepper5  = 655,
     Setting_Stepper6  = 656,
-    Setting_Stepper7  = 657,
     Setting_Stepper8  = 658,
     Setting_Stepper9  = 659,
     Setting_Stepper10 = 660,
@@ -463,6 +462,8 @@ typedef enum {
     Setting_ModBus_StreamFormat = 681,
     Setting_THC_FeedFactor = 682,
     // 683 - 689 - reserved for Sienci
+
+    Setting_SubroutineOptions = 700,
 
     Setting_SpindlePWMOptions1 = 709,
 
@@ -605,7 +606,8 @@ typedef union {
                  tool_persistent                 :1,
                  keep_rapids_override_on_reset   :1,
                  keep_feed_override_on_reset     :1,
-         		 unassigned                      :9;
+                 m98_prescan_enable              :1,
+         		 unassigned                      :8;
     };
 } settingflags_t;
 

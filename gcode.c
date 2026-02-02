@@ -74,10 +74,11 @@ typedef union {
                  G8 :1, //!< [G43,G43.1,G49] Tool length offset
                 G10 :1, //!< [G98,G99] Return mode in canned cycles
                 G11 :1, //!< [G50,G51] Scaling
-                G12 :1, //!< [G54,G55,G56,G57,G58,G59,G59.1,G59.2,G59.3] Coordinate system selection
-                G13 :1, //!< [G61] Control mode
-                G14 :1, //!< [G96,G97] Spindle Speed Mode
+                G12 :1, //!< [G54,G55,G56,G57,G58,G59,G59.1,G59.2,G59.3] Coordinate system selection (14)
+                G13 :1, //!< [G61] Control mode (15)
+                G14 :1, //!< [G96,G97] Spindle Speed Mode (13)
                 G15 :1, //!< [G7,G8] Lathe Diameter Mode
+//                G16 :1, //!< [G66,G67] Modal macro call (12)
 
                  M4 :1, //!< [M0,M1,M2,M30] Stopping
                  M5 :1, //!< [M62,M63,M64,M65,M66,M67,M68] Aux I/O
@@ -116,11 +117,19 @@ typedef union {
     };
 } ijk_words_t;
 
+typedef struct m98_macro {
+    macro_id_t id;
+    vfs_file_t *file;
+    size_t pos;
+    struct m98_macro *next;
+} m98_macro_t;
+
 // Declare gc extern struct
 DCRAM parser_state_t gc_state;
 
 #define RETURN(status) return gc_at_exit(status);
 
+m98_macro_t *m98_macros = NULL;
 static output_command_t *output_commands = NULL; // Linked list
 static scale_factor_t scale_factor = {
     .ijk[X_AXIS] = 1.0f,
@@ -604,6 +613,68 @@ bool gc_modal_state_restore (gc_modal_snapshot_t *snapshot)
 
 #endif // NGC_PARAMETERS_ENABLE
 
+static m98_macro_t *macro_find (macro_id_t id)
+{
+    m98_macro_t *sub;
+
+    if((sub = m98_macros)) do {
+        if(sub->id == id)
+            break;
+    } while((sub = sub->next));
+
+    return sub;
+}
+
+size_t gc_macro_get_pos (macro_id_t id, vfs_file_t *file)
+{
+    m98_macro_t *sub = macro_find(id);
+
+    return sub && sub->file == file ? sub->pos : 0;
+}
+
+/*
+bool gc_macros_validate (void)
+{
+    bool ok = true;
+    m98_macro_t *sub;
+
+    if((sub = m98_macros)) do {
+        ok = sub->pos != 0;
+    } while(ok && (sub = sub->next));
+
+    return ok;
+}
+*/
+
+static void macros_clear (void)
+{
+    m98_macro_t *next;
+
+    if(m98_macros) do {
+        next = m98_macros->next;
+        free(m98_macros);
+    } while((m98_macros = next));
+}
+
+static status_code_t macro_add (macro_id_t id, vfs_file_t *file)
+{
+    m98_macro_t *sub = macro_find(id);
+
+    if(sub == NULL && (sub = calloc(sizeof(m98_macro_t), 1))) {
+        sub->id = id;
+        sub->file = file;
+        if(m98_macros) {
+            m98_macro_t *add = m98_macros;
+            while(add->next)
+                add = add->next;
+            add->next = sub;
+        } else
+            m98_macros = sub;
+    }
+
+    return sub ? Status_OK : Status_FlowControlOutOfMemory;
+}
+
 static status_code_t macro_call (macro_id_t macro, parameter_words_t args, uint8_t repeats)
 {
 #if NGC_PARAMETERS_ENABLE
@@ -622,10 +693,13 @@ static status_code_t macro_call (macro_id_t macro, parameter_words_t args, uint8
 
 static status_code_t gc_at_exit (status_code_t status)
 {
-    if(status != Status_OK) {
+    if(!(status == Status_OK || status == Status_Handled)) {
 
         // Clear any pending output commands
         gc_clear_output_commands(output_commands);
+
+        // Clear any registered M98 macros
+        macros_clear();
 
 #if NGC_PARAMETERS_ENABLE
 
@@ -926,7 +1000,7 @@ char *gc_normalize_block (char *block, status_code_t *status, char **message)
                 break;
 
             case ')':
-                if(comment && !gc_state.skip_blocks) {
+                if(comment && !(gc_state.skip_blocks || state_get() == STATE_CHECK_MODE)) {
 
                     *s1 = '\0';
                     if(!hal.driver_cap.no_gcode_message_handling) {
@@ -1076,8 +1150,11 @@ status_code_t gc_execute_block (char *block)
             else if(!(gc_state.file_run = fs_changed)) {
                 protocol_buffer_synchronize(); // Empty planner buffer
                 grbl.report.feedback_message(Message_ProgramEnd);
-                if(grbl.on_program_completed)
-                    grbl.on_program_completed(ProgramFlow_EndPercent, state_get() == STATE_CHECK_MODE);
+                if(grbl.on_program_completed) {
+                    bool check_mode = state_get() == STATE_CHECK_MODE;
+                    grbl.on_program_completed(ProgramFlow_EndPercent, check_mode);
+                    gc_state.file_stream = !check_mode;
+                }
             }
         } else
             gc_state.file_run = !gc_state.file_run;
@@ -1619,7 +1696,7 @@ status_code_t gc_execute_block (char *block)
 
                     case 66:
                         if(!ioports_can_do().wait_on_input || (ioports_unclaimed(Port_Digital, Port_Input) == 0 &&
-                                                              ioports_unclaimed(Port_Analog, Port_Input) == 0))
+                                                                ioports_unclaimed(Port_Analog, Port_Input) == 0))
                             RETURN(Status_GcodeUnsupportedCommand); // [Unsupported M command]
                         word_bit.modal_group.M5 = On;
                         port_command = (io_mcode_t)int_value;
@@ -1640,11 +1717,18 @@ status_code_t gc_execute_block (char *block)
                         break;
 #endif
 
+                    case 98:
+                        if(mantissa != 0 || grbl.on_macro_execute == NULL)
+                            RETURN(Status_GcodeUnsupportedCommand);
+                        word_bit.modal_group.M4 = On;
+                        gc_block.non_modal_command = NonModal_MacroCall2;
+                        break;
+
                     case 99:
+                        if(mantissa != 0 || !(!!hal.stream.file || !!grbl.on_macro_return))
+                            RETURN(Status_GcodeUnsupportedCommand);
                         word_bit.modal_group.M4 = On;
                         gc_block.modal.program_flow = ProgramFlow_Return;
-                        if(grbl.on_macro_return == NULL)
-                            RETURN(Status_GcodeUnsupportedCommand);
                         break;
 
                     default:
@@ -1754,10 +1838,20 @@ status_code_t gc_execute_block (char *block)
                         break;
 
                     case 'O':
-                        if (mantissa > 0)
+                        if(mantissa > 0)
                             RETURN(Status_GcodeCommandValueNotInteger);
-                        word_bit.parameter.o = On;
-                        gc_block.values.o = int_value;
+                        {
+                            m98_macro_t *macro;
+
+                            if(hal.stream.state.m98_macro_prescan && (macro = macro_find((macro_id_t)int_value))) {
+                                macro->file = hal.stream.file;
+                                macro->pos = vfs_tell(macro->file);
+                                RETURN(Status_OK);
+                            } else {
+                                word_bit.parameter.o = On;
+                                gc_block.values.o = int_value;
+                            }
+                        }
                         break;
 
                     case 'P': // NOTE: For certain commands, P value must be an integer, but none of these commands are supported.
@@ -1939,9 +2033,11 @@ status_code_t gc_execute_block (char *block)
 
   // [0. Non-specific/common error-checks and miscellaneous setup]:
 
-    if(word_bit.modal_group.G0 &&
+    if((word_bit.modal_group.G0 &&
         (gc_block.non_modal_command == Modal_MacroCall ||
-          gc_block.non_modal_command == NonModal_MacroCall)) {
+          gc_block.non_modal_command == NonModal_MacroCall)) ||
+           (word_bit.modal_group.M4 &&
+             gc_block.non_modal_command == NonModal_MacroCall2)) {
 
         if(!gc_block.words.p)
             RETURN(Status_GcodeValueWordMissing); // [P word missing]
@@ -1955,27 +2051,30 @@ status_code_t gc_execute_block (char *block)
 
 #if NGC_PARAMETERS_ENABLE
 
-        // Remove axis and ijk words flags since values are to be passed unmodified.
-        axis_words.mask = ijk_words.mask = 0;
+        if(gc_block.non_modal_command != NonModal_MacroCall2) {
 
-        if(gc_block.non_modal_command == NonModal_MacroCall) {
-            // TODO: add context for local storage?
-            if(!ngc_call_push(&gc_state + ngc_call_level()))
-                RETURN(Status_FlowControlStackOverflow); // [Call level too deep]
-            gc_block.g65_words.mask = macro_arguments_push(&gc_block.values, gc_block.words).mask;
-            gc_block.words.mask &= ~gc_block.g65_words.mask; // Remove G65 arguments
-        } else { // G66
-            g66_arguments_t *args;
-//            if(gc_state.g66_args && gc_state.g66_args->call_level == ngc_call_level())
-//                  RETURN(cannot have nested g66 calls on the same call level?);
-            if((args = malloc(sizeof(g66_arguments_t)))) {
-                args->prev = gc_state.g66_args;
-                gc_state.g66_args = args;
-                gc_state.g66_args->call_level = ngc_call_level();
-                gc_state.g66_args->words.mask = gc_block.words.mask;
-                memcpy(&gc_state.g66_args->values, &gc_block.values, sizeof(gc_values_t));
+            // Remove axis and ijk words flags since values are to be passed unmodified.
+            axis_words.mask = ijk_words.mask = 0;
+
+            if(gc_block.non_modal_command == NonModal_MacroCall) {
+                // TODO: add context for local storage?
+                if(!ngc_call_push(&gc_state + ngc_call_level()))
+                    RETURN(Status_FlowControlStackOverflow); // [Call level too deep]
+                gc_block.g65_words.mask = macro_arguments_push(&gc_block.values, gc_block.words).mask;
+                gc_block.words.mask &= ~gc_block.g65_words.mask; // Remove G65 arguments
+            } else { // G66
+                g66_arguments_t *args;
+    //            if(gc_state.g66_args && gc_state.g66_args->call_level == ngc_call_level())
+    //                  RETURN(cannot have nested g66 calls on the same call level?);
+                if((args = malloc(sizeof(g66_arguments_t)))) {
+                    args->prev = gc_state.g66_args;
+                    gc_state.g66_args = args;
+                    gc_state.g66_args->call_level = ngc_call_level();
+                    gc_state.g66_args->words.mask = gc_block.words.mask;
+                    memcpy(&gc_state.g66_args->values, &gc_block.values, sizeof(gc_values_t));
+                }
+                RETURN(args ? Status_OK : Status_FlowControlStackOverflow);
             }
-            RETURN(args ? Status_OK : Status_FlowControlStackOverflow);
         }
 #endif // NGC_PARAMETERS_ENABLE
     }
@@ -4092,6 +4191,14 @@ status_code_t gc_execute_block (char *block)
             break;
 #endif
 
+        case NonModal_MacroCall2:
+            if(check_mode) {
+                RETURN(macro_add((macro_id_t)gc_block.values.p, hal.stream.file));
+            } else {
+                RETURN(macro_call((macro_id_t)gc_block.values.p, (parameter_words_t){ .$ = On}, gc_block.values.l));
+            }
+            break;
+
         case NonModal_SetCoordinateOffset: // G92
             add_offset((coord_data_t *)gc_block.values.xyz);
             gc_state.g92_offset_applied = true; // TODO: check for all zero?
@@ -4315,6 +4422,8 @@ status_code_t gc_execute_block (char *block)
         if(gc_state.modal.program_flow == ProgramFlow_Return) {
             if(grbl.on_macro_return)
                 grbl.on_macro_return();
+            else if(grbl.on_program_completed)
+                grbl.on_program_completed(gc_state.modal.program_flow, check_mode);
         } else if(gc_state.modal.program_flow == ProgramFlow_Paused || gc_block.modal.program_flow == ProgramFlow_OptionalStop || gc_block.modal.program_flow == ProgramFlow_CompletedM60 || sys.flags.single_block) {
             if(!check_mode) {
                 if(gc_block.modal.program_flow == ProgramFlow_CompletedM60 && hal.pallet_shuttle)
@@ -4401,14 +4510,15 @@ status_code_t gc_execute_block (char *block)
             if(grbl.on_program_completed)
                 grbl.on_program_completed(gc_state.modal.program_flow, check_mode);
 
-            // Clear any pending output commands
-            gc_clear_output_commands(output_commands);
+            // Clear any pending output commands etc...
+            gc_at_exit(hal.stream.state.m98_macro_prescan ? Status_Handled : Status_UserException);
 
 #if NGC_PARAMETERS_ENABLE
             ngc_modal_state_invalidate();
 #endif
 
-            grbl.report.feedback_message(Message_ProgramEnd);
+            if(!check_mode || !settings.flags.m98_prescan_enable)
+                grbl.report.feedback_message(Message_ProgramEnd);
         }
         gc_state.modal.program_flow = ProgramFlow_Running; // Reset program flow.
     }

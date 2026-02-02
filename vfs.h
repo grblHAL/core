@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2022-2025 Terje Io
+  Copyright (c) 2022-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -79,9 +79,15 @@ typedef struct {
 } vfs_stat_t;
 
 typedef struct {
+    uint8_t update       :1,
+            is_temporary :1,
+            unused       :6;
+} vfs_file_status_t;
+
+typedef struct {
     const void *fs;
     size_t size;
-    bool update;
+    vfs_file_status_t status;
     uint8_t handle __attribute__ ((aligned (4))); // first byte of file handle structure
 } vfs_file_t;
 

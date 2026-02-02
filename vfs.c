@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2022-2025 Terje Io
+  Copyright (c) 2022-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -267,7 +267,7 @@ vfs_file_t *vfs_open (const char *filename, const char *mode)
 
     if(mount && (file = mount->vfs->fopen(get_filename(mount, filename), mode))) {
         file->fs = mount->vfs;
-        file->update = !mount->mode.hidden && !!strchr(mode, 'w');
+        file->status.update = !mount->mode.hidden && !!strchr(mode, 'w');
     }
 
     return file;
@@ -279,7 +279,7 @@ void vfs_close (vfs_file_t *file)
 
     ((vfs_t *)(file->fs))->fclose(file);
 
-    if(file->update && vfs.on_fs_changed)
+    if(file->status.update && vfs.on_fs_changed)
         vfs.on_fs_changed((vfs_t *)file->fs);
 }
 

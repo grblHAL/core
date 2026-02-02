@@ -766,8 +766,12 @@ status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, boo
         *skip = false;
         if(settings.flags.ngc_debug_out)
             report_message(line, Message_Plain);
-    } else
+    } else {
         *skip = skip_sub || (stack_idx >= 0 && stack[stack_idx].skip);
+   //     char buf[200];
+   //     sprintf(buf, "%d %d %d %s", *skip, stack_idx, stack[stack_idx].operation, line);
+   //     report_message(buf, Message_Plain);
+    }
 
     return status;
 }

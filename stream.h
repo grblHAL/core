@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2019-2025 Terje Io
+  Copyright (c) 2019-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -280,13 +280,14 @@ typedef union {
 typedef union {
     uint8_t value;
     struct {
-        uint8_t webui_connected :1,
-                is_usb          :1,
-                linestate_event :1, //!< Set when driver supports on_linestate_changed event.
-                passthru        :1, //!< Set when stream is in passthru mode.
-                utf8            :1, //!< Set when stream is in UTF8 mode.
-                eof             :1, //!< Set when a file stream reaches end-of-file.
-                unused          :2;
+        uint8_t webui_connected   :1,
+                is_usb            :1,
+                linestate_event   :1, //!< Set when driver supports on_linestate_changed event.
+                passthru          :1, //!< Set when stream is in passthru mode.
+                utf8              :1, //!< Set when stream is in UTF8 mode.
+                eof               :1, //!< Set when a file stream reaches end-of-file.
+                m98_macro_prescan :1, //!< Set when prescanning gcode for M98 macro definitions.
+                unused            :1;
     };
 } io_stream_state_t;
 

@@ -1,5 +1,32 @@
 ## grblHAL changelog
 
+<a name="20260202">20260202
+
+Core:
+
+* Added _experimental_ support for M98 subroutines, internal subroutines are only supported for programs run from a local file system.  
+`$700` controls whether they are scanned for internally in the main program \(1\) or always located externally \(0\).
+If scanned for internally the program is run twice, initially in check mode to locate the subroutines before it is rewound and run in normal mode.  
+If stored externally the file _P\<macro number\>.macro_ is run, _\<macro number\>_ is the `M98` `P` value.  
+Ref. discussion [789](https://github.com/grblHAL/core/discussions/789).
+> [!NOTE]
+> If a subroutine is not found in the main program it is assumed to be an external routine.  
+> Internal subroutines must be located _after_ the main program part which has to be terminated by `M2` or `M30`.
+
+Drivers:
+
+* ESP32, S3: fix for compilation error when USB serial comms is enabled.
+
+* STM32F1xx: fix for copy/paste error in SVN board map.
+
+Plugins:
+
+* Spindle, offset: updated for core change.
+
+* Keypad, I2C display interface: updated for core change.
+
+---
+
 <a name="20260128">20260131
 
 Plugins:

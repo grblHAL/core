@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2025 Terje Io
+  Copyright (c) 2017-2026 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -28,6 +28,7 @@
 #include "coolant_control.h"
 #include "spindle_control.h"
 #include "errors.h"
+#include "vfs.h"
 
 #define MAX_OFFSET_ENTRIES 4 // must be a power of 2
 
@@ -60,6 +61,7 @@ typedef enum {
     Modal_MacroCall = 66,                   //!< 66 - G66
     Modal_MacroEnd = 67,                    //!< 67 - G67
     NonModal_SetCoordinateOffset = 92,      //!< 92 - G92
+    NonModal_MacroCall2 = 98,               //!< 98 - M98
     NonModal_ResetCoordinateOffset = 102,   //!< 102 - G92.1
     NonModal_ClearCoordinateOffset = 112,   //!< 112 - G92.2
  #if ENABLE_ACCELERATION_PROFILES
@@ -741,6 +743,7 @@ void gc_coolant (coolant_state_t state);
 void gc_set_tool_offset (tool_offset_mode_t mode, uint_fast8_t idx, int32_t offset);
 plane_t *gc_get_plane_data (plane_t *plane, plane_select_t select);
 axes_signals_t gc_claim_axis_words (parser_block_t *gc_block, axes_signals_t validate);
+size_t gc_macro_get_pos (macro_id_t id, vfs_file_t *file);
 
 #if NGC_PARAMETERS_ENABLE
 parameter_words_t gc_get_g65_arguments (void);
