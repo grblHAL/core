@@ -147,8 +147,7 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
 
                 if(event_signals.cycle_start) {
                     system_set_exec_state_flag(EXEC_CYCLE_START);
-                    if(settings.status_report.pin_state)
-                        report_add_realtime(Report_CycleStart);
+                    report_add_realtime(Report_CycleStart);
                     gc_state.tool_change = false;
                     if(grbl.on_cycle_start)
                         grbl.on_cycle_start();

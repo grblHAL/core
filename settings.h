@@ -435,6 +435,7 @@ typedef enum {
     Setting_Stepper4  = 654,
     Setting_Stepper5  = 655,
     Setting_Stepper6  = 656,
+    Setting_Stepper7  = 657,
     Setting_Stepper8  = 658,
     Setting_Stepper9  = 659,
     Setting_Stepper10 = 660,

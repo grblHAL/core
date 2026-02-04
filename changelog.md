@@ -1,6 +1,22 @@
 ## grblHAL changelog
 
-<a name="20260203">20260203
+<a name="20260204">Build 20260204
+
+Core:
+
+* Reinstated settings definition that somehow was deleted in the 20260202 commit. 
+
+Drivers:
+
+* RP2040: Removed deleted file from build. Ref. [#172](https://github.com/grblHAL/RP2040/issues/172).
+
+Plugins:
+
+* Keypad: updated for previous core change.
+
+---
+
+<a name="20260203">Build 20260203
 
 Core:
 
@@ -18,7 +34,7 @@ position etc. is converted to imperial when $13=1. Ref. PR [#20](https://github.
 
 ---
 
-<a name="20260202">20260202
+<a name="20260202">Build 20260202
 
 Core:
 

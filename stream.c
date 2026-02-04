@@ -202,7 +202,7 @@ ISR_CODE bool ISR_FUNC(stream_enqueue_realtime_command)(uint8_t c)
 {
 	bool drop = hal.stream.enqueue_rt_command ? hal.stream.enqueue_rt_command(c) : protocol_enqueue_realtime_command(c);
 
-    if(drop && (c == CMD_CYCLE_START || c == CMD_CYCLE_START_LEGACY) && settings.status_report.pin_state)
+    if(drop && (c == CMD_CYCLE_START || c == CMD_CYCLE_START_LEGACY) && state_get() == STATE_IDLE)
         report_add_realtime(Report_CycleStart);
 
     return drop;
@@ -594,7 +594,7 @@ ISR_CODE bool ISR_FUNC(stream_mpg_check_enable)(uint8_t c)
 
         default:
             protocol_enqueue_realtime_command(c);
-            if((c == CMD_CYCLE_START || c == CMD_CYCLE_START_LEGACY) && settings.status_report.pin_state && state_get() == STATE_IDLE)
+            if((c == CMD_CYCLE_START || c == CMD_CYCLE_START_LEGACY) && state_get() == STATE_IDLE)
                 report_add_realtime(Report_CycleStart);
             break;
     }
