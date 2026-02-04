@@ -70,7 +70,7 @@ typedef union {
                  G4 :1, //!< [G91.1] Arc IJK distance mode
                  G5 :1, //!< [G93,G94,G95] Feed rate mode
                  G6 :1, //!< [G20,G21] Units
-                 G7 :1, //!< [G40] Cutter radius compensation mode. G41/42 NOT SUPPORTED.
+                 G7 :1, //!< [G40,G41,G41.1,G42,G42.1] Cutter radius compensation mode. ONLY G40 SUPPORTED.
                  G8 :1, //!< [G43,G43.1,G49] Tool length offset
                 G10 :1, //!< [G98,G99] Return mode in canned cycles
                 G11 :1, //!< [G50,G51] Scaling
@@ -80,7 +80,7 @@ typedef union {
                 G15 :1, //!< [G7,G8] Lathe Diameter Mode
 //                G16 :1, //!< [G66,G67] Modal macro call (12)
 
-                 M4 :1, //!< [M0,M1,M2,M30] Stopping
+                 M4 :1, //!< [M0,M1,M2,M30,M99] Stopping
                  M5 :1, //!< [M62,M63,M64,M65,M66,M67,M68] Aux I/O
                  M6 :1, //!< [M6] Tool change
                  M7 :1, //!< [M3,M4,M5] Spindle turning
@@ -250,7 +250,7 @@ static void set_scaling (float factor)
     gc_state.modal.scaling_active = factor != 1.0f;
 
     if(state.value != gc_get_g51_state().value)
-        system_add_rt_report(Report_Scaling);
+        report_add_realtime(Report_Scaling);
 }
 
 float *gc_get_scaling (void)
@@ -324,7 +324,7 @@ void gc_set_tool_offset (tool_offset_mode_t mode, uint_fast8_t idx, int32_t offs
     gc_state.modal.tool_offset_mode = mode;
 
     if(tlo_changed) {
-        system_add_rt_report(Report_ToolOffset);
+        report_add_realtime(Report_ToolOffset);
         system_flag_wco_change();
     }
 }
@@ -592,12 +592,12 @@ bool gc_modal_state_restore (gc_modal_snapshot_t *snapshot)
             coolant_restore(gc_state.modal.coolant, settings.coolant.on_delay);
 
         if(actions->command.G12) {
-            system_add_rt_report(Report_GWCO);
+            report_add_realtime(Report_GWCO);
             system_flag_wco_change();
         }
 
         if(actions->command.G15)
-            system_add_rt_report(Report_LatheXMode);
+            report_add_realtime(Report_LatheXMode);
 
         for(idx = 0; idx < N_SYS_SPINDLE; idx++) {
             if(actions->update_spindle[idx]) {
@@ -837,14 +837,14 @@ void gc_spindle_off (void)
     }
 
     spindle_all_off();
-    system_add_rt_report(Report_Spindle);
+    report_add_realtime(Report_Spindle);
 }
 
 void gc_coolant (coolant_state_t state)
 {
     gc_state.modal.coolant = state;
     hal.coolant.set_state(gc_state.modal.coolant);
-    system_add_rt_report(Report_Coolant);
+    report_add_realtime(Report_Coolant);
 }
 
 static void add_offset (const coord_data_t *offset)
@@ -2540,7 +2540,7 @@ status_code_t gc_execute_block (char *block)
                     report_scaling |= scale_factor.ijk[idx] != gc_block.values.xyz[idx];
                     scale_factor.ijk[idx] = gc_block.values.xyz[idx];
                     bit_false(axis_words.mask, bit(idx));
-                    system_add_rt_report(Report_Scaling);
+                    report_add_realtime(Report_Scaling);
                 }
                 gc_block.modal.scaling_active = gc_block.modal.scaling_active || (scale_factor.xyz[idx] != 1.0f);
             } while(idx);
@@ -2582,7 +2582,7 @@ status_code_t gc_execute_block (char *block)
             gc_state.modal.scaling_active = gc_block.modal.scaling_active;
 
             if(report_scaling)
-                system_add_rt_report(Report_Scaling);
+                report_add_realtime(Report_Scaling);
 
         } else
             set_scaling(1.0f);
@@ -2722,7 +2722,10 @@ status_code_t gc_execute_block (char *block)
             p_value = (uint8_t)truncf(gc_block.values.p); // Convert p value to int.
 
             switch(gc_block.values.l) {
-
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+#endif
                 case 2:
 #ifndef ROTATION_ENABLE
                     if(gc_block.words.r)
@@ -2767,7 +2770,9 @@ status_code_t gc_execute_block (char *block)
                         } // else, keep current stored value.
                     } while(idx);
                     break;
-
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
                 case 1: case 10:
 #if COMPATIBILITY_LEVEL <= 1
                 case 11:
@@ -3679,14 +3684,14 @@ status_code_t gc_execute_block (char *block)
                 if(grbl.on_tool_changed)
                     grbl.on_tool_changed(gc_state.tool);
 
-                system_add_rt_report(Report_Tool);
+                report_add_realtime(Report_Tool);
             }
 
             // Prepare tool carousel when available
             if(hal.tool.select)
                 hal.tool.select(pending_tool, !set_tool);
             else
-                system_add_rt_report(Report_Tool);
+                report_add_realtime(Report_Tool);
         }
     }
 
@@ -3708,7 +3713,7 @@ status_code_t gc_execute_block (char *block)
 
             case IoMCode_WaitOnInput:
                 sys.var5399 = ioport_wait_on_input((io_port_type_t)gc_block.output_command.is_digital, gc_block.output_command.port, (wait_mode_t)gc_block.values.l, gc_block.values.q);
-                system_add_rt_report(Report_M66Result);
+                report_add_realtime(Report_M66Result);
                 break;
 
             case IoMCode_AnalogOutSynced:
@@ -3756,7 +3761,7 @@ status_code_t gc_execute_block (char *block)
 #endif
                         RETURN((status_code_t)int_value);
                 }
-                system_add_rt_report(Report_Tool);
+                report_add_realtime(Report_Tool);
             } else { // Manual
                 int_value = (uint_fast16_t)Status_OK;
                 gc_state.tool_change = true;
@@ -3873,7 +3878,7 @@ status_code_t gc_execute_block (char *block)
 
                     actions->command.G8 = Off;
                     system_flag_wco_change();
-                    system_add_rt_report(Report_ToolOffset);
+                    report_add_realtime(Report_ToolOffset);
 
                     gc_state.modal.tool_offset_mode = gc_block.modal.tool_offset_mode;
                     memcpy(&gc_state.modal.tool_length_offset, &snapshot->modal.tool_length_offset, sizeof(gc_state.modal.tool_length_offset));
@@ -4028,7 +4033,7 @@ status_code_t gc_execute_block (char *block)
         } while(idx);
 
         if(tlo_changed) {
-            system_add_rt_report(Report_ToolOffset);
+            report_add_realtime(Report_ToolOffset);
             system_flag_wco_change();
         }
     }
@@ -4036,7 +4041,7 @@ status_code_t gc_execute_block (char *block)
     // [15. Coordinate system selection ]:
     if(command_words.G12) {
         memcpy(&gc_state.modal.g5x_offset, &gc_block.modal.g5x_offset, sizeof(coord_system_t));
-        system_add_rt_report(Report_GWCO);
+        report_add_realtime(Report_GWCO);
         system_flag_wco_change();
     }
 
@@ -4053,7 +4058,7 @@ status_code_t gc_execute_block (char *block)
 
     if(command_words.G15) {
         gc_state.modal.diameter_mode = gc_block.modal.diameter_mode;
-        system_add_rt_report(Report_LatheXMode);
+        report_add_realtime(Report_LatheXMode);
     }
 
     // [18. Set retract mode ]:
@@ -4451,7 +4456,7 @@ status_code_t gc_execute_block (char *block)
             // gc_state.modal.cutter_comp = CUTTER_COMP_DISABLE; // Not supported.
             if(gc_state.modal.g5x_offset.id != CoordinateSystem_G54) {
                 gc_state.modal.g5x_offset.id = CoordinateSystem_G54;
-                system_add_rt_report(Report_GWCO);
+                report_add_realtime(Report_GWCO);
             }
             gc_state.modal.coolant = (coolant_state_t){0};
             gc_state.modal.override_ctrl.feed_rates_disable = Off;
@@ -4503,8 +4508,8 @@ status_code_t gc_execute_block (char *block)
 
                 spindle_all_off();
                 hal.coolant.set_state(gc_state.modal.coolant);
-                system_add_rt_report(Report_Spindle); // Set to report change
-                system_add_rt_report(Report_Coolant); // immediately.
+                report_add_realtime(Report_Spindle); // Set to report change
+                report_add_realtime(Report_Coolant); // immediately.
             }
 
             if(grbl.on_program_completed)

@@ -122,7 +122,7 @@ static bool spindle_activate (spindle_id_t spindle_id, spindle_num_t spindle_num
                 if(grbl.on_spindle_selected)
                     grbl.on_spindle_selected(&sys_spindle[spindle_num].hal);
 #if N_SPINDLE > 1
-                system_add_rt_report(Report_SpindleId);
+                report_add_realtime(Report_SpindleId);
 #endif
             }
         }
@@ -552,7 +552,7 @@ float spindle_set_override (spindle_ptrs_t *spindle, override_t speed_override)
             } else
                 sys.step_control.update_spindle_rpm = On;
 
-            system_add_rt_report(Report_Overrides); // Set to report change immediately
+            report_add_realtime(Report_Overrides); // Set to report change immediately
 
     //       if(grbl.on_spindle_programmed)
     //           grbl.on_spindle_programmed(spindle, spindle->param->state, spindle->param->rpm, spindle->param->rpm_mode);
@@ -618,7 +618,7 @@ bool spindle_set_state (spindle_ptrs_t *spindle, spindle_state_t state, float rp
         spindle->param->state.on = state.on;
         spindle->param->state.ccw = state.ccw;
 
-        system_add_rt_report(Report_Spindle); // Set to report change immediately
+        report_add_realtime(Report_Spindle); // Set to report change immediately
 
         st_rpm_changed(rpm);
     }
@@ -754,7 +754,7 @@ void spindle_all_off (void)
         }
     } while(spindle_num);
 
-    system_add_rt_report(Report_Spindle);
+    report_add_realtime(Report_Spindle);
 }
 
 /*! \brief Check if any of the enabled spindles is running.

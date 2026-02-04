@@ -78,6 +78,7 @@ Helper functions for saving away and restoring a stream input buffer. _Not refer
 #include <stdbool.h>
 
 #include "vfs.h"
+#include "system.h"
 
 typedef enum {
     StreamType_Serial = 0,
@@ -316,6 +317,7 @@ typedef struct {
     set_format_ptr set_format;                              //!< Optional handler for setting the stream format.
     stream_set_direction_ptr set_direction;                 //!< Optional handler for setting the transfer direction for half-duplex communication.
     on_linestate_changed_ptr on_linestate_changed;          //!< Optional handler to be called when line state changes. Set by client.
+    status_report_tracking_t report;                        //!< Tracks when to add data to status reports.
     vfs_file_t *file;                                       //!< File handle, non-null if streaming from a file.
 } io_stream_t;
 

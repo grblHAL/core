@@ -79,6 +79,7 @@ static struct {
     io_stream_t stream;
     stream_write_char_ptr write_char;
     stream_connection_flags_t flags;
+    on_rt_reports_added_ptr on_rt_reports_added;
 } mpg;
 
 void stream_register_streams (io_stream_details_t *details)
@@ -201,8 +202,8 @@ ISR_CODE bool ISR_FUNC(stream_enqueue_realtime_command)(uint8_t c)
 {
 	bool drop = hal.stream.enqueue_rt_command ? hal.stream.enqueue_rt_command(c) : protocol_enqueue_realtime_command(c);
 
-    if(drop && (c == CMD_CYCLE_START || c == CMD_CYCLE_START_LEGACY))
-        sys.report.cycle_start = settings.status_report.pin_state;
+    if(drop && (c == CMD_CYCLE_START || c == CMD_CYCLE_START_LEGACY) && settings.status_report.pin_state)
+        report_add_realtime(Report_CycleStart);
 
     return drop;
 }
@@ -541,6 +542,17 @@ void stream_set_defaults (const io_stream_t *stream, uint32_t baud_rate)
 
 // MPG stream
 
+ISR_CODE static void mpg_rt_report_add (report_tracking_flags_t report)
+{
+    if(mpg.on_rt_reports_added)
+        mpg.on_rt_reports_added(report);
+
+    if(report.value == 0)
+        mpg.stream.report.flags.value = 0;
+    else
+        mpg.stream.report.flags.value |= report.value;
+}
+
 void stream_mpg_set_mode (void *data)
 {
     stream_mpg_enable(data != NULL);
@@ -551,7 +563,11 @@ static void stream_mpg_write (void *cmd)
     switch((uint32_t)cmd) {
 
         case CMD_STATUS_REPORT_ALL:
-            report_realtime_status(mpg.stream.write, report_get_rt_flags_all());
+            mpg.stream.report.flags.value = report_get_rt_flags_all().value;
+            // no break
+        case CMD_STATUS_REPORT:
+        case CMD_STATUS_REPORT_LEGACY:
+            report_realtime_status(mpg.stream.write, &mpg.stream.report);
             break;
 
         case CMD_GCODE_REPORT:
@@ -569,6 +585,8 @@ ISR_CODE bool ISR_FUNC(stream_mpg_check_enable)(uint8_t c)
             break;
 
         case CMD_GCODE_REPORT:
+        case CMD_STATUS_REPORT:
+        case CMD_STATUS_REPORT_LEGACY:
         case CMD_STATUS_REPORT_ALL:
             if(mpg.flags.is_mpg_tx)
                 task_add_immediate(stream_mpg_write, (void *)((uint32_t)c));
@@ -576,8 +594,8 @@ ISR_CODE bool ISR_FUNC(stream_mpg_check_enable)(uint8_t c)
 
         default:
             protocol_enqueue_realtime_command(c);
-            if((c == CMD_CYCLE_START || c == CMD_CYCLE_START_LEGACY) && settings.status_report.pin_state)
-                sys.report.cycle_start |= state_get() == STATE_IDLE;
+            if((c == CMD_CYCLE_START || c == CMD_CYCLE_START_LEGACY) && settings.status_report.pin_state && state_get() == STATE_IDLE)
+                report_add_realtime(Report_CycleStart);
             break;
     }
 
@@ -623,6 +641,9 @@ bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stream_write_
         hal.stream.write_all = stream_write_all;
 
         stream_set_description(stream, "MPG");
+
+        mpg.on_rt_reports_added = grbl.on_rt_reports_added;
+        grbl.on_rt_reports_added = mpg_rt_report_add;
 
         if(grbl.on_mpg_registered)
             grbl.on_mpg_registered(&mpg.stream, true);
@@ -674,6 +695,7 @@ bool stream_mpg_enable (bool on)
     } else if(org_stream.type != StreamType_Redirected) {
         memcpy(&hal.stream, &org_stream, sizeof(io_stream_t));
         org_stream.type = StreamType_Redirected;
+        mpg.stream.report.override_counter = mpg.stream.report.wco_counter = 0;
         if(hal.stream.disable_rx)
             hal.stream.disable_rx(false);
         if(mpg.write_char)
@@ -686,7 +708,7 @@ bool stream_mpg_enable (bool on)
 
     sys.mpg_mode = on;
     mpg.flags.mpg_control = Off;
-    system_add_rt_report(Report_MPGMode);
+    report_add_realtime(Report_MPGMode);
 
     // Force a realtime status report, all reports when MPG mode active
     task_add_delayed(report_mpg_mode, (void *)((uintptr_t)(on ? CMD_STATUS_REPORT_ALL : CMD_STATUS_REPORT)), 5);

@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2025 Terje Io
+  Copyright (c) 2017-2026 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
   Copyright (c) 2011 Jens Geisler
@@ -767,7 +767,7 @@ void plan_feed_override (override_t feed_override, override_t rapid_override)
          (rapidrate_changed = rapid_override != sys.override.rapid_rate)) {
         sys.override.feed_rate = feed_override;
         sys.override.rapid_rate = rapid_override;
-        system_add_rt_report(Report_Overrides); // Set to report change immediately
+        report_add_realtime(Report_Overrides); // Set to report change immediately
         if(plan_update_velocity_profile_parameters())
             plan_cycle_reinitialize();
         if(grbl.on_override_changed) {

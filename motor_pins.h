@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2025 Terje Io
+  Copyright (c) 2021-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -22,6 +22,11 @@
 */
 
 #pragma once
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wexpansion-to-defined"
+#endif
 
 #define CAT(a, b) CAT_(a, b)
 #define CAT_(a, b) a##b
@@ -1418,5 +1423,9 @@ static inline home_signals_t get_motor_fault_cap (void)
 
     return motor_fault;
 }
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 /*EOF*/

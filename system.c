@@ -147,7 +147,8 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
 
                 if(event_signals.cycle_start) {
                     system_set_exec_state_flag(EXEC_CYCLE_START);
-                    sys.report.cycle_start = settings.status_report.pin_state;
+                    if(settings.status_report.pin_state)
+                        report_add_realtime(Report_CycleStart);
                     gc_state.tool_change = false;
                     if(grbl.on_cycle_start)
                         grbl.on_cycle_start();
@@ -325,7 +326,7 @@ static status_code_t output_all_settings (sys_state_t state, char *args)
 static status_code_t output_parser_state (sys_state_t state, char *args)
 {
     report_gcode_modes(hal.stream.write);
-    system_add_rt_report(Report_Homed); // Report homed state on next realtime report
+    report_add_realtime(Report_Homed); // Report homed state on next realtime report
 
     return Status_OK;
 }
@@ -572,7 +573,7 @@ static status_code_t set_tool_reference (sys_state_t state, char *args)
     } else
         sys.tlo_reference_set.mask = 0;
 #endif
-    system_add_rt_report(Report_TLOReference);
+    report_add_realtime(Report_TLOReference);
 
     return Status_OK;
 }
@@ -1179,7 +1180,7 @@ void system_clear_tlo_reference (axes_signals_t homing_cycle)
     if(homing_cycle.mask & (settings.mode == Mode_Lathe ? (X_AXIS_BIT|Z_AXIS_BIT) : bit(plane.axis_linear))) {
         if(sys.tlo_reference_set.mask != 0) {
             sys.tlo_reference_set.mask = 0;  // Invalidate tool length offset reference
-            system_add_rt_report(Report_TLOReference);
+            report_add_realtime(Report_TLOReference);
         }
     }
 }
@@ -1198,7 +1199,7 @@ void system_flag_wco_change (void)
     if(grbl.on_wco_changed)
         grbl.on_wco_changed();
 
-    system_add_rt_report(Report_WCO);
+    report_add_realtime(Report_WCO);
 }
 
 /*! \brief Sets machine position. Must be sent a 'step' array.
@@ -1255,51 +1256,4 @@ void system_raise_alarm (alarm_code_t alarm)
         if(sys.driver_started || sys.alarm == Alarm_SelftestFailed)
             grbl.report.alarm_message(alarm);
     }
-}
-
-// TODO: encapsulate sys.report
-
-/*! \brief Get the active realtime report addon flags for the next report.
-\return a #report_tracking_flags_t union containing the flags.
- */
-report_tracking_flags_t system_get_rt_report_flags (void)
-{
-    return sys.report;
-}
-
-/*! \brief Set(s) or clear all active realtime report addon flag(s) for the next report.
-
-Fires the \ref grbl.on_rt_reports_added event.
-\param report a #report_tracking_t enum containing the flag(s) to set or clear.
- */
-ISR_CODE void system_add_rt_report (report_tracking_t report)
-{
-    switch(report) {
-
-        case Report_ClearAll:
-            sys.report.value = 0;
-            return;
-
-        case Report_MPGMode:
-            if(!hal.driver_cap.mpg_mode)
-                return;
-            break;
-
-        case Report_LatheXMode:
-            sys.report.wco = settings.status_report.work_coord_offset;
-            break;
-
-        case Report_ProbeId:
-            if(hal.probe.select == NULL)
-                return;
-            break;
-
-        default:
-            break;
-    }
-
-    sys.report.value |= (uint32_t)report;
-
-    if(sys.report.value && grbl.on_rt_reports_added)
-        grbl.on_rt_reports_added((report_tracking_flags_t)((uint32_t)report));
 }

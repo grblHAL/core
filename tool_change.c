@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2020-2025 Terje Io
+  Copyright (c) 2020-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -126,7 +126,7 @@ static void reset (void)
                 memcpy(gc_state.tool, &current_tool, sizeof(tool_data_t));
             else
                 memcpy(next_tool, &current_tool, sizeof(tool_data_t));
-            system_add_rt_report(Report_Tool);
+            report_add_realtime(Report_Tool);
         }
         gc_state.tool_pending = gc_state.tool->tool_id;
         next_tool = NULL;
@@ -352,7 +352,7 @@ static void execute_probe (void *data)
             if(!(sys.tlo_reference_set.mask & bit(plane.axis_linear))) {
                 sys.tlo_reference[plane.axis_linear] = sys.probe_position[plane.axis_linear];
                 sys.tlo_reference_set.mask |= bit(plane.axis_linear);
-                system_add_rt_report(Report_TLOReference);
+                report_add_realtime(Report_TLOReference);
                 grbl.report.feedback_message(Message_ReferenceTLOEstablished);
             } else
                 gc_set_tool_offset(ToolLengthOffset_EnableDynamic, plane.axis_linear,
@@ -572,7 +572,7 @@ void tc_init (void)
     if(!hal.stream.suspend_read) // Tool change requires support for suspending input stream.
         return;
 
-    system_add_rt_report(Report_TLOReference);
+    report_add_realtime(Report_TLOReference);
 
     if(settings.tool_change.mode == ToolChange_Disabled || settings.tool_change.mode == ToolChange_Ignore) {
         hal.tool.change = NULL;

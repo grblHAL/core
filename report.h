@@ -64,7 +64,7 @@ status_code_t report_grbl_setting (setting_id_t id, void *data);
 void report_echo_line_received (char *line);
 
 // Prints realtime status report.
-void report_realtime_status (stream_write_ptr stream_write, report_tracking_flags_t report);
+void report_realtime_status (stream_write_ptr stream_write, status_report_tracking_t *report);
 
 // Prints recorded probe position.
 void report_probe_parameters (void);
@@ -128,5 +128,6 @@ status_code_t report_time (void);
 void report_pid_log (void);
 
 report_tracking_flags_t report_get_rt_flags_all (void);
+void report_add_realtime (report_tracking_t report);
 
 #endif

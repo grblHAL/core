@@ -1348,7 +1348,7 @@ FLASHMEM static status_code_t set_axis_setting (setting_id_t setting, float valu
             if(settings.axis[idx].max_travel != -value) {
                 sys.flags.travel_changed = On;
                 bit_false(sys.homed.mask, bit(idx));
-                system_add_rt_report(Report_Homed);
+                report_add_realtime(Report_Homed);
             }
             settings.axis[idx].max_travel = -value; // Store as negative for internal use.
             tmp_set_soft_limits();

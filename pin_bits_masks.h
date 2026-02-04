@@ -321,7 +321,7 @@ static inline void aux_ctrl_claim_ports (aux_claim_explicit_ptr aux_claim_explic
     if(aux_claim == NULL)
         aux_claim = __claim_in_port;
 
-    for(idx = 0; idx < sizeof(aux_ctrl) / sizeof(aux_ctrl_t); idx++) {
+    if(sizeof(aux_ctrl)) for(idx = 0; idx < sizeof(aux_ctrl) / sizeof(aux_ctrl_t); idx++) {
 
         if(aux_ctrl[idx].port != IOPORT_UNASSIGNED)
             aux_claim_explicit(&aux_ctrl[idx]);
@@ -511,7 +511,7 @@ static inline void aux_ctrl_claim_out_ports (aux_claim_explicit_out_ptr aux_clai
     if(aux_claim_explicit == NULL)
         aux_claim_explicit = ___claim_out_port_explicit;
 
-    for(idx = 0; idx < sizeof(aux_ctrl_out) / sizeof(aux_ctrl_out_t); idx++) {
+    if(sizeof(aux_ctrl_out)) for(idx = 0; idx < sizeof(aux_ctrl_out) / sizeof(aux_ctrl_out_t); idx++) {
         if(aux_ctrl_out[idx].gpio.port == (void *)EXPANDER_PORT) {
             if(ioports_enumerate(Port_Digital, Port_Output, (pin_cap_t){ .external = On, .claimable = On }, aux_claim, &aux_ctrl_out[idx])) {
                 if((aux_ctrl_out[idx].output = ioport_claim(Port_Digital, Port_Output, &aux_ctrl_out[idx].port, NULL /*xbar_fn_to_pinname(aux_ctrl_out[idx].function)*/))) {

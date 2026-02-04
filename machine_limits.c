@@ -438,7 +438,7 @@ static bool homing_cycle (axes_signals_t cycle, axes_signals_t auto_square)
 
                 if(rt_exec == EXEC_STATUS_REPORT) {
                     system_clear_exec_state_flag(EXEC_STATUS_REPORT);
-                    report_realtime_status(hal.stream.write_all, system_get_rt_report_flags());
+                    report_realtime_status(hal.stream.write_all, &hal.stream.report);
                 } else {
 
                     // Homing failure condition: Reset issued during cycle.

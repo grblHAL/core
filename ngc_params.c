@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2025 Terje Io
+  Copyright (c) 2021-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -1129,7 +1129,7 @@ static status_code_t macro_select_probe (parameter_words_t args)
     if(!args.q)
         status = Status_GcodeValueWordMissing;
     else if(ngc_param_get(17 /* Q word */, &probe_id) && (hal.probe.select ? hal.probe.select((probe_id_t)probe_id) : probe_id == 0.0f))
-        system_add_rt_report(Report_ProbeId);
+        report_add_realtime(Report_ProbeId);
     else
         status = Status_GcodeValueOutOfRange;
 

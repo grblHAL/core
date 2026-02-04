@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2025 Terje Io
+  Copyright (c) 2025-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -58,7 +58,7 @@ static void probe_connected_toggle (void)
             probe->flags.guarded = probe_state.irq_enabled = Off;
 
         if(settings.probe.enable_protection)
-            system_add_rt_report(Report_ProbeProtect);
+            report_add_realtime(Report_ProbeProtect);
     }
 }
 
@@ -86,7 +86,7 @@ static void probe_configure (bool is_probe_away, bool probing)
     }
 
     if(settings.probe.enable_protection)
-        system_add_rt_report(Report_ProbeProtect);
+        report_add_realtime(Report_ProbeProtect);
 
     if(!probe_state.irq_enabled)
         probe_state.triggered = Off;

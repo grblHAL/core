@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2016-2025 Terje Io
+  Copyright (c) 2016-2026 Terje Io
   Copyright (c) 2012-2016 Sungeun K. Jeon for Gnea Research LLC
 
   grblHAL is free software: you can redistribute it and/or modify
@@ -34,7 +34,7 @@ void coolant_restore (coolant_state_t mode, uint16_t on_delay_ms)
         hal.coolant.set_state(mode);
         if(mode.value && on_delay_ms)
             delay_sec((float)on_delay_ms / 1000.0f, sys.suspend ? DelayMode_SysSuspend : DelayMode_Dwell);
-        system_add_rt_report(Report_Coolant);
+        report_add_realtime(Report_Coolant);
     }
 }
 
@@ -48,7 +48,7 @@ void coolant_set_state (coolant_state_t mode)
         hal.coolant.set_state(mode);
         if(mode.value && settings.coolant.on_delay)
             delay_sec((float)settings.coolant.on_delay / 1000.0f, DelayMode_Dwell);
-        system_add_rt_report(Report_Coolant);
+        report_add_realtime(Report_Coolant);
     }
 }
 

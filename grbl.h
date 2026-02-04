@@ -42,7 +42,7 @@
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_BUILD 20260202
+#define GRBL_BUILD 20260203
 
 #define GRBL_URL "https://github.com/grblHAL"
 
@@ -109,10 +109,9 @@
 #define CMD_FEED_HOLD_LEGACY        '!'
 #define CMD_PROGRAM_DEMARCATION     '%'
 
-// NOTE: All override realtime commands must be in the extended ASCII character set, starting
-// at character value 128 (0x80) and up to 255 (0xFF). If the normal set of realtime commands,
-// such as status reports, feed hold, reset, and cycle start, are moved to the extended set
-// space, protocol.c's protocol_process_realtime() will need to be modified to accommodate the change.
+// NOTE: All realtime commands must be in the extended ASCII character set, starting
+// at character value 128 (0x80) and up to 191 (0xBF). Do not assign values > 191 since those
+// are for the first character in UTF-8 code points.
 #define CMD_STATUS_REPORT                   0x80 // (128) TODO: use 0x05 ctrl-E ENQ instead?
 #define CMD_CYCLE_START                     0x81 // (129) TODO: use 0x06 ctrl-F ACK instead? or SYN/DC2/DC3?
 #define CMD_FEED_HOLD                       0x82 // (130) TODO: use 0x15 ctrl-U NAK instead?

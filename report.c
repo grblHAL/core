@@ -49,8 +49,6 @@ static char buf[(STRLEN_COORDVALUE + 1) * N_AXIS];
 static char *(*get_axis_values)(float *axis_values);
 static char *(*get_axis_value)(float value);
 static char *(*get_rate_value)(float value);
-static uint8_t override_counter = 0; // Tracks when to add override data to status reports.
-static uint8_t wco_counter = 0;      // Tracks when to add work coordinate offset data to status reports.
 static const char vbar[2] = { '|', '\0' };
 
 // Append a number of strings to the static buffer
@@ -312,7 +310,7 @@ static message_code_t report_feedback_message (message_code_t id)
 // Welcome message
 static void report_init_message (stream_write_ptr write)
 {
-    override_counter = wco_counter = 0;
+    hal.stream.report.override_counter = hal.stream.report.wco_counter = 0;
 
 #if COMPATIBILITY_LEVEL == 0
     write(ASCII_EOL "GrblHAL " GRBL_VERSION " ['$' or '$HELP' for help]" ASCII_EOL);
@@ -1184,7 +1182,7 @@ static bool report_spindle_num (spindle_info_t *spindle, void *data)
  // specific needs, but the desired real-time data report must be as short as possible. This is
  // requires as it minimizes the computational overhead and allows grblHAL to keep running smoothly,
  // especially during g-code programs with fast, short line segments and high frequency reports (5-20Hz).
-void report_realtime_status (stream_write_ptr stream_write, report_tracking_flags_t report)
+void report_realtime_status (stream_write_ptr stream_write, status_report_tracking_t *report)
 {
     static bool probing = false;
 
@@ -1236,7 +1234,7 @@ void report_realtime_status (stream_write_ptr stream_write, report_tracking_flag
 
         case STATE_ESTOP:
         case STATE_ALARM:
-            if((report.all || settings.status_report.alarm_substate) && sys.alarm)
+            if((report->flags.all || settings.status_report.alarm_substate) && sys.alarm)
                 stream_write(appendbuf(2, "Alarm:", uitoa((uint32_t)sys.alarm)));
             else
                 stream_write("Alarm");
@@ -1261,10 +1259,10 @@ void report_realtime_status (stream_write_ptr stream_write, report_tracking_flag
 
     system_convert_array_steps_to_mpos(print_position, sys.position);
 
-    if((report.distance_to_go = settings.status_report.distance_to_go)) {
+    if((report->flags.distance_to_go = settings.status_report.distance_to_go)) {
         // Calculate distance-to-go in current block (i.e., difference between target / end-of-block) and current position)
         plan_block_t *cur_block = plan_get_current_block();
-        if((report.distance_to_go = !!cur_block)) {
+        if((report->flags.distance_to_go = !!cur_block)) {
             for(idx = 0; idx < N_AXIS; idx++) {
                 dist_remaining[idx] = cur_block->target_mm[idx] - print_position[idx];
             }
@@ -1300,7 +1298,7 @@ void report_realtime_status (stream_write_ptr stream_write, report_tracking_flag
             stream_write(appendbuf(2, "|Ln:", uitoa(line_number)));
     }
 
-    if(report.distance_to_go) {
+    if(report->flags.distance_to_go) {
         // Report distance-to-go.
         stream_write("|DTG:");
         stream_write(get_axis_values(dist_remaining));
@@ -1362,7 +1360,7 @@ void report_realtime_status (stream_write_ptr stream_write, report_tracking_flag
 
         ctrl_pin_state.probe_triggered = probe_state.triggered;
         ctrl_pin_state.probe_disconnected = !probe_state.connected;
-        ctrl_pin_state.cycle_start |= report.cycle_start;
+        ctrl_pin_state.cycle_start |= report->flags.cycle_start;
         if(sys.flags.value & sys_switches.value) {
             if(!hal.signals_cap.stop_disable)
                 ctrl_pin_state.stop_disable = sys.flags.optional_stop_disable;
@@ -1391,45 +1389,45 @@ void report_realtime_status (stream_write_ptr stream_write, report_tracking_flag
 
     if(settings.status_report.overrides) {
 
-        if((report.overrides = override_counter == 0 || report.overrides)) {
+        if((report->flags.overrides = report->override_counter == 0 || report->flags.overrides)) {
 
-            override_counter = state & (STATE_HOMING|STATE_CYCLE|STATE_HOLD|STATE_JOG|STATE_SAFETY_DOOR)
-                                ? (REPORT_OVERRIDE_REFRESH_BUSY_COUNT - 1) // Reset counter for slow refresh
-                                : (REPORT_OVERRIDE_REFRESH_IDLE_COUNT - 1);
+            report->override_counter = state & (STATE_HOMING|STATE_CYCLE|STATE_HOLD|STATE_JOG|STATE_SAFETY_DOOR)
+                                        ? (REPORT_OVERRIDE_REFRESH_BUSY_COUNT - 1) // Reset counter for slow refresh
+                                        : (REPORT_OVERRIDE_REFRESH_IDLE_COUNT - 1);
 
-            if(!report.all) {
-                report.spindle = report.spindle || spindle_0_state.on;
-                report.coolant = report.coolant || hal.coolant.get_state().value != 0;
+            if(!report->flags.all) {
+                report->flags.spindle = report->flags.spindle || spindle_0_state.on;
+                report->flags.coolant = report->flags.coolant || hal.coolant.get_state().value != 0;
             }
         } else
-            override_counter--;
+            report->override_counter--;
 
-        if(override_counter > (REPORT_OVERRIDE_REFRESH_IDLE_COUNT - 1) && state == STATE_IDLE)
-            override_counter = REPORT_OVERRIDE_REFRESH_IDLE_COUNT - 1;
+        if(report->override_counter > (REPORT_OVERRIDE_REFRESH_IDLE_COUNT - 1) && state == STATE_IDLE)
+            report->override_counter = REPORT_OVERRIDE_REFRESH_IDLE_COUNT - 1;
     } else
-        report.overrides = Off;
+        report->flags.overrides = Off;
 
     if(settings.status_report.work_coord_offset) {
 
-        if(wco_counter == 0 || report.wco || report.force_wco || report.gwco || report.all) {
+        if(report->wco_counter == 0 || report->flags.wco || report->flags.force_wco || report->flags.gwco || report->flags.all) {
 
-            wco_counter = state & (STATE_HOMING|STATE_CYCLE|STATE_HOLD|STATE_JOG|STATE_SAFETY_DOOR)
-                           ? (REPORT_WCO_REFRESH_BUSY_COUNT - 1) // Reset counter for slow refresh
-                           : (REPORT_WCO_REFRESH_IDLE_COUNT - 1);
+            report->wco_counter = state & (STATE_HOMING|STATE_CYCLE|STATE_HOLD|STATE_JOG|STATE_SAFETY_DOOR)
+                                   ? (REPORT_WCO_REFRESH_BUSY_COUNT - 1) // Reset counter for slow refresh
+                                   : (REPORT_WCO_REFRESH_IDLE_COUNT - 1);
 
-            if(!(report.wco = !report.overrides || report.all || report.force_wco || report.gwco))
+            if(!(report->flags.wco = !report->flags.overrides || report->flags.all || report->flags.force_wco || report->flags.gwco))
                 delayed_report.wco = On;
         } else
-            wco_counter--;
+            report->wco_counter--;
 
-        if(wco_counter > (REPORT_WCO_REFRESH_IDLE_COUNT - 1) && state == STATE_IDLE)
-            wco_counter = REPORT_WCO_REFRESH_IDLE_COUNT - 1;
+        if(report->wco_counter > (REPORT_WCO_REFRESH_IDLE_COUNT - 1) && state == STATE_IDLE)
+            report->wco_counter = REPORT_WCO_REFRESH_IDLE_COUNT - 1;
     } else
-        report.wco = Off;
+        report->flags.wco = Off;
 
-    if(report.value || gc_state.tool_change) {
+    if(report->flags.value || gc_state.tool_change) {
 
-        if(report.wco) {
+        if(report->flags.wco) {
             if(settings.status_report.machine_position) {
                 for(idx = 0; idx < N_AXIS; idx++)
                     wco[idx] = gc_get_offset(idx, true);
@@ -1442,18 +1440,18 @@ void report_realtime_status (stream_write_ptr stream_write, report_tracking_flag
 #endif
         }
 
-        if(report.gwco) {
+        if(report->flags.gwco) {
             stream_write("|WCS:");
             stream_write(gc_coord_system_to_str(gc_state.modal.g5x_offset.id));
         }
 
-        if(report.overrides) {
+        if(report->flags.overrides) {
             stream_write(appendbuf(2, "|Ov:", uitoa((uint32_t)sys.override.feed_rate)));
             stream_write(appendbuf(2, ",", uitoa((uint32_t)sys.override.rapid_rate)));
             stream_write(appendbuf(2, ",", uitoa((uint32_t)spindle_0->param->override_pct)));
         }
 
-        if(report.spindle || report.coolant || report.tool || gc_state.tool_change) {
+        if(report->flags.spindle || report->flags.coolant || report->flags.tool || gc_state.tool_change) {
 
             coolant_state_t cl_state = hal.coolant.get_state();
 
@@ -1476,53 +1474,53 @@ void report_realtime_status (stream_write_ptr stream_write, report_tracking_flag
             if (cl_state.mist)
                 *append++ = 'M';
 
-            if(gc_state.tool_change && !report.tool)
+            if(gc_state.tool_change && !report->flags.tool)
                 *append++ = 'T';
 
             *append = '\0';
             stream_write(buf);
         }
 
-        if(report.scaling) {
+        if(report->flags.scaling) {
             axis_signals_tostring(buf, gc_get_g51_state());
             stream_write("|Sc:");
             stream_write(buf);
         }
 
 #if COMPATIBILITY_LEVEL <= 1
-        if((report.all || report.mpg_mode) && settings.report_interval) {
+        if((report->flags.all || report->flags.mpg_mode) && settings.report_interval) {
             stream_write(sys.flags.auto_reporting ? "|AR:" : "|AR");
             if(sys.flags.auto_reporting)
                 stream_write(uitoa(settings.report_interval));
         }
 #endif
 
-        if(report.mpg_mode)
+        if(report->flags.mpg_mode)
             stream_write(sys.mpg_mode ? "|MPG:1" : "|MPG:0");
 
-        if(report.homed && (sys.homing.mask || settings.homing.flags.single_axis_commands || settings.homing.flags.manual)) {
+        if(report->flags.homed && (sys.homing.mask || settings.homing.flags.single_axis_commands || settings.homing.flags.manual)) {
             axes_signals_t homing = {sys.homing.mask ? sys.homing.mask : AXES_BITMASK};
             stream_write(appendbuf(2, "|H:", (homing.mask & sys.homed.mask) == homing.mask ? "1" : "0"));
             if(settings.homing.flags.single_axis_commands)
                 stream_write(appendbuf(2, ",", uitoa(sys.homed.mask)));
         }
 
-        if(report.xmode && settings.mode == Mode_Lathe)
+        if(report->flags.xmode && settings.mode == Mode_Lathe)
             stream_write(gc_state.modal.diameter_mode ? "|D:1" : "|D:0");
 
-        if(report.tool)
+        if(report->flags.tool)
             stream_write(appendbuf(2, "|T:", uitoa((uint32_t)gc_state.tool->tool_id)));
 
-        if(report.probe_id || report.probe_protect) {
+        if(report->flags.probe_id || report->flags.probe_protect) {
             stream_write(appendbuf(2, "|P:", uitoa((uint32_t)probe_state.probe_id)));
-            if(report.probe_protect && !probe_state.is_probing && probe_state.irq_enabled)
+            if(report->flags.probe_protect && !probe_state.is_probing && probe_state.irq_enabled)
                 stream_write(",P");
         }
 
-        if(report.tlo_reference)
+        if(report->flags.tlo_reference)
             stream_write(appendbuf(2, "|TLR:", uitoa(sys.tlo_reference_set.mask != 0)));
 
-        if(report.m66result && sys.var5399 > -2) { // M66 result
+        if(report->flags.m66result && sys.var5399 > -2) { // M66 result
             if(sys.var5399 >= 0)
                 stream_write(appendbuf(2, "|In:", uitoa(sys.var5399)));
             else
@@ -1531,10 +1529,10 @@ void report_realtime_status (stream_write_ptr stream_write, report_tracking_flag
     }
 
     if(grbl.on_realtime_report)
-        grbl.on_realtime_report(stream_write, report);
+        grbl.on_realtime_report(stream_write, report->flags);
 
 #if COMPATIBILITY_LEVEL <= 1
-    if(report.all) {
+    if(report->flags.all) {
         stream_write("|FW:grblHAL");
         if(sys.blocking_event)
             stream_write("|$C:1");
@@ -1578,18 +1576,18 @@ void report_realtime_status (stream_write_ptr stream_write, report_tracking_flag
         if (is_changed)
             system_set_exec_state_flag(EXEC_GCODE_REPORT);
 
-        if(report.tool_offset)
+        if(report->flags.tool_offset)
             system_set_exec_state_flag(EXEC_TLO_REPORT);
     }
 
     stream_write(">" ASCII_EOL);
 
     if(stream_write == hal.stream.write_all) {
-        system_add_rt_report(Report_ClearAll);
-
+        report_add_realtime(Report_ClearAll);
         if(delayed_report.wco)
-            system_add_rt_report(Report_WCO); // Set to report on next request
-    }
+            report_add_realtime(Report_WCO); // Set to report on next request
+    } else
+        report->flags.value = delayed_report.value;
 }
 
 static void report_bitfield (const char *format, bool bitmap)
@@ -2904,9 +2902,48 @@ report_tracking_flags_t report_get_rt_flags_all (void)
     report_tracking_flags_t report;
 
     report.value = (uint32_t)Report_All;
-    report.tool_offset = sys.report.tool_offset;
+    report.tool_offset = hal.stream.report.flags.tool_offset;
     report.m66result = sys.var5399 > -2;
     report.probe_id = !!hal.probe.select;
 
     return report;
+}
+
+/*! \brief Set(s) or clear all active realtime report addon flag(s) for the next report.
+
+Fires the \ref grbl.on_rt_reports_added event.
+\param report a #report_tracking_t enum containing the flag(s) to set or clear.
+ */
+ISR_CODE void report_add_realtime (report_tracking_t report)
+{
+    report_tracking_flags_t flags = { .value = (uint32_t)report };
+
+    switch(report) {
+
+        case Report_ClearAll:
+            hal.stream.report.flags.value = 0;
+            return;
+
+        case Report_MPGMode:
+            if(!hal.driver_cap.mpg_mode)
+                return;
+            break;
+
+        case Report_LatheXMode:
+            flags.wco = settings.status_report.work_coord_offset;
+            break;
+
+        case Report_ProbeId:
+            if(hal.probe.select == NULL)
+                return;
+            break;
+
+        default:
+            break;
+    }
+
+    hal.stream.report.flags.value |= flags.value;
+
+    if(grbl.on_rt_reports_added && (flags.value || report == Report_ClearAll))
+        grbl.on_rt_reports_added(flags);
 }

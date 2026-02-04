@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+<a name="20260203">20260203
+
+Core:
+
+* Changed real time reporting to allow per connection flags for which report elements to output.
+
+* Added pragmas to shut up warnings from the ESP32 compiler.
+
+Plugins:
+
+* Keypad, I2C display interface: Updated to v2. The first byte in the message has been changed to hold the version number, this has been changed from 1 to 2.
+The main other changes are the machine state code is now according to the [official version](https://github.com/grblHAL/core/blob/08c778530ca5b476d22b73244366e32db7993302/system.h#L88-L110) and
+position etc. is converted to imperial when $13=1. Ref. PR [#20](https://github.com/grblHAL/Plugin_keypad/pull/20).
+
+* Fans, Laser, Spindle, Encoder: updated for core change.
+
+---
+
 <a name="20260202">20260202
 
 Core:

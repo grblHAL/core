@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2025 Terje Io
+  Copyright (c) 2018-2026 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -461,7 +461,7 @@ static void state_await_toolchanged (uint_fast16_t rt_exec)
             if(grbl.on_tool_changed)
                 grbl.on_tool_changed(gc_state.tool);
 
-            system_add_rt_report(Report_Tool);
+            report_add_realtime(Report_Tool);
         }
         pending_state = gc_state.tool_change ? STATE_TOOL_CHANGE : STATE_IDLE;
         state_set(STATE_IDLE);

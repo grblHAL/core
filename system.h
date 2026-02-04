@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2025 Terje Io
+  Copyright (c) 2017-2026 Terje Io
   Copyright (c) 2014-2016 Sungeun K. Jeon for Gnea Research LLC
 
   grblHAL is free software: you can redistribute it and/or modify
@@ -242,6 +242,12 @@ typedef union {
 } report_tracking_flags_t;
 
 typedef struct {
+    report_tracking_flags_t flags;
+    uint8_t override_counter;       //!< Tracks when to add override data to status reports.
+    uint8_t wco_counter;            //!< Tracks when to add work coordinate offset data to status reports.
+} status_report_tracking_t;
+
+typedef struct {
     override_t feed_rate;           //!< Feed rate override value in percent
     override_t rapid_rate;          //!< Rapids override value in percent
     override_t spindle_rpm;         //!< __NOTE:__ Not used by the core, it maintain per spindle override in \ref spindle_param_t
@@ -306,7 +312,6 @@ typedef struct system {
     axes_signals_t homing;                  //!< Axes with homing enabled.
     overrides_t override;                   //!< Override values & states
     system_override_delay_t override_delay; //!< Flags for delayed overrides.
-    report_tracking_flags_t report;         //!< Tracks when to add data to status reports.
     parking_state_t parking_state;          //!< Tracks parking state
     hold_state_t holding_state;             //!< Tracks holding state
     coord_system_id_t probe_coordsys_id;    //!< Coordinate system in which last probe took place.
@@ -386,8 +391,6 @@ void system_output_help (const sys_command_t *commands, uint32_t num_commands);
 void system_register_commands (sys_commands_t *commands);
 
 void system_clear_tlo_reference (axes_signals_t homing_cycle);
-void system_add_rt_report (report_tracking_t report);
-report_tracking_flags_t system_get_rt_report_flags (void);
 
 // Special handlers for setting and clearing grblHAL's real-time execution flags.
 #define system_set_exec_state_flag(mask) hal.set_bits_atomic(&sys.rt_exec_state, (mask))

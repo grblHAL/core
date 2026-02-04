@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2016-2025 Terje Io
+  Copyright (c) 2016-2026 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -495,7 +495,7 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
                     st.dir_out = st.exec_segment->exec_block->direction;
 
                 if(st.exec_block != NULL && st.exec_block->offset_id != st.exec_segment->exec_block->offset_id)
-                    sys.report.wco = sys.report.force_wco = On; // Do not generate grbl.on_rt_reports_added event!
+                    report_add_realtime(Report_WCO|Report_ForceWCO);
 
                 st.exec_block = st.exec_segment->exec_block;
                 st.step_event_count = st.exec_block->step_event_count;

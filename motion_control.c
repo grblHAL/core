@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2025 Terje Io
+  Copyright (c) 2017-2026 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -971,7 +971,7 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
         sync_position();
     }
 
-    system_add_rt_report(Report_Homed);
+    report_add_realtime(Report_Homed);
 
     homed_status = settings.limits.flags.hard_enabled &&
                     settings.limits.flags.check_at_init &&
