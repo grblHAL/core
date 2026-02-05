@@ -1,5 +1,15 @@
 ## grblHAL changelog
 
+<a name="20260205">Build 20260205
+
+Core:
+
+* Fixed bad update causing compiler error if multiple spindles are enabled.
+
+* Moved some reporting data definitions/structures that caused Windows simulator builds to fail.
+
+---
+
 <a name="20260204">Build 20260204
 
 Core:

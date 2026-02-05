@@ -78,7 +78,6 @@ Helper functions for saving away and restoring a stream input buffer. _Not refer
 #include <stdbool.h>
 
 #include "vfs.h"
-#include "system.h"
 
 typedef enum {
     StreamType_Serial = 0,
@@ -138,6 +137,71 @@ typedef union {
                 unused :4;
     };
 } serial_linestate_t;
+
+typedef enum {
+    Report_ClearAll = 0,
+    Report_MPGMode = (1 << 0),
+    Report_Scaling = (1 << 1),
+    Report_Homed   = (1 << 2),
+    Report_LatheXMode = (1 << 3),
+    Report_Spindle = (1 << 4),
+    Report_Coolant = (1 << 5),
+    Report_Overrides = (1 << 6),
+    Report_Tool = (1 << 7),
+    Report_WCO = (1 << 8),
+    Report_GWCO = (1 << 9),
+    Report_ToolOffset = (1 << 10),
+    Report_M66Result = (1 << 11),
+    Report_PWM = (1 << 12),
+    Report_Motor = (1 << 13),
+    Report_Encoder = (1 << 14),
+    Report_TLOReference = (1 << 15),
+    Report_Fan = (1 << 16),
+    Report_SpindleId = (1 << 17),
+    Report_ProbeId = (1 << 18),
+    Report_DistanceToGo = (1 << 19),
+    Report_ProbeProtect = (1 << 20),
+    Report_ForceWCO = (1 << 29),
+    Report_CycleStart = (1 << 30),
+    Report_All = 0x801FFFFF
+} report_tracking_t;
+
+typedef union {
+    uint32_t value;
+    struct {
+        uint32_t mpg_mode       :1, //!< MPG mode changed.
+                 scaling        :1, //!< Scaling (G50/G51) changed.
+                 homed          :1, //!< Homed state changed.
+                 xmode          :1, //!< Lathe radius/diameter mode changed.
+                 spindle        :1, //!< Spindle state changed.
+                 coolant        :1, //!< Coolant state changed.
+                 overrides      :1, //!< Overrides changed.
+                 tool           :1, //!< Tool changed.
+                 wco            :1, //!< Add work coordinates.
+                 gwco           :1, //!< Add work coordinate.
+                 tool_offset    :1, //!< Tool offsets changed.
+                 m66result      :1, //!< M66 result updated.
+                 pwm            :1, //!< Add PWM information (optional: to be added by driver).
+                 motor          :1, //!< Add motor information (optional: to be added by driver).
+                 encoder        :1, //!< Add encoder information (optional: to be added by driver).
+                 tlo_reference  :1, //!< Tool length offset reference changed.
+                 fan            :1, //!< Fan on/off changed.
+                 spindle_id     :1, //!< Spindle changed.
+                 probe_id       :1, //!< Probe changed.
+                 distance_to_go :1, //!< Distance to go.
+                 probe_protect  :1, //!< Probe protection state changed.
+                 unassigned     :8, //
+                 force_wco      :1, //!< Add work coordinates (due to WCO changed during motion).
+                 cycle_start    :1, //!< Cycle start signal triggered. __NOTE:__ do __NOT__ add to Report_All enum above!
+                 all            :1; //!< Set when CMD_STATUS_REPORT_ALL is requested, may be used by user code.
+    };
+} report_tracking_flags_t;
+
+typedef struct {
+    report_tracking_flags_t flags;
+    uint8_t override_counter;       //!< Tracks when to add override data to status reports.
+    uint8_t wco_counter;            //!< Tracks when to add work coordinate offset data to status reports.
+} status_report_tracking_t;
 
 /*! \brief Pointer to function for getting stream connected status.
 \returns \a true connected, \a false otherwise.

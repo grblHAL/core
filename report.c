@@ -1338,7 +1338,7 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
     }
 
 #elif N_SPINDLE > 1
-    if(report.spindle_id) {
+    if(report->flags.spindle_id) {
         spindle_r_t data = {
             .spindle_id = spindle_0->id,
             .stream_write = stream_write
