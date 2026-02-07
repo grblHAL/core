@@ -80,6 +80,7 @@ static struct {
     stream_write_char_ptr write_char;
     stream_connection_flags_t flags;
     on_rt_reports_added_ptr on_rt_reports_added;
+    on_gcode_mode_changed_ptr on_gcode_mode_changed;
 } mpg;
 
 void stream_register_streams (io_stream_details_t *details)
@@ -553,6 +554,15 @@ ISR_CODE static void mpg_rt_report_add (report_tracking_flags_t report)
         mpg.stream.report.flags.value |= report.value;
 }
 
+static void mpg_gcode_mode_changed (void)
+{
+    if(mpg.on_gcode_mode_changed)
+        mpg.on_gcode_mode_changed();
+
+    if(hal.stream.type != StreamType_MPG)
+        report_gcode_modes(mpg.stream.write);
+}
+
 void stream_mpg_set_mode (void *data)
 {
     stream_mpg_enable(data != NULL);
@@ -644,6 +654,9 @@ bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stream_write_
 
         mpg.on_rt_reports_added = grbl.on_rt_reports_added;
         grbl.on_rt_reports_added = mpg_rt_report_add;
+
+        mpg.on_gcode_mode_changed = grbl.on_gcode_mode_changed;
+        grbl.on_gcode_mode_changed = mpg_gcode_mode_changed;
 
         if(grbl.on_mpg_registered)
             grbl.on_mpg_registered(&mpg.stream, true);

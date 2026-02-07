@@ -1,5 +1,22 @@
 ## grblHAL changelog
 
+<a name="20260206">Build 20260206
+
+Core:
+
+* Changed spindle at speed check to potentially fix issue with it sometimes skipping the wait cycle. Ref. discussion [#198](https://github.com/grblHAL/core/discussions/198).
+
+* Added experimental support for ramping PWM output on RPM changes, enable with new `$9` option flag and spindle delay settings:  
+`$394` > 0, enables ramp up for spindle on and on RPM changes while spindle is enabled.  
+`$339` > 0, enables ramp down for spindle off.  
+`$392` > 0, enables ramp up on door close and/or restore from parked.  
+
+Plugins:
+
+* Spindle: updated to ensure `$340` setting is applied when changed instead of requiring a reboot.
+
+---
+
 <a name="20260205">Build 20260205
 
 Core:

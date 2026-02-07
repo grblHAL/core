@@ -91,6 +91,7 @@ typedef void (*on_override_changed_ptr)(override_changed_t override);
 typedef void (*on_spindle_programmed_ptr)(spindle_ptrs_t *spindle, spindle_state_t state, float rpm, spindle_rpm_mode_t mode);
 typedef void (*on_spindle_at_speed_ptr)(spindle_ptrs_t *spindle, spindle_state_t state);
 typedef void (*on_port_out_ptr)(uint8_t port, io_port_type_t type, float value);
+typedef void (*on_gcode_mode_changed_ptr)(void);
 typedef void (*on_wco_changed_ptr)(void);
 typedef void (*on_wco_saved_ptr)(coord_system_id_t id, coord_system_data_t *data);
 typedef void (*on_program_completed_ptr)(program_flow_t program_flow, bool check_mode);
@@ -228,6 +229,7 @@ typedef struct {
     on_spindle_programmed_ptr on_spindle_programmed;
     on_spindle_at_speed_ptr on_spindle_at_speed;
     on_port_out_ptr on_port_out;                                //!< Might be called from interrupt context, only for unclaimed ports.
+    on_gcode_mode_changed_ptr on_gcode_mode_changed;            //!< Called if settings.status_report.parser_state is enabled.
     on_wco_changed_ptr on_wco_changed;
     on_wco_saved_ptr on_wco_saved;
     on_program_completed_ptr on_program_completed;

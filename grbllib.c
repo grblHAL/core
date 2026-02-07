@@ -424,7 +424,7 @@ int grbl_enter (void)
 
     hal.stepper.enable(settings.steppers.energize, true);
 
-    spindle_all_off();
+    spindle_all_off(true);
     hal.coolant.set_state((coolant_state_t){0});
 
     if(hal.get_position)

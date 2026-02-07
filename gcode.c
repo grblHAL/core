@@ -836,7 +836,7 @@ void gc_spindle_off (void)
         memset(&gc_state.modal.spindle[idx], 0, offsetof(spindle_t, hal));
     }
 
-    spindle_all_off();
+    spindle_all_off(false);
     report_add_realtime(Report_Spindle);
 }
 
@@ -4506,7 +4506,7 @@ status_code_t gc_execute_block (char *block)
 
                 system_flag_wco_change(); // Set to refresh immediately just in case something altered.
 
-                spindle_all_off();
+                spindle_all_off(false);
                 hal.coolant.set_state(gc_state.modal.coolant);
                 report_add_realtime(Report_Spindle); // Set to report change
                 report_add_realtime(Report_Coolant); // immediately.

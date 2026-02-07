@@ -111,7 +111,7 @@ static void state_restore_conditions (restore_condition_t *condition)
 static void enter_sleep (void)
 {
     st_go_idle();
-    spindle_all_off();
+    spindle_all_off(false);
     hal.coolant.set_state((coolant_state_t){0});
     grbl.report.feedback_message(Message_SleepMode);
     stateHandler = state_noop;
@@ -362,26 +362,30 @@ void state_set (sys_state_t new_state)
 // Suspend manager. Controls spindle overrides in hold states.
 void state_suspend_manager (void)
 {
-    if (stateHandler != state_await_resume || !gc_spindle_get(0)->state.on)
+    if(stateHandler != state_await_resume || !gc_spindle_get(0)->state.on)
         return;
 
     if(sys.override.spindle_stop.value) {
 
+        spindle_t *spindle = &restore_condition.spindle[restore_condition.spindle_num];
+
         // Handles beginning of spindle stop
         if(sys.override.spindle_stop.initiate) {
             sys.override.spindle_stop.value = 0; // Clear stop override state
-            if(grbl.on_spindle_programmed)
-                grbl.on_spindle_programmed(restore_condition.spindle[restore_condition.spindle_num].hal, (spindle_state_t){0}, 0.0f, 0);
-            spindle_set_state(restore_condition.spindle[restore_condition.spindle_num].hal, (spindle_state_t){0}, 0.0f); // De-energize
-            sys.override.spindle_stop.enabled = On; // Set stop override state to enabled, if de-energized.
-            if(grbl.on_override_changed)
-                grbl.on_override_changed(OverrideChanged_SpindleState);
+            if(spindle->hal && spindle->hal->get_state(spindle->hal).on) {
+                if(grbl.on_spindle_programmed)
+                    grbl.on_spindle_programmed(spindle->hal, (spindle_state_t){0}, 0.0f, SpindleSpeedMode_RPM);
+                spindle_set_state(spindle->hal, (spindle_state_t){0}, 0.0f); // De-energize
+                sys.override.spindle_stop.enabled = On; // Set stop override state to enabled, if de-energized.
+                if(grbl.on_override_changed)
+                    grbl.on_override_changed(OverrideChanged_SpindleState);
+            }
         }
 
         // Handles restoring of spindle state
         if(sys.override.spindle_stop.restore) {
             grbl.report.feedback_message(Message_SpindleRestore);
-            state_spindle_restore(&restore_condition.spindle[restore_condition.spindle_num], settings.spindle.on_delay);
+            state_spindle_restore(spindle, settings.spindle.on_delay);
             sys.override.spindle_stop.value = 0; // Clear stop override state
             if(grbl.on_override_changed)
                 grbl.on_override_changed(OverrideChanged_SpindleState);
@@ -513,7 +517,7 @@ static void state_await_hold (uint_fast16_t rt_exec)
         switch (sys_state) {
 
             case STATE_TOOL_CHANGE:
-                spindle_all_off(); // De-energize
+                spindle_all_off(false); // De-energize
                 hal.coolant.set_state((coolant_state_t){0}); // De-energize
                 break;
 
@@ -575,13 +579,13 @@ static void state_await_hold (uint_fast16_t rt_exec)
                     } else {
                         // Parking motion not possible. Just disable the spindle and coolant.
                         // NOTE: Laser mode does not start a parking motion to ensure the laser stops immediately.
-                        spindle_all_off(); // De-energize
+                        spindle_all_off(false); // De-energize
                         if(sys.flags.is_parking || sys_state == STATE_SLEEP || !settings.safety_door.flags.keep_coolant_on)
                             hal.coolant.set_state((coolant_state_t){0}); // De-energize
                         sys.parking_state = hal.control.get_state().safety_door_ajar ? Parking_DoorAjar : Parking_DoorClosed;
                     }
                 } else {
-                    spindle_all_off(); // De-energize
+                    spindle_all_off(false); // De-energize
                     if(sys.flags.is_parking || sys_state == STATE_SLEEP || !settings.safety_door.flags.keep_coolant_on)
                         hal.coolant.set_state((coolant_state_t){0}); // De-energize
                     sys.parking_state = hal.control.get_state().safety_door_ajar ? Parking_DoorAjar : Parking_DoorClosed;

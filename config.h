@@ -1125,6 +1125,9 @@ Useful for some pre-built electronic boards.
 #if !defined DEFAULT_PWM_SPINDLE_DISABLE_LASER_MODE || defined __DOXYGEN__
 #define DEFAULT_PWM_SPINDLE_DISABLE_LASER_MODE Off
 #endif
+#if !defined DEFAULT_PWM_SPINDLE_ENABLE_RAMP || defined __DOXYGEN__
+#define DEFAULT_PWM_SPINDLE_ENABLE_RAMP Off
+#endif
 ///@}
 
 /*! @name $16 - Setting_SpindleInvertMask

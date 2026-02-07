@@ -198,6 +198,7 @@ PROGMEM const settings_t defaults = {
     .pwm_spindle.flags.pwm_disable = false,
     .pwm_spindle.flags.enable_rpm_controlled = DEFAULT_SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED,
     .pwm_spindle.flags.laser_mode_disable = DEFAULT_PWM_SPINDLE_DISABLE_LASER_MODE,
+    .pwm_spindle.flags.pwm_ramped = DEFAULT_PWM_SPINDLE_ENABLE_RAMP,
     .pwm_spindle.invert.on = DEFAULT_INVERT_SPINDLE_ENABLE_PIN,
     .pwm_spindle.invert.ccw = DEFAULT_INVERT_SPINDLE_CCW_PIN,
     .pwm_spindle.invert.pwm = DEFAULT_INVERT_SPINDLE_PWM_PIN,
@@ -736,15 +737,18 @@ static status_code_t set_pwm_mode (setting_id_t id, uint_fast16_t int_value)
 
 static status_code_t set_pwm_options (setting_id_t id, uint_fast16_t int_value)
 {
-    if(int_value & 0x001) {
-        if(int_value > 0b111)
+    if(int_value & 0b0001) {
+        if(int_value > 0b1111)
             return Status_SettingValueOutOfRange;
         settings.pwm_spindle.flags.pwm_disable = Off;
-        settings.pwm_spindle.flags.enable_rpm_controlled = !!(int_value & 0b010);
-        settings.pwm_spindle.flags.laser_mode_disable = !!(int_value & 0b100);
+        settings.pwm_spindle.flags.enable_rpm_controlled = !!(int_value & 0b0010);
+        settings.pwm_spindle.flags.laser_mode_disable = !!(int_value & 0b0100);
+        settings.pwm_spindle.flags.pwm_ramped = !!(int_value & 0b1000);
     } else {
         settings.pwm_spindle.flags.pwm_disable = On;
-        settings.pwm_spindle.flags.enable_rpm_controlled = settings.pwm_spindle.flags.laser_mode_disable = Off;
+        settings.pwm_spindle.flags.enable_rpm_controlled =
+         settings.pwm_spindle.flags.laser_mode_disable =
+          settings.pwm_spindle.flags.pwm_ramped = Off;
     }
 
     return Status_OK;
@@ -1515,9 +1519,10 @@ FLASHMEM static uint32_t get_int (setting_id_t id)
         case Setting_SpindlePWMOptions:
             value = settings.pwm_spindle.flags.pwm_disable
                      ? 0
-                     : (0b001 |
-                        (settings.pwm_spindle.flags.enable_rpm_controlled ? 0b010 : 0) |
-                         (settings.pwm_spindle.flags.laser_mode_disable ? 0b100 : 0));
+                     : (0b0001 |
+                        (settings.pwm_spindle.flags.enable_rpm_controlled ? 0b0010 : 0) |
+                         (settings.pwm_spindle.flags.laser_mode_disable ? 0b0100 : 0) |
+                          (settings.pwm_spindle.flags.pwm_ramped ? 0b1000 : 0));
             break;
 
         case Setting_Mode:
@@ -2063,7 +2068,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_InvertProbePin, Group_Probing, "Invert probe inputs", NULL, Format_Bitfield, probe_signals, NULL, NULL, Setting_IsLegacyFn, set_probe_invert, get_int, is_setting_available },
      { Setting_SpindlePWMBehaviour, Group_Spindle, "Deprecated", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsLegacyFn, set_pwm_mode, get_int, is_setting_available },
      { Setting_GangedDirInvertMask, Group_Stepper, "Ganged axes direction invert", NULL, Format_Bitfield, ganged_axes, NULL, NULL, Setting_IsExtendedFn, set_ganged_dir_invert, get_int, is_setting_available },
-     { Setting_SpindlePWMOptions, Group_Spindle, "PWM spindle options", NULL, Format_XBitfield, "Enable,RPM controls spindle enable signal,Disable laser mode capability", NULL, NULL, Setting_IsExtendedFn, set_pwm_options, get_int, is_setting_available },
+     { Setting_SpindlePWMOptions, Group_Spindle, "PWM spindle options", NULL, Format_XBitfield, "Enable,RPM controls spindle enable signal,Disable laser mode capability,Enable ramping", NULL, NULL, Setting_IsExtendedFn, set_pwm_options, get_int, is_setting_available },
 #if COMPATIBILITY_LEVEL <= 1
      { Setting_StatusReportMask, Group_General, "Status report options", NULL, Format_Bitfield, "Position in machine coordinate,Buffer state,Line numbers,Feed & speed,Pin state,Work coordinate offset,Overrides,Probe coordinates,Buffer sync on WCO change,Parser state,Alarm substatus,Run substatus,Enable when homing,Distance-to-go", NULL, NULL, Setting_IsExtendedFn, set_report_mask, get_int, NULL },
 #else
@@ -2237,7 +2242,8 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_LimitPinsInvertMask, "Inverts the axis limit input signals." },
     { Setting_InvertProbePin, "Inverts the probe input signal(s)." },
     { Setting_SpindlePWMOptions, "Enable controls PWM output availability.\\n"
-                                 "When `RPM controls spindle enable signal` is checked and M3 or M4 is active S0 switches it off and S > 0 switches it on."
+                                 "When `RPM controls spindle enable signal` is checked and M3 or M4 is active S0 switches it off and S > 0 switches it on.\\n"
+                                 "When 'Ramping enable' is checked spin up and spin down time is calculated from $394 and $539 respectively."
     },
     { Setting_GangedDirInvertMask, "Inverts the direction signals for the second motor used for ganged axes.\\n\\n"
                                    "NOTE: This inversion will be applied in addition to the inversion from setting $3."

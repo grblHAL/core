@@ -100,7 +100,7 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
                     if(state_get() != STATE_IDLE && state_get() != STATE_JOG)
                         system_set_exec_state_flag(EXEC_SAFETY_DOOR);
                     if(settings.mode == Mode_Laser) // Turn off spindle immediately (laser) when in laser mode
-                        spindle_all_off();
+                        spindle_all_off(true);
                 } else
                     system_set_exec_state_flag(EXEC_SAFETY_DOOR);
             }

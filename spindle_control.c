@@ -117,6 +117,10 @@ static bool spindle_activate (spindle_id_t spindle_id, spindle_num_t spindle_num
                 sys_spindle[spindle_num].param.hal = &sys_spindle[spindle_num].hal;
                 if(sys_spindle[spindle_num].param.override_pct == 0)
                     sys_spindle[spindle_num].param.override_pct = DEFAULT_SPINDLE_RPM_OVERRIDE;
+                if(spindle_hal.type == SpindleType_PWM && !spindle_hal.cap.laser && spindle_hal.context.pwm->flags.ramp_pwm ) {
+                    sys_spindle[spindle_num].param.ramp_up = settings.spindle.on_delay > 0;
+                    sys_spindle[spindle_num].param.ramp_down = settings.spindle.off_delay > 0;
+                }
                 spindle_hal.param = &sys_spindle[spindle_num].param;
                 memcpy(&sys_spindle[spindle_num].hal, &spindle_hal, sizeof(spindle_ptrs_t));
                 if(grbl.on_spindle_selected)
@@ -283,10 +287,15 @@ void spindle_update_caps (spindle_ptrs_t *spindle, spindle_pwm_t *pwm_caps)
         idx--;
         if(sys_spindle[idx].enabled && spindle->id == sys_spindle[idx].hal.id) {
             sys_spindle[idx].hal.type = spindle->type;
-            sys_spindle[idx].hal.cap.laser = spindle->cap.laser;
             sys_spindle[idx].hal.rpm_min =  spindle->rpm_min;
             sys_spindle[idx].hal.rpm_max =  spindle->rpm_max;
             sys_spindle[idx].hal.pwm_off_value =  spindle->pwm_off_value;
+            if((sys_spindle[idx].hal.cap.laser = spindle->cap.laser) || spindle->type != SpindleType_PWM || !spindle->context.pwm->flags.ramp_pwm)
+                sys_spindle[idx].param.ramp_up = sys_spindle[idx].param.ramp_down = Off;
+            else {
+                sys_spindle[idx].param.ramp_up = settings.spindle.on_delay > 0;
+                sys_spindle[idx].param.ramp_down = settings.spindle.off_delay > 0;
+            }
             break;
         }
     } while(idx);
@@ -528,6 +537,70 @@ spindle_id_t spindle_add_null (void)
 
 // End null (dummy) spindle.
 
+typedef struct {
+    spindle_ptrs_t *spindle;
+    uint16_t delay;
+    uint32_t start, end;
+    volatile float rpm;
+    float rpm_delta;
+    float rpm_target;
+} rpm_override_t;
+
+static void spindle_ramp_task (void *data)
+{
+    bool ok;
+    rpm_override_t *ramp = (rpm_override_t *)data;
+
+    ramp->rpm = ramp->rpm + ramp->rpm_delta;
+
+    if(ramp->rpm_delta > 0.0f) {
+        if((ok = ramp->rpm >= ramp->rpm_target))
+            ramp->rpm = ramp->rpm_target;
+    } else if((ok = ramp->rpm <= ramp->rpm_target))
+        ramp->rpm = ramp->rpm_target;
+
+    if(!ok)
+        task_add_delayed(spindle_ramp_task, data, ramp->delay);
+    else
+        ramp->delay = 0; // done
+
+    ramp->end = hal.get_elapsed_ticks();
+
+    ramp->spindle->update_pwm(ramp->spindle, ramp->spindle->get_pwm(ramp->spindle, ramp->rpm));
+}
+
+static uint16_t spindle_get_ramp (spindle_ptrs_t *spindle, float rpm, float target_rpm, uint16_t delay_ms, rpm_override_t *ramp)
+{
+    ramp->spindle = spindle;
+    ramp->rpm = rpm;
+    ramp->rpm_target = target_rpm;
+    ramp->rpm_delta = target_rpm - rpm;
+    ramp->delay = DWELL_TIME_STEP;
+
+    uint16_t dly = ((uint16_t)(float)delay_ms * fabsf(ramp->rpm_delta / spindle->rpm_max));
+
+    ramp->rpm_delta /= (float)(dly / ramp->delay) + 1;
+
+    if(ramp->start == 0)
+    ramp->start = hal.get_elapsed_ticks();
+
+    return dly;
+}
+
+static bool spindle_ramp_override (spindle_ptrs_t *spindle, float rpm, float target_rpm)
+{
+    static rpm_override_t ramp;
+
+    task_delete(spindle_ramp_task, &ramp);
+
+    if(ramp.delay)
+        rpm = ramp.rpm;
+
+    return spindle_get_ramp(spindle, rpm, spindle->param->rpm_overridden, settings.spindle.on_delay, &ramp) &&
+            task_add_delayed(spindle_ramp_task, &ramp, ramp.delay);
+
+}
+
 /*! \brief Set spindle speed override.
 \param spindle pointer to a \ref spindle_ptrs_t structure.
 \param speed_override override as a percentage of the programmed RPM.
@@ -542,15 +615,22 @@ float spindle_set_override (spindle_ptrs_t *spindle, override_t speed_override)
 
         if((uint8_t)speed_override != spindle->param->override_pct) {
 
+            float rpm = spindle->param->rpm_overridden;
+            sys_state_t state = state_get();
+
             spindle_set_rpm(spindle, spindle->param->rpm, speed_override);
 
-            if(state_get() == STATE_IDLE) {
-                if(spindle->get_pwm && spindle->update_pwm)
-                    spindle->update_pwm(spindle, spindle->get_pwm(spindle, spindle->param->rpm_overridden));
-                else if(spindle->update_rpm)
-                    spindle->update_rpm(spindle, spindle->param->rpm_overridden);
-            } else
-                sys.step_control.update_spindle_rpm = On;
+            if(!(spindle->param->ramp_up &&
+                  spindle->get_state(spindle).on &&
+                   spindle_ramp_override(spindle, rpm, spindle->param->rpm_overridden))) {
+                if(state == STATE_IDLE) {
+                    if(spindle->get_pwm && spindle->update_pwm)
+                        spindle->update_pwm(spindle, spindle->get_pwm(spindle, spindle->param->rpm_overridden));
+                    else if(spindle->update_rpm)
+                        spindle->update_rpm(spindle, spindle->param->rpm_overridden);
+                } else
+                    sys.step_control.update_spindle_rpm = On;
+            }
 
             report_add_realtime(Report_Overrides); // Set to report change immediately
 
@@ -590,6 +670,45 @@ bool spindle_check_state (spindle_ptrs_t *spindle, spindle_state_t state)
     return (state.value & mask.value) == (spindle->get_state(spindle).value & mask.value);
 }
 
+static void spindle_ramp (spindle_ptrs_t *spindle, spindle_state_t state, float rpm, float target_rpm, uint16_t delay_ms)
+{
+    bool ok = true;
+
+    if(delay_ms > DWELL_TIME_STEP) {
+
+        static rpm_override_t ramp;
+
+        task_delete(spindle_ramp_task, NULL);
+
+        if(spindle_get_ramp(spindle, rpm, target_rpm, delay_ms, &ramp) > DWELL_TIME_STEP) {
+
+            float delay = (float)ramp.delay / 1000.0f;
+
+            if(ramp.rpm_delta > 0.0f) {
+                if(spindle->param->state.on != state.on || state.ccw != spindle->param->state.ccw) {
+                    spindle->param->state.on = state.on;
+                    spindle->set_state(spindle, state, (rpm = rpm + ramp.rpm_delta));
+                }
+                while(ok && (rpm = rpm + ramp.rpm_delta) < target_rpm) {
+                    spindle->update_pwm(spindle, spindle->get_pwm(spindle, rpm));
+                    ok = delay_sec(delay, sys.suspend ? DelayMode_SysSuspend : DelayMode_Dwell);
+                }
+            } else while(ok && (rpm = rpm + ramp.rpm_delta) > target_rpm) {
+                spindle->update_pwm(spindle, spindle->get_pwm(spindle, rpm));
+                ok = delay_sec(delay, sys.suspend ? DelayMode_SysSuspend : DelayMode_Dwell);
+            }
+            ramp.end = hal.get_elapsed_ticks();
+        }
+    }
+
+    if(ok && rpm != target_rpm) {
+        if(state.on == spindle->param->state.on)
+            spindle->update_pwm(spindle, spindle->get_pwm(spindle, target_rpm));
+        else
+            spindle->set_state(spindle, state, target_rpm);
+    }
+}
+
 /*! \internal \brief Immediately sets spindle running state with direction and spindle rpm, if enabled.
 Called by g-code parser spindle_set_state_synced(), parking retract and restore, g-code program end,
 sleep, and spindle stop override.
@@ -598,20 +717,30 @@ sleep, and spindle stop override.
 \param rpm the spindle RPM to set.
 \returns \a true if successful, \a false if the current controller state is \ref ABORTED.
 */
-bool spindle_set_state (spindle_ptrs_t *spindle, spindle_state_t state, float rpm)
+static bool _spindle_set_state (spindle_ptrs_t *spindle, spindle_state_t state, float rpm, uint16_t on_delay_ms)
 {
-    if (!ABORTED) { // Block during abort.
+    if(!ABORTED) { // Block during abort.
 
-        if (!state.on) { // Halt or set spindle direction and rpm.
+        if(!state.on) { // Halt or set spindle direction and rpm.
             rpm = 0.0f;
-            spindle->set_state(spindle, (spindle_state_t){0}, 0.0f);
+            if(spindle->param->ramp_down)
+                spindle_ramp(spindle, spindle->param->state, spindle->param->rpm_overridden, 0.0f, settings.spindle.off_delay);
+            spindle->set_state(spindle, (spindle_state_t){0}, (spindle->param->rpm_overridden = 0.0f));
         } else {
             // NOTE: Assumes all calls to this function is when grblHAL is not moving or must remain off.
             // TODO: alarm/interlock if going from CW to CCW directly in non-laser mode?
-            if (spindle->cap.laser && state.ccw)
+            if(spindle->cap.laser && state.ccw)
                 rpm = 0.0f; // TODO: May need to be rpm_min*(100/MAX_SPINDLE_RPM_OVERRIDE);
 
-            spindle->set_state(spindle, state, spindle_set_rpm(spindle, rpm, spindle->param->override_pct));
+            if(spindle->param->ramp_up) {
+                if(spindle->param->state.on && spindle->param->state.ccw != state.ccw) {
+                    spindle_ramp(spindle, spindle->param->state, spindle->param->rpm_overridden, 0.0f, settings.spindle.off_delay);
+                    spindle->param->rpm = spindle->param->rpm_overridden = 0.0f;
+                }
+                float arpm = spindle->param->rpm_overridden;
+                spindle_ramp(spindle, state, arpm, spindle_set_rpm(spindle, rpm, spindle->param->override_pct), on_delay_ms ? on_delay_ms : settings.spindle.on_delay);
+            } else
+                spindle->set_state(spindle, state, spindle_set_rpm(spindle, rpm, spindle->param->override_pct));
         }
 
         spindle->param->rpm = rpm;
@@ -626,6 +755,11 @@ bool spindle_set_state (spindle_ptrs_t *spindle, spindle_state_t state, float rp
     return !ABORTED;
 }
 
+bool spindle_set_state (spindle_ptrs_t *spindle, spindle_state_t state, float rpm)
+{
+    return _spindle_set_state(spindle, state, rpm, 0);
+}
+
 /*! \brief If the spindle supports at speed functionality it will wait
 for it to reach the speed and raise an alarm if the speed is not reached within the timeout period.
 \param spindle pointer to a \ref spindle_ptrs_t structure.
@@ -633,28 +767,28 @@ for it to reach the speed and raise an alarm if the speed is not reached within 
 \param rpm the spindle RPM to set.
 \returns \a true if successful, \a false if the current controller state is \ref ABORTED.
 */
-static bool spindle_set_state_wait (spindle_ptrs_t *spindle, spindle_state_t state, float rpm, uint16_t delay_ms, delaymode_t delay_mode)
+static bool spindle_set_state_wait (spindle_ptrs_t *spindle, spindle_state_t state, float rpm, uint16_t delay_ms)
 {
     bool ok;
 
     if(!(ok = state_get() == STATE_CHECK_MODE)) {
 
-        if((ok = spindle_set_state(spindle, state, rpm))) {
+        if((ok = _spindle_set_state(spindle, state, rpm, delay_ms))) {
 
-            if(sys.override.control.spindle_wait_disable) {
+            if(sys.override.control.spindle_wait_disable || (state.on ? spindle->param->ramp_up : spindle->param->ramp_down)) {
                 sys.override.control.spindle_wait_disable = Off;
             } else {
 
                 bool at_speed = !spindle->cap.at_speed || spindle->cap.torch || spindle->at_speed_tolerance <= 0.0f;
 
                 if(at_speed)
-                    ok = delay_ms == 0 || spindle->cap.torch || delay_sec((float)delay_ms / 1000.0f, delay_mode);
+                    ok = delay_ms == 0 || spindle->cap.torch || delay_sec((float)delay_ms / 1000.0f, sys.suspend ? DelayMode_SysSuspend : DelayMode_Dwell);
                 else {
                     uint16_t delay = 0;
                     if(delay_ms == 0)
                         delay_ms = 60000; // one minute...
-                    while(!(at_speed = spindle->get_state(spindle).at_speed)) {
-                        if(!delay_sec(0.2f, delay_mode))
+                    do {
+                        if(!delay_sec(0.2f, sys.suspend ? DelayMode_SysSuspend : DelayMode_Dwell))
                             break;
                         delay += 200;
                         if(delay > delay_ms) {
@@ -662,7 +796,8 @@ static bool spindle_set_state_wait (spindle_ptrs_t *spindle, spindle_state_t sta
                             system_raise_alarm(Alarm_Spindle);
                             break;
                         }
-                    }
+                    } while(!(at_speed = spindle->get_state(spindle).at_speed));
+
                     ok &= at_speed;
                 }
             }
@@ -692,7 +827,7 @@ bool spindle_set_state_synced (spindle_ptrs_t *spindle, spindle_state_t state, f
         if(grbl.on_spindle_programmed)
             grbl.on_spindle_programmed(spindle, state, rpm, mode);
 
-        ok = spindle_set_state_wait(spindle, state, rpm, state.on ? settings.spindle.on_delay : settings.spindle.off_delay, DelayMode_Dwell);
+        ok = spindle_set_state_wait(spindle, state, rpm, state.on ? settings.spindle.on_delay : settings.spindle.off_delay);
     }
 
     return ok;
@@ -709,9 +844,9 @@ bool spindle_restore (spindle_ptrs_t *spindle, spindle_state_t state, float rpm,
     bool ok;
 
     if(spindle->cap.laser) // When in laser mode, ignore spindle spin-up delay. Set to turn on laser when cycle starts.
-        ok = (sys.step_control.update_spindle_rpm = spindle_set_state(spindle, state, 0.0f));
+        ok = (sys.step_control.update_spindle_rpm = _spindle_set_state(spindle, state, 0.0f, 0));
     else if(!(ok = spindle_check_state(spindle, state) && spindle->param->rpm == rpm))
-        ok = spindle_set_state_wait(spindle, state, rpm, delay_ms, DelayMode_SysSuspend);
+        ok = spindle_set_state_wait(spindle, state, rpm, delay_ms);
 
     return ok;
 }
@@ -737,13 +872,17 @@ float spindle_set_rpm (spindle_ptrs_t *spindle, float rpm, override_t override_p
 
 /*! \brief Turn off all enabled spindles.
 */
-void spindle_all_off (void)
+void spindle_all_off (bool reset)
 {
     spindle_ptrs_t *spindle;
     uint_fast8_t spindle_num = N_SYS_SPINDLE;
 
     do {
         if((spindle = spindle_get(--spindle_num))) {
+
+            if(!reset && spindle->param->ramp_down)
+                spindle_set_state(spindle, (spindle_state_t){0}, 0.0f);
+
             spindle->param->rpm = spindle->param->rpm_overridden = 0.0f;
             spindle->param->state.value = 0;
 #ifdef GRBL_ESP32
@@ -879,6 +1018,7 @@ bool spindle_precompute_pwm_values (spindle_ptrs_t *spindle, spindle_pwm_t *pwm_
         pwm_data->flags.invert_pwm = settings->invert.pwm & spindle->cap.pwm_invert;
         pwm_data->flags.rpm_controlled = settings->flags.enable_rpm_controlled;
         pwm_data->flags.laser_mode_disable = settings->flags.laser_mode_disable;
+        pwm_data->flags.ramp_pwm = settings->flags.pwm_ramped;
         if(settings->pwm_off_value == 0.0f)
             pwm_data->off_value = pwm_data->flags.invert_pwm ? pwm_data->period - pwm_data->offset : 0;
         else
@@ -977,15 +1117,18 @@ static status_code_t set_spindle_invert (setting_id_t id, uint_fast16_t int_valu
 
 static status_code_t set_pwm_options (setting_id_t id, uint_fast16_t int_value)
 {
-    if(int_value & 0x001) {
-        if(int_value > 0b111)
+    if(int_value & 0b0001) {
+        if(int_value > 0b1111)
             return Status_SettingValueOutOfRange;
         sp1_settings.cfg.flags.pwm_disable = Off;
-        sp1_settings.cfg.flags.enable_rpm_controlled = !!(int_value & 0b010);
-        sp1_settings.cfg.flags.laser_mode_disable = !!(int_value & 0b100);
+        sp1_settings.cfg.flags.enable_rpm_controlled = !!(int_value & 0b0010);
+        sp1_settings.cfg.flags.laser_mode_disable = !!(int_value & 0b0100);
+        sp1_settings.cfg.flags.pwm_ramped = !!(int_value & 0b1000);
     } else {
         sp1_settings.cfg.flags.pwm_disable = On;
-        sp1_settings.cfg.flags.enable_rpm_controlled = sp1_settings.cfg.flags.laser_mode_disable = Off;
+        sp1_settings.cfg.flags.enable_rpm_controlled =
+         sp1_settings.cfg.flags.laser_mode_disable =
+          sp1_settings.cfg.flags.pwm_ramped = Off;
     }
 
     return Status_OK;
@@ -1000,9 +1143,10 @@ static uint32_t get_int (setting_id_t id)
         case Setting_SpindlePWMOptions1:
             value = sp1_settings.cfg.flags.pwm_disable
                      ? 0
-                     : (0b001 |
-                        (sp1_settings.cfg.flags.enable_rpm_controlled ? 0b010 : 0) |
-                         (sp1_settings.cfg.flags.laser_mode_disable ? 0b100 : 0));
+                     : (0b0001 |
+                        (sp1_settings.cfg.flags.enable_rpm_controlled ? 0b0010 : 0) |
+                         (sp1_settings.cfg.flags.laser_mode_disable ? 0b0100 : 0) |
+                          (sp1_settings.cfg.flags.pwm_ramped ? 0b1000 : 0));
             break;
 
         case Setting_SpindleInvertMask1:
@@ -1088,7 +1232,7 @@ static const setting_detail_t spindle1_settings[] = {
     { Setting_Spindle_DirPort, Group_AuxPorts, "PWM2 spindle direction port", NULL, Format_Decimal, "-#0", "-1", max_dport, Setting_NonCoreFn, set_port, get_port, has_ports, { .reboot_required = On } },
     { Setting_SpindleInvertMask1, Group_Spindle, "PWM2 spindle signals invert", NULL, Format_Bitfield, spindle_signals, NULL, NULL, Setting_IsExtendedFn, set_spindle_invert, get_int, NULL, { .reboot_required = On } },
     { Setting_Spindle_PWMPort, Group_AuxPorts, "PWM2 spindle PWM port", NULL, Format_Decimal, "-#0", "0", max_aport, Setting_NonCoreFn, set_port, get_port, has_ports, { .reboot_required = On } },
-    { Setting_SpindlePWMOptions1, Group_Spindle, "PWM2 spindle options", NULL, Format_XBitfield, "Enable,RPM controls spindle enable signal,Disable laser mode capability", NULL, NULL, Setting_IsExtendedFn, set_pwm_options, get_int, has_pwm },
+    { Setting_SpindlePWMOptions1, Group_Spindle, "PWM2 spindle options", NULL, Format_XBitfield, "Enable,RPM controls spindle enable signal,Disable laser mode capability,Enable ramping", NULL, NULL, Setting_IsExtendedFn, set_pwm_options, get_int, has_pwm },
     { Setting_RpmMax1, Group_Spindle, "PWM2 spindle max speed", "RPM", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacy, &sp1_settings.cfg.rpm_max, NULL, has_pwm },
     { Setting_RpmMin1, Group_Spindle, "PWM2 spindle min speed", "RPM", Format_Decimal, "#####0.000", NULL, NULL, Setting_IsLegacy, &sp1_settings.cfg.rpm_min, NULL, has_pwm },
     { Setting_PWMFreq1, Group_Spindle, "PWM2 spindle PWM frequency", "Hz", Format_Decimal, "#####0", NULL, NULL, Setting_IsExtended, &sp1_settings.cfg.pwm_freq, NULL, has_freq },
@@ -1115,7 +1259,8 @@ static const setting_descr_t spindle1_settings_descr[] = {
     { Setting_SpindleInvertMask1, "Inverts the spindle on, counterclockwise and PWM signals (active low)." },
     { Setting_Spindle_PWMPort, "Spindle analog aux port. Must be PWM capable!" },
     { Setting_SpindlePWMOptions1, "Enable controls PWM output availability.\\n"
-                                  "When `RPM controls spindle enable signal` is checked and M3 or M4 is active S0 switches it off and S > 0 switches it on."
+                                  "When `RPM controls spindle enable signal` is checked and M3 or M4 is active S0 switches it off and S > 0 switches it on.\\n"
+                                  "When 'Ramping enable' is checked spin up and spin down time is calculated from $394 and $539 respectively."
     },
     { Setting_RpmMax1, "Maximum spindle speed." },
     { Setting_RpmMin1, "Minimum spindle speed." },
@@ -1165,8 +1310,9 @@ static void spindle1_settings_restore (void)
         .rpm_max = DEFAULT_SPINDLE1_RPM_MAX,
         .rpm_min = DEFAULT_SPINDLE1_RPM_MIN,
         .flags.pwm_disable = false,
-        .flags.enable_rpm_controlled = 0, //DEFAULT_SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED, TODO: add setting?
-        .flags.laser_mode_disable = 0, // TODO: add setting? Not possible?
+        .flags.enable_rpm_controlled = 0, //DEFAULT_SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED,
+        .flags.pwm_ramped = DEFAULT_PWM_SPINDLE_ENABLE_RAMP,
+        .flags.laser_mode_disable = 0, // TODO: Not possible?
         .invert.on = DEFAULT_INVERT_SPINDLE1_ENABLE_PIN,
         .invert.ccw = DEFAULT_INVERT_SPINDLE1_CCW_PIN,
         .invert.pwm = DEFAULT_INVERT_SPINDLE1_PWM_PIN,

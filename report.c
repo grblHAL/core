@@ -1187,6 +1187,7 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
     static bool probing = false;
 
     uint_fast8_t idx;
+    bool gcode_mode_changed = false;
     float print_position[N_AXIS], wco[N_AXIS], dist_remaining[N_AXIS];
     report_tracking_flags_t delayed_report = {0};
     probe_state_t probe_state = {
@@ -1550,31 +1551,29 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
 #endif
 
         spindle_t *spindle = gc_spindle_get(0);
-        bool is_changed = feed_rate != gc_state.feed_rate ||
-                           spindle_rpm != spindle->rpm ||
-                            tool_id != gc_state.tool->tool_id
+
+        gcode_mode_changed = feed_rate != gc_state.feed_rate ||
+                              spindle_rpm != spindle->rpm ||
+                               tool_id != gc_state.tool->tool_id
 #if NGC_PARAMETERS_ENABLE
-                             || g66_active != !!gc_state.g66_args;
+                                || g66_active != !!gc_state.g66_args;
 #else
 ;
 #endif
 
-        if(is_changed) {
+        if(gcode_mode_changed) {
             feed_rate = gc_state.feed_rate;
             tool_id = gc_state.tool->tool_id;
             spindle_rpm = spindle->rpm;
 #if NGC_PARAMETERS_ENABLE
             g66_active = !!gc_state.g66_args;
 #endif
-        } else if((is_changed = g92_active != is_g92_active()))
+        } else if((gcode_mode_changed = g92_active != is_g92_active()))
             g92_active = !g92_active;
         else if(memcmp(&last_state, &gc_state.modal, sizeof(gc_modal_t))) {
             last_state = gc_state.modal;
-            is_changed = true;
+            gcode_mode_changed = true;
         }
-
-        if (is_changed)
-            system_set_exec_state_flag(EXEC_GCODE_REPORT);
 
         if(report->flags.tool_offset)
             system_set_exec_state_flag(EXEC_TLO_REPORT);
@@ -1588,6 +1587,12 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
             report_add_realtime(Report_WCO); // Set to report on next request
     } else
         report->flags.value = delayed_report.value;
+
+    if(gcode_mode_changed) {
+        system_set_exec_state_flag(EXEC_GCODE_REPORT);
+        if(grbl.on_gcode_mode_changed)
+            grbl.on_gcode_mode_changed();
+    }
 }
 
 static void report_bitfield (const char *format, bool bitmap)

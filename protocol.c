@@ -180,7 +180,7 @@ bool protocol_main_loop (void)
 
     // Ensure spindle and coolant is switched off on a cold start
     if(sys.cold_start) {
-        spindle_all_off();
+        spindle_all_off(true);
         hal.coolant.set_state((coolant_state_t){0});
         sys.cold_start = false;
 		system_set_exec_state_flag(EXEC_RT_COMMAND);  // execute any startup up tasks
@@ -449,7 +449,7 @@ bool protocol_exec_rt_system (void)
         if((sys.reset_pending = bit_istrue(sys.rt_exec_state, EXEC_RESET))) {
             // Kill spindle and coolant.
             killed = true;
-            spindle_all_off();
+            spindle_all_off(true);
             hal.coolant.set_state((coolant_state_t){0});
         }
 
@@ -519,7 +519,7 @@ bool protocol_exec_rt_system (void)
 
             if(!killed) {
                 // Kill spindle and coolant.
-                spindle_all_off();
+                spindle_all_off(true);
                 hal.coolant.set_state((coolant_state_t){0});
             }
 

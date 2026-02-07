@@ -485,7 +485,7 @@ static status_code_t tool_change (parser_state_t *parser_state)
     block_cycle_start = settings.tool_change.mode != ToolChange_SemiAutomatic;
 
     // Stop spindle and coolant.
-    spindle_all_off();
+    spindle_all_off(false);
     hal.coolant.set_state((coolant_state_t){0});
 
     execute_posted = false;
