@@ -1,5 +1,15 @@
 ## grblHAL changelog
 
+<a name="20260210">20260210
+
+Drivers:
+
+* RP2040: added hotwire variant for SKR Pico v1 board, uses bed heater output for spindle PWM. Removed some unused code.
+
+* Networking, WizNet: added lock to avoid intermittent network stack crash that may happen when large reports are output.
+
+---
+
 <a name="20260206">Build 20260206
 
 Core:
