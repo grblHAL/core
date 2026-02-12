@@ -1,10 +1,10 @@
 /*
 
-  modbus.h - a lightweight ModBus implementation, interface wrapper
+  modbus.c - a lightweight ModBus implementation, interface wrapper
 
   Part of grblHAL
 
-  Copyright (c) 2023-2025 Terje Io
+  Copyright (c) 2023-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -113,6 +113,12 @@ bool modbus_send (modbus_message_t *msg, const modbus_callbacks_t *callbacks, bo
         ok = modbus[tcp_api].send(msg, callbacks, block);
 
     return ok || (rtu_api != N_MODBUS_API && modbus[rtu_api].send(msg, callbacks, block));
+}
+
+// Dummy exception handler
+void modbus_null_exception_handler (uint8_t code, void *context)
+{
+//    NOOP
 }
 
 uint16_t modbus_read_u16 (uint8_t *p)

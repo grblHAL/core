@@ -173,14 +173,16 @@ stream_suspend_state_t stream_is_rx_suspended (void)
 
 bool stream_rx_suspend (stream_rx_buffer_t *rxbuffer, bool suspend)
 {
+    bool ok = false;
+
     if(suspend) {
-        if(stream.rxbuffer == NULL) {
+        if((ok = stream.rxbuffer == NULL /* ?? && rxbuffer->tail != rxbuffer->head */)) {
             stream.rxbuffer = rxbuffer;
             stream.read = hal.stream.read;
             stream.enqueue_realtime_command = hal.stream.set_enqueue_rt_handler(await_toolchange_ack);
             hal.stream.read = stream_get_null;
         }
-    } else if(stream.rxbuffer) {
+    } else if((ok = stream.rxbuffer)) {
         if(rxbuffer->backup)
             memcpy(rxbuffer, &rxbackup, sizeof(stream_rx_buffer_t));
         if(stream.enqueue_realtime_command) {
@@ -191,7 +193,7 @@ bool stream_rx_suspend (stream_rx_buffer_t *rxbuffer, bool suspend)
         stream.rxbuffer = NULL;
     }
 
-    return rxbuffer->tail != rxbuffer->head;
+    return ok;
 }
 
 ISR_CODE bool ISR_FUNC(stream_buffer_all)(uint8_t c)
@@ -570,7 +572,7 @@ void stream_mpg_set_mode (void *data)
 
 static void stream_mpg_write (void *cmd)
 {
-    switch((uint32_t)cmd) {
+    switch((uintptr_t)cmd) {
 
         case CMD_STATUS_REPORT_ALL:
             mpg.stream.report.flags.value = report_get_rt_flags_all().value;
@@ -599,7 +601,7 @@ ISR_CODE bool ISR_FUNC(stream_mpg_check_enable)(uint8_t c)
         case CMD_STATUS_REPORT_LEGACY:
         case CMD_STATUS_REPORT_ALL:
             if(mpg.flags.is_mpg_tx)
-                task_add_immediate(stream_mpg_write, (void *)((uint32_t)c));
+                task_add_immediate(stream_mpg_write, (void *)((uintptr_t)c));
             break;
 
         default:
@@ -667,7 +669,7 @@ bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stream_write_
 
 static void report_mpg_mode (void *data)
 {
-    protocol_enqueue_realtime_command((char)((uintptr_t)data));
+    protocol_enqueue_realtime_command((uint8_t)((uintptr_t)data));
 }
 
 bool stream_mpg_enable (bool on)

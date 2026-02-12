@@ -1,5 +1,26 @@
 ## grblHAL changelog
 
+<a name="20260212">Build 20260212
+
+Core:
+
+* For developers: added new callback for Modbus timeouts, defaults to exception callback for backwards compatibilty.
+
+Driver:
+
+* RP2040: fixed minor init sequence error.
+
+Plugins:
+
+* Spindle, VFDs: improved exception/timeout handling by adding new online status.
+E.g. when offline VFDs will not be polled for status and causing unneccesary alarms.
+
+* Misc, FNC Expander: fix for typo affecting `$pins` report.
+
+* Misc, ESP AT: late update for core signature changes.
+
+---
+
 <a name="20260210">20260210
 
 Drivers:

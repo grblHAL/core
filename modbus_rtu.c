@@ -4,7 +4,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2020-2025 Terje Io
+  Copyright (c) 2020-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -131,13 +131,12 @@ static inline queue_entry_t *add_message (queue_entry_t *packet, modbus_message_
 
     if(callbacks && !sys.reset_pending) {
         memcpy(&packet->callbacks, callbacks, sizeof(modbus_callbacks_t));
+        if(callbacks->on_rx_timeout == NULL) // for backwards comaptibility
+            packet->callbacks.on_rx_timeout = packet->callbacks.on_rx_exception;
         if(!packet->async && packet->callbacks.retries)
-            packet->callbacks.on_rx_exception = retry_exception;
-    } else {
-        packet->callbacks.retries = 0;
-        packet->callbacks.on_rx_packet = NULL;
-        packet->callbacks.on_rx_exception = NULL;
-    }
+            packet->callbacks.on_rx_exception = packet->callbacks.on_rx_timeout = retry_exception;
+    } else
+        memset(&packet->callbacks, 0, sizeof(modbus_callbacks_t));
 
     return packet;
 }
@@ -202,8 +201,8 @@ static void modbus_poll (void *data)
 
                 if(packet->async) {
                     state = ModBus_Silent;
-                    if(packet->callbacks.on_rx_exception)
-                        packet->callbacks.on_rx_exception(0, packet->msg.context);
+                    if(packet->callbacks.on_rx_timeout)
+                        packet->callbacks.on_rx_timeout(0, packet->msg.context);
                     packet = NULL;
                 } else if(stream.read() == packet->msg.adu[0] && (stream.read() & 0x80)) {
                     exception_code = stream.read();
@@ -306,8 +305,8 @@ static bool modbus_send_rtu (modbus_message_t *msg, const modbus_callbacks_t *ca
             switch(state) {
 
                 case ModBus_Timeout:
-                    if(packet->callbacks.on_rx_exception)
-                        packet->callbacks.on_rx_exception(0, packet->msg.context);
+                    if(packet->callbacks.on_rx_timeout)
+                        packet->callbacks.on_rx_timeout(0, packet->msg.context);
                     poll = packet->callbacks.retries > 0;
                     break;
 
@@ -326,8 +325,10 @@ static bool modbus_send_rtu (modbus_message_t *msg, const modbus_callbacks_t *ca
                 case ModBus_Retry:
                     if((int32_t)(silence_until - hal.get_elapsed_ticks()) <= 0) {
                         silence_until = 0;
-                        if(--packet->callbacks.retries == 0)
+                        if(--packet->callbacks.retries == 0) {
                             packet->callbacks.on_rx_exception = callbacks->on_rx_exception;
+                            packet->callbacks.on_rx_timeout = callbacks->on_rx_timeout ? callbacks->on_rx_timeout : callbacks->on_rx_exception;
+                        }
                         packet = add_message(&sync_msg, msg, false, (const modbus_callbacks_t *)&packet->callbacks);
                         tx_message(packet);
                     }
@@ -359,9 +360,8 @@ static void modbus_reset (void)
     if(sys.abort) {
 
         if(packet) {
+            memset((void *)&packet->callbacks, 0, sizeof(modbus_callbacks_t));
             packet = NULL;
-            packet->callbacks.retries = 0;
-            packet->callbacks.on_rx_exception = NULL;
         }
 
         tail = head;

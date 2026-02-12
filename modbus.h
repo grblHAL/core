@@ -4,7 +4,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2023-2025 Terje Io
+  Copyright (c) 2023-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -69,6 +69,7 @@ typedef struct {
     uint16_t retry_delay;
     void (*on_rx_packet)(modbus_message_t *msg);
     void (*on_rx_exception)(uint8_t code, void *context);
+    void (*on_rx_timeout)(uint8_t code, void *context); // Set to modbus_null_exception_handler() to disable.
 } modbus_callbacks_t;
 
 typedef union {
@@ -114,6 +115,7 @@ bool modbus_enabled (void);
 void modbus_flush_queue (void);
 void modbus_set_silence (const modbus_silence_timeout_t *timeout);
 bool modbus_send (modbus_message_t *msg, const modbus_callbacks_t *callbacks, bool block);
+void modbus_null_exception_handler (uint8_t code, void *context);
 uint16_t modbus_read_u16 (uint8_t *p);
 void modbus_write_u16 (uint8_t *p, uint16_t value);
 bool modbus_register_api (const modbus_api_t *api);
