@@ -178,7 +178,7 @@ static char *fs_getcwd (char *buf, size_t size)
     return "/";
 }
 
-static const vfs_t fs_null = {
+PROGMEM static const vfs_t fs_null = {
     .fopen = fs_open,
     .fclose = fs_close,
     .fread = fs_read,

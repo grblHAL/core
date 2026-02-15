@@ -59,7 +59,7 @@ static bool keep_rt_commands = false;
 static void protocol_exec_rt_suspend (sys_state_t state);
 
 // add gcode to execute not originating from normal input stream
-bool protocol_enqueue_gcode (char *gcode)
+FLASHMEM bool protocol_enqueue_gcode (char *gcode)
 {
     bool ok = xcommand[0] == '\0' &&
                (state_get() == STATE_IDLE || (state_get() & (STATE_ALARM|STATE_JOG|STATE_TOOL_CHANGE))) &&
@@ -74,7 +74,7 @@ bool protocol_enqueue_gcode (char *gcode)
     return ok;
 }
 
-static bool recheck_line (char *line, line_flags_t *flags)
+FLASHMEM static bool recheck_line (char *line, line_flags_t *flags)
 {
     bool keep_rt_commands = false, first_char = true;
 
@@ -173,9 +173,13 @@ bool protocol_main_loop (void)
             protocol_execute_realtime(); // Enter safety door mode. Should return as IDLE state.
         }
 #endif
-        // All systems go!
-        if(!settings.homing.flags.nx_scrips_on_homed_only)
-            task_add_immediate(system_execute_startup, NULL); // Schedule startup script for execution.
+        if(sys.alarm_pending)
+            system_raise_alarm(sys.alarm_pending);
+        else {
+            // All systems go!
+            if(!settings.homing.flags.nx_scrips_on_homed_only)
+                task_add_immediate(system_execute_startup, NULL); // Schedule startup script for execution.
+        }
     }
 
     // Ensure spindle and coolant is switched off on a cold start
@@ -414,7 +418,7 @@ bool protocol_execute_realtime (void)
     return !ABORTED;
 }
 
-static void protocol_poll_cmd (void)
+FLASHMEM static void protocol_poll_cmd (void)
 {
     int16_t c;
 
@@ -562,11 +566,10 @@ bool protocol_exec_rt_system (void)
 
             sys.flags.keep_input = Off;
 
-            if(sys.alarm_pending != Alarm_None) {
+            if(sys.alarm_pending) {
 
                 sys.position_lost = st_is_stepping();
                 system_raise_alarm(sys.alarm_pending);
-                sys.alarm_pending = Alarm_None;
 
             } else if(st_is_stepping()) {
 
@@ -779,7 +782,7 @@ bool protocol_exec_rt_system (void)
 // whatever function that invoked the suspend, such that grblHAL resumes normal operation.
 // This function is written in a way to promote custom parking motions. Simply use this as a
 // template.
-static void protocol_exec_rt_suspend (sys_state_t state)
+FLASHMEM static void protocol_exec_rt_suspend (sys_state_t state)
 {
     if((sys.blocking_event = state == STATE_SLEEP)) {
         *line = '\0';

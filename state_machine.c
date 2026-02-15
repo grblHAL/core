@@ -74,7 +74,7 @@ typedef struct {
 // Declare and initialize parking local variables
 static parking_data_t park = {0};
 
-static void state_spindle_restore (spindle_t *spindle, uint16_t on_delay_ms)
+FLASHMEM static void state_spindle_restore (spindle_t *spindle, uint16_t on_delay_ms)
 {
     if(spindle->hal) {
         if(grbl.on_spindle_programmed)
@@ -83,7 +83,7 @@ static void state_spindle_restore (spindle_t *spindle, uint16_t on_delay_ms)
     }
 }
 
-static void state_restore_conditions (restore_condition_t *condition)
+FLASHMEM static void state_restore_conditions (restore_condition_t *condition)
 {
     if(!settings.parking.flags.enabled || !park.flags.restart) {
 
@@ -108,7 +108,7 @@ static void state_restore_conditions (restore_condition_t *condition)
     }
 }
 
-static void enter_sleep (void)
+FLASHMEM static void enter_sleep (void)
 {
     st_go_idle();
     spindle_all_off(false);
@@ -117,7 +117,7 @@ static void enter_sleep (void)
     stateHandler = state_noop;
 }
 
-static bool initiate_hold (uint_fast16_t new_state)
+FLASHMEM static bool initiate_hold (uint_fast16_t new_state)
 {
     spindle_t *spindle;
     spindle_num_t spindle_num = N_SYS_SPINDLE;
@@ -181,7 +181,7 @@ static bool initiate_hold (uint_fast16_t new_state)
     return sys_state == STATE_CYCLE;
 }
 
-bool state_door_reopened (void)
+FLASHMEM bool state_door_reopened (void)
 {
     return settings.parking.flags.enabled && park.flags.restart;
 }
@@ -360,7 +360,7 @@ void state_set (sys_state_t new_state)
 }
 
 // Suspend manager. Controls spindle overrides in hold states.
-void state_suspend_manager (void)
+FLASHMEM void state_suspend_manager (void)
 {
     if(stateHandler != state_await_resume || !gc_spindle_get(0)->state.on)
         return;
@@ -454,7 +454,7 @@ static void state_cycle (uint_fast16_t rt_exec)
 
 /*! /brief Waits for tool change cycle to end then restarts the cycle.
  */
-static void state_await_toolchanged (uint_fast16_t rt_exec)
+FLASHMEM static void state_await_toolchanged (uint_fast16_t rt_exec)
 {
     if (rt_exec & EXEC_CYCLE_START) {
         if (!gc_state.tool_change) {
@@ -477,7 +477,7 @@ static void state_await_toolchanged (uint_fast16_t rt_exec)
 
 /*! /brief Waits for motion to end to complete then executes actions depending on the current sys_state.
  */
-static void state_await_motion_cancel (uint_fast16_t rt_exec)
+FLASHMEM static void state_await_motion_cancel (uint_fast16_t rt_exec)
 {
     if (rt_exec & EXEC_CYCLE_COMPLETE) {
         if (sys_state == STATE_JOG) {
@@ -490,17 +490,16 @@ static void state_await_motion_cancel (uint_fast16_t rt_exec)
 
         state_set(pending_state);
 
-        if(sys.alarm_pending) {
+        if(sys.alarm_pending)
             system_set_exec_alarm(sys.alarm_pending);
-            sys.alarm_pending = Alarm_None;
-        } else if(gc_state.tool_change)
+        else if(gc_state.tool_change)
             state_set(STATE_TOOL_CHANGE);
     }
 }
 
 /*! /brief Waits for feed hold to complete then executes actions depending on the current sys_state.
  */
-static void state_await_hold (uint_fast16_t rt_exec)
+FLASHMEM static void state_await_hold (uint_fast16_t rt_exec)
 {
     if (rt_exec & EXEC_CYCLE_COMPLETE) {
 
@@ -509,10 +508,8 @@ static void state_await_hold (uint_fast16_t rt_exec)
         plan_cycle_reinitialize();
         sys.step_control.flags = 0;
 
-        if (sys.alarm_pending) {
+        if(sys.alarm_pending)
             system_set_exec_alarm(sys.alarm_pending);
-            sys.alarm_pending = Alarm_None;
-        }
 
         switch (sys_state) {
 
@@ -610,7 +607,7 @@ static void state_await_hold (uint_fast16_t rt_exec)
 
 /*! /brief Waits for action to execute when in feed hold state.
  */
-static void state_await_resume (uint_fast16_t rt_exec)
+FLASHMEM static void state_await_resume (uint_fast16_t rt_exec)
 {
     if ((rt_exec & EXEC_CYCLE_COMPLETE) && settings.parking.flags.enabled) {
         if (sys.step_control.execute_sys_motion) {
@@ -715,7 +712,7 @@ static void state_await_resume (uint_fast16_t rt_exec)
 /*! /brief Waits until plunge motion abort is completed then calls state_await_hold() to restart retraction.
 state_await_hold() is set to handle the cycle complete event.
  */
-static void state_await_restart_retract (uint_fast16_t rt_exec)
+FLASHMEM static void state_await_restart_retract (uint_fast16_t rt_exec)
 {
     if (rt_exec & EXEC_CYCLE_COMPLETE) {
 
@@ -732,7 +729,7 @@ static void state_await_restart_retract (uint_fast16_t rt_exec)
 /*! /brief Sets up a feed hold to abort plunge motion.
 state_await_restart_retract() is set to handle the cycle complete event.
  */
-static void restart_retract (void)
+FLASHMEM static void restart_retract (void)
 {
     grbl.report.feedback_message(Message_SafetyDoorAjar);
 
@@ -752,7 +749,7 @@ static void restart_retract (void)
 /*! /brief Waits until slow plunge motion is completed then deenergize spindle and coolant and execute fast retract motion.
 state_await_resume() is set to handle the cycle complete event.
  */
-static void state_await_waypoint_retract (uint_fast16_t rt_exec)
+FLASHMEM static void state_await_waypoint_retract (uint_fast16_t rt_exec)
 {
     if (rt_exec & EXEC_CYCLE_COMPLETE) {
 
@@ -793,7 +790,7 @@ static void state_await_waypoint_retract (uint_fast16_t rt_exec)
 state_await_resumed() is set to handle the cycle complete event.
 Note: A safety door event during restoration or motion will halt it and restart the retract sequence.
  */
-static void state_restore (uint_fast16_t rt_exec)
+FLASHMEM static void state_restore (uint_fast16_t rt_exec)
 {
     if (rt_exec & EXEC_SAFETY_DOOR) {
         if(park.flags.restoring)
@@ -848,7 +845,7 @@ static void state_restore (uint_fast16_t rt_exec)
 /*! /brief Waits until slow plunge motion is complete then restart the cycle.
 Note: A safety door event during the motion will halt it and restart the retract sequence.
  */
-static void state_await_resumed (uint_fast16_t rt_exec)
+FLASHMEM static void state_await_resumed (uint_fast16_t rt_exec)
 {
     if (rt_exec & EXEC_SAFETY_DOOR)
         restart_retract();

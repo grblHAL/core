@@ -43,7 +43,7 @@ ISR_CODE void ISR_FUNC(enqueue_feed_override)(uint8_t cmd)
 }
 
 // Returns 0 if no commands enqueued
-uint8_t get_feed_override (void)
+FLASHMEM uint8_t get_feed_override (void)
 {
     uint8_t data = 0;
     uint_fast8_t bptr = feed.tail;
@@ -67,7 +67,7 @@ ISR_CODE void ISR_FUNC(enqueue_spindle_override)(uint8_t cmd)
 }
 
 // Returns 0 if no commands enqueued
-uint8_t get_spindle_override (void)
+FLASHMEM uint8_t get_spindle_override (void)
 {
     uint8_t data = 0;
     uint_fast8_t bptr = spindle.tail;
@@ -91,7 +91,7 @@ ISR_CODE void ISR_FUNC(enqueue_coolant_override)(uint8_t cmd)
 }
 
 // Returns 0 if no commands enqueued
-uint8_t get_coolant_override (void)
+FLASHMEM uint8_t get_coolant_override (void)
 {
     uint8_t data = 0;
     uint_fast8_t bptr = coolant.tail;
@@ -104,7 +104,7 @@ uint8_t get_coolant_override (void)
     return data;
 }
 
-void flush_override_buffers (void)
+FLASHMEM void flush_override_buffers (void)
 {
     feed.head = feed.tail = spindle.head = spindle.tail = coolant.head = coolant.tail = 0;
 }

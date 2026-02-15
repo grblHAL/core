@@ -173,7 +173,7 @@ parser_state_t *gc_get_state (void)
     return &gc_state;
 }
 
-char *gc_coord_system_to_str (coord_system_id_t id)
+FLASHMEM char *gc_coord_system_to_str (coord_system_id_t id)
 {
     static char buf[6];
 
@@ -188,7 +188,7 @@ char *gc_coord_system_to_str (coord_system_id_t id)
     return buf;
 }
 
-static void override_disable (spindle_t *spindle, int32_t spindle_id, gc_override_flags_t flags, overrides_t *overrides)
+FLASHMEM static void override_disable (spindle_t *spindle, int32_t spindle_id, gc_override_flags_t flags, overrides_t *overrides)
 {
     gc_override_flags_t org_flags = gc_state.modal.override_ctrl;
 
@@ -214,7 +214,7 @@ static void override_disable (spindle_t *spindle, int32_t spindle_id, gc_overrid
     mc_override_ctrl_update(org_flags);
 }
 
-static void override_restore (spindle_t *spindle, int32_t spindle_id, gc_override_flags_t flags, overrides_t *overrides)
+FLASHMEM static void override_restore (spindle_t *spindle, int32_t spindle_id, gc_override_flags_t flags, overrides_t *overrides)
 {
     if(flags.spindle_rpm) {
         if(!(gc_state.modal.override_ctrl.spindle_rpm_disable = overrides->control.spindle_rpm_disable)) {
@@ -235,7 +235,7 @@ static void override_restore (spindle_t *spindle, int32_t spindle_id, gc_overrid
     mc_override_ctrl_update(gc_state.modal.override_ctrl);
 }
 
-static void set_scaling (float factor)
+FLASHMEM static void set_scaling (float factor)
 {
     uint_fast8_t idx = N_AXIS;
     axes_signals_t state = gc_get_g51_state();
@@ -290,7 +290,7 @@ inline static float gc_get_block_offset (parser_block_t *gc_block, uint_fast8_t 
     return gc_block->modal.g5x_offset.data.coord.values[idx] + gc_state.g92_offset.coord.values[idx] + gc_state.modal.tool_length_offset[idx];
 }
 
-void gc_set_tool_offset (tool_offset_mode_t mode, uint_fast8_t idx, int32_t offset)
+FLASHMEM void gc_set_tool_offset (tool_offset_mode_t mode, uint_fast8_t idx, int32_t offset)
 {
     bool tlo_changed = false;
 
@@ -354,7 +354,7 @@ plane_t *gc_get_plane_data (plane_t *plane, plane_select_t select)
     return plane;
 }
 
-axes_signals_t gc_claim_axis_words (parser_block_t *gc_block, axes_signals_t validate)
+FLASHMEM axes_signals_t gc_claim_axis_words (parser_block_t *gc_block, axes_signals_t validate)
 {
     static const parameter_words_t wordmap[] = {
         { .x = On },
@@ -416,7 +416,7 @@ float gc_get_accel_factor (uint8_t profile)
 
 #if NGC_PARAMETERS_ENABLE
 
-static parameter_words_t macro_arguments_push (gc_values_t *values, parameter_words_t words)
+FLASHMEM static parameter_words_t macro_arguments_push (gc_values_t *values, parameter_words_t words)
 {
     // NOTE: this array has to match the parameter_words_t order!
     PROGMEM static const uint8_t offset[] = {
@@ -490,7 +490,7 @@ static parameter_words_t macro_arguments_push (gc_values_t *values, parameter_wo
     return g65_words;
 }
 
-static modal_restore_actions_t *get_state_restore_commands (gc_modal_t *modal, gc_modal_snapshot_t *snapshot)
+FLASHMEM static modal_restore_actions_t *get_state_restore_commands (gc_modal_t *modal, gc_modal_snapshot_t *snapshot)
 {
     static modal_restore_actions_t actions = {0};
 
@@ -573,7 +573,7 @@ static modal_restore_actions_t *get_state_restore_commands (gc_modal_t *modal, g
     return &actions;
 }
 
-bool gc_modal_state_restore (gc_modal_snapshot_t *snapshot)
+FLASHMEM bool gc_modal_state_restore (gc_modal_snapshot_t *snapshot)
 {
     bool ok = false;
 
@@ -613,7 +613,7 @@ bool gc_modal_state_restore (gc_modal_snapshot_t *snapshot)
 
 #endif // NGC_PARAMETERS_ENABLE
 
-static m98_macro_t *macro_find (macro_id_t id)
+FLASHMEM static m98_macro_t *macro_find (macro_id_t id)
 {
     m98_macro_t *sub;
 
@@ -625,7 +625,7 @@ static m98_macro_t *macro_find (macro_id_t id)
     return sub;
 }
 
-size_t gc_macro_get_pos (macro_id_t id, vfs_file_t *file)
+FLASHMEM size_t gc_macro_get_pos (macro_id_t id, vfs_file_t *file)
 {
     m98_macro_t *sub = macro_find(id);
 
@@ -646,7 +646,7 @@ bool gc_macros_validate (void)
 }
 */
 
-static void macros_clear (void)
+FLASHMEM static void macros_clear (void)
 {
     m98_macro_t *next;
 
@@ -656,7 +656,7 @@ static void macros_clear (void)
     } while((m98_macros = next));
 }
 
-static status_code_t macro_add (macro_id_t id, vfs_file_t *file)
+FLASHMEM static status_code_t macro_add (macro_id_t id, vfs_file_t *file)
 {
     m98_macro_t *sub = macro_find(id);
 
@@ -675,7 +675,7 @@ static status_code_t macro_add (macro_id_t id, vfs_file_t *file)
     return sub ? Status_OK : Status_FlowControlOutOfMemory;
 }
 
-static status_code_t macro_call (macro_id_t macro, parameter_words_t args, uint8_t repeats)
+FLASHMEM static status_code_t macro_call (macro_id_t macro, parameter_words_t args, uint8_t repeats)
 {
 #if NGC_PARAMETERS_ENABLE
     ngc_named_param_set("_value", 0.0f);
@@ -716,7 +716,7 @@ static status_code_t gc_at_exit (status_code_t status)
     return status;
 }
 
-void gc_init (bool stop)
+FLASHMEM void gc_init (bool stop)
 {
 #if COMPATIBILITY_LEVEL > 1
         memset(&gc_state, 0, sizeof(parser_state_t));
@@ -813,14 +813,14 @@ inline static bool is_single_spindle_block (parser_block_t *gc_block, modal_grou
 // Set dynamic laser power mode to PPI (Pulses Per Inch)
 // Returns true if driver uses hardware implementation.
 // Driver support for pulsing the laser on signal is required for this to work.
-bool gc_laser_ppi_enable (uint_fast16_t ppi, uint_fast16_t pulse_length)
+FLASHMEM bool gc_laser_ppi_enable (uint_fast16_t ppi, uint_fast16_t pulse_length)
 {
     gc_state.is_laser_ppi_mode = ppi > 0 && pulse_length > 0;
 
     return grbl.on_laser_ppi_enable && grbl.on_laser_ppi_enable(ppi, pulse_length);
 }
 
-spindle_t *gc_spindle_get (spindle_num_t spindle)
+FLASHMEM spindle_t *gc_spindle_get (spindle_num_t spindle)
 {
 #if N_SYS_SPINDLE > 1
     return spindle < 0 ? gc_state.spindle : &gc_state.modal.spindle[spindle];
@@ -829,7 +829,7 @@ spindle_t *gc_spindle_get (spindle_num_t spindle)
 #endif
 }
 
-void gc_spindle_off (void)
+FLASHMEM void gc_spindle_off (void)
 {
     uint_fast8_t idx;
     for(idx = 0; idx < N_SYS_SPINDLE; idx++) {
@@ -840,7 +840,7 @@ void gc_spindle_off (void)
     report_add_realtime(Report_Spindle);
 }
 
-void gc_coolant (coolant_state_t state)
+FLASHMEM void gc_coolant (coolant_state_t state)
 {
     gc_state.modal.coolant = state;
     hal.coolant.set_state(gc_state.modal.coolant);
@@ -854,7 +854,7 @@ static void add_offset (const coord_data_t *offset)
     system_flag_wco_change();
 }
 
-static tool_data_t *tool_get_pending (tool_id_t tool_id, char **message)
+FLASHMEM static tool_data_t *tool_get_pending (tool_id_t tool_id, char **message)
 {
     static tool_data_t tool_data = {0};
 
@@ -885,7 +885,7 @@ static inline void tool_set (tool_data_t *tool)
 }
 
 // Add output command to linked list
-static bool add_output_command (output_command_t *command)
+FLASHMEM static bool add_output_command (output_command_t *command)
 {
     output_command_t *add_cmd;
 
@@ -907,7 +907,7 @@ static bool add_output_command (output_command_t *command)
 }
 
 // Free linked list of output commands
-void gc_clear_output_commands (output_command_t *cmd)
+FLASHMEM void gc_clear_output_commands (output_command_t *cmd)
 {
     while(cmd) {
         output_command_t *next = cmd->next;
@@ -918,7 +918,7 @@ void gc_clear_output_commands (output_command_t *cmd)
 
 static gc_thread_data thread;
 
-static status_code_t init_sync_motion (plan_line_data_t *pl_data, float pitch)
+FLASHMEM static status_code_t init_sync_motion (plan_line_data_t *pl_data, float pitch)
 {
     if(pl_data->spindle.hal->get_data == NULL)
         RETURN(Status_GcodeUnsupportedCommand); // [Spindle not sync capable]
@@ -946,7 +946,7 @@ static status_code_t init_sync_motion (plan_line_data_t *pl_data, float pitch)
 }
 
 // Output and free previously allocated message
-void gc_output_message (char *message)
+FLASHMEM void gc_output_message (char *message)
 {
     if(message) {
 

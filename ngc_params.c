@@ -38,6 +38,7 @@
 #include "settings.h"
 #include "ngc_params.h"
 #include "state_machine.h"
+#include "modbus.h"
 
 #ifndef NGC_MAX_CALL_LEVEL
 #define NGC_MAX_CALL_LEVEL 10
@@ -95,7 +96,7 @@ static ngc_string_id_t ref_id = (uint32_t)-1;
 static ngc_string_param_t *ngc_string_params = NULL;
 static on_macro_execute_ptr on_macro_execute;
 
-static const uint8_t axis_map[] = {
+PROGMEM static const uint8_t axis_map[] = {
 #ifdef ROTATION_ENABLE
     10,
 #else
@@ -138,28 +139,28 @@ static const uint8_t axis_map[] = {
 
 #if N_AXIS > 3
 
-static float _convert_pos (float value, uint_fast8_t axis)
+FLASHMEM static float _convert_pos (float value, uint_fast8_t axis)
 {
     return settings.flags.report_inches && bit_isfalse(settings.steppers.is_rotary.mask, bit(axis)) ? value * 25.4f : value;
 }
 
 #else
 
-static inline float _convert_pos (float value, uint_fast8_t axis)
+FLASHMEM static inline float _convert_pos (float value, uint_fast8_t axis)
 {
     return settings.flags.report_inches ? value * 25.4f : value;
 }
 
 #endif
 
-static float _absolute_pos (uint_fast8_t axis)
+FLASHMEM static float _absolute_pos (uint_fast8_t axis)
 {
     axis = axis_map[axis];
 
     return _convert_pos(axis <= 9 ? sys.position[axis] / settings.axis[axis].steps_per_mm : 0.0f, axis);
 }
 
-static float _relative_pos (uint_fast8_t axis)
+FLASHMEM static float _relative_pos (uint_fast8_t axis)
 {
     axis = axis_map[axis];
 
@@ -168,7 +169,7 @@ static float _relative_pos (uint_fast8_t axis)
 
 // numbered parameters
 
-static float probe_coord (ngc_param_id_t id)
+FLASHMEM static float probe_coord (ngc_param_id_t id)
 {
     float value = 0.0f;
     uint_fast8_t axis = axis_map[(id % 10)];
@@ -181,7 +182,7 @@ static float probe_coord (ngc_param_id_t id)
     return _convert_pos(value, axis);
 }
 
-static float scaling_factors (ngc_param_id_t id)
+FLASHMEM static float scaling_factors (ngc_param_id_t id)
 {
     float *factors = gc_get_scaling();
     uint_fast8_t axis = axis_map[(id % 10)];
@@ -189,7 +190,7 @@ static float scaling_factors (ngc_param_id_t id)
     return axis <= 9 ? factors[axis] : 0.0f;
 }
 
-static float probe_result (ngc_param_id_t id)
+FLASHMEM static float probe_result (ngc_param_id_t id)
 {
     return sys.flags.probe_succeeded ? 1.0f : 0.0f;
 }
@@ -202,24 +203,24 @@ static float home_pos (ngc_param_id_t id)
     return axis <= N_AXIS ? sys.home_position[axis - 1] : 0.0f;
 }
 */
-static float m66_result (ngc_param_id_t id)
+FLASHMEM static float m66_result (ngc_param_id_t id)
 {
     return (float)sys.var5399;
 }
 
-static float tool_number (ngc_param_id_t id)
+FLASHMEM static float tool_number (ngc_param_id_t id)
 {
     return (float)gc_state.tool->tool_id;
 }
 
-static float tool_offset (ngc_param_id_t id)
+FLASHMEM static float tool_offset (ngc_param_id_t id)
 {
     uint_fast8_t axis = axis_map[(id % 10)];
 
     return axis <= 9 ? gc_state.modal.tool_length_offset[axis] : 0.0f;
 }
 
-static float g28_home (ngc_param_id_t id)
+FLASHMEM static float g28_home (ngc_param_id_t id)
 {
     float value = 0.0f;
     uint_fast8_t axis = axis_map[(id % 10)];
@@ -231,7 +232,7 @@ static float g28_home (ngc_param_id_t id)
     return value;
 }
 
-static float g30_home (ngc_param_id_t id)
+FLASHMEM static float g30_home (ngc_param_id_t id)
 {
     float value = 0.0f;
     uint_fast8_t axis = axis_map[(id % 10)];
@@ -243,12 +244,12 @@ static float g30_home (ngc_param_id_t id)
     return value;
 }
 
-static float coord_system (ngc_param_id_t id)
+FLASHMEM static float coord_system (ngc_param_id_t id)
 {
     return (float)gc_state.modal.g5x_offset.id + 1;
 }
 
-static float coord_system_offset (ngc_param_id_t id)
+FLASHMEM static float coord_system_offset (ngc_param_id_t id)
 {
     float value = 0.0f;
     uint_fast8_t axis = id % 10;
@@ -274,24 +275,24 @@ static float coord_system_offset (ngc_param_id_t id)
     return value;
 }
 
-static float g92_offset_applied (ngc_param_id_t id)
+FLASHMEM static float g92_offset_applied (ngc_param_id_t id)
 {
     return (float)gc_state.g92_offset_applied;
 }
 
-static float g92_offset (ngc_param_id_t id)
+FLASHMEM static float g92_offset (ngc_param_id_t id)
 {
     uint_fast8_t axis = axis_map[(id % 10)];
 
     return axis <= 9 ? gc_state.g92_offset.coord.values[axis] : 0.0f;
 }
 
-static float work_position (ngc_param_id_t id)
+FLASHMEM static float work_position (ngc_param_id_t id)
 {
     return _relative_pos(id % 10 + 1);
 }
 
-static float debug_output (ngc_param_id_t id)
+FLASHMEM static float debug_output (ngc_param_id_t id)
 {
     return (float)settings.flags.ngc_debug_out;
 }
@@ -321,7 +322,7 @@ PROGMEM static const ngc_ro_param_t ngc_ro_params[] = {
     { .id_min = 5599, .id_max = 5599, .get = debug_output }         // LinuxCNC
 };
 
-bool ngc_param_get (ngc_param_id_t id, float *value)
+FLASHMEM bool ngc_param_get (ngc_param_id_t id, float *value)
 {
     bool found = id > 0 && id < ngc_ro_params[0].id_min;
     uint_fast8_t idx = sizeof(ngc_ro_params) / sizeof(ngc_ro_param_t);
@@ -347,17 +348,17 @@ bool ngc_param_get (ngc_param_id_t id, float *value)
     return found;
 }
 
-bool ngc_param_is_rw (ngc_param_id_t id)
+FLASHMEM bool ngc_param_is_rw (ngc_param_id_t id)
 {
     return id > 0 && id < ngc_ro_params[0].id_min;
 }
 
-bool ngc_param_exists (ngc_param_id_t id)
+FLASHMEM bool ngc_param_exists (ngc_param_id_t id)
 {
     return id > 0 && id <= ngc_ro_params[(sizeof(ngc_ro_params) / sizeof(ngc_ro_param_t)) - 1].id_max;
 }
 
-bool ngc_param_set (ngc_param_id_t id, float value)
+FLASHMEM bool ngc_param_set (ngc_param_id_t id, float value)
 {
     bool ok = id > 0 && id < ngc_ro_params[0].id_min;
 
@@ -462,7 +463,7 @@ PROGMEM static const ngc_named_ro_param_t ngc_named_ro_param[] = {
 
 // Named parameters
 
-float ngc_named_param_get_by_id (ncg_name_param_id_t id)
+FLASHMEM float ngc_named_param_get_by_id (ncg_name_param_id_t id)
 {
     float value;
 
@@ -709,7 +710,7 @@ float ngc_named_param_get_by_id (ncg_name_param_id_t id)
 }
 
 // Lowercase name, remove control characters and spaces
-static char *ngc_name_tolower (char *s)
+FLASHMEM static char *ngc_name_tolower (char *s)
 {
     static char name[NGC_MAX_PARAM_LENGTH + 1];
 
@@ -727,7 +728,7 @@ static char *ngc_name_tolower (char *s)
 	return name;
 }
 
-bool ngc_named_param_get (char *name, float *value)
+FLASHMEM bool ngc_named_param_get (char *name, float *value)
 {
     bool found = false;
     uint_fast8_t idx = sizeof(ngc_named_ro_param) / sizeof(ngc_named_ro_param_t);
@@ -760,14 +761,14 @@ bool ngc_named_param_get (char *name, float *value)
     return found;
 }
 
-bool ngc_named_param_exists (char *name)
+FLASHMEM bool ngc_named_param_exists (char *name)
 {
     float value;
 
     return ngc_named_param_get(name, &value);
 }
 
-float *ngc_named_param_set (char *name, float value)
+FLASHMEM float *ngc_named_param_set (char *name, float value)
 {
     bool ok = false;
     uint_fast8_t idx = sizeof(ngc_named_ro_param) / sizeof(ngc_named_ro_param_t);
@@ -820,7 +821,7 @@ float *ngc_named_param_set (char *name, float value)
     return ok ? &rw_param->value : NULL;
 }
 
-static ngc_string_param_t *sp_get_by_name (char *name)
+FLASHMEM static ngc_string_param_t *sp_get_by_name (char *name)
 {
     ngc_string_param_t *sr = ngc_string_params;
 
@@ -832,7 +833,7 @@ static ngc_string_param_t *sp_get_by_name (char *name)
     return sr;
 }
 
-static ngc_string_param_t *sp_set (ngc_string_id_t id, char *value)
+FLASHMEM static ngc_string_param_t *sp_set (ngc_string_id_t id, char *value)
 {
     size_t len;
     ngc_string_param_t *last = NULL, *sp;
@@ -889,7 +890,7 @@ static ngc_string_param_t *sp_set (ngc_string_id_t id, char *value)
     return sp;
 }
 
-char *ngc_string_param_get (ngc_string_id_t id)
+FLASHMEM char *ngc_string_param_get (ngc_string_id_t id)
 {
     ngc_string_param_t *sp;
 
@@ -901,17 +902,17 @@ char *ngc_string_param_get (ngc_string_id_t id)
     return sp ? sp->value : NULL;
 }
 
-bool ngc_string_param_exists (ngc_string_id_t id)
+FLASHMEM bool ngc_string_param_exists (ngc_string_id_t id)
 {
     return !!ngc_string_param_get(id);
 }
 
-bool ngc_string_param_set (ngc_param_id_t id, char *value)
+FLASHMEM bool ngc_string_param_set (ngc_param_id_t id, char *value)
 {
     return id > 0 && !!sp_set((ngc_string_id_t)id, value);
 }
 
-ngc_string_id_t ngc_string_param_set_name (char *name)
+FLASHMEM ngc_string_id_t ngc_string_param_set_name (char *name)
 {
     ngc_string_param_t *sr = *name ? sp_get_by_name(name) : NULL;
 
@@ -921,7 +922,7 @@ ngc_string_id_t ngc_string_param_set_name (char *name)
     return sr ? sr->id : 0;
 }
 
-void ngc_string_param_delete (ngc_string_id_t id)
+FLASHMEM void ngc_string_param_delete (ngc_string_id_t id)
 {
     ngc_string_param_t *sr = ngc_string_params, *rm;
 
@@ -941,7 +942,7 @@ void ngc_string_param_delete (ngc_string_id_t id)
     }
 }
 
-bool ngc_modal_state_save (gc_modal_t *state, gc_override_values_t *overrides, float feed_rate, bool auto_restore)
+FLASHMEM bool ngc_modal_state_save (gc_modal_t *state, gc_override_values_t *overrides, float feed_rate, bool auto_restore)
 {
     gc_modal_snapshot_t **saved_state = call_level == -1 ? &modal_state : &call_levels[call_level].modal_state;
 
@@ -958,7 +959,7 @@ bool ngc_modal_state_save (gc_modal_t *state, gc_override_values_t *overrides, f
     return *saved_state != NULL;
 }
 
-void ngc_modal_state_invalidate (void)
+FLASHMEM void ngc_modal_state_invalidate (void)
 {
     gc_modal_snapshot_t **saved_state = call_level == -1 ? &modal_state : &call_levels[call_level].modal_state;
 
@@ -968,17 +969,17 @@ void ngc_modal_state_invalidate (void)
     }
 }
 
-gc_modal_snapshot_t *ngc_modal_state_get (void)
+FLASHMEM gc_modal_snapshot_t *ngc_modal_state_get (void)
 {
     return call_level == -1 ? modal_state : call_levels[call_level].modal_state;
 }
 
-bool ngc_modal_state_restore (void)
+FLASHMEM bool ngc_modal_state_restore (void)
 {
     return gc_modal_state_restore(call_level == -1 ? modal_state : call_levels[call_level].modal_state);
 }
 
-bool ngc_call_push (void *context)
+FLASHMEM bool ngc_call_push (void *context)
 {
     bool ok;
 
@@ -988,7 +989,7 @@ bool ngc_call_push (void *context)
     return ok;
 }
 
-bool ngc_call_pop (void)
+FLASHMEM bool ngc_call_pop (void)
 {
     if(call_level >= 0) {
 
@@ -1042,17 +1043,17 @@ bool ngc_call_pop (void)
     return call_level >= 0;
 }
 
-uint_fast8_t ngc_call_level (void)
+FLASHMEM uint_fast8_t ngc_call_level (void)
 {
     return (uint_fast8_t)(call_level + 1);
 }
 
-uint8_t ngc_float_decimals (void)
+FLASHMEM uint8_t ngc_float_decimals (void)
 {
 	return settings.flags.report_inches ? N_DECIMAL_COORDVALUE_INCH : N_DECIMAL_COORDVALUE_MM;
 }
 
-static status_code_t macro_set_get_setting (parameter_words_t args)
+FLASHMEM static status_code_t macro_set_get_setting (parameter_words_t args)
 {
     float setting_id;
     status_code_t status = Status_OK;
@@ -1086,7 +1087,7 @@ static status_code_t macro_set_get_setting (parameter_words_t args)
     return status;
 }
 
-static status_code_t macro_ngc_parameter_rw (parameter_words_t args)
+FLASHMEM static status_code_t macro_ngc_parameter_rw (parameter_words_t args)
 {
     float idx, value;
     status_code_t status = Status_OK;
@@ -1113,7 +1114,7 @@ static status_code_t macro_ngc_parameter_rw (parameter_words_t args)
     return status;
 }
 
-static status_code_t macro_get_machine_state (parameter_words_t args)
+FLASHMEM static status_code_t macro_get_machine_state (parameter_words_t args)
 {
     ngc_named_param_set("_value", (float)ffs(state_get()));
     ngc_named_param_set("_value_returned", 1.0f);
@@ -1121,7 +1122,7 @@ static status_code_t macro_get_machine_state (parameter_words_t args)
     return Status_OK;
 }
 
-static status_code_t macro_select_probe (parameter_words_t args)
+FLASHMEM static status_code_t macro_select_probe (parameter_words_t args)
 {
     float probe_id;
     status_code_t status = Status_OK;
@@ -1136,7 +1137,7 @@ static status_code_t macro_select_probe (parameter_words_t args)
     return status;
 }
 
-static status_code_t macro_get_tool_offset (parameter_words_t args)
+FLASHMEM static status_code_t macro_get_tool_offset (parameter_words_t args)
 {
     float tool_id, axis_id;
     status_code_t status = Status_OK;
@@ -1158,7 +1159,66 @@ static status_code_t macro_get_tool_offset (parameter_words_t args)
     return status;
 }
 
-static status_code_t onMacroExecute (macro_id_t macro_id, parameter_words_t args, uint32_t repeats)
+static void modbus_response_handler (modbus_response_t *response)
+{
+    ngc_named_param_set("_value", (float)(response->exception ? response->exception : response->values[0]));
+    ngc_named_param_set("_value_returned", response->exception ? 0.0f : (float)response->num_values);
+    if(response->exception == ModBus_NoException) {
+        if(response->num_values == 2)
+            ngc_named_param_set("_value2", (float)(response->exception ? response->exception : response->values[1]));
+        if(response->num_values == 3)
+            ngc_named_param_set("_value2", (float)(response->exception ? response->exception : response->values[2]));
+    }
+}
+
+FLASHMEM static status_code_t macro_modbus_msg (parameter_words_t args)
+{
+    float tmpvar;
+    status_code_t status = Status_OK;
+
+    if(!(args.f && args.s))
+        status = Status_GcodeValueWordMissing;
+    else if(ngc_param_get(9 /* F word -> function */, &tmpvar)) {
+
+        uint16_t server, address = 0, n_values = 0, values[MODBUS_MAX_REGISTERS];
+
+        const modbus_function_properties_t *p = modbus_get_function_properties((modbus_function_t)tmpvar);
+
+        if(p->function != ModBus_ReadExceptionStatus && p->function && args.r && ngc_param_get(18 /* R word - register address */, &tmpvar)) {
+
+            address = (uint16_t)tmpvar;
+
+            if(p->is_write) {
+
+                if(args.a && ngc_param_get(1 /* A word - first register value */, &tmpvar))
+                    values[n_values++] = (uint16_t)tmpvar;
+
+                if(!p->single_register) {
+                    if(args.b && ngc_param_get(2 /* B word - second register value */, &tmpvar))
+                        values[n_values++] = (uint16_t)tmpvar;
+                    if(args.c && ngc_param_get(3 /* C word - third register value */, &tmpvar))
+                        values[n_values++] = (uint16_t)tmpvar;
+                }
+            } else if(args.x && ngc_param_get(24 /* X word - number of registers to read */, &tmpvar)) {
+                if((n_values = (uint16_t)tmpvar) > MODBUS_MAX_REGISTERS)
+                    return Status_GcodeValueOutOfRange;
+            } else
+                n_values = 1;
+        }
+
+        if((p->function == ModBus_ReadExceptionStatus || n_values) &&
+             args.s && ngc_param_get(19 /* S word - server address */, &tmpvar)) {
+            server = (uint16_t)tmpvar;
+            status = modbus_message(server, p->function, address, values, n_values, modbus_response_handler);
+        } else
+            status = p->function ? Status_GcodeValueWordMissing : Status_GcodeUnsupportedCommand;
+    } else
+        status = Status_GcodeUnsupportedCommand;
+
+    return status;
+}
+
+FLASHMEM static status_code_t onMacroExecute (macro_id_t macro_id, parameter_words_t args, uint32_t repeats)
 {
     status_code_t status = repeats > 1 && macro_id >= 1 && macro_id <= G65Macro_LastInbuilt
                    ? Status_GcodeValueOutOfRange
@@ -1190,12 +1250,17 @@ static status_code_t onMacroExecute (macro_id_t macro_id, parameter_words_t args
             sys.override.control.spindle_wait_disable = On;
             status = Status_OK;
             break;
+
+        case G65Macro_ModbusMessage:
+            status = modbus_isup().ok ? macro_modbus_msg(args) : Status_GcodeUnsupportedCommand;
+            break;
+
     }
 
     return status == Status_Unhandled && on_macro_execute ? on_macro_execute(macro_id, args, repeats) : status;
 }
 
-void ngc_params_init (void)
+FLASHMEM void ngc_params_init (void)
 {
     static bool init_ok = false;
 

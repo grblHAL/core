@@ -40,7 +40,7 @@
 
 static char buf[STRLEN_COORDVALUE + 1];
 
-static const float froundvalues[MAX_PRECISION + 1] =
+PROGMEM static const float froundvalues[MAX_PRECISION + 1] =
 {
     0.5f,                // 0
     0.05f,               // 1
@@ -321,7 +321,7 @@ bool isintf (float value)
 }
 
 // Non-blocking delay function used for general operation and suspend features.
-bool delay_sec (float seconds, delaymode_t mode)
+FLASHMEM bool delay_sec (float seconds, delaymode_t mode)
 {
     bool ok = true;
 
@@ -361,7 +361,7 @@ float convert_delta_vector_to_unit_vector (float *vector)
     return magnitude;
 }
 
-void rotate (coord_data_t *pt, plane_t plane, float angle /*rad*/)
+FLASHMEM void rotate (coord_data_t *pt, plane_t plane, float angle /*rad*/)
 {
     float cos = cosf(angle), sin = sinf(angle),
           t0 = pt->values[plane.axis_0] * cos - pt->values[plane.axis_1] * sin,
@@ -372,7 +372,7 @@ void rotate (coord_data_t *pt, plane_t plane, float angle /*rad*/)
 }
 
 // parse ISO8601 datetime: YYYY-MM-DDTHH:MM:SSZxxx
-struct tm *get_datetime (const char *s)
+FLASHMEM struct tm *get_datetime (const char *s)
 {
     static struct tm dt;
     PROGMEM static const uint8_t mdays[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};

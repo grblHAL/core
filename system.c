@@ -159,7 +159,7 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
 
 /*! \brief Executes user startup scripts, if stored.
 */
-void system_execute_startup (void *data)
+FLASHMEM void system_execute_startup (void *data)
 {
     if(hal.nvs.type != NVS_None) {
 
@@ -179,7 +179,7 @@ void system_execute_startup (void *data)
     }
 }
 
-static status_code_t read_int (char *s, int32_t *value)
+FLASHMEM static status_code_t read_int (char *s, int32_t *value)
 {
     uint_fast8_t counter = 0;
     float parameter;
@@ -199,7 +199,7 @@ static status_code_t read_int (char *s, int32_t *value)
 //
 
 // Reset spindle encoder data
-static status_code_t spindle_reset_data (sys_state_t state, char *args)
+FLASHMEM static status_code_t spindle_reset_data (sys_state_t state, char *args)
 {
     spindle_t *spindle = gc_spindle_get(-1);
 
@@ -209,7 +209,7 @@ static status_code_t spindle_reset_data (sys_state_t state, char *args)
     return spindle->hal->reset_data ? Status_OK : Status_InvalidStatement;
 }
 
-static status_code_t jog (sys_state_t state, char *args)
+FLASHMEM static status_code_t jog (sys_state_t state, char *args)
 {
     if(!(state == STATE_IDLE || (state & (STATE_JOG|STATE_TOOL_CHANGE))))
          return Status_IdleError;
@@ -222,47 +222,47 @@ static status_code_t jog (sys_state_t state, char *args)
     return args == NULL ? Status_InvalidStatement : gc_execute_block(args); // NOTE: $J= is ignored inside g-code parser and used to detect jog motions.
 }
 
-static status_code_t enumerate_alarms (sys_state_t state, char *args)
+FLASHMEM static status_code_t enumerate_alarms (sys_state_t state, char *args)
 {
     return report_alarm_details(false);
 }
 
-static status_code_t enumerate_alarms_grblformatted (sys_state_t state, char *args)
+FLASHMEM static status_code_t enumerate_alarms_grblformatted (sys_state_t state, char *args)
 {
     return report_alarm_details(true);
 }
 
-static status_code_t enumerate_errors (sys_state_t state, char *args)
+FLASHMEM static status_code_t enumerate_errors (sys_state_t state, char *args)
 {
     return report_error_details(false);
 }
 
-static status_code_t enumerate_errors_grblformatted (sys_state_t state, char *args)
+FLASHMEM static status_code_t enumerate_errors_grblformatted (sys_state_t state, char *args)
 {
     return report_error_details(true);
 }
 
-static status_code_t enumerate_groups (sys_state_t state, char *args)
+FLASHMEM static status_code_t enumerate_groups (sys_state_t state, char *args)
 {
     return report_setting_group_details(true, NULL);
 }
 
-static status_code_t enumerate_settings (sys_state_t state, char *args)
+FLASHMEM static status_code_t enumerate_settings (sys_state_t state, char *args)
 {
     return report_settings_details(SettingsFormat_MachineReadable, Setting_SettingsAll, Group_All);
 }
 
-static status_code_t enumerate_settings_grblformatted (sys_state_t state, char *args)
+FLASHMEM static status_code_t enumerate_settings_grblformatted (sys_state_t state, char *args)
 {
     return report_settings_details(SettingsFormat_Grbl, Setting_SettingsAll, Group_All);
 }
 
-static status_code_t enumerate_settings_halformatted (sys_state_t state, char *args)
+FLASHMEM static status_code_t enumerate_settings_halformatted (sys_state_t state, char *args)
 {
     return report_settings_details(SettingsFormat_grblHAL, Setting_SettingsAll, Group_All);
 }
 
-static status_code_t enumerate_all (sys_state_t state, char *args)
+FLASHMEM static status_code_t enumerate_all (sys_state_t state, char *args)
 {
     report_alarm_details(false);
     report_error_details(false);
@@ -270,7 +270,7 @@ static status_code_t enumerate_all (sys_state_t state, char *args)
     return report_settings_details(SettingsFormat_MachineReadable, Setting_SettingsAll, Group_All);
 }
 
-static status_code_t output_settings (sys_state_t state, char *args)
+FLASHMEM static status_code_t output_settings (sys_state_t state, char *args)
 {
     status_code_t retval = Status_OK;
 
@@ -291,7 +291,7 @@ static status_code_t output_settings (sys_state_t state, char *args)
     return retval;
 }
 
-static status_code_t output_setting_description (sys_state_t state, char *args)
+FLASHMEM static status_code_t output_setting_description (sys_state_t state, char *args)
 {
     status_code_t retval = Status_BadNumberFormat;
 
@@ -305,7 +305,7 @@ static status_code_t output_setting_description (sys_state_t state, char *args)
     return retval;
 }
 
-static status_code_t output_all_settings (sys_state_t state, char *args)
+FLASHMEM static status_code_t output_all_settings (sys_state_t state, char *args)
 {
     status_code_t retval = Status_OK;
 
@@ -322,7 +322,7 @@ static status_code_t output_all_settings (sys_state_t state, char *args)
     return retval;
 }
 
-static status_code_t output_parser_state (sys_state_t state, char *args)
+FLASHMEM static status_code_t output_parser_state (sys_state_t state, char *args)
 {
     report_gcode_modes(hal.stream.write);
     report_add_realtime(Report_Homed); // Report homed state on next realtime report
@@ -330,7 +330,7 @@ static status_code_t output_parser_state (sys_state_t state, char *args)
     return Status_OK;
 }
 
-static status_code_t toggle_single_block (sys_state_t state, char *args)
+FLASHMEM static status_code_t toggle_single_block (sys_state_t state, char *args)
 {
     if(!hal.signals_cap.single_block) {
         sys.flags.single_block = !sys.flags.single_block;
@@ -342,7 +342,7 @@ static status_code_t toggle_single_block (sys_state_t state, char *args)
     return hal.signals_cap.single_block ? Status_InvalidStatement : Status_OK;
 }
 
-static status_code_t toggle_block_delete (sys_state_t state, char *args)
+FLASHMEM static status_code_t toggle_block_delete (sys_state_t state, char *args)
 {
     if(!hal.signals_cap.block_delete) {
         sys.flags.block_delete_enabled = !sys.flags.block_delete_enabled;
@@ -354,7 +354,7 @@ static status_code_t toggle_block_delete (sys_state_t state, char *args)
     return hal.signals_cap.block_delete ? Status_InvalidStatement : Status_OK;
 }
 
-static status_code_t toggle_optional_stop (sys_state_t state, char *args)
+FLASHMEM static status_code_t toggle_optional_stop (sys_state_t state, char *args)
 {
     if(!hal.signals_cap.stop_disable) {
         sys.flags.optional_stop_disable = !sys.flags.optional_stop_disable;
@@ -366,7 +366,7 @@ static status_code_t toggle_optional_stop (sys_state_t state, char *args)
     return hal.signals_cap.stop_disable ? Status_InvalidStatement : Status_OK;
 }
 
-static status_code_t check_mode (sys_state_t state, char *args)
+FLASHMEM static status_code_t check_mode (sys_state_t state, char *args)
 {
     if (state == STATE_CHECK_MODE) {
         // Perform reset when toggling off. Check g-code mode should only work if grblHAL
@@ -383,33 +383,52 @@ static status_code_t check_mode (sys_state_t state, char *args)
     return Status_OK;
 }
 
-static status_code_t disable_lock (sys_state_t state, char *args)
+FLASHMEM static status_code_t check_status (bool homing)
+{
+    status_code_t status = Status_OK;
+
+    control_signals_t control_signals = hal.control.get_state();
+
+    // Block if self-test failed
+    if(sys.alarm == Alarm_SelftestFailed)
+        status = Status_SelfTestFailed;
+    // Block if e-stop is active.
+    else if(control_signals.e_stop)
+        status = Status_EStop;
+    // Block if safety door is ajar.
+    else if(control_signals.safety_door_ajar && !settings.safety_door.flags.ignore_when_idle)
+        status = Status_CheckDoor;
+    // Block if safety reset is active.
+    else if(control_signals.reset)
+        status = Status_Reset;
+
+    if(status == Status_OK) {
+        if(homing) {
+            if(control_signals.motor_fault)
+                status = Status_MotorFault;
+            else if(!(settings.homing.flags.enabled && (sys.homing.mask || settings.homing.flags.single_axis_commands || settings.homing.flags.manual)))
+                status = Status_HomingDisabled;
+        } else if(settings.limits.flags.hard_enabled && settings.limits.flags.check_at_init && limit_signals_merge(hal.limits.get_state()).value)
+            status = Status_LimitsEngaged;
+        else if(limits_homing_required())
+            status = Status_HomingRequired;
+    }
+
+    return status;
+}
+
+FLASHMEM static status_code_t disable_lock (sys_state_t state, char *args)
 {
     status_code_t retval = Status_OK;
 
     if(state & (STATE_ALARM|STATE_ESTOP)) {
 
-        control_signals_t control_signals = hal.control.get_state();
-
-        // Block if self-test failed
-        if(sys.alarm == Alarm_SelftestFailed)
-            retval = Status_SelfTestFailed;
-        // Block if e-stop is active.
-        else if (control_signals.e_stop)
-            retval = Status_EStop;
-        // Block if safety door is ajar.
-        else if (control_signals.safety_door_ajar)
-            retval = Status_CheckDoor;
-        // Block if safety reset is active.
-        else if(control_signals.reset)
-            retval = Status_Reset;
-        else if(settings.limits.flags.hard_enabled && settings.limits.flags.check_at_init && limit_signals_merge(hal.limits.get_state()).value)
-            retval = Status_LimitsEngaged;
-        else if(limits_homing_required())
-            retval = Status_HomingRequired;
-        else {
-            grbl.report.feedback_message(Message_AlarmUnlock);
+        if((retval = check_status(false)) == Status_OK) {
             state_set(STATE_IDLE);
+            if(sys.alarm_pending)
+                system_raise_alarm(sys.alarm_pending);
+            else
+                grbl.report.feedback_message(Message_AlarmUnlock);
         }
         // Don't run startup script. Prevents stored moves in startup from causing accidents.
     } // Otherwise, no effect.
@@ -417,59 +436,40 @@ static status_code_t disable_lock (sys_state_t state, char *args)
     return retval;
 }
 
-static status_code_t output_help (sys_state_t state, char *args)
+FLASHMEM static status_code_t output_help (sys_state_t state, char *args)
 {
     return report_help(args);
 }
 
-static status_code_t enumerate_spindles (sys_state_t state, char *args)
+FLASHMEM static status_code_t enumerate_spindles (sys_state_t state, char *args)
 {
     return report_spindles(false);
 }
 
-static status_code_t enumerate_spindles_mr (sys_state_t state, char *args)
+FLASHMEM static status_code_t enumerate_spindles_mr (sys_state_t state, char *args)
 {
     return report_spindles(true);
 }
 
-static status_code_t go_home (sys_state_t state, axes_signals_t axes)
+FLASHMEM static status_code_t go_home (sys_state_t state, axes_signals_t axes)
 {
     if(axes.mask && !settings.homing.flags.single_axis_commands)
         return Status_HomingDisabled;
 
-    if(!(state_get() == STATE_IDLE || (state_get() & (STATE_ALARM|STATE_ESTOP))))
+    if(!(state_get() == STATE_IDLE || state_get() == STATE_ALARM))
         return Status_IdleError;
 
     status_code_t retval = Status_OK;
 
-    control_signals_t control_signals = hal.control.get_state();
-
-    // Block if self-test failed
-    if(sys.alarm == Alarm_SelftestFailed)
-        retval = Status_SelfTestFailed;
-    // Block if e-stop is active.
-    else if (control_signals.e_stop)
-        retval = Status_EStop;
-    else if(control_signals.motor_fault)
-        retval = Status_MotorFault;
-    else if (!(settings.homing.flags.enabled && (sys.homing.mask || settings.homing.flags.single_axis_commands || settings.homing.flags.manual)))
-        retval = Status_HomingDisabled;
-    // Block if safety door is ajar.
-    else if (control_signals.safety_door_ajar && !settings.safety_door.flags.ignore_when_idle)
-        retval = Status_CheckDoor;
-    // Block if safety reset is active.
-    else if(control_signals.reset)
-        retval = Status_Reset;
-
-    if(retval == Status_OK)
+    if((retval = check_status(true)) == Status_OK)
         retval = mc_homing_cycle(axes); // Home axes according to configuration
 
-    if (retval == Status_OK && !sys.abort) {
+    if(retval == Status_OK && !sys.abort) {
         state_set(STATE_IDLE);  // Set to IDLE when complete.
         st_go_idle();           // Set steppers to the settings idle state before returning.
         grbl.report.feedback_message(Message_None);
         // Execute startup scripts after successful homing.
-        if (sys.homing.mask && (sys.homing.mask & sys.homed.mask) == sys.homing.mask)
+        if(sys.homing.mask && (sys.homing.mask & sys.homed.mask) == sys.homing.mask)
             system_execute_startup(NULL);
         else if(limits_homing_required()) { // Keep alarm state active if homing is required and not all axes homed.
             sys.alarm = Alarm_HomingRequired;
@@ -480,69 +480,69 @@ static status_code_t go_home (sys_state_t state, axes_signals_t axes)
     return retval == Status_Unhandled ? Status_OK : retval;
 }
 
-static status_code_t home (sys_state_t state, char *args)
+FLASHMEM static status_code_t home (sys_state_t state, char *args)
 {
     return go_home(state, (axes_signals_t){0});
 }
 
-static status_code_t home_x (sys_state_t state, char *args)
+FLASHMEM static status_code_t home_x (sys_state_t state, char *args)
 {
     return go_home(state, (axes_signals_t){X_AXIS_BIT});
 }
 
-static status_code_t home_y (sys_state_t state, char *args)
+FLASHMEM static status_code_t home_y (sys_state_t state, char *args)
 {
     return go_home(state, (axes_signals_t){Y_AXIS_BIT});
 }
 
-static status_code_t home_z (sys_state_t state, char *args)
+FLASHMEM static status_code_t home_z (sys_state_t state, char *args)
 {
     return go_home(state, (axes_signals_t){Z_AXIS_BIT});
 }
 
 #ifdef A_AXIS
-static status_code_t home_a (sys_state_t state, char *args)
+FLASHMEM static status_code_t home_a (sys_state_t state, char *args)
 {
     return go_home(state, (axes_signals_t){A_AXIS_BIT});
 }
 #endif
 
 #ifdef B_AXIS
-static status_code_t home_b (sys_state_t state, char *args)
+FLASHMEM static status_code_t home_b (sys_state_t state, char *args)
 {
     return go_home(state, (axes_signals_t){B_AXIS_BIT});
 }
 #endif
 
 #ifdef C_AXIS
-static status_code_t home_c (sys_state_t state, char *args)
+FLASHMEM static status_code_t home_c (sys_state_t state, char *args)
 {
     return go_home(state, (axes_signals_t){C_AXIS_BIT});
 }
 #endif
 
 #ifdef U_AXIS
-static status_code_t home_u (sys_state_t state, char *args)
+FLASHMEM static status_code_t home_u (sys_state_t state, char *args)
 {
     return go_home(state, (axes_signals_t){U_AXIS_BIT});
 }
 #endif
 
 #ifdef V_AXIS
-static status_code_t home_v (sys_state_t state, char *args)
+FLASHMEM static status_code_t home_v (sys_state_t state, char *args)
 {
     return go_home(state, (axes_signals_t){V_AXIS_BIT});
 }
 #endif
 
 #ifdef W_AXIS
-static status_code_t home_w (sys_state_t state, char *args)
+FLASHMEM static status_code_t home_w (sys_state_t state, char *args)
 {
     return go_home(state, (axes_signals_t){W_AXIS_BIT});
 }
 #endif
 
-static status_code_t enter_sleep (sys_state_t state, char *args)
+FLASHMEM static status_code_t enter_sleep (sys_state_t state, char *args)
 {
     if(!settings.flags.sleep_enable)
         return Status_InvalidStatement;
@@ -554,7 +554,7 @@ static status_code_t enter_sleep (sys_state_t state, char *args)
     return Status_OK;
 }
 
-static status_code_t set_tool_reference (sys_state_t state, char *args)
+FLASHMEM static status_code_t set_tool_reference (sys_state_t state, char *args)
 {
 #if TOOL_LENGTH_OFFSET_AXIS >= 0
     if(sys.flags.probe_succeeded) {
@@ -577,12 +577,12 @@ static status_code_t set_tool_reference (sys_state_t state, char *args)
     return Status_OK;
 }
 
-static status_code_t tool_probe_workpiece (sys_state_t state, char *args)
+FLASHMEM static status_code_t tool_probe_workpiece (sys_state_t state, char *args)
 {
     return tc_probe_workpiece();
 }
 
-static status_code_t output_ngc_parameters (sys_state_t state, char *args)
+FLASHMEM static status_code_t output_ngc_parameters (sys_state_t state, char *args)
 {
     status_code_t retval = Status_OK;
 
@@ -603,7 +603,7 @@ static status_code_t output_ngc_parameters (sys_state_t state, char *args)
     return retval;
 }
 
-static status_code_t build_info (sys_state_t state, char *args)
+FLASHMEM static status_code_t build_info (sys_state_t state, char *args)
 {
     if (!(state == STATE_IDLE || (state & (STATE_ALARM|STATE_ESTOP|STATE_SLEEP|STATE_CHECK_MODE))))
         return Status_IdleError;
@@ -623,7 +623,7 @@ static status_code_t build_info (sys_state_t state, char *args)
     return Status_OK;
 }
 
-static status_code_t output_all_build_info (sys_state_t state, char *args)
+FLASHMEM static status_code_t output_all_build_info (sys_state_t state, char *args)
 {
     char info[sizeof(stored_line_t)];
 
@@ -633,7 +633,7 @@ static status_code_t output_all_build_info (sys_state_t state, char *args)
     return Status_OK;
 }
 
-static status_code_t settings_downgrade (sys_state_t state, char *args)
+FLASHMEM static status_code_t settings_downgrade (sys_state_t state, char *args)
 {
     settings.version.build = settings.version.build == 0 ? (GRBL_BUILD - 20000000UL) : 0;
 
@@ -646,7 +646,7 @@ static status_code_t settings_downgrade (sys_state_t state, char *args)
     return Status_OK;
 }
 
-static status_code_t settings_reset (sys_state_t state, char *args)
+FLASHMEM static status_code_t settings_reset (sys_state_t state, char *args)
 {
     settings_restore_t restore = {0};
     status_code_t retval = Status_OK;
@@ -694,7 +694,7 @@ static status_code_t settings_reset (sys_state_t state, char *args)
     return retval;
 }
 
-static status_code_t output_startup_lines (sys_state_t state, char *args)
+FLASHMEM static status_code_t output_startup_lines (sys_state_t state, char *args)
 {
     if (!(state == STATE_IDLE || (state & (STATE_ALARM|STATE_ESTOP|STATE_CHECK_MODE))))
         return Status_IdleError;
@@ -714,7 +714,7 @@ static status_code_t output_startup_lines (sys_state_t state, char *args)
     return Status_OK;
 }
 
-static status_code_t set_startup_line (sys_state_t state, char *args, uint_fast8_t lnr)
+FLASHMEM static status_code_t set_startup_line (sys_state_t state, char *args, uint_fast8_t lnr)
 {
     if(args == NULL)
         return Status_InvalidStatement;
@@ -752,17 +752,17 @@ static status_code_t set_startup_line (sys_state_t state, char *args, uint_fast8
     return retval;
 }
 
-static status_code_t set_startup_line0 (sys_state_t state, char *args)
+FLASHMEM static status_code_t set_startup_line0 (sys_state_t state, char *args)
 {
     return set_startup_line(state, args, 0);
 }
 
-static status_code_t set_startup_line1 (sys_state_t state, char *args)
+FLASHMEM static status_code_t set_startup_line1 (sys_state_t state, char *args)
 {
     return set_startup_line(state, args, 1);
 }
 
-static status_code_t rtc_action (sys_state_t state, char *args)
+FLASHMEM static status_code_t rtc_action (sys_state_t state, char *args)
 {
     status_code_t retval;
 
@@ -785,7 +785,7 @@ static status_code_t rtc_action (sys_state_t state, char *args)
     return retval;
 }
 
-static status_code_t reboot_system (sys_state_t state, char *args)
+FLASHMEM static status_code_t reboot_system (sys_state_t state, char *args)
 {
     report_message("Rebooting controller, communication may be lost", Message_Warning);
     hal.delay_ms(100, NULL);
@@ -799,7 +799,7 @@ static status_code_t reboot_system (sys_state_t state, char *args)
 
 #include "nvs_buffer.h"
 
-static status_code_t output_memmap (sys_state_t state, char *args)
+FLASHMEM static status_code_t output_memmap (sys_state_t state, char *args)
 {
     nvs_memmap();
 
@@ -808,7 +808,7 @@ static status_code_t output_memmap (sys_state_t state, char *args)
 
 #endif
 
-const char *help_rst (const char *cmd)
+FLASHMEM const char *help_rst (const char *cmd)
 {
 #if ENABLE_RESTORE_NVS_WIPE_ALL
     hal.stream.write("$RST=* - restore/reset all settings." ASCII_EOL);
@@ -830,7 +830,7 @@ const char *help_rst (const char *cmd)
     return NULL;
 }
 
-const char *help_rtc (const char *cmd)
+FLASHMEM const char *help_rtc (const char *cmd)
 {
     if(hal.driver_cap.rtc) {
         hal.stream.write("$RTC - output current time." ASCII_EOL);
@@ -840,7 +840,7 @@ const char *help_rtc (const char *cmd)
     return NULL;
 }
 
-const char *help_spindle (const char *cmd)
+FLASHMEM const char *help_spindle (const char *cmd)
 {
     spindle_ptrs_t *spindle = gc_spindle_get(0)->hal;
 
@@ -853,22 +853,22 @@ const char *help_spindle (const char *cmd)
     return NULL;
 }
 
-const char *help_steppers (const char *cmd)
+FLASHMEM const char *help_steppers (const char *cmd)
 {
     return hal.stepper.status ? "output stepper driver status" : NULL;
 }
 
-const char *help_pins (const char *cmd)
+FLASHMEM const char *help_pins (const char *cmd)
 {
     return hal.enumerate_pins ? "enumerate pin bindings" : NULL;
 }
 
-const char *help_pin_state (const char *cmd)
+FLASHMEM const char *help_pin_state (const char *cmd)
 {
     return ioports_can_do().io ? "output auxiliary pin states" : NULL;
 }
 
-const char *help_switches (const char *cmd)
+FLASHMEM const char *help_switches (const char *cmd)
 {
     const char *help = NULL;
 
@@ -893,7 +893,7 @@ const char *help_switches (const char *cmd)
     return help;
 }
 
-const char *help_homing (const char *cmd)
+FLASHMEM const char *help_homing (const char *cmd)
 {
     if(settings.homing.flags.enabled)
         hal.stream.write("$H - home configured axes." ASCII_EOL);
@@ -904,7 +904,7 @@ const char *help_homing (const char *cmd)
     return NULL;
 }
 
-const char *help_reboot (const char *cmd)
+FLASHMEM const char *help_reboot (const char *cmd)
 {
     return hal.reboot ? "reboot (hard reset) controller" : NULL;
 }
@@ -1008,13 +1008,13 @@ static sys_commands_t core_commands = {
 
 static sys_commands_t *commands_root = &core_commands;
 
-void system_register_commands (sys_commands_t *commands)
+FLASHMEM void system_register_commands (sys_commands_t *commands)
 {
     commands->next = commands_root;
     commands_root = commands;
 }
 
-void _system_output_help (sys_commands_t *commands, bool traverse)
+FLASHMEM void _system_output_help (sys_commands_t *commands, bool traverse)
 {
     const char *help;
     uint_fast8_t idx;
@@ -1045,7 +1045,7 @@ void _system_output_help (sys_commands_t *commands, bool traverse)
 }
 
 // Deprecated, to be removed.
-void system_output_help (const sys_command_t *commands, uint32_t num_commands)
+FLASHMEM void system_output_help (const sys_command_t *commands, uint32_t num_commands)
 {
     sys_commands_t cmd = {
          .commands = commands,
@@ -1055,7 +1055,7 @@ void system_output_help (const sys_command_t *commands, uint32_t num_commands)
     _system_output_help(&cmd, false);
 }
 
-void system_command_help (void)
+FLASHMEM void system_command_help (void)
 {
     _system_output_help(&core_commands, false);
     if(commands_root != &core_commands)
@@ -1081,7 +1081,7 @@ __NOTE:__ Code calling this function needs to provide the command in a writable 
 \param line pointer to the command string.
 \returns \a status_code_t enum value; #Status_OK if successfully handled, another relevant status code if not.
 */
-status_code_t system_execute_line (char *line)
+FLASHMEM status_code_t system_execute_line (char *line)
 {
     if(line[1] == '\0') {
         grbl.report.help_message();
@@ -1167,7 +1167,7 @@ Clears the tool length offset (TLO) when linear axis or X- or Z-axis is homed in
 Typically called on the grbl.on_homing complete event.
 \param id a \a axes_signals_t holding the axis flags that homed status was changed for.
 */
-void system_clear_tlo_reference (axes_signals_t homing_cycle)
+FLASHMEM void system_clear_tlo_reference (axes_signals_t homing_cycle)
 {
     plane_t plane;
 
@@ -1190,7 +1190,7 @@ If configured waits for the planner buffer to empty then fires the
 grbl.on_wco_changed event and sets the #Report_WCO flag to add
 the WCO report element to the next status report.
 */
-void system_flag_wco_change (void)
+FLASHMEM void system_flag_wco_change (void)
 {
     if(settings.status_report.sync_on_wco_change)
         protocol_buffer_synchronize();
@@ -1226,7 +1226,7 @@ void system_convert_array_steps_to_mpos (float *position, int32_t *steps)
 \param tolerance as the allowed radius the current position has to be within.
 \returns \a false if tolerance is 0 or position is outside the allowed radius, otherwise \a true.
 */
-bool system_xy_at_fixture (coord_system_id_t id, float tolerance)
+FLASHMEM bool system_xy_at_fixture (coord_system_id_t id, float tolerance)
 {
     bool ok = false;
 
@@ -1249,10 +1249,14 @@ void system_raise_alarm (alarm_code_t alarm)
     if(state_get() == STATE_HOMING && !(sys.rt_exec_state & EXEC_RESET))
         system_set_exec_alarm(alarm);
     else if(sys.alarm != alarm) {
-        sys.alarm = alarm;
-        sys.blocking_event = alarm_is_critical(sys.alarm);
-        state_set(alarm == Alarm_EStop ? STATE_ESTOP : STATE_ALARM);
-        if(sys.driver_started || sys.alarm == Alarm_SelftestFailed)
-            grbl.report.alarm_message(alarm);
+        if(!(state_get() == STATE_ESTOP || sys.blocking_event)) {
+            if((sys.alarm = alarm) == sys.alarm_pending)
+                sys.alarm_pending = Alarm_None;
+            sys.blocking_event = alarm_is_critical(sys.alarm);
+            state_set(alarm == Alarm_EStop ? STATE_ESTOP : STATE_ALARM);
+            if(sys.driver_started || sys.alarm == Alarm_SelftestFailed)
+                grbl.report.alarm_message(alarm);
+        } else
+            sys.alarm_pending = alarm;
     }
 }

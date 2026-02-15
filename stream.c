@@ -83,7 +83,7 @@ static struct {
     on_gcode_mode_changed_ptr on_gcode_mode_changed;
 } mpg;
 
-void stream_register_streams (io_stream_details_t *details)
+FLASHMEM void stream_register_streams (io_stream_details_t *details)
 {
     if(details->n_streams) {
         details->next = streams;
@@ -91,7 +91,7 @@ void stream_register_streams (io_stream_details_t *details)
     }
 }
 
-bool stream_enumerate_streams (stream_enumerate_callback_ptr callback, void *data)
+FLASHMEM bool stream_enumerate_streams (stream_enumerate_callback_ptr callback, void *data)
 {
     if(callback == NULL)
         return false;
@@ -127,7 +127,7 @@ int32_t stream_get_null (void)
     return SERIAL_NO_DATA;
 }
 
-const io_stream_status_t *stream_get_uart_status (uint8_t instance)
+FLASHMEM const io_stream_status_t *stream_get_uart_status (uint8_t instance)
 {
     const io_stream_status_t *status = NULL;
 
@@ -166,12 +166,12 @@ ISR_CODE static bool ISR_FUNC(await_toolchange_ack)(uint8_t c)
     return true;
 }
 
-stream_suspend_state_t stream_is_rx_suspended (void)
+FLASHMEM stream_suspend_state_t stream_is_rx_suspended (void)
 {
     return stream.rxbuffer ? (stream.rxbuffer->backup ? StreamSuspend_Active : StreamSuspend_Pending) : StreamSuspend_Off;
 }
 
-bool stream_rx_suspend (stream_rx_buffer_t *rxbuffer, bool suspend)
+FLASHMEM bool stream_rx_suspend (stream_rx_buffer_t *rxbuffer, bool suspend)
 {
     bool ok = false;
 
@@ -223,7 +223,7 @@ static bool is_not_connected (void)
     return false;
 }
 
-static bool connection_is_up (io_stream_t *stream)
+FLASHMEM static bool connection_is_up (io_stream_t *stream)
 {
     if(stream->is_connected)
         return stream->is_connected();
@@ -257,7 +257,7 @@ static void stream_write_all (const char *s)
     }
 }
 
-static stream_connection_t *add_connection (const io_stream_t *stream)
+FLASHMEM static stream_connection_t *add_connection (const io_stream_t *stream)
 {
     stream_connection_t *connection, *last = connections;
 
@@ -285,7 +285,7 @@ static stream_connection_t *add_connection (const io_stream_t *stream)
     return connection;
 }
 
-static bool stream_select (const io_stream_t *stream, bool add)
+FLASHMEM static bool stream_select (const io_stream_t *stream, bool add)
 {
     static const io_stream_t *active_stream = NULL;
 
@@ -404,12 +404,12 @@ static bool stream_select (const io_stream_t *stream, bool add)
     return true;
 }
 
-const io_stream_t *stream_get_base (void)
+FLASHMEM const io_stream_t *stream_get_base (void)
 {
     return base.stream;
 }
 
-io_stream_flags_t stream_get_flags (io_stream_t stream)
+FLASHMEM io_stream_flags_t stream_get_flags (io_stream_t stream)
 {
     io_stream_flags_t flags = {0};
     io_stream_details_t *details = streams;
@@ -428,7 +428,7 @@ io_stream_flags_t stream_get_flags (io_stream_t stream)
     return flags;
 }
 
-bool stream_set_description (const io_stream_t *stream, const char *description)
+FLASHMEM bool stream_set_description (const io_stream_t *stream, const char *description)
 {
     bool ok;
 
@@ -440,7 +440,7 @@ bool stream_set_description (const io_stream_t *stream, const char *description)
     return ok;
 }
 
-bool stream_connect (const io_stream_t *stream)
+FLASHMEM bool stream_connect (const io_stream_t *stream)
 {
     bool ok;
 
@@ -456,7 +456,7 @@ typedef struct {
     io_stream_t const *stream;
 } connection_t;
 
-static bool _open_instance (io_stream_properties_t const *stream, void *data)
+FLASHMEM static bool _open_instance (io_stream_properties_t const *stream, void *data)
 {
     connection_t *connection = (connection_t *)data;
 
@@ -468,7 +468,7 @@ static bool _open_instance (io_stream_properties_t const *stream, void *data)
     return connection->stream != NULL;
 }
 
-bool stream_connect_instance (uint8_t instance, uint32_t baud_rate)
+FLASHMEM bool stream_connect_instance (uint8_t instance, uint32_t baud_rate)
 {
     connection_t connection = {
         .instance = instance,
@@ -478,13 +478,13 @@ bool stream_connect_instance (uint8_t instance, uint32_t baud_rate)
     return stream_enumerate_streams(_open_instance, &connection) && stream_connect(connection.stream);
 }
 
-void stream_disconnect (const io_stream_t *stream)
+FLASHMEM void stream_disconnect (const io_stream_t *stream)
 {
     if(stream)
         stream_select(stream, false);
 }
 
-io_stream_t const *stream_open_instance (uint8_t instance, uint32_t baud_rate, stream_write_char_ptr rx_handler, const char *description)
+FLASHMEM io_stream_t const *stream_open_instance (uint8_t instance, uint32_t baud_rate, stream_write_char_ptr rx_handler, const char *description)
 {
     connection_t connection = {
         .instance = instance,
@@ -500,7 +500,7 @@ io_stream_t const *stream_open_instance (uint8_t instance, uint32_t baud_rate, s
     return connection.stream;
 }
 
-bool stream_close (io_stream_t const *stream)
+FLASHMEM bool stream_close (io_stream_t const *stream)
 {
     bool released = false;
     io_stream_details_t *details = streams;
@@ -524,7 +524,7 @@ bool stream_close (io_stream_t const *stream)
 
 // UART style streams
 
-void stream_set_defaults (const io_stream_t *stream, uint32_t baud_rate)
+FLASHMEM void stream_set_defaults (const io_stream_t *stream, uint32_t baud_rate)
 {
     stream->set_enqueue_rt_handler(protocol_enqueue_realtime_command);
 
@@ -556,7 +556,7 @@ ISR_CODE static void mpg_rt_report_add (report_tracking_flags_t report)
         mpg.stream.report.flags.value |= report.value;
 }
 
-static void mpg_gcode_mode_changed (void)
+FLASHMEM static void mpg_gcode_mode_changed (void)
 {
     if(mpg.on_gcode_mode_changed)
         mpg.on_gcode_mode_changed();
@@ -565,7 +565,7 @@ static void mpg_gcode_mode_changed (void)
         report_gcode_modes(mpg.stream.write);
 }
 
-void stream_mpg_set_mode (void *data)
+FLASHMEM void stream_mpg_set_mode (void *data)
 {
     stream_mpg_enable(data != NULL);
 }
@@ -614,7 +614,7 @@ ISR_CODE bool ISR_FUNC(stream_mpg_check_enable)(uint8_t c)
     return true;
 }
 
-bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stream_write_char_ptr write_char)
+FLASHMEM bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stream_write_char_ptr write_char)
 {
     if(stream == NULL || !stream_is_uart(stream->type) || stream->disable_rx == NULL)
         return false;
@@ -667,12 +667,12 @@ bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stream_write_
     return connection != NULL;
 }
 
-static void report_mpg_mode (void *data)
+FLASHMEM static void report_mpg_mode (void *data)
 {
     protocol_enqueue_realtime_command((uint8_t)((uintptr_t)data));
 }
 
-bool stream_mpg_enable (bool on)
+FLASHMEM bool stream_mpg_enable (bool on)
 {
     static io_stream_t org_stream = {
         .type = StreamType_Redirected
@@ -735,45 +735,45 @@ bool stream_mpg_enable (bool on)
 
 static enqueue_realtime_command_ptr enqueue_realtime_command = protocol_enqueue_realtime_command;
 
-static uint16_t null_rx_free (void)
+FLASHMEM static uint16_t null_rx_free (void)
 {
     return RX_BUFFER_SIZE;
 }
 
-static uint16_t null_count (void)
+FLASHMEM static uint16_t null_count (void)
 {
     return 0;
 }
 
-static bool null_put_c (const uint8_t c)
+FLASHMEM static bool null_put_c (const uint8_t c)
 {
     return true;
 }
 
-static void null_write_string (const char *s)
+FLASHMEM static void null_write_string (const char *s)
 {
 }
 
-static void null_write(const uint8_t *s, uint16_t length)
+FLASHMEM static void null_write(const uint8_t *s, uint16_t length)
 {
 }
 
-static bool null_suspend_disable (bool suspend)
-{
-    return true;
-}
-
-static bool null_set_baudrate (uint32_t baud_rate)
+FLASHMEM static bool null_suspend_disable (bool suspend)
 {
     return true;
 }
 
-static bool null_enqueue_rt_command (uint8_t c)
+FLASHMEM static bool null_set_baudrate (uint32_t baud_rate)
+{
+    return true;
+}
+
+FLASHMEM static bool null_enqueue_rt_command (uint8_t c)
 {
     return enqueue_realtime_command(c);
 }
 
-static enqueue_realtime_command_ptr null_set_rt_handler (enqueue_realtime_command_ptr handler)
+FLASHMEM static enqueue_realtime_command_ptr null_set_rt_handler (enqueue_realtime_command_ptr handler)
 {
     enqueue_realtime_command_ptr prev = enqueue_realtime_command;
 
@@ -783,9 +783,9 @@ static enqueue_realtime_command_ptr null_set_rt_handler (enqueue_realtime_comman
     return prev;
 }
 
-const io_stream_t *stream_null_init (uint32_t baud_rate)
+FLASHMEM const io_stream_t *stream_null_init (uint32_t baud_rate)
 {
-    static const io_stream_t stream = {
+    PROGMEM static const io_stream_t stream = {
         .type = StreamType_Null,
         .is_connected = stream_connected,
         .read = stream_get_null,
@@ -937,7 +937,7 @@ void debug_printf (const char *fmt, ...)
 
 #else
 
-void debug_printf (const char *fmt, ...)
+FLASHMEM void debug_printf (const char *fmt, ...)
 {
     // NOOP
 }

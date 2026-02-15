@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2025 Terje Io
+  Copyright (c) 2021-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -118,7 +118,8 @@ typedef enum {
     G65Macro_GetMachineState     = 4,
     G65Macro_SelectProbe         = 5,
     G65Macro_SpindleDelayDisable = 6,
-    G65Macro_LastInbuilt         = G65Macro_SpindleDelayDisable
+    G65Macro_ModbusMessage       = 7,
+    G65Macro_LastInbuilt         = G65Macro_ModbusMessage
 } g65_inbuilt_t;
 
 void ngc_params_init (void);

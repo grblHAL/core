@@ -202,7 +202,7 @@ static int fs_stat (const char *filename, vfs_stat_t *st)
 
 void fs_device_mount (void)
 {
-    static const vfs_t fs = {
+    PROGMEM static const vfs_t fs = {
         .fopen = fs_open,
         .fclose = fs_close,
         .fread = fs_read,

@@ -53,7 +53,7 @@ static on_probe_completed_ptr on_probe_completed;
 static on_wco_saved_ptr on_wco_saved;
 
 // Clear tool length offset on homing
-static void onHomingComplete (axes_signals_t homing_cycle, bool success)
+FLASHMEM static void onHomingComplete (axes_signals_t homing_cycle, bool success)
 {
     if(on_homing_completed)
         on_homing_completed(homing_cycle, success);
@@ -62,7 +62,7 @@ static void onHomingComplete (axes_signals_t homing_cycle, bool success)
         system_clear_tlo_reference(homing_cycle);
 }
 
-static void onWcoSaved (coord_system_id_t id, coord_system_data_t *data)
+FLASHMEM static void onWcoSaved (coord_system_id_t id, coord_system_data_t *data)
 {
     if(on_wco_saved)
         on_wco_saved(id, data);
@@ -73,7 +73,7 @@ static void onWcoSaved (coord_system_id_t id, coord_system_data_t *data)
 
 // Set tool offset on successful $TPW probe, prompt for retry on failure.
 // Called via probe completed event.
-static void onProbeCompleted (void)
+FLASHMEM static void onProbeCompleted (void)
 {
     if(!sys.flags.probe_succeeded)
         grbl.report.feedback_message(Message_ProbeFailedRetry);
@@ -83,7 +83,7 @@ static void onProbeCompleted (void)
 }
 
 // Restore HAL pointers on completion or reset.
-static void change_completed (void)
+FLASHMEM static void change_completed (void)
 {
     if(enqueue_realtime_command) {
         while(spin_lock);
@@ -117,7 +117,7 @@ static void change_completed (void)
 
 // Reset claimed HAL entry points and restore previous tool if needed on soft restart.
 // Called from EXEC_RESET and EXEC_STOP handlers (via HAL).
-static void reset (void)
+FLASHMEM static void reset (void)
 {
     if(next_tool) { //TODO: move to gc_xxx() function?
         // Restore previous tool if reset is during change
@@ -137,7 +137,7 @@ static void reset (void)
 }
 
 // Restore coolant and spindle status, return controlled point to original position.
-static bool restore (void)
+FLASHMEM static bool restore (void)
 {
     bool ok;
     plan_line_data_t plan_data;
@@ -181,7 +181,7 @@ static bool restore (void)
     return !ABORTED;
 }
 
-static bool go_linear_home (plan_line_data_t *pl_data)
+FLASHMEM static bool go_linear_home (plan_line_data_t *pl_data)
 {
     system_convert_array_steps_to_mpos(target.values, sys.position);
 
@@ -196,7 +196,7 @@ static bool go_linear_home (plan_line_data_t *pl_data)
 }
 #if COMPATIBILITY_LEVEL <= 1
 
-static bool go_toolsetter (plan_line_data_t *pl_data)
+FLASHMEM static bool go_toolsetter (plan_line_data_t *pl_data)
 {
     coord_system_data_t g59_3_offset;
 
@@ -228,14 +228,14 @@ static bool go_toolsetter (plan_line_data_t *pl_data)
 
 // Issue warning on cycle start event if touch off by $TPW is pending.
 // Used in Manual and Manual_G59_3 modes ($341=1 or $341=2). Called from the foreground process.
-static void execute_warning (void *data)
+FLASHMEM static void execute_warning (void *data)
 {
     grbl.report.feedback_message(Message_ExecuteTPW);
 }
 
 // Execute restore position after tool change, either back to original or to toolsetter for touch off.
 // Used when G30 position is used for changing the tool. Called from the foreground process.
-static void execute_return_from_g30 (void *data)
+FLASHMEM static void execute_return_from_g30 (void *data)
 {
     bool ok;
     plan_line_data_t plan_data;
@@ -267,7 +267,7 @@ static void execute_return_from_g30 (void *data)
 
 // Execute restore position after touch off (on cycle start event).
 // Used in Manual and Manual_G59_3 modes ($341=1 or $341=2). Called from the foreground process.
-static void execute_restore (void *data)
+FLASHMEM static void execute_restore (void *data)
 {
     // Get current position.
     system_convert_array_steps_to_mpos(target.values, sys.position);
@@ -283,7 +283,7 @@ static void execute_restore (void *data)
 }
 
 // Set and limit probe travel to be within machine limits.
-static void set_probe_target (coord_data_t *target, uint8_t axis)
+FLASHMEM static void set_probe_target (coord_data_t *target, uint8_t axis)
 {
     target->values[axis] -= settings.tool_change.probing_distance;
 
@@ -293,7 +293,7 @@ static void set_probe_target (coord_data_t *target, uint8_t axis)
 
 // Execute touch off on cycle start event from @ G59.3 position.
 // Used in SemiAutomatic mode ($341=3) only. Called from the foreground process.
-static void execute_probe (void *data)
+FLASHMEM static void execute_probe (void *data)
 {
 #if COMPATIBILITY_LEVEL <= 1
     bool ok;
@@ -428,7 +428,7 @@ ISR_CODE static void ISR_FUNC(on_toolchange_ack)(void)
 }
 
 // Set next and/or current tool. Called by gcode.c on on a Tn or M61 command (via HAL).
-static void onToolSelect (tool_data_t *tool, bool next)
+FLASHMEM static void onToolSelect (tool_data_t *tool, bool next)
 {
     next_tool = tool;
 
@@ -440,7 +440,7 @@ static void onToolSelect (tool_data_t *tool, bool next)
 }
 
 // Start a tool change sequence. Called by gcode.c on a M6 command (via HAL).
-static status_code_t tool_change (parser_state_t *parser_state)
+FLASHMEM static status_code_t tool_change (parser_state_t *parser_state)
 {
     if(next_tool == NULL)
         return Status_GCodeToolError;
@@ -562,7 +562,7 @@ static status_code_t tool_change (parser_state_t *parser_state)
 
 // Claim HAL tool change entry points and clear current tool offsets.
 // TODO: change to survive a warm reset?
-void tc_init (void)
+FLASHMEM void tc_init (void)
 {
     static bool on_homing_subscribed = false;
 
@@ -603,7 +603,7 @@ void tc_init (void)
 // Perform a probe cycle: set tool length offset and restart job if successful.
 // Note: tool length offset is set by the onProbeCompleted event handler.
 // Called by the $TPW system command.
-status_code_t tc_probe_workpiece (void)
+FLASHMEM status_code_t tc_probe_workpiece (void)
 {
     if(!(settings.tool_change.mode == ToolChange_Manual || settings.tool_change.mode == ToolChange_Manual_G59_3) || enqueue_realtime_command == NULL)
         return Status_InvalidStatement;

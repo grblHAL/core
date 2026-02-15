@@ -86,7 +86,7 @@ static ngc_sub_t *subs = NULL, *exec_sub = NULL;
 static ngc_stack_entry_t stack[NGC_STACK_DEPTH] = {0};
 static on_gcode_message_ptr on_gcode_comment;
 
-static status_code_t read_command (char *line, uint_fast8_t *pos, ngc_cmd_t *operation)
+FLASHMEM static status_code_t read_command (char *line, uint_fast8_t *pos, ngc_cmd_t *operation)
 {
     char c = line[*pos];
     status_code_t status = Status_OK;
@@ -199,7 +199,7 @@ static status_code_t read_command (char *line, uint_fast8_t *pos, ngc_cmd_t *ope
 }
 
 // Returns the last called named sub with reference count
-static ngc_sub_t *get_refcount (uint32_t *refcount)
+FLASHMEM static ngc_sub_t *get_refcount (uint32_t *refcount)
 {
     ngc_sub_t *sub, *last = NULL;
     uint32_t o_label = 0;
@@ -219,7 +219,7 @@ static ngc_sub_t *get_refcount (uint32_t *refcount)
     return last;
 }
 
-static ngc_sub_t *add_sub (uint32_t o_label, vfs_file_t *file)
+FLASHMEM static ngc_sub_t *add_sub (uint32_t o_label, vfs_file_t *file)
 {
     ngc_sub_t *sub;
 
@@ -241,7 +241,7 @@ static ngc_sub_t *add_sub (uint32_t o_label, vfs_file_t *file)
     return sub;
 }
 
-static void clear_subs (vfs_file_t *file)
+FLASHMEM static void clear_subs (vfs_file_t *file)
 {
     ngc_sub_t *current = subs, *prev = NULL, *next;
 
@@ -262,7 +262,7 @@ static void clear_subs (vfs_file_t *file)
     }
 }
 
-static status_code_t stack_push (uint32_t o_label, ngc_cmd_t operation)
+FLASHMEM static status_code_t stack_push (uint32_t o_label, ngc_cmd_t operation)
 {
     if(stack_idx < (NGC_STACK_DEPTH - 1) && (operation != NGCFlowCtrl_Call || ngc_call_push(&stack[stack_idx + 1]))) {
         stack[++stack_idx].o_label = o_label;
@@ -275,7 +275,7 @@ static status_code_t stack_push (uint32_t o_label, ngc_cmd_t operation)
     return Status_FlowControlStackOverflow;
 }
 
-static bool stack_pull (void)
+FLASHMEM static bool stack_pull (void)
 {
     bool ok;
 
@@ -291,7 +291,7 @@ static bool stack_pull (void)
     return ok;
 }
 
-static void stack_unwind_sub (uint32_t o_label)
+FLASHMEM static void stack_unwind_sub (uint32_t o_label)
 {
     while(stack_idx >= 0 && stack[stack_idx].o_label != o_label)
         stack_pull();
@@ -314,14 +314,14 @@ static void stack_unwind_sub (uint32_t o_label)
 
 // Public functions
 
-void ngc_flowctrl_unwind_stack (vfs_file_t *file)
+FLASHMEM void ngc_flowctrl_unwind_stack (vfs_file_t *file)
 {
     clear_subs(file);
     while(stack_idx >= 0 && stack[stack_idx].file == file)
         stack_pull();
 }
 
-static status_code_t onGcodeComment (char *comment)
+FLASHMEM static status_code_t onGcodeComment (char *comment)
 {
     uint_fast8_t pos = 6;
     status_code_t status = Status_OK;
@@ -343,7 +343,7 @@ static status_code_t onGcodeComment (char *comment)
     return status;
 }
 
-void ngc_flowctrl_init (void)
+FLASHMEM void ngc_flowctrl_init (void)
 {
     static bool init_ok = false;
 
@@ -360,7 +360,7 @@ void ngc_flowctrl_init (void)
 
 // NOTE: onNamedSubError will be called recursively for each
 // redirected file by the grbl.report.status_message() call.
-static status_code_t onNamedSubError (status_code_t status)
+FLASHMEM static status_code_t onNamedSubError (status_code_t status)
 {
     static bool closing = false;
 
@@ -396,7 +396,7 @@ static status_code_t onNamedSubError (status_code_t status)
     return status;
 }
 
-static status_code_t onNamedSubEOF (vfs_file_t *file, status_code_t status)
+FLASHMEM static status_code_t onNamedSubEOF (vfs_file_t *file, status_code_t status)
 {
     if(stack_idx >= 0 && stack[stack_idx].file == file) {
         stream_redirect_close(stack[stack_idx].file);
@@ -406,7 +406,7 @@ static status_code_t onNamedSubEOF (vfs_file_t *file, status_code_t status)
     return status;
 }
 
-status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, bool *skip)
+FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, bool *skip)
 {
     float value;
     bool skipping;

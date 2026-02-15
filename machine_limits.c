@@ -113,7 +113,7 @@ ISR_CODE void ISR_FUNC(limit_interrupt_handler)(limit_signals_t state) // DEFAUL
 
 // Establish work envelope for homed axes, used by soft limits and jog limits handling.
 // When hard limits are enabled pulloff distance is subtracted to avoid triggering limit switches.
-void limits_set_work_envelope (void)
+FLASHMEM void limits_set_work_envelope (void)
 {
     uint_fast8_t idx = N_AXIS;
 
@@ -143,7 +143,7 @@ void limits_set_work_envelope (void)
 
 // Set machine positions for homed limit switches. Don't update non-homed axes.
 // NOTE: settings.max_travel[] is stored as a negative value.
-void limits_set_machine_positions (axes_signals_t cycle, bool add_pulloff)
+FLASHMEM void limits_set_machine_positions (axes_signals_t cycle, bool add_pulloff)
 {
     uint_fast8_t idx = N_AXIS;
 
@@ -167,7 +167,7 @@ void limits_set_machine_positions (axes_signals_t cycle, bool add_pulloff)
 #endif
 
 // Set, get homing pulloff
-coord_data_t *limits_homing_pulloff (coord_data_t *distance)
+FLASHMEM coord_data_t *limits_homing_pulloff (coord_data_t *distance)
 {
     if(distance)
         memcpy(&homing_pulloff, distance, sizeof(coord_data_t));
@@ -177,7 +177,7 @@ coord_data_t *limits_homing_pulloff (coord_data_t *distance)
 
 // Pulls off axes from asserted homing switches before homing starts.
 // For now only for auto squared axes.
-static bool limits_pull_off (axes_signals_t axis, coord_data_t *distance, float scaling)
+FLASHMEM static bool limits_pull_off (axes_signals_t axis, coord_data_t *distance, float scaling)
 {
     uint_fast8_t n_axis = 0, idx = N_AXIS;
     coord_data_t target = {0};
@@ -266,7 +266,7 @@ static bool limits_pull_off (axes_signals_t axis, coord_data_t *distance, float 
 // mask, which prevents the stepper algorithm from executing step pulses. Homing motions typically
 // circumvent the processes for executing motions in normal operation.
 // NOTE: Only the abort realtime command can interrupt this process.
-static bool homing_cycle (axes_signals_t cycle, axes_signals_t auto_square)
+FLASHMEM static bool homing_cycle (axes_signals_t cycle, axes_signals_t auto_square)
 {
     if (ABORTED) // Block if system reset has been issued.
         return false;
@@ -532,7 +532,7 @@ static bool homing_cycle (axes_signals_t cycle, axes_signals_t auto_square)
 
 // Perform homing cycle(s) according to configuration.
 // NOTE: only one auto squared axis can be homed at a time.
-status_code_t limits_go_home (axes_signals_t cycle)
+FLASHMEM status_code_t limits_go_home (axes_signals_t cycle)
 {
     axes_signals_t auto_square = {0}, auto_squared = {0};
 
@@ -604,7 +604,7 @@ status_code_t limits_go_home (axes_signals_t cycle)
 // Performs a soft limit check. Called from mc_line() only. Assumes the machine has been homed,
 // the workspace volume is in all negative space, and the system is in normal operation.
 // NOTE: Also used by jogging to block travel outside soft-limit volume.
-void limits_soft_check (float *target, planner_cond_t condition)
+FLASHMEM void limits_soft_check (float *target, planner_cond_t condition)
 {
 #ifdef KINEMATICS_API
     if(condition.target_validated ? !condition.target_valid : !grbl.check_travel_limits(target, sys.soft_limits, false, &sys.work_envelope)) {
@@ -630,7 +630,7 @@ void limits_soft_check (float *target, planner_cond_t condition)
 }
 
 // Set axes to be homed from settings.
-void limits_set_homing_axes (void)
+FLASHMEM void limits_set_homing_axes (void)
 {
     uint_fast8_t idx = N_AXIS;
 
@@ -644,7 +644,7 @@ void limits_set_homing_axes (void)
 }
 
 // Check if homing is required.
-bool limits_homing_required (void)
+FLASHMEM bool limits_homing_required (void)
 {
     return settings.homing.flags.enabled && settings.homing.flags.init_lock &&
             (sys.cold_start || !settings.homing.flags.override_locks) &&
@@ -652,7 +652,7 @@ bool limits_homing_required (void)
 }
 
 // Get homing rate from the first axis in the cycle.
-static float get_homing_rate (axes_signals_t cycle, homing_mode_t mode)
+FLASHMEM static float get_homing_rate (axes_signals_t cycle, homing_mode_t mode)
 {
     uint_fast8_t idx = 0;
 
@@ -845,7 +845,7 @@ static void apply_travel_limits (float *target, float *position, work_envelope_t
     } while(idx);
 }
 
-void limits_init (void)
+FLASHMEM void limits_init (void)
 {
     hal.homing.get_feedrate = get_homing_rate;
     grbl.check_travel_limits = check_travel_limits;

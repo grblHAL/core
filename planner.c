@@ -227,7 +227,7 @@ uint_fast16_t plan_get_buffer_size (void)
     return block_buffer.size;
 }
 
-bool plan_reset (void)
+FLASHMEM bool plan_reset (void)
 {
     if(block_buffer.blocks == NULL) {
 
@@ -741,7 +741,7 @@ void plan_sync_velocity (void *block)
 }
 
 // Set feed overrides
-void plan_feed_override (override_t feed_override, override_t rapid_override)
+FLASHMEM void plan_feed_override (override_t feed_override, override_t rapid_override)
 {
     bool feedrate_changed = false, rapidrate_changed = false;
 
@@ -774,7 +774,7 @@ void plan_feed_override (override_t feed_override, override_t rapid_override)
     }
 }
 
-void plan_data_init (plan_line_data_t *plan_data)
+FLASHMEM void plan_data_init (plan_line_data_t *plan_data)
 {
     memset(plan_data, 0, sizeof(plan_line_data_t));
     plan_data->offset_id = gc_state.offset_id;

@@ -67,7 +67,7 @@ static int32_t stream_read_file (void)
     return (int32_t)c;
 }
 
-static status_code_t onFileEnd (vfs_file_t *file, status_code_t status)
+FLASHMEM static status_code_t onFileEnd (vfs_file_t *file, status_code_t status)
 {
     rd_stream_t *stream;
 
@@ -88,7 +88,7 @@ static status_code_t onFileEnd (vfs_file_t *file, status_code_t status)
 // This code will be executed after each command is sent to the parser,
 // If an error is detected reading from file(s) will be stopped and the
 // status_code reported, if not a "ok" status reply will not be output.
-static status_code_t trap_status_messages (status_code_t status)
+FLASHMEM static status_code_t trap_status_messages (status_code_t status)
 {
     gc_state.last_error = status;
 
@@ -111,7 +111,7 @@ static status_code_t trap_status_messages (status_code_t status)
     return status;
 }
 
-static void onReportHandlersInit (void)
+FLASHMEM static void onReportHandlersInit (void)
 {
     if(on_report_handlers_init)
         on_report_handlers_init();
@@ -120,19 +120,19 @@ static void onReportHandlersInit (void)
     grbl.report.status_message = trap_status_messages;
 }
 
-void stream_set_type (stream_type_t type, vfs_file_t *file)
+FLASHMEM void stream_set_type (stream_type_t type, vfs_file_t *file)
 {
     hal.stream.type = type;
     if(!(hal.stream.file = file))
         gc_state.file_stream = false;
 }
 
-bool stream_is_file (void)
+FLASHMEM bool stream_is_file (void)
 {
     return hal.stream.type == StreamType_File;
 }
 
-vfs_file_t *stream_redirect_read (char *filename, status_message_ptr status_handler, on_file_end_ptr eof_handler)
+FLASHMEM vfs_file_t *stream_redirect_read (char *filename, status_message_ptr status_handler, on_file_end_ptr eof_handler)
 {
     static bool error_handler_ok = false;
 
@@ -180,7 +180,7 @@ vfs_file_t *stream_redirect_read (char *filename, status_message_ptr status_hand
     return file;
 }
 
-void stream_redirect_close (vfs_file_t *file)
+FLASHMEM void stream_redirect_close (vfs_file_t *file)
 {
     rd_stream_t *stream = rd_streams, *prev_stream = NULL;
 

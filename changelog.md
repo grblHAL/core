@@ -1,5 +1,28 @@
 ## grblHAL changelog
 
+<a name="20260215">Build 20260215
+
+Core:
+
+* Marked a large number of non-critical functions with `FLASHMEM` to save RAM for the iMXRT1062 driver.
+
+* Improved alarm handling, if a critical alarm is active when a non-critical alarm is raised the non-critical alarm will be delayed until after reset for the critical alarm.
+
+* Improved Modbus exception handling and added high level API call for creating and sending Modbus messages.
+Added `G65P7` inbuilt macro, using the new API call, for interacting with Modbus devices from gcode. See the [Wiki](https://github.com/grblHAL/core/wiki/Expressions-and-flow-control#inbuilt-g65-macros) for details.
+
+Drivers:
+
+* iMXRT1062: marked some non-critical functions with `FLASHMEM`.
+
+Plugins:
+
+* SD card: marked some non-critical functions with `FLASHMEM` to save RAM for the iMXRT1062 driver.
+
+* Templates, Modbus cmd: new plugin that adds the system command `$MODBUSCMD` that can be used to interact with Modbus devices. 
+
+---
+
 <a name="20260212">Build 20260212
 
 Core:

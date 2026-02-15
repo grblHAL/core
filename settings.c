@@ -1723,7 +1723,7 @@ inline static uint8_t get_decimal_places (const char *format)
     return dp ? strchr(format, '\0') - dp - 1 : 1;
 }
 
-char *setting_get_value (const setting_detail_t *setting, uint_fast16_t offset)
+FLASHMEM char *setting_get_value (const setting_detail_t *setting, uint_fast16_t offset)
 {
     char *value = NULL;
 
@@ -1805,7 +1805,7 @@ char *setting_get_value (const setting_detail_t *setting, uint_fast16_t offset)
     return value;
 }
 
-uint32_t setting_get_int_value (const setting_detail_t *setting, uint_fast16_t offset)
+FLASHMEM uint32_t setting_get_int_value (const setting_detail_t *setting, uint_fast16_t offset)
 {
     uint32_t value = 0;
 
@@ -1861,7 +1861,7 @@ uint32_t setting_get_int_value (const setting_detail_t *setting, uint_fast16_t o
     return value;
 }
 
-float setting_get_float_value (const setting_detail_t *setting, uint_fast16_t offset)
+FLASHMEM float setting_get_float_value (const setting_detail_t *setting, uint_fast16_t offset)
 {
     float value = NAN;
 
@@ -1888,7 +1888,7 @@ float setting_get_float_value (const setting_detail_t *setting, uint_fast16_t of
     return value;
 }
 
-static bool is_group_available (const setting_detail_t *setting, uint_fast16_t offset)
+FLASHMEM static bool is_group_available (const setting_detail_t *setting, uint_fast16_t offset)
 {
     return settings_is_group_available(setting->group);
 }
@@ -2452,13 +2452,13 @@ static setting_details_t setting_details = {
 
 static setting_details_t *settingsd = &setting_details;
 
-void settings_register (setting_details_t *details)
+FLASHMEM void settings_register (setting_details_t *details)
 {
     settingsd->next = details;
     settingsd = details;
 }
 
-setting_details_t *settings_get_details (void)
+FLASHMEM setting_details_t *settings_get_details (void)
 {
     return &setting_details;
 }
@@ -2466,14 +2466,14 @@ setting_details_t *settings_get_details (void)
 /**/
 
 // Write build info to persistent storage
-void settings_write_build_info (char *line)
+FLASHMEM void settings_write_build_info (char *line)
 {
     if(hal.nvs.type != NVS_None)
         hal.nvs.memcpy_to_nvs(NVS_ADDR_BUILD_INFO, (uint8_t *)line, sizeof(stored_line_t), true);
 }
 
 // Read build info from persistent storage.
-bool settings_read_build_info(char *line)
+FLASHMEM bool settings_read_build_info(char *line)
 {
     if (!(hal.nvs.type != NVS_None && hal.nvs.memcpy_from_nvs((uint8_t *)line, NVS_ADDR_BUILD_INFO, sizeof(stored_line_t), true) == NVS_TransferResult_OK)) {
         settings_restore((settings_restore_t){ .build_info = On });
@@ -2483,7 +2483,7 @@ bool settings_read_build_info(char *line)
 }
 
 // Write startup line to persistent storage
-void settings_write_startup_line (uint8_t idx, char *line)
+FLASHMEM void settings_write_startup_line (uint8_t idx, char *line)
 {
     assert(idx < N_STARTUP_LINE);
 
@@ -2496,7 +2496,7 @@ void settings_write_startup_line (uint8_t idx, char *line)
 }
 
 // Read startup line to persistent storage.
-bool settings_read_startup_line (uint8_t idx, char *line)
+FLASHMEM bool settings_read_startup_line (uint8_t idx, char *line)
 {
     assert(idx < N_STARTUP_LINE);
 
@@ -2510,7 +2510,7 @@ bool settings_read_startup_line (uint8_t idx, char *line)
 }
 
 // Write selected coordinate data to persistent storage.
-void settings_write_coord_data (coord_system_id_t id, coord_system_data_t *data)
+FLASHMEM void settings_write_coord_data (coord_system_id_t id, coord_system_data_t *data)
 {
     assert(id <= N_CoordinateSystems);
 
@@ -2526,7 +2526,7 @@ void settings_write_coord_data (coord_system_id_t id, coord_system_data_t *data)
 }
 
 // Read selected coordinate data from persistent storage.
-bool settings_read_coord_data (coord_system_id_t id, coord_system_data_t *data)
+FLASHMEM bool settings_read_coord_data (coord_system_id_t id, coord_system_data_t *data)
 {
     assert(id <= N_CoordinateSystems);
 
@@ -2545,7 +2545,7 @@ bool settings_read_coord_data (coord_system_id_t id, coord_system_data_t *data)
 static tool_data_t tool_data[N_TOOLS + 1];
 
 // Write selected tool data to persistent storage.
-static bool settings_set_tool_data (tool_data_t *tool)
+FLASHMEM static bool settings_set_tool_data (tool_data_t *tool)
 {
     bool ok = tool->tool_id <= N_TOOLS;
 
@@ -2556,7 +2556,7 @@ static bool settings_set_tool_data (tool_data_t *tool)
 }
 
 // Read selected tool data from persistent storage.
-static tool_table_entry_t *settings_get_tool_data (tool_id_t tool_id)
+FLASHMEM static tool_table_entry_t *settings_get_tool_data (tool_id_t tool_id)
 {
     static tool_table_entry_t tool = {0};
 
@@ -2575,7 +2575,7 @@ static tool_table_entry_t *settings_get_tool_data (tool_id_t tool_id)
 }
 
 // Clear all tool data in persistent storage.
-static bool settings_clear_tool_data (void)
+FLASHMEM static bool settings_clear_tool_data (void)
 {
     uint_fast8_t idx;
 
@@ -2594,13 +2594,13 @@ static bool settings_clear_tool_data (void)
 static tool_data_t tool_data = {0};
 
 // Write selected tool data to persistent storage.
-static bool settings_set_tool_data (tool_data_t *tool_data)
+FLASHMEM static bool settings_set_tool_data (tool_data_t *tool_data)
 {
     return true;
 }
 
 // Read selected tool data from persistent storage.
-static tool_table_entry_t *settings_get_tool_data (tool_id_t tool_id)
+FLASHMEM static tool_table_entry_t *settings_get_tool_data (tool_id_t tool_id)
 {
     static tool_table_entry_t tool = {0};
 
@@ -2617,7 +2617,7 @@ static tool_table_entry_t *settings_get_tool_data (tool_id_t tool_id)
 }
 
 // Clear all tool data in persistent storage.
-static bool settings_clear_tool_data (void)
+FLASHMEM static bool settings_clear_tool_data (void)
 {
     memset(&tool_data, 0, sizeof(tool_data_t));
 
@@ -2627,7 +2627,7 @@ static bool settings_clear_tool_data (void)
 #endif // N_TOOLS
 
 // Sanity check of settings, board map could have been changed...
-static void sanity_check (void)
+FLASHMEM static void sanity_check (void)
 {
 #if LATHE_UVW_OPTION
     settings.mode = Mode_Lathe;
@@ -2691,7 +2691,7 @@ static void sanity_check (void)
 
 // Read global settings from persistent storage.
 // Checks version-byte of non-volatile storage and global settings copy.
-bool read_global_settings (void)
+FLASHMEM bool read_global_settings (void)
 {
     bool ok = hal.nvs.type != NVS_None && SETTINGS_VERSION == hal.nvs.get_byte(0) && hal.nvs.memcpy_from_nvs((uint8_t *)&settings, NVS_ADDR_GLOBAL, sizeof(settings_t), true) == NVS_TransferResult_OK;
 
@@ -2701,7 +2701,7 @@ bool read_global_settings (void)
 }
 
 // Write global settings to persistent storage
-void settings_write_global (void)
+FLASHMEM void settings_write_global (void)
 {
     if(override_backup.valid)
         restore_override_backup();
@@ -2714,7 +2714,7 @@ void settings_write_global (void)
 
 #if N_SPINDLE > 1
 
-static bool get_default_spindle (spindle_info_t *spindle, void *data)
+FLASHMEM static bool get_default_spindle (spindle_info_t *spindle, void *data)
 {
     bool ok;
 
@@ -2727,7 +2727,7 @@ static bool get_default_spindle (spindle_info_t *spindle, void *data)
 #endif
 
 // Restore global settings to defaults and write to persistent storage
-void settings_restore (settings_restore_t restore)
+FLASHMEM void settings_restore (settings_restore_t restore)
 {
     uint_fast8_t idx;
     stored_line_t empty_line;
@@ -2802,7 +2802,7 @@ inline static bool is_available (const setting_detail_t *setting, uint_fast16_t 
     return setting->is_available == NULL || setting->is_available(setting, offset);
 }
 
-bool settings_is_group_available (setting_group_t id)
+FLASHMEM bool settings_is_group_available (setting_group_t id)
 {
     const setting_group_detail_t *group = setting_get_group_details(id);
 
@@ -2857,12 +2857,12 @@ bool settings_is_group_available (setting_group_t id)
     return available;
 }
 
-setting_group_t settings_normalize_group (setting_group_t group)
+FLASHMEM setting_group_t settings_normalize_group (setting_group_t group)
 {
     return (group > Group_Axis0 && group < Group_Axis0 + N_AXIS) ? Group_Axis0 : group;
 }
 
-bool settings_iterator (const setting_detail_t *setting, setting_output_ptr callback, void *data)
+FLASHMEM bool settings_iterator (const setting_detail_t *setting, setting_output_ptr callback, void *data)
 {
     bool ok = false;
 
@@ -2920,7 +2920,7 @@ static inline const setting_detail_t *_setting_get_details (setting_id_t id, uin
     return NULL;
 }
 
-const setting_detail_t *setting_get_details (setting_id_t id, setting_details_t **set)
+FLASHMEM const setting_detail_t *setting_get_details (setting_id_t id, setting_details_t **set)
 {
     const setting_detail_t *detail;
 
@@ -2951,7 +2951,7 @@ const setting_detail_t *setting_get_details (setting_id_t id, setting_details_t 
     return detail;
 }
 
-const char *setting_get_description (setting_id_t id)
+FLASHMEM const char *setting_get_description (setting_id_t id)
 {
     const char *description = NULL;
 
@@ -2980,7 +2980,7 @@ const char *setting_get_description (setting_id_t id)
     return description;
 }
 
-const setting_group_detail_t *setting_get_group_details (setting_group_t id)
+FLASHMEM const setting_group_detail_t *setting_get_group_details (setting_group_t id)
 {
     uint_fast16_t idx;
     setting_details_t *details = settings_get_details();
@@ -3005,7 +3005,7 @@ setting_group_t setting_get_parent_group (setting_group_t id)
 }
 */
 
-static status_code_t validate_value (const setting_detail_t *setting, float value)
+FLASHMEM static status_code_t validate_value (const setting_detail_t *setting, float value)
 {
     float val;
     uint_fast8_t set_idx = 0;
@@ -3033,7 +3033,7 @@ static status_code_t validate_value (const setting_detail_t *setting, float valu
     return Status_OK;
 }
 
-static status_code_t validate_uint_value (const setting_detail_t *setting, uint32_t value)
+FLASHMEM static status_code_t validate_uint_value (const setting_detail_t *setting, uint32_t value)
 {
     uint32_t val;
     uint_fast8_t set_idx = 0;
@@ -3062,7 +3062,7 @@ static status_code_t validate_uint_value (const setting_detail_t *setting, uint3
     return Status_OK;
 }
 
-static uint32_t strnumentries (const char *s, const char delimiter)
+FLASHMEM static uint32_t strnumentries (const char *s, const char delimiter)
 {
     if(s == NULL || *s == '\0')
         return 0;
@@ -3078,7 +3078,7 @@ static uint32_t strnumentries (const char *s, const char delimiter)
     return entries;
 }
 
-setting_datatype_t setting_datatype_to_external (setting_datatype_t datatype)
+FLASHMEM setting_datatype_t setting_datatype_to_external (setting_datatype_t datatype)
 {
     switch(datatype) {
 
@@ -3094,17 +3094,17 @@ setting_datatype_t setting_datatype_to_external (setting_datatype_t datatype)
     return datatype;
 }
 
-bool setting_is_list (const setting_detail_t *setting)
+FLASHMEM bool setting_is_list (const setting_detail_t *setting)
 {
     return setting->datatype == Format_Bitfield || setting->datatype == Format_XBitfield || setting->datatype == Format_RadioButtons;
 }
 
-bool setting_is_integer (const setting_detail_t *setting)
+FLASHMEM bool setting_is_integer (const setting_detail_t *setting)
 {
     return setting->datatype == Format_Integer || setting->datatype == Format_Int8 || setting->datatype == Format_Int16;
 }
 
-static char *remove_element (char *s, uint_fast8_t entry)
+FLASHMEM static char *remove_element (char *s, uint_fast8_t entry)
 {
     while(entry && *s) {
         if(*s == ',')
@@ -3127,7 +3127,7 @@ static char *remove_element (char *s, uint_fast8_t entry)
     return s;
 }
 
-static void setting_remove_element (setting_id_t id, uint_fast8_t pos)
+FLASHMEM static void setting_remove_element (setting_id_t id, uint_fast8_t pos)
 {
     const setting_detail_t *setting = setting_get_details(id, NULL);
 
@@ -3137,7 +3137,7 @@ static void setting_remove_element (setting_id_t id, uint_fast8_t pos)
 
 // Flag setting elements for bitfields as N/A according to a mask
 // Note: setting format string has to reside in RAM.
-void setting_remove_elements (setting_id_t id, uint32_t mask, bool trim)
+FLASHMEM void setting_remove_elements (setting_id_t id, uint32_t mask, bool trim)
 {
     const setting_detail_t *setting;
 
@@ -3171,7 +3171,7 @@ inline static bool setting_is_core (setting_type_t type)
     return !(type == Setting_NonCore || type == Setting_NonCoreFn);
 }
 
-static status_code_t setting_validate_me_uint (const setting_detail_t *setting, char *svalue)
+FLASHMEM static status_code_t setting_validate_me_uint (const setting_detail_t *setting, char *svalue)
 {
     uint_fast8_t idx = 0;
     uint32_t value;
@@ -3216,7 +3216,7 @@ static status_code_t setting_validate_me_uint (const setting_detail_t *setting, 
     return status;
 }
 
-status_code_t setting_validate_me (const setting_detail_t *setting, float value, char *svalue)
+FLASHMEM status_code_t setting_validate_me (const setting_detail_t *setting, float value, char *svalue)
 {
     status_code_t status = Status_OK;
 
@@ -3262,7 +3262,7 @@ status_code_t setting_validate_me (const setting_detail_t *setting, float value,
     return status;
 }
 
-status_code_t setting_validate (setting_id_t id, float value, char *svalue)
+FLASHMEM status_code_t setting_validate (setting_id_t id, float value, char *svalue)
 {
     const setting_detail_t *setting = setting_get_details(id, NULL);
 
@@ -3270,7 +3270,7 @@ status_code_t setting_validate (setting_id_t id, float value, char *svalue)
     return setting == NULL ? Status_OK : setting_validate_me(setting, value, svalue);
 }
 
-static bool settings_changed_spindle (void)
+FLASHMEM static bool settings_changed_spindle (void)
 {
     static spindle_settings_t spindle_settings = {};
     static spindle_pwm_settings_t spindle_pwm_settings = {};
@@ -3411,7 +3411,7 @@ FLASHMEM status_code_t settings_store_setting (setting_id_t id, char *svalue)
     return status;
 }
 
-bool settings_add_spindle_type (const char *type)
+FLASHMEM bool settings_add_spindle_type (const char *type)
 {
     bool ok;
 
@@ -3424,7 +3424,7 @@ bool settings_add_spindle_type (const char *type)
     return ok;
 }
 
-void onFileDemarcate (bool start)
+FLASHMEM void onFileDemarcate (bool start)
 {
     if(!start) {
 
@@ -3442,14 +3442,14 @@ void onFileDemarcate (bool start)
 }
 
 // Clear settings chain
-void settings_clear (void)
+FLASHMEM void settings_clear (void)
 {
     setting_details.next = NULL;
     settingsd = &setting_details;
 }
 
 // Initialize the config subsystem
-void settings_init (void)
+FLASHMEM void settings_init (void)
 {
     settings_changed_flags_t changed = {0};
 

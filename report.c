@@ -197,7 +197,7 @@ inline static char *control_signals_tostring (char *buf, control_signals_t signa
     return buf;
 }
 
-void report_init (void)
+FLASHMEM void report_init (void)
 {
     get_axis_value = settings.flags.report_inches ? get_axis_value_inches : get_axis_value_mm;
     get_axis_values = settings.flags.report_inches ? get_axis_values_inches : get_axis_values_mm;
@@ -210,7 +210,7 @@ void report_init (void)
 // operation. Errors events can originate from the g-code parser, settings module, or asynchronously
 // from a critical error, such as a triggered hard limit. Interface should always monitor for these
 // responses.
-static status_code_t report_status_message (status_code_t status_code)
+FLASHMEM static status_code_t report_status_message (status_code_t status_code)
 {
     switch(status_code) {
 
@@ -230,7 +230,7 @@ static status_code_t report_status_message (status_code_t status_code)
 }
 
 // Prints alarm messages.
-static alarm_code_t report_alarm_message (alarm_code_t alarm_code)
+FLASHMEM static alarm_code_t report_alarm_message (alarm_code_t alarm_code)
 {
     hal.stream.write_all(appendbuf(3, "ALARM:", uitoa((uint32_t)alarm_code), ASCII_EOL));
     hal.delay_ms(100, NULL); // Force delay to ensure message clears output stream buffer.
@@ -239,7 +239,7 @@ static alarm_code_t report_alarm_message (alarm_code_t alarm_code)
 }
 
 // Prints feedback message, typically from gcode.
-void report_message (const char *msg, message_type_t type)
+FLASHMEM void report_message (const char *msg, message_type_t type)
 {
     if(hal.stream.is_connected()) {
 
@@ -273,19 +273,19 @@ void report_message (const char *msg, message_type_t type)
 }
 
 // Message helper to be run as foreground task
-void report_plain (void *message)
+FLASHMEM void report_plain (void *message)
 {
     report_message((char *)message, Message_Plain);
 }
 
 // Message helper to be run as foreground task
-void report_info (void *message)
+FLASHMEM void report_info (void *message)
 {
     report_message((char *)message, Message_Info);
 }
 
 // Message helper to be run as foreground task
-void report_warning (void *message)
+FLASHMEM void report_warning (void *message)
 {
     report_message((char *)message, Message_Warning);
 }
@@ -295,7 +295,7 @@ void report_warning (void *message)
 // messages such as setup warnings, switch toggling, and how to exit alarms.
 // NOTE: For interfaces, messages are always placed within brackets. And if silent mode
 // is installed, the message number codes are less than zero.
-static message_code_t report_feedback_message (message_code_t id)
+FLASHMEM static message_code_t report_feedback_message (message_code_t id)
 {
     const message_t *msg = message_get(id);
 
@@ -308,7 +308,7 @@ static message_code_t report_feedback_message (message_code_t id)
 }
 
 // Welcome message
-static void report_init_message (stream_write_ptr write)
+FLASHMEM static void report_init_message (stream_write_ptr write)
 {
     hal.stream.report.override_counter = hal.stream.report.wco_counter = 0;
 
@@ -320,13 +320,13 @@ static void report_init_message (stream_write_ptr write)
 }
 
 // grblHAL help message
-static void report_help_message (void)
+FLASHMEM static void report_help_message (void)
 {
     hal.stream.write("[HLP:$$ $# $G $I $N $x=val $Nx=line $J=line $SLP $C $X $H $B ~ ! ? ctrl-x]" ASCII_EOL);
 }
 
 // Prints plugin info.
-void report_plugin (const char *name, const char *version)
+FLASHMEM void report_plugin (const char *name, const char *version)
 {
     hal.stream.write("[PLUGIN:");
     hal.stream.write(name);
@@ -335,7 +335,7 @@ void report_plugin (const char *name, const char *version)
     hal.stream.write("]" ASCII_EOL);
 }
 
-static bool report_group_settings (const setting_group_detail_t *groups, const uint_fast8_t n_groups, char *args)
+FLASHMEM static bool report_group_settings (const setting_group_detail_t *groups, const uint_fast8_t n_groups, char *args)
 {
     bool found = false;
     uint_fast8_t idx;
@@ -365,7 +365,7 @@ static bool report_group_settings (const setting_group_detail_t *groups, const u
     return found;
 }
 
-status_code_t report_help (char *args)
+FLASHMEM status_code_t report_help (char *args)
 {
     if(*args == '\0') {
 
@@ -412,12 +412,12 @@ status_code_t report_help (char *args)
 
 // grblHAL settings print out.
 
-static int cmp_settings (const void *a, const void *b)
+FLASHMEM static int cmp_settings (const void *a, const void *b)
 {
   return (*(setting_detail_t **)(a))->id - (*(setting_detail_t **)(b))->id;
 }
 
-static bool report_setting (const setting_detail_t *setting, uint_fast16_t offset, void *data)
+FLASHMEM static bool report_setting (const setting_detail_t *setting, uint_fast16_t offset, void *data)
 {
     appendbuf(3, "$", uitoa(setting->id + offset), "=");
 
@@ -432,7 +432,7 @@ static bool report_setting (const setting_detail_t *setting, uint_fast16_t offse
     return true;
 }
 
-status_code_t report_grbl_setting (setting_id_t id, void *data)
+FLASHMEM status_code_t report_grbl_setting (setting_id_t id, void *data)
 {
     status_code_t status = Status_OK;
 
@@ -446,7 +446,7 @@ status_code_t report_grbl_setting (setting_id_t id, void *data)
     return status;
 }
 
-static bool print_setting (const setting_detail_t *setting, uint_fast16_t offset, void *data)
+FLASHMEM static bool print_setting (const setting_detail_t *setting, uint_fast16_t offset, void *data)
 {
     if(setting->value != NULL)
         grbl.report.setting(setting, offset, data);
@@ -464,7 +464,7 @@ static inline bool is_hidden (const setting_detail_t *setting)
     return (setting->id == Setting_HomingFeedRate || setting->id == Setting_HomingSeekRate) ? settings.homing.flags.per_axis_feedrates : setting->flags.hidden;
 }
 
-void report_grbl_settings (bool all, void *data)
+FLASHMEM void report_grbl_settings (bool all, void *data)
 {
 
     uint_fast16_t idx, n_settings = 0;
@@ -520,7 +520,7 @@ void report_grbl_settings (bool all, void *data)
 // Prints current probe parameters. Upon a probe command, these parameters are updated upon a
 // successful probe or upon a failed probe with the G38.3 without errors command (if supported).
 // These values are retained until grblHAL is power-cycled, whereby they will be re-zeroed.
-void report_probe_parameters (void)
+FLASHMEM void report_probe_parameters (void)
 {
     // Report in terms of machine position.
     float print_position[N_AXIS];
@@ -533,7 +533,7 @@ void report_probe_parameters (void)
 
 // Prints current home position in terms of machine position.
 // Bitmask for homed axes attached.
-void report_home_position (void)
+FLASHMEM void report_home_position (void)
 {
     hal.stream.write("[HOME:");
     hal.stream.write(get_axis_values(sys.home_position));
@@ -543,7 +543,7 @@ void report_home_position (void)
 }
 
 // Prints current tool offsets.
-void report_tool_offsets (void)
+FLASHMEM void report_tool_offsets (void)
 {
     hal.stream.write("[TLO:");
 #if TOOL_LENGTH_OFFSET_AXIS >= 0
@@ -557,7 +557,7 @@ void report_tool_offsets (void)
 #if NGC_PARAMETERS_ENABLE
 
 // Prints NIST/LinuxCNC NGC parameter value
-status_code_t report_ngc_parameter (ngc_param_id_t id)
+FLASHMEM status_code_t report_ngc_parameter (ngc_param_id_t id)
 {
     float value;
 
@@ -574,7 +574,7 @@ status_code_t report_ngc_parameter (ngc_param_id_t id)
 }
 
 // Prints named LinuxCNC NGC parameter value
-status_code_t report_named_ngc_parameter (char *arg)
+FLASHMEM status_code_t report_named_ngc_parameter (char *arg)
 {
     float value;
 
@@ -593,7 +593,7 @@ status_code_t report_named_ngc_parameter (char *arg)
 #endif
 
 // Prints grblHAL NGC parameters (coordinate offsets, probing, tool table)
-void report_ngc_parameters (void)
+FLASHMEM void report_ngc_parameters (void)
 {
     uint_fast8_t idx;
     coord_system_data_t offset;
@@ -706,7 +706,7 @@ static inline bool is_g92_active (void)
 }
 
 // Convert motion mode (G0, G1, ...) to string.
-static char *motionmode_to_str (char *buf, motion_mode_t mode)
+FLASHMEM static char *motionmode_to_str (char *buf, motion_mode_t mode)
 {
     strcpy(buf, "G");
 
@@ -723,7 +723,7 @@ static char *motionmode_to_str (char *buf, motion_mode_t mode)
 }
 
 // Print current gcode parser mode state
-void report_gcode_modes (stream_write_ptr stream_write)
+FLASHMEM void report_gcode_modes (stream_write_ptr stream_write)
 {
     stream_write("[GC:");
     stream_write(motionmode_to_str(buf, gc_state.modal.motion));
@@ -847,14 +847,14 @@ void report_gcode_modes (stream_write_ptr stream_write)
 }
 
 // Prints specified startup line
-void report_startup_line (uint8_t n, char *line)
+FLASHMEM void report_startup_line (uint8_t n, char *line)
 {
     hal.stream.write(appendbuf(3, "$N", uitoa((uint32_t)n), "="));
     hal.stream.write(line);
     hal.stream.write(ASCII_EOL);
 }
 
-void report_execute_startup_message (char *line, status_code_t status_code)
+FLASHMEM void report_execute_startup_message (char *line, status_code_t status_code)
 {
     hal.stream.write(">");
     hal.stream.write(line);
@@ -863,7 +863,7 @@ void report_execute_startup_message (char *line, status_code_t status_code)
 }
 
 // Prints build info line
-void report_build_info (char *line, bool extended)
+FLASHMEM void report_build_info (char *line, bool extended)
 {
     char buf[100];
 
@@ -1151,7 +1151,7 @@ void report_build_info (char *line, bool extended)
 
 // Prints the character string line grblHAL has received from the user, which has been pre-parsed,
 // and has been sent into protocol_execute_line() routine to be executed by grblHAL.
-void report_echo_line_received (char *line)
+FLASHMEM void report_echo_line_received (char *line)
 {
     hal.stream.write("[echo: ");
     hal.stream.write(line);
@@ -1165,7 +1165,7 @@ typedef struct {
     stream_write_ptr stream_write;
 } spindle_r_t;
 
-static bool report_spindle_num (spindle_info_t *spindle, void *data)
+FLASHMEM static bool report_spindle_num (spindle_info_t *spindle, void *data)
 {
     bool ok;
 
@@ -1630,7 +1630,7 @@ static void report_bitfield (const char *format, bool bitmap)
     }
 }
 
-static void write_quoted (const char *s, const char *sep)
+FLASHMEM static void write_quoted (const char *s, const char *sep)
 {
     hal.stream.write("\"");
     hal.stream.write(s); // TODO: escape double quoutes
@@ -1639,7 +1639,7 @@ static void write_quoted (const char *s, const char *sep)
         hal.stream.write(sep);
 }
 
-static void write_name (const char *s, uint_fast8_t offset)
+FLASHMEM static void write_name (const char *s, uint_fast8_t offset)
 {
     char *q = hal.stream.write_n ? strchr(s, '?') : NULL;
 
@@ -1652,7 +1652,7 @@ static void write_name (const char *s, uint_fast8_t offset)
         hal.stream.write(s);
 }
 
-static void report_settings_detail (settings_format_t format, const setting_detail_t *setting, uint_fast8_t offset)
+FLASHMEM static void report_settings_detail (settings_format_t format, const setting_detail_t *setting, uint_fast8_t offset)
 {
     uint_fast8_t suboffset = setting->flags.subgroups ? offset / setting->flags.increment : offset;
 
@@ -1922,7 +1922,7 @@ typedef struct {
     uint_fast16_t offset;
 } report_args_t;
 
-static bool print_sorted (const setting_detail_t *setting, uint_fast16_t offset, void *args)
+FLASHMEM static bool print_sorted (const setting_detail_t *setting, uint_fast16_t offset, void *args)
 {
     if(!(((report_args_t *)args)->group == setting->group && ((report_args_t *)args)->offset != offset))
         report_settings_detail (((report_args_t *)args)->format, setting, offset);
@@ -1930,7 +1930,7 @@ static bool print_sorted (const setting_detail_t *setting, uint_fast16_t offset,
     return true;
 }
 
-static bool print_unsorted (const setting_detail_t *setting, uint_fast16_t offset, void *args)
+FLASHMEM static bool print_unsorted (const setting_detail_t *setting, uint_fast16_t offset, void *args)
 {
     if(!(((report_args_t *)args)->group == setting->group && ((report_args_t *)args)->offset != offset) &&
        (setting->is_available == NULL ||setting->is_available(setting, 0)))
@@ -1939,7 +1939,7 @@ static bool print_unsorted (const setting_detail_t *setting, uint_fast16_t offse
     return true;
 }
 
-static status_code_t print_settings_details (settings_format_t format, setting_group_t group)
+FLASHMEM static status_code_t print_settings_details (settings_format_t format, setting_group_t group)
 {
     uint_fast16_t idx, n_settings = 0;
     bool reported = group == Group_All;
@@ -2001,7 +2001,7 @@ static status_code_t print_settings_details (settings_format_t format, setting_g
     return reported ? Status_OK : Status_SettingDisabled;
 }
 
-status_code_t report_settings_details (settings_format_t format, setting_id_t id, setting_group_t group)
+FLASHMEM status_code_t report_settings_details (settings_format_t format, setting_id_t id, setting_group_t group)
 {
     if(id != Setting_SettingsAll) {
         status_code_t status = Status_OK;
@@ -2019,7 +2019,7 @@ status_code_t report_settings_details (settings_format_t format, setting_id_t id
     return print_settings_details(format, group);
 }
 
-status_code_t report_setting_description (settings_format_t format, setting_id_t id)
+FLASHMEM status_code_t report_setting_description (settings_format_t format, setting_id_t id)
 {
     const setting_detail_t *setting;
 
@@ -2044,12 +2044,12 @@ status_code_t report_setting_description (settings_format_t format, setting_id_t
     return Status_OK;
 }
 
-static int cmp_alarms (const void *a, const void *b)
+FLASHMEM static int cmp_alarms (const void *a, const void *b)
 {
   return (*(alarm_detail_t **)(a))->id - (*(alarm_detail_t **)(b))->id;
 }
 
-static void print_alarm (const alarm_detail_t *alarm, bool grbl_format)
+FLASHMEM static void print_alarm (const alarm_detail_t *alarm, bool grbl_format)
 {
     if(grbl_format) {
         write_quoted(uitoa(alarm->id), ",");
@@ -2067,7 +2067,7 @@ static void print_alarm (const alarm_detail_t *alarm, bool grbl_format)
     }
 }
 
-status_code_t report_alarm_details (bool grbl_format)
+FLASHMEM status_code_t report_alarm_details (bool grbl_format)
 {
     uint_fast16_t idx, n_alarms = 0;
     alarm_details_t *details = grbl.on_get_alarms();
@@ -2104,12 +2104,12 @@ status_code_t report_alarm_details (bool grbl_format)
     return Status_OK;
 }
 
-static int cmp_errors (const void *a, const void *b)
+FLASHMEM static int cmp_errors (const void *a, const void *b)
 {
   return (*(status_detail_t **)(a))->id - (*(status_detail_t **)(b))->id;
 }
 
-static void print_error (const status_detail_t *error, bool grbl_format)
+FLASHMEM static void print_error (const status_detail_t *error, bool grbl_format)
 {
     if(grbl_format) {
         write_quoted(uitoa(error->id), ",");
@@ -2127,7 +2127,7 @@ static void print_error (const status_detail_t *error, bool grbl_format)
     }
 }
 
-status_code_t report_error_details (bool grbl_format)
+FLASHMEM status_code_t report_error_details (bool grbl_format)
 {
     uint_fast16_t idx, n_errors = 0;
     error_details_t *details = grbl.on_get_errors();
@@ -2164,7 +2164,7 @@ status_code_t report_error_details (bool grbl_format)
     return Status_OK;
 }
 
-static void print_setting_group (const setting_group_detail_t *group, char *prefix)
+FLASHMEM static void print_setting_group (const setting_group_detail_t *group, char *prefix)
 {
     if(settings_is_group_available(group->id)) {
         if(!prefix) {
@@ -2183,17 +2183,17 @@ static void print_setting_group (const setting_group_detail_t *group, char *pref
     }
 }
 
-static int cmp_setting_group_id (const void *a, const void *b)
+FLASHMEM static int cmp_setting_group_id (const void *a, const void *b)
 {
     return (*(setting_group_detail_t **)(a))->id - (*(setting_group_detail_t **)(b))->id;
 }
 
-static int cmp_setting_group_name (const void *a, const void *b)
+FLASHMEM static int cmp_setting_group_name (const void *a, const void *b)
 {
     return strcmp((*(setting_group_detail_t **)(a))->name, (*(setting_group_detail_t **)(b))->name);
 }
 
-static bool group_is_dup (setting_group_detail_t **groups, setting_group_t group)
+FLASHMEM static bool group_is_dup (setting_group_detail_t **groups, setting_group_t group)
 {
     while(*groups) {
         if((*groups)->id == group)
@@ -2204,7 +2204,7 @@ static bool group_is_dup (setting_group_detail_t **groups, setting_group_t group
     return false;
 }
 
-status_code_t report_setting_group_details (bool by_id, char *prefix)
+FLASHMEM status_code_t report_setting_group_details (bool by_id, char *prefix)
 {
     uint_fast16_t idx, n_groups = 0;
     setting_details_t *details = settings_get_details();
@@ -2244,7 +2244,7 @@ status_code_t report_setting_group_details (bool by_id, char *prefix)
     return Status_OK;
 }
 
-static char *add_limits (char *buf, limit_signals_t limits)
+FLASHMEM static char *add_limits (char *buf, limit_signals_t limits)
 {
     buf = axis_signals_tostring(buf, limits.min);
     *buf++ = ',';
@@ -2257,7 +2257,7 @@ static char *add_limits (char *buf, limit_signals_t limits)
     return buf;
 }
 
-status_code_t report_last_signals_event (sys_state_t state, char *args)
+FLASHMEM status_code_t report_last_signals_event (sys_state_t state, char *args)
 {
     char *append = &buf[12];
 
@@ -2273,7 +2273,7 @@ status_code_t report_last_signals_event (sys_state_t state, char *args)
     return Status_OK;
 }
 
-status_code_t report_current_limit_state (sys_state_t state, char *args)
+FLASHMEM status_code_t report_current_limit_state (sys_state_t state, char *args)
 {
     char *append = &buf[8];
 
@@ -2287,7 +2287,7 @@ status_code_t report_current_limit_state (sys_state_t state, char *args)
     return Status_OK;
 }
 
-status_code_t report_current_home_signal_state (sys_state_t state, char *args)
+FLASHMEM status_code_t report_current_home_signal_state (sys_state_t state, char *args)
 {
     char *append = &buf[7];
     home_signals_t home = hal.homing.get_state();
@@ -2307,7 +2307,7 @@ status_code_t report_current_home_signal_state (sys_state_t state, char *args)
 }
 
 // Prints spindle data (encoder pulse and index count, angular position).
-status_code_t report_spindle_data (sys_state_t state, char *args)
+FLASHMEM status_code_t report_spindle_data (sys_state_t state, char *args)
 {
     spindle_t *spindle = gc_spindle_get(-1);
 
@@ -2346,7 +2346,7 @@ typedef struct {
     pin_info_t *pins;
 } pin_data_t;
 
-static void report_pin_info (pin_info_t *pin)
+FLASHMEM static void report_pin_info (pin_info_t *pin)
 {
     hal.stream.write("[PIN:");
     if(*pin->port)
@@ -2361,7 +2361,7 @@ static void report_pin_info (pin_info_t *pin)
     hal.stream.write("]" ASCII_EOL);
 }
 
-static pin_info_t *get_pin_info (xbar_t *pin, pin_info_t *info)
+FLASHMEM static pin_info_t *get_pin_info (xbar_t *pin, pin_info_t *info)
 {
     info->function = pin->function;
     info->pin = pin->pin;
@@ -2375,29 +2375,29 @@ static pin_info_t *get_pin_info (xbar_t *pin, pin_info_t *info)
     return info;
 }
 
-static void count_pins (xbar_t *pin, void *data)
+FLASHMEM static void count_pins (xbar_t *pin, void *data)
 {
     ((pin_data_t *)data)->n_pins++;
 }
 
-static void get_pins (xbar_t *pin, void *data)
+FLASHMEM static void get_pins (xbar_t *pin, void *data)
 {
     get_pin_info(pin, &((pin_data_t *)data)->pins[((pin_data_t *)data)->idx++]);
 }
 
-static int cmp_pins (const void *a, const void *b)
+FLASHMEM static int cmp_pins (const void *a, const void *b)
 {
     return ((pin_info_t *)a)->sortkey - ((pin_info_t *)b)->sortkey;
 }
 
-static void report_pin (xbar_t *pin, void *data)
+FLASHMEM static void report_pin (xbar_t *pin, void *data)
 {
     pin_info_t info;
 
     report_pin_info(get_pin_info(pin, &info));
 }
 
-status_code_t report_pins (sys_state_t state, char *args)
+FLASHMEM status_code_t report_pins (sys_state_t state, char *args)
 {
     pin_data_t pin_data = {0};
 
@@ -2433,13 +2433,13 @@ typedef struct {
     pin_info_t data[2];
 } port_pins_t;
 
-static void get_uart_pins (xbar_t *pin, void *data)
+FLASHMEM static void get_uart_pins (xbar_t *pin, void *data)
 {
     if(pin->group == PinGroup_UART + ((port_pins_t *)data)->instance)
         get_pin_info(pin, &((port_pins_t *)data)->data[((port_pins_t *)data)->n_pins++]);
 }
 
-static bool report_port_info (const io_stream_properties_t *port, void *data)
+FLASHMEM static bool report_port_info (const io_stream_properties_t *port, void *data)
 {
     if(!stream_is_uart(port->type))
         return false;
@@ -2493,7 +2493,7 @@ static bool report_port_info (const io_stream_properties_t *port, void *data)
     return false;
 }
 
-bool get_ports (io_stream_properties_t const *port, void *data)
+FLASHMEM bool get_ports (io_stream_properties_t const *port, void *data)
 {
     if(stream_is_uart(port->type)) {
         ((port_data_t *)data)[((port_data_t *)data)->idx].port = port;
@@ -2503,7 +2503,7 @@ bool get_ports (io_stream_properties_t const *port, void *data)
     return false;
 }
 
-bool count_ports (io_stream_properties_t const *port, void *data)
+FLASHMEM bool count_ports (io_stream_properties_t const *port, void *data)
 {
     if(stream_is_uart(port->type))
         (*(uint32_t *)data)++;
@@ -2511,12 +2511,12 @@ bool count_ports (io_stream_properties_t const *port, void *data)
     return false;
 }
 
-static int cmp_ports (const void *a, const void *b)
+FLASHMEM static int cmp_ports (const void *a, const void *b)
 {
     return ((port_data_t *)a)->port->instance - ((port_data_t *)b)->port->instance;
 }
 
-status_code_t report_uart_ports (sys_state_t state, char *args)
+FLASHMEM status_code_t report_uart_ports (sys_state_t state, char *args)
 {
     uint32_t n_ports = 0;
     port_data_t *port_data;
@@ -2540,7 +2540,7 @@ status_code_t report_uart_ports (sys_state_t state, char *args)
     return Status_OK;
 }
 
-static char *irq_mode (pin_irq_mode_t mode)
+FLASHMEM static char *irq_mode (pin_irq_mode_t mode)
 {
     switch(mode) {
         case IRQ_Mode_Rising:
@@ -2566,7 +2566,7 @@ static char *irq_mode (pin_irq_mode_t mode)
     return "-";
 }
 
-static char *pull_mode (pull_mode_t mode)
+FLASHMEM static char *pull_mode (pull_mode_t mode)
 {
     switch(mode) {
         case PullMode_Up:
@@ -2582,7 +2582,7 @@ static char *pull_mode (pull_mode_t mode)
     return "-";
 }
 
-static bool print_aux_din (xbar_t *port, uint8_t pnum, void *data)
+FLASHMEM static bool print_aux_din (xbar_t *port, uint8_t pnum, void *data)
 {
     hal.stream.write("[PINSTATE:DIN|");
     hal.stream.write(port->description ? port->description : xbar_fn_to_pinname(port->function));
@@ -2605,7 +2605,7 @@ static bool print_aux_din (xbar_t *port, uint8_t pnum, void *data)
     return false;
 }
 
-static bool print_aux_dout (xbar_t *port, uint8_t pnum, void *data)
+FLASHMEM static bool print_aux_dout (xbar_t *port, uint8_t pnum, void *data)
 {
     hal.stream.write("[PINSTATE:DOUT|");
     hal.stream.write(port->description ? port->description : xbar_fn_to_pinname(port->function));
@@ -2626,7 +2626,7 @@ static bool print_aux_dout (xbar_t *port, uint8_t pnum, void *data)
     return false;
 }
 
-static bool print_aux_ain (xbar_t *port, uint8_t pnum, void *data)
+FLASHMEM static bool print_aux_ain (xbar_t *port, uint8_t pnum, void *data)
 {
     hal.stream.write("[PINSTATE:AIN|");
     hal.stream.write(port->description);
@@ -2641,7 +2641,7 @@ static bool print_aux_ain (xbar_t *port, uint8_t pnum, void *data)
     return false;
 }
 
-static bool print_aux_aout (xbar_t *port, uint8_t pnum, void *data)
+FLASHMEM static bool print_aux_aout (xbar_t *port, uint8_t pnum, void *data)
 {
     hal.stream.write("[PINSTATE:AOUT|");
     hal.stream.write(port->description);
@@ -2665,7 +2665,7 @@ static bool print_aux_aout (xbar_t *port, uint8_t pnum, void *data)
     return false;
 }
 
-status_code_t report_pin_states (sys_state_t state, char *args)
+FLASHMEM status_code_t report_pin_states (sys_state_t state, char *args)
 {
     ioports_enumerate(Port_Digital, Port_Input, (pin_cap_t){}, print_aux_din, NULL);
     ioports_enumerate(Port_Digital, Port_Output, (pin_cap_t){}, print_aux_dout, NULL);
@@ -2675,7 +2675,7 @@ status_code_t report_pin_states (sys_state_t state, char *args)
     return Status_OK;
 }
 
-static void print_uito2a (char *prefix, uint32_t v)
+FLASHMEM static void print_uito2a (char *prefix, uint32_t v)
 {
     hal.stream.write(prefix);
     if(v < 10)
@@ -2683,7 +2683,7 @@ static void print_uito2a (char *prefix, uint32_t v)
     hal.stream.write(uitoa(v));
 }
 
-status_code_t report_time (void)
+FLASHMEM status_code_t report_time (void)
 {
     bool ok = false;
 
@@ -2704,7 +2704,7 @@ status_code_t report_time (void)
     return ok ? Status_OK : Status_InvalidStatement;
 }
 
-static bool report_spindle (spindle_info_t *spindle, void *data)
+FLASHMEM static bool report_spindle (spindle_info_t *spindle, void *data)
 {
     if(data) {
         char *caps = buf;
@@ -2778,14 +2778,14 @@ typedef struct {
     spindle_info_t *spindles;
 } spindle_rdata_t;
 
-static bool get_spindles (spindle_info_t *spindle, void *data)
+FLASHMEM static bool get_spindles (spindle_info_t *spindle, void *data)
 {
     memcpy(&((spindle_rdata_t *)data)->spindles[((spindle_rdata_t *)data)->idx++], spindle, sizeof(spindle_info_t));
 
     return false;
 }
 
-static int cmp_spindles (const void *a, const void *b)
+FLASHMEM static int cmp_spindles (const void *a, const void *b)
 {
     uint32_t key_a = ((spindle_info_t *)a)->num == -1 ? ((((spindle_info_t *)a)->hal->type + 1) << 8) | ((spindle_info_t *)a)->id : ((spindle_info_t *)a)->num,
              key_b = ((spindle_info_t *)b)->num == -1 ? ((((spindle_info_t *)b)->hal->type + 1) << 8) | ((spindle_info_t *)b)->id : ((spindle_info_t *)b)->num;
@@ -2795,7 +2795,7 @@ static int cmp_spindles (const void *a, const void *b)
 
 #endif
 
-status_code_t report_spindles (bool machine_readable)
+FLASHMEM status_code_t report_spindles (bool machine_readable)
 {
 #if N_SPINDLE > 1
 
@@ -2825,7 +2825,7 @@ status_code_t report_spindles (bool machine_readable)
     return Status_OK;
 }
 
-status_code_t report_stepper_status (sys_state_t state, char *args)
+FLASHMEM status_code_t report_stepper_status (sys_state_t state, char *args)
 {
     if(hal.stepper.status) {
 
@@ -2858,7 +2858,7 @@ status_code_t report_stepper_status (sys_state_t state, char *args)
     return hal.stepper.status ? Status_OK : Status_InvalidStatement;
 }
 
-void report_pid_log (void)
+FLASHMEM void report_pid_log (void)
 {
 #ifdef PID_LOG
     uint_fast16_t idx = 0;
@@ -2885,7 +2885,7 @@ void report_pid_log (void)
 #endif
 }
 
-static const report_t report_fns = {
+PROGMEM static const report_t report_fns = {
     .init_message = report_init_message,
     .help_message = report_help_message,
     .status_message = report_status_message,
@@ -2894,7 +2894,7 @@ static const report_t report_fns = {
     .setting = report_setting
 };
 
-void report_init_fns (void)
+FLASHMEM void report_init_fns (void)
 {
     memcpy(&grbl.report, &report_fns, sizeof(report_t));
 
@@ -2902,7 +2902,7 @@ void report_init_fns (void)
         grbl.on_report_handlers_init();
 }
 
-report_tracking_flags_t report_get_rt_flags_all (void)
+FLASHMEM report_tracking_flags_t report_get_rt_flags_all (void)
 {
     report_tracking_flags_t report;
 

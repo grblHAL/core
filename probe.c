@@ -48,7 +48,7 @@ static void probe_irq_handler (uint8_t port, bool state)
 }
 
 // Toggle probe connected status.
-static void probe_connected_toggle (void)
+FLASHMEM static void probe_connected_toggle (void)
 {
     if(!probe_state.is_probing) {
         if((probe->flags.connected = probe_state.connected = !probe_state.connected)) {
@@ -65,7 +65,7 @@ static void probe_connected_toggle (void)
 // Sets up the probe pin invert mask to
 // appropriately set the pin logic according to setting for normal-high/normal-low operation
 // and the probing cycle modes for toward-workpiece/away-from-workpiece.
-static void probe_configure (bool is_probe_away, bool probing)
+FLASHMEM static void probe_configure (bool is_probe_away, bool probing)
 {
     bool invert = !!(settings.probe.value & probe->inverted_bit.value);
 
@@ -94,7 +94,7 @@ static void probe_configure (bool is_probe_away, bool probing)
     probe_state.is_probing = probing;
 }
 
-static bool probe_select (probe_id_t probe_id)
+FLASHMEM static bool probe_select (probe_id_t probe_id)
 {
     uint_fast8_t idx = 0;
     probe_t *selected_probe = NULL;
@@ -116,7 +116,7 @@ static bool probe_select (probe_id_t probe_id)
     return probe == selected_probe;
 }
 
-static probe_flags_t probe_get_caps (probe_id_t probe_id)
+FLASHMEM static probe_flags_t probe_get_caps (probe_id_t probe_id)
 {
     uint_fast8_t idx = 0;
     probe_t *probe = NULL;
@@ -129,7 +129,7 @@ static probe_flags_t probe_get_caps (probe_id_t probe_id)
     return probe ? probe->flags : (probe_flags_t){0};
 }
 
-static bool is_triggered (probe_id_t probe_id)
+FLASHMEM static bool is_triggered (probe_id_t probe_id)
 {
     uint_fast8_t idx = 0;
     probe_t *probe = NULL;
@@ -143,7 +143,7 @@ static bool is_triggered (probe_id_t probe_id)
 }
 
 // Returns the probe connected and triggered pin states.
-static probe_state_t get_state (void)
+FLASHMEM static probe_state_t get_state (void)
 {
     probe_state_t state = { .value = probe_state.value };
 
@@ -158,7 +158,7 @@ static probe_state_t get_state (void)
     return state;
 }
 
-bool probe_add (probe_id_t probe_id, uint8_t port, pin_irq_mode_t irq_mode, void *input, get_probe_input_ptr get_input)
+FLASHMEM bool probe_add (probe_id_t probe_id, uint8_t port, pin_irq_mode_t irq_mode, void *input, get_probe_input_ptr get_input)
 {
     static uint_fast8_t n_probes = 0;
 
@@ -212,7 +212,7 @@ bool probe_add (probe_id_t probe_id, uint8_t port, pin_irq_mode_t irq_mode, void
     return true;
 }
 
-void probe_connected_event (void *data)
+FLASHMEM void probe_connected_event (void *data)
 {
     if(hal.probe.connected_toggle) {
         if((uintptr_t)data == 2)

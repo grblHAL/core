@@ -474,7 +474,7 @@ static inline float dist1 (const float x1, const float y1, const float x2, const
  * power available on Arduino, I think it is not wise to implement it.
  */
 
-void mc_cubic_b_spline (float *target, plan_line_data_t *pl_data, float *position, float *first, float *second)
+FLASHMEM void mc_cubic_b_spline (float *target, plan_line_data_t *pl_data, float *position, float *first, float *second)
 {
     float bez_target[N_AXIS];
 
@@ -564,7 +564,7 @@ void mc_cubic_b_spline (float *target, plan_line_data_t *pl_data, float *positio
 
 // end Bezier splines
 
-bool mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_data, float *position, plane_t plane, uint32_t repeats, gc_canned_t *canned)
+FLASHMEM bool mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_data, float *position, plane_t plane, uint32_t repeats, gc_canned_t *canned)
 {
     pl_data->condition.rapid_motion = On; // Set rapid motion condition flag.
 
@@ -674,7 +674,7 @@ inline static float calc_thread_doc (uint_fast16_t pass, float cut_depth, float 
 
 // TODO: change pitch to follow any tapers
 
-void mc_thread (plan_line_data_t *pl_data, float *position, gc_thread_data *thread, bool feed_hold_disabled)
+FLASHMEM void mc_thread (plan_line_data_t *pl_data, float *position, gc_thread_data *thread, bool feed_hold_disabled)
 {
     uint_fast16_t pass = 1, passes = 0;
     float doc = thread->initial_depth, inv_degression = 1.0f / thread->depth_degression, thread_length;
@@ -795,7 +795,7 @@ void mc_thread (plan_line_data_t *pl_data, float *position, gc_thread_data *thre
 }
 
 // Sets up valid jog motion received from g-code parser, checks for soft-limits, and executes the jog.
-status_code_t mc_jog_execute (plan_line_data_t *pl_data, parser_block_t *gc_block, float *position)
+FLASHMEM status_code_t mc_jog_execute (plan_line_data_t *pl_data, parser_block_t *gc_block, float *position)
 {
     // Initialize planner data struct for jogging motions.
     // NOTE: Spindle and coolant are allowed to fully function with overrides during a jog.
@@ -827,7 +827,7 @@ status_code_t mc_jog_execute (plan_line_data_t *pl_data, parser_block_t *gc_bloc
 }
 
 // Execute dwell in seconds.
-void mc_dwell (float seconds)
+FLASHMEM void mc_dwell (float seconds)
 {
     if (state_get() != STATE_CHECK_MODE) {
         protocol_buffer_synchronize();
@@ -838,7 +838,7 @@ void mc_dwell (float seconds)
 // Perform homing cycle to locate and set machine zero. Only '$H' executes this command.
 // NOTE: There should be no motions in the buffer and grblHAL must be in an idle state before
 // executing the homing cycle. This prevents incorrect buffered plans after homing.
-status_code_t mc_homing_cycle (axes_signals_t cycle)
+FLASHMEM status_code_t mc_homing_cycle (axes_signals_t cycle)
 {
     bool home_all = cycle.mask == 0;
     status_code_t homed_status = Status_OK;
@@ -990,7 +990,7 @@ status_code_t mc_homing_cycle (axes_signals_t cycle)
 
 // Perform tool length probe cycle. Requires probe switch.
 // NOTE: Upon probe failure, the program will be stopped and placed into ALARM state.
-gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_flags_t parser_flags)
+FLASHMEM gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_flags_t parser_flags)
 {
     uint_fast8_t idx = N_AXIS;
 
@@ -1116,7 +1116,7 @@ gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_f
 
 // Plans and executes the single special motion case for parking. Independent of main planner buffer.
 // NOTE: Uses the always free planner ring buffer head to store motion parameters for execution.
-bool mc_parking_motion (float *parking_target, plan_line_data_t *pl_data)
+FLASHMEM bool mc_parking_motion (float *parking_target, plan_line_data_t *pl_data)
 {
     bool ok;
 
@@ -1134,7 +1134,7 @@ bool mc_parking_motion (float *parking_target, plan_line_data_t *pl_data)
     return ok;
 }
 
-void mc_override_ctrl_update (gc_override_flags_t override_state)
+FLASHMEM void mc_override_ctrl_update (gc_override_flags_t override_state)
 {
  // Finish all queued commands before altering override control state
     if(sys.override.control.value != override_state.value)

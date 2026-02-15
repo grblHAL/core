@@ -64,7 +64,7 @@ typedef struct {
 #define TOOL_ADDR(n) (NVS_ADDR_TOOL_TABLE + n * (sizeof(tool_data_t) + NVS_CRC_BYTES))
 #endif
 
-static const emap_t target[] = {
+PROGMEM static const emap_t target[] = {
     {NVS_ADDR_GLOBAL, NVS_GROUP_GLOBAL, 0},
 
     {PARAMETER_ADDR(0), NVS_GROUP_PARAMETERS, 0},
@@ -139,7 +139,7 @@ inline static void ram_put_byte (uint32_t offset, uint8_t new_value)
     nvsbuffer.addr[offset] = new_value;
 }
 
-static nvs_transfer_result_t memcpy_to_ram (uint32_t destination, uint8_t *source, uint32_t size, bool with_checksum)
+FLASHMEM static nvs_transfer_result_t memcpy_to_ram (uint32_t destination, uint8_t *source, uint32_t size, bool with_checksum)
 {
     if(hal.nvs.driver_area.address && destination > hal.nvs.driver_area.address + hal.nvs.driver_area.size)
         return physical_nvs.memcpy_to_nvs(destination, source, size, with_checksum);
@@ -206,7 +206,7 @@ static nvs_transfer_result_t memcpy_to_ram (uint32_t destination, uint8_t *sourc
     return NVS_TransferResult_OK;
 }
 
-static nvs_transfer_result_t memcpy_from_ram (uint8_t *destination, uint32_t source, uint32_t size, bool with_checksum)
+FLASHMEM static nvs_transfer_result_t memcpy_from_ram (uint8_t *destination, uint32_t source, uint32_t size, bool with_checksum)
 {
     if(hal.nvs.driver_area.address && source > hal.nvs.driver_area.address + hal.nvs.driver_area.size)
         return physical_nvs.memcpy_from_nvs(destination, source, size, with_checksum);
@@ -224,7 +224,7 @@ static nvs_transfer_result_t memcpy_from_ram (uint8_t *destination, uint32_t sou
 }
 
 // Try to allocate RAM from heap for buffer/emulation.
-bool nvs_buffer_alloc (void)
+FLASHMEM bool nvs_buffer_alloc (void)
 {
 	if(nvsbuffer.addr == NULL) {
 
@@ -238,7 +238,7 @@ bool nvs_buffer_alloc (void)
     return nvsbuffer.addr != NULL;
 }
 
-void nvs_buffer_free (void)
+FLASHMEM void nvs_buffer_free (void)
 {
     if(nvsbuffer.addr) {
         nvs_buffer_sync_physical();
@@ -248,7 +248,7 @@ void nvs_buffer_free (void)
 //
 // Switch over to RAM based copy.
 // Changes to RAM based copy will be written to physical storage when grblHAL is in IDLE state.
-bool nvs_buffer_init (void)
+FLASHMEM bool nvs_buffer_init (void)
 {
     hal.nvs.size = ((hal.nvs.size - 1) | 0x03) + 1; // Ensure NVS area ends on a word boundary
 
@@ -293,7 +293,7 @@ bool nvs_buffer_init (void)
 
 // Allocate NVS block for driver settings.
 // NOTE: allocation has to be done before content is copied from physical storage.
-nvs_address_t nvs_alloc (size_t size)
+FLASHMEM nvs_address_t nvs_alloc (size_t size)
 {
     static uint8_t *mem_address;
 
@@ -322,7 +322,7 @@ nvs_address_t nvs_alloc (size_t size)
 }
 
 // Write RAM changes to physical storage
-void nvs_buffer_sync_physical (void)
+FLASHMEM void nvs_buffer_sync_physical (void)
 {
     if(!settings_dirty.is_dirty)
         return;
@@ -397,7 +397,7 @@ void nvs_buffer_sync_physical (void)
     }
 }
 
-nvs_io_t *nvs_buffer_get_physical (void)
+FLASHMEM nvs_io_t *nvs_buffer_get_physical (void)
 {
     return hal.nvs.type == NVS_Emulated ? &physical_nvs : &hal.nvs;
 }
@@ -406,7 +406,7 @@ nvs_io_t *nvs_buffer_get_physical (void)
 
 #include "report.h"
 
-void nvs_memmap (void)
+FLASHMEM void nvs_memmap (void)
 {
     char buf[30];
 

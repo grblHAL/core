@@ -144,7 +144,7 @@ static bool dummy_irq_claim (irq_type_t irq, uint_fast8_t id, irq_callback_ptr c
     return false;
 }
 
-static void report_driver_error (void *data)
+FLASHMEM static void report_driver_error (void *data)
 {
     char msg[40];
 
@@ -196,12 +196,12 @@ ISR_CODE static home_signals_t ISR_FUNC(get_homing_status2)(void)
     return home;
 }
 
-static void output_welcome_message (void *data)
+FLASHMEM static void output_welcome_message (void *data)
 {
     grbl.report.init_message(hal.stream.write);
 }
 
-static void onLinestateChanged (serial_linestate_t state)
+FLASHMEM static void onLinestateChanged (serial_linestate_t state)
 {
     if(state.dtr) {
         task_delete(output_welcome_message, NULL);
@@ -212,7 +212,7 @@ static void onLinestateChanged (serial_linestate_t state)
         on_linestate_changed(state);
 }
 
-static void stepperEnable (axes_signals_t enable, bool hold)
+FLASHMEM static void stepperEnable (axes_signals_t enable, bool hold)
 {
     if(stepper_enable)
         stepper_enable(enable, hold);
@@ -220,7 +220,7 @@ static void stepperEnable (axes_signals_t enable, bool hold)
     sys.steppers_enabled = /*!hold &&*/ enable.bits == AXES_BITMASK;
 }
 
-static void print_pos_msg (void *data)
+FLASHMEM static void print_pos_msg (void *data)
 {
     hal.stream.write("grblHAL: power on self-test (POS) failed!" ASCII_EOL);
 
@@ -228,13 +228,13 @@ static void print_pos_msg (void *data)
     } while((on_booted = task_run(on_booted)));
 }
 
-static void onPosFailure (serial_linestate_t state)
+FLASHMEM static void onPosFailure (serial_linestate_t state)
 {
     if(state.dtr) // delay a bit to let the USB stack come up
         task_add_delayed(print_pos_msg, NULL, 50);
 }
 
-static bool onProbeToolsetter (tool_data_t *tool, coord_data_t *position, bool at_g59_3, bool on)
+FLASHMEM static bool onProbeToolsetter (tool_data_t *tool, coord_data_t *position, bool at_g59_3, bool on)
 {
     bool ok = false;
 
@@ -244,7 +244,7 @@ static bool onProbeToolsetter (tool_data_t *tool, coord_data_t *position, bool a
     return ok;
 }
 
-static void tool_changed (tool_data_t *tool)
+FLASHMEM static void tool_changed (tool_data_t *tool)
 {
     if(settings.flags.tool_persistent && tool->tool_id != settings.tool_id) {
         settings.tool_id = tool->tool_id;
@@ -252,7 +252,7 @@ static void tool_changed (tool_data_t *tool)
     }
 }
 
-static void settings_changed (settings_t *settings, settings_changed_flags_t changed)
+FLASHMEM static void settings_changed (settings_t *settings, settings_changed_flags_t changed)
 {
     hal_settings_changed(settings, changed);
 
@@ -260,14 +260,14 @@ static void settings_changed (settings_t *settings, settings_changed_flags_t cha
         grbl.on_settings_changed(settings, changed);
 }
 
-static atc_status_t atc_get_state (void)
+FLASHMEM static atc_status_t atc_get_state (void)
 {
     return hal.driver_cap.atc ? ATC_Online : ATC_None;
 }
 
 // main entry point
 
-int grbl_enter (void)
+FLASHMEM int grbl_enter (void)
 {
     assert(NVS_ADDR_PARAMETERS + N_CoordinateSystems * (sizeof(coord_data_t) + NVS_CRC_BYTES) < NVS_ADDR_STARTUP_BLOCK);
     assert(NVS_ADDR_STARTUP_BLOCK + N_STARTUP_LINE * (sizeof(stored_line_t) + NVS_CRC_BYTES) < NVS_ADDR_BUILD_INFO);
@@ -685,7 +685,7 @@ ISR_CODE bool ISR_FUNC(task_add_systick)(foreground_task_ptr fn, void *data)
     return task != NULL;
 }
 
-void task_delete_systick (foreground_task_ptr fn, void *data)
+FLASHMEM void task_delete_systick (foreground_task_ptr fn, void *data)
 {
     core_task_t *task, *prev = NULL;
 
@@ -776,7 +776,7 @@ ISR_CODE bool ISR_FUNC(task_run_on_startup)(foreground_task_ptr fn, void *data)
 }
 
 // for core use only, called once from protocol.c on cold start
-void task_execute_on_startup (void)
+FLASHMEM void task_execute_on_startup (void)
 {
     if(!sys.driver_started) {
 
@@ -817,7 +817,7 @@ void task_execute_on_startup (void)
     }
 }
 
-void task_raise_alarm (void *data)
+FLASHMEM void task_raise_alarm (void *data)
 {
     system_raise_alarm((alarm_code_t)data);
 }

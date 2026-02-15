@@ -223,7 +223,7 @@ extern void gc_output_message (char *message);
 
 
 // Callback from delay to deenergize steppers after movement, might been cancelled
-void st_deenergize (void *data)
+FLASHMEM void st_deenergize (void *data)
 {
     if(sys.steppers_deenergize) {
         hal.stepper.enable(settings.steppers.energize, true);
@@ -233,7 +233,7 @@ void st_deenergize (void *data)
 
 // Stepper state initialization. Cycle should only start if the st.cycle_start flag is
 // enabled. Startup init and limits call this function but shouldn't start the cycle.
-void st_wake_up (void)
+FLASHMEM void st_wake_up (void)
 {
     // Initialize stepper data to ensure first ISR call does not step and
     // cancel any pending steppers deenergize
@@ -302,7 +302,7 @@ typedef struct {
 static spindle_sync_t spindle_tracker;
 static on_settings_changed_ptr on_settings_changed = NULL;
 
-void st_spindle_sync_cfg (settings_t *settings, settings_changed_flags_t changed)
+FLASHMEM void st_spindle_sync_cfg (settings_t *settings, settings_changed_flags_t changed)
 {
     if(!on_settings_changed) {
         on_settings_changed = grbl.on_settings_changed;
@@ -722,7 +722,7 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
 //! \endcond
 
 // Reset and clear stepper subsystem variables
-void st_reset (void)
+FLASHMEM void st_reset (void)
 {
     if(hal.probe.configure)
         hal.probe.configure(false, false);
@@ -830,7 +830,7 @@ void st_update_plan_block_parameters (bool fast_hold)
 }
 
 // Changes the run state of the step segment buffer to execute the special parking motion.
-void st_parking_setup_buffer (void)
+FLASHMEM void st_parking_setup_buffer (void)
 {
     // Store step execution data of partially completed block, if necessary.
     if (prep.recalculate.hold_partial_block && !prep.recalculate.parking) {
@@ -848,7 +848,7 @@ void st_parking_setup_buffer (void)
 
 
 // Restores the step segment buffer to the normal run state after a parking motion.
-void st_parking_restore_buffer (void)
+FLASHMEM void st_parking_restore_buffer (void)
 {
     // Restore step execution data and flags of partially completed block, if necessary.
     if (prep.recalculate.hold_partial_block) {

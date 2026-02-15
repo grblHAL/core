@@ -27,7 +27,7 @@
 
 #if STEP_OUTMODE == GPIO_MAP
 
-static const uint32_t c_step_outmap[] = {
+PROGMEM static const uint32_t c_step_outmap[] = {
     0,
     X_STEP_BIT,
     Y_STEP_BIT,
@@ -302,7 +302,7 @@ static uint32_t step_outmap[sizeof(c_step_outmap) / sizeof(uint32_t)];
 
 #if DIRECTION_OUTMODE == GPIO_MAP
 
-static const uint32_t c_dir_outmap[] = {
+PROGMEM static const uint32_t c_dir_outmap[] = {
     0,
     X_DIRECTION_BIT,
     Y_DIRECTION_BIT,

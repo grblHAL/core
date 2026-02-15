@@ -82,7 +82,7 @@ typedef enum {
 \param rhs pointer to the right hand side operand.
 \returns #Status_OK enum value if processed without error, appropriate \ref status_code_t enum value if not.
 */
-static status_code_t execute_binary1 (float *lhs, ngc_binary_op_t operation, float *rhs)
+FLASHMEM static status_code_t execute_binary1 (float *lhs, ngc_binary_op_t operation, float *rhs)
 {
     status_code_t status = Status_OK;
 
@@ -130,7 +130,7 @@ Any non-zero input value is taken as meaning true, and only 0.0 means false.
 \param rhs pointer to the right hand side operand.
 \returns #Status_OK enum value if processed without error, appropriate \ref status_code_t enum value if not.
 */
-static status_code_t execute_binary2 (float *lhs, ngc_binary_op_t operation, float *rhs)
+FLASHMEM static status_code_t execute_binary2 (float *lhs, ngc_binary_op_t operation, float *rhs)
 {
     switch(operation) {
 
@@ -202,7 +202,7 @@ This just calls either execute_binary1 or execute_binary2.
 \param rhs pointer to the right hand side operand.
 \returns #Status_OK enum value if processed without error, appropriate \ref status_code_t enum value if not.
 */
-static status_code_t execute_binary (float *lhs, ngc_binary_op_t operation, float *rhs)
+FLASHMEM static status_code_t execute_binary (float *lhs, ngc_binary_op_t operation, float *rhs)
 {
     if (operation <= NGCBinaryOp_Binary2)
         return execute_binary1(lhs, operation, rhs);
@@ -218,7 +218,7 @@ All angle measures in the input or output are in degrees.
 \param operation \ref ngc_binary_op_t enum value.
 \returns #Status_OK enum value if processed without error, appropriate \ref status_code_t enum value if not.
 */
-static status_code_t execute_unary (float *operand, ngc_unary_op_t operation)
+FLASHMEM static status_code_t execute_unary (float *operand, ngc_unary_op_t operation)
 {
     status_code_t status = Status_OK;
 
@@ -301,7 +301,7 @@ static status_code_t execute_unary (float *operand, ngc_unary_op_t operation)
 \param operator \ref ngc_binary_op_t enum value.
 \returns precedence level.
 */
-static uint_fast8_t precedence (ngc_binary_op_t operator)
+FLASHMEM static uint_fast8_t precedence (ngc_binary_op_t operator)
 {
     switch(operator)
     {
@@ -350,7 +350,7 @@ value of operation is set to the symbolic value for that operation.
 \param operation pointer to \ref ngc_binary_op_t enum value.
 \returns #Status_OK enum value if processed without error, appropriate \ref status_code_t enum value if not.
 */
-static status_code_t read_operation (char *line, uint_fast8_t *pos, ngc_binary_op_t *operation)
+FLASHMEM static status_code_t read_operation (char *line, uint_fast8_t *pos, ngc_binary_op_t *operation)
 {
     char c = line[*pos];
     status_code_t status = Status_OK;
@@ -475,7 +475,7 @@ value of operation is set to the symbolic value for that operation.
 \param operation pointer to \ref ngc_unary_op_t enum value.
 \returns #Status_OK enum value if processed without error, appropriate \ref status_code_t enum value if not.
 */
-static status_code_t read_operation_unary (char *line, uint_fast8_t *pos, ngc_unary_op_t *operation)
+FLASHMEM static status_code_t read_operation_unary (char *line, uint_fast8_t *pos, ngc_unary_op_t *operation)
 {
     char c = line[*pos];
     status_code_t status = Status_OK;
@@ -589,7 +589,7 @@ starting at the index given by the pos offset.
 \param buffer pointer to a character buffer for the name.
 \returns #Status_OK enum value if processed without error, appropriate \ref status_code_t enum value if not.
 */
-status_code_t ngc_read_name (char *line, uint_fast8_t *pos, char *buffer)
+FLASHMEM status_code_t ngc_read_name (char *line, uint_fast8_t *pos, char *buffer)
 {
     char *s;
     uint_fast8_t len = 0;
@@ -634,7 +634,7 @@ sequentially, the value of #2 would be 10 after the line was executed.
 \param value pointer to float where result is to be stored.
 \returns #Status_OK enum value if processed without error, appropriate \ref status_code_t enum value if not.
 */
-status_code_t ngc_read_parameter (char *line, uint_fast8_t *pos, float *value, bool check)
+FLASHMEM status_code_t ngc_read_parameter (char *line, uint_fast8_t *pos, float *value, bool check)
 {
     int32_t param;
     status_code_t status = Status_BadNumberFormat;
@@ -672,7 +672,7 @@ of the ATAN operation applied to the two arguments.
 \param value pointer to float where result is to be stored.
 \returns #Status_OK enum value if processed without error, appropriate \ref status_code_t enum value if not.
 */
-static status_code_t read_atan (char *line, uint_fast8_t *pos, float *value)
+FLASHMEM static status_code_t read_atan (char *line, uint_fast8_t *pos, float *value)
 {
     float argument2;
 
@@ -701,7 +701,7 @@ handled specially because it is followed by two arguments.
 \param value pointer to float where result is to be stored.
 \returns #Status_OK enum value if processed without error, appropriate \ref status_code_t enum value if not.
 */
-static status_code_t read_unary (char *line, uint_fast8_t *pos, float *value)
+FLASHMEM static status_code_t read_unary (char *line, uint_fast8_t *pos, float *value)
 {
     ngc_unary_op_t operation;
     status_code_t status;
@@ -793,7 +793,7 @@ other readers, depending upon the first character.
 \param value pointer to float where result is to be stored.
 \returns #Status_OK enum value if processed without error, appropriate \ref status_code_t enum value if not.
 */
-status_code_t ngc_read_real_value (char *line, uint_fast8_t *pos, float *value)
+FLASHMEM status_code_t ngc_read_real_value (char *line, uint_fast8_t *pos, float *value)
 {
     char c = line[*pos], c1;
 
@@ -839,7 +839,7 @@ an error will be reported (since a sign is not a digit).
 \param value pointer to integer where result is to be stored.
 \returns #Status_OK enum value if processed without error, appropriate \ref status_code_t enum value if not.
 */
-status_code_t ngc_read_integer_unsigned (char *line, uint_fast8_t *pos, uint32_t *value)
+FLASHMEM status_code_t ngc_read_integer_unsigned (char *line, uint_fast8_t *pos, uint32_t *value)
 {
     return line[*pos] == '+' ? Status_GcodeCommandValueNotInteger : read_uint(line, pos, value);
 }
@@ -858,7 +858,7 @@ close to an integer, then returning the integer it is close to.
 \param value pointer to integer where result is to be stored.
 \returns #Status_OK enum value if processed without error, appropriate \ref status_code_t enum value if not.
 */
-status_code_t ngc_read_integer_value (char *line, uint_fast8_t *pos, int32_t *value)
+FLASHMEM status_code_t ngc_read_integer_value (char *line, uint_fast8_t *pos, int32_t *value)
 {
   float fvalue;
   status_code_t status;
@@ -881,7 +881,7 @@ status_code_t ngc_read_integer_value (char *line, uint_fast8_t *pos, int32_t *va
 \param value pointer to float where result is to be stored.
 \returns #Status_OK enum value if evaluated without error, appropriate \ref status_code_t enum value if not.
 */
-status_code_t ngc_eval_expression (char *line, uint_fast8_t *pos, float *value)
+FLASHMEM status_code_t ngc_eval_expression (char *line, uint_fast8_t *pos, float *value)
 {
     float values[MAX_STACK];
     ngc_binary_op_t operators[MAX_STACK];
@@ -932,7 +932,7 @@ status_code_t ngc_eval_expression (char *line, uint_fast8_t *pos, float *value)
 
 /**/
 
-static int8_t get_format (char c, int8_t pos, uint8_t *decimals)
+FLASHMEM static int8_t get_format (char c, int8_t pos, uint8_t *decimals)
 {
     static uint8_t d;
 
@@ -991,7 +991,7 @@ _NOTE:_ The returned string must be freed by the caller.
 \param line pointer to the original string.
 \returns pointer to the resulting string on success, NULL on failure.
 */
-char *ngc_substitute_parameters (char *line)
+FLASHMEM char *ngc_substitute_parameters (char *line)
 {
     if(line == NULL)
         return NULL;
@@ -1072,7 +1072,7 @@ _NOTE:_ The returned string must be freed by the caller.
 \param comment pointer to the comment string.
 \returns pointer to the resulting string on success, NULL on failure.
 */
-char *ngc_process_comment (char *comment)
+FLASHMEM char *ngc_process_comment (char *comment)
 {
     if(comment == NULL)
         return NULL;
