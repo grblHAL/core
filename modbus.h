@@ -28,6 +28,7 @@
 #include <stdbool.h>
 
 #include "errors.h"
+#include "stream.h"
 
 #ifndef MODBUS_MAX_ADU_SIZE
 #define MODBUS_MAX_ADU_SIZE 12
@@ -147,6 +148,18 @@ typedef struct {
     modbus_is_busy_ptr is_busy;
 } modbus_api_t;
 
+typedef struct {
+    set_baud_rate_ptr set_baud_rate;
+    set_format_ptr set_format;                          //!< Optional handler for setting the stream format.
+    stream_set_direction_ptr set_direction;             //!< NULL if auto direction
+    get_stream_buffer_count_ptr get_tx_buffer_count;
+    get_stream_buffer_count_ptr get_rx_buffer_count;
+    stream_write_n_ptr write;
+    stream_read_ptr read;
+    flush_stream_buffer_ptr flush_tx_buffer;
+    flush_stream_buffer_ptr flush_rx_buffer;
+} modbus_rtu_stream_t;
+
 modbus_cap_t modbus_isup (void);
 bool modbus_isbusy (void);
 bool modbus_enabled (void);
@@ -157,6 +170,7 @@ void modbus_null_exception_handler (uint8_t code, void *context);
 uint16_t modbus_read_u16 (uint8_t *p);
 void modbus_write_u16 (uint8_t *p, uint16_t value);
 bool modbus_register_api (const modbus_api_t *api);
+modbus_rtu_stream_t *modbus_get_rtu_stream (void);
 
 // Experimental high level API
 

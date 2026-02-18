@@ -1,5 +1,27 @@
 ## grblHAL changelog
 
+<a name="20260218">Build 20260218
+
+Core:
+
+* Changed `$pinstates` command output, now reports pin number instead of pin id.
+
+* For developers: added API call that returns Modbus stream handlers.
+
+Drivers:
+
+* iMXRT1062: fixed copy paste error.
+
+* RP4040: removed limit on highest expander pin number that can be used for basic functions.
+
+* STM32F1xx: removed duplicate pin definition for safety door input in CNC3040 map.
+
+Plugins:
+
+* Templates, Modbus command: added commands `$MODBUSDBG` and `$MODBUSDBG=0` that can be used to enable/disable `[MSG:...]` reports containing sent and received data. 
+
+---
+
 <a name="20260215">Build 20260215
 
 Core:
@@ -19,7 +41,7 @@ Plugins:
 
 * SD card: marked some non-critical functions with `FLASHMEM` to save RAM for the iMXRT1062 driver.
 
-* Templates, Modbus cmd: new plugin that adds the system command `$MODBUSCMD` that can be used to interact with Modbus devices. 
+* Templates, Modbus command: new plugin that adds the system command `$MODBUSCMD` that can be used to interact with Modbus devices. 
 
 ---
 

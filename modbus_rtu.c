@@ -49,18 +49,6 @@ typedef enum {
     ModBus_Retry
 } modbus_state_t;
 
-typedef struct {
-    set_baud_rate_ptr set_baud_rate;
-    set_format_ptr set_format;                          //!< Optional handler for setting the stream format.
-    stream_set_direction_ptr set_direction;             //!< NULL if auto direction
-    get_stream_buffer_count_ptr get_tx_buffer_count;
-    get_stream_buffer_count_ptr get_rx_buffer_count;
-    stream_write_n_ptr write;
-    stream_read_ptr read;
-    flush_stream_buffer_ptr flush_tx_buffer;
-    flush_stream_buffer_ptr flush_rx_buffer;
-} modbus_stream_t;
-
 typedef struct queue_entry {
     bool async;
     modbus_message_t msg;
@@ -79,7 +67,7 @@ PROGMEM static const modbus_silence_timeout_t dflt_timeout =
     .b115200 = 2
 };
 
-static modbus_stream_t stream;
+static modbus_rtu_stream_t stream;
 static int8_t stream_instance = -1;
 static uint32_t rx_timeout = 0, silence_until = 0, silence_timeout;
 static modbus_exception_t exception_code = ModBus_NoException;
@@ -554,6 +542,11 @@ FLASHMEM static status_code_t report_stats (sys_state_t state, char *args)
         stats.tx_count = stats.retries = stats.timeouts = stats.rx_exceptions = stats.crc_errors = 0;
 
     return Status_OK;
+}
+
+modbus_rtu_stream_t *modbus_get_rtu_stream (void)
+{
+    return stream.read == NULL ? NULL : &stream;
 }
 
 FLASHMEM void modbus_rtu_init (int8_t instance, int8_t dir_aux)

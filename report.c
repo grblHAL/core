@@ -2587,7 +2587,7 @@ FLASHMEM static bool print_aux_din (xbar_t *port, uint8_t pnum, void *data)
     hal.stream.write("[PINSTATE:DIN|");
     hal.stream.write(port->description ? port->description : xbar_fn_to_pinname(port->function));
     hal.stream.write("|");
-    hal.stream.write(uitoa(port->id));
+    hal.stream.write(uitoa(port->pin));
     hal.stream.write("|");
     hal.stream.write(port->mode.inverted ? "I" : "N");
     hal.stream.write(pull_mode((pull_mode_t)port->mode.pull_mode));
@@ -2610,7 +2610,7 @@ FLASHMEM static bool print_aux_dout (xbar_t *port, uint8_t pnum, void *data)
     hal.stream.write("[PINSTATE:DOUT|");
     hal.stream.write(port->description ? port->description : xbar_fn_to_pinname(port->function));
     hal.stream.write("|");
-    hal.stream.write(uitoa(port->id));
+    hal.stream.write(uitoa(port->pin));
     hal.stream.write("|");
     hal.stream.write(port->mode.inverted ? "I" : "N");
 //                hal.stream.write(port->mode.pwm ? "P" : (port->mode.servo_pwm ? "S" : "N"));
@@ -2631,7 +2631,7 @@ FLASHMEM static bool print_aux_ain (xbar_t *port, uint8_t pnum, void *data)
     hal.stream.write("[PINSTATE:AIN|");
     hal.stream.write(port->description);
     hal.stream.write("|");
-    hal.stream.write(uitoa(port->id));
+    hal.stream.write(uitoa(port->pin));
     hal.stream.write("|||");
     hal.stream.write(port->get_value ? uitoa((uint32_t)port->get_value(port)) : "?");
     hal.stream.write("|");
@@ -2646,7 +2646,7 @@ FLASHMEM static bool print_aux_aout (xbar_t *port, uint8_t pnum, void *data)
     hal.stream.write("[PINSTATE:AOUT|");
     hal.stream.write(port->description);
     hal.stream.write("|");
-    hal.stream.write(uitoa(port->id));
+    hal.stream.write(uitoa(port->pin));
     hal.stream.write("|");
     hal.stream.write(port->mode.pwm ? "P" : (port->mode.servo_pwm ? "S" : "N"));
     hal.stream.write("|");
