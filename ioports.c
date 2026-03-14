@@ -32,7 +32,9 @@
 #include "hal.h"
 #include "settings.h"
 
+#ifndef MAX_PORTS
 #define MAX_PORTS (Output_AuxMax - Output_Aux0 + 1)
+#endif
 
 typedef enum {
     Port_AnalogIn = 0,
@@ -93,11 +95,11 @@ static io_ports_private_t ports_cfg[] = {
     },
     {
         .type = Port_DigitalIn, .count = -1, .free = -1, .min_fn = Input_Aux0, .max_fn = Input_AuxMax,
-        .n_max = (Input_AuxMax - Input_Aux0 + 1), .last_claimed = (Input_AuxMax - Input_Aux0)
+        .n_max = MAX_PORTS, .last_claimed = (MAX_PORTS - 1)
     },
     {
         .type = Port_DigitalOut, .count = -1, .free = -1, .min_fn = Output_Aux0, .max_fn = Output_AuxMax,
-        .n_max = (Output_AuxMax - Output_Aux0 + 1), .last_claimed = (Output_AuxMax - Output_Aux0)
+        .n_max = MAX_PORTS, .last_claimed = (MAX_PORTS - 1)
     }
 };
 
