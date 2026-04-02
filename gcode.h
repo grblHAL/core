@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2026 Terje Io
+  Copyright (c) 2017-2025 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -28,7 +28,6 @@
 #include "coolant_control.h"
 #include "spindle_control.h"
 #include "errors.h"
-#include "vfs.h"
 
 #define MAX_OFFSET_ENTRIES 4 // must be a power of 2
 
@@ -51,12 +50,15 @@ Do not alter values!
 typedef enum {
     NonModal_NoAction = 0,                  //!< 0 - Default, must be zero
     NonModal_Dwell = 4,                     //!< 4 - G4
-    NonModal_Settings = 10,                 //!< 10 - G10
+    NonModal_SetCoordinateData = 10,        //!< 10 - G10
     NonModal_GoHome_0 = 28,                 //!< 28 - G28
     NonModal_SetHome_0 = 38,                //!< 38 - G28.1
     NonModal_GoHome_1 = 30,                 //!< 30 - G30
     NonModal_SetHome_1 = 40,                //!< 40 - G30.1
     NonModal_AbsoluteOverride = 53,         //!< 53 - G53
+    NonModal_MacroCall = 65,                //!< 65 - G65
+    Modal_MacroCall = 66,                   //!< 66 - G66
+    Modal_MacroEnd = 67,                    //!< 67 - G67
     NonModal_SetCoordinateOffset = 92,      //!< 92 - G92
     NonModal_ResetCoordinateOffset = 102,   //!< 102 - G92.1
     NonModal_ClearCoordinateOffset = 112,   //!< 112 - G92.2
@@ -64,23 +66,10 @@ typedef enum {
     NonModal_RestoreCoordinateOffset = 122, //!< 122 - G92.3
     NonModal_SetAccelerationProfile = 187   //!< 187 - G187
  #else
-    NonModal_RestoreCoordinateOffset = 122  //!< 122 - G92.3
+    NonModal_RestoreCoordinateOffset = 122 //!< 122 - G92.3
  #endif
 } non_modal_t;
 
-typedef enum {
-    ToolAction_None = 0,                    //!< 0 - Default, must be zero
-    ToolAction_Change = 6,                  //!< 6 - M6
-    ToolAction_Set = 61,                    //!< 61 - M61
-} tool_action_t;
-
-typedef enum {
-    MacroCall_End = 0,                      //!< 0 - Default, must be zero (G67)
-    MacroCall_NonModal = 65,                //!< 65 - G65
-    MacroCall_Modal = 66,                   //!< 66 - G66
-    MacroCall_Modal1 = 166,                 //!< 166 - G66.1
-    MacroCall_NonModal98 = 98,              //!< 98 - M98
-} macro_call_t;
 
 typedef enum {
     ModalState_NoAction = 0,                //!< 0 - Default, must be zero
@@ -144,11 +133,7 @@ typedef enum {
 } feed_mode_t;
 
 // Modal Group G7: Cutter radius compensation mode
-typedef enum {
-    CComp_Off = 0, //!< 0 - G40 - Default, must be zero
-    CComp_Left,    //!< 1 - G41, G41.1
-    CComp_Right    //!< 2 - G42, G42.1
-} ccomp_mode_t;
+//#define CUTTER_COMP_DISABLE 0 // G40 - Default, must be zero
 
 /*! Modal Group G8: Tool length offset
 
@@ -339,11 +324,20 @@ typedef enum {
   #endif
 } gc_probe_t;
 
+#if CUTTER_COMP_ENABLE
+// Modal Group G7: Cutter radius compensation mode
+typedef enum {
+    CComp_Off = 0, //!< 0 - G40 - Default, must be zero
+    CComp_Left,    //!< 1 - G41, G41.1
+    CComp_Right    //!< 2 - G42, G42.1
+} ccomp_mode_t;
+
 typedef struct {
     ccomp_mode_t side;
     bool first_move;
     float radius;
 } gc_ccomp_t;
+#endif
 
 //! Parser flags for special cases.
 typedef union {
@@ -508,7 +502,9 @@ typedef struct {
     bool diameter_mode;                  //!< {G7,G8} Lathe diameter mode.
     //< uint8_t distance_arc;            //!< {G91.1} NOTE: Don't track. Only default supported.
     plane_select_t plane_select;         //!< {G17,G18,G19}
-    //< gc_ccomp_t cutter_comp;          //!< {G40,G41,G41.1,G42,G42.1} NOTE: Don't track. Only default (G40) supported.
+#if CUTTER_COMP_ENABLE
+    gc_ccomp_t cutter_comp;              //!< {G40,G41,G42}
+#endif
     tool_offset_mode_t tool_offset_mode; //!< {G43,G43.1,G49}
     coord_system_t g5x_offset;           //!< {G54,G55,G56,G57,G58,G59,G59.1,G59.2,G59.3}
 #if ENABLE_PATH_BLENDING
@@ -611,7 +607,6 @@ typedef struct {
 
 typedef struct g66_arguments
 {
-    macro_call_t call;
     uint32_t call_level;
     gc_values_t values;
     parameter_words_t words;
@@ -636,7 +631,9 @@ typedef struct {
 #endif
     uint32_t line_number;           //!< Last line number sent
     tool_id_t tool_pending;         //!< Tool to be selected on next M6
-    tool_id_t g43_pending;          //!< Tool offset from tool in tool table to be applied on M6 completed, set when G43 is in block with M6
+#if NGC_EXPRESSIONS_ENABLE
+    uint32_t g43_pending;           //!< Tool offset to be selected on next M6, for macro ATC
+#endif
     bool file_run;                  //!< Tracks % command
     bool file_stream;               //!< Tracks streaming from file
     bool is_laser_ppi_mode;
@@ -671,7 +668,6 @@ It will also be passed to mc_jog_execute() and any user M-code validation and ex
  */
 typedef struct {
     non_modal_t non_modal_command;      //!< Non modal command
-    tool_action_t tool_action;          //!< Non modal tool change
     override_mode_t override_command;   //!< Override command TODO: add to non_modal above?
     user_mcode_t user_mcode;            //!< Set > 0 if a user M-code is found.
     bool user_mcode_sync;               //!< Set to \a true by M-code validation handler if M-code is to be executed after synchronization.
@@ -683,7 +679,6 @@ typedef struct {
     uint32_t arc_turns;                 //
     parameter_words_t g65_words;        //!< Parameter words to pass to G65 macro.
 #if NGC_PARAMETERS_ENABLE
-    macro_call_t macro_call;
     modal_state_action_t state_action;  //!< M70-M73 modal state action
 #endif
 #if N_AXIS > 3
@@ -763,7 +758,6 @@ void gc_coolant (coolant_state_t state);
 void gc_set_tool_offset (tool_offset_mode_t mode, uint_fast8_t idx, int32_t offset);
 plane_t *gc_get_plane_data (plane_t *plane, plane_select_t select);
 axes_signals_t gc_claim_axis_words (parser_block_t *gc_block, axes_signals_t validate);
-size_t gc_macro_get_pos (macro_id_t id, vfs_file_t *file);
 
 #if NGC_PARAMETERS_ENABLE
 parameter_words_t gc_get_g65_arguments (void);
