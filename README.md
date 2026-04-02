@@ -64,7 +64,7 @@ This is a port/rewrite of [grbl 1.1f](https://github.com/gnea/grbl) and should b
   - Arc IJK Distance Modes: G91.1
   - Plane Select Modes: G17, G18, G19
   - Tool Length Offset Modes: G43*, G43.1, G43.2*, G49
-  - Cutter Compensation Modes: G40
+  - Cutter Compensation Modes: G41, G42, G40
   - Coordinate System Modes: G54, G55, G56, G57, G58, G59, G59.1, G59.2, G59.3
   - Control Modes: G61
   - Program Flow: M0, M1, M2, M30, M60
