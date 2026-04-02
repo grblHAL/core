@@ -287,6 +287,14 @@ from the current location.
 #define TOOL_LENGTH_OFFSET_AXIS -1 // Default is all axes.
 #endif
 
+/*! \def CUTTER_COMP_ENABLE
+\brief Enables cutter compensation feature.
+*/
+#if !defined CUTTER_COMP_ENABLE || defined __DOXYGEN__
+#define CUTTER_COMP_ENABLE On  // Default disabled. Set to \ref On or 1 to enable.
+#endif
+
+
 /*! \def MINIMUM_JUNCTION_SPEED
 \brief Minimum planner junction speed.
 Sets the default minimum junction speed the planner plans to at every buffer block junction,
