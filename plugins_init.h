@@ -186,6 +186,11 @@
     encoder_init();
 #endif
 
+#if ADD_TO_RT_REPORT_ENABLE
+    extern void add_to_rt_report_init (void);
+    add_to_rt_report_init();
+#endif
+
     extern void my_plugin_init (void);
     my_plugin_init();
 

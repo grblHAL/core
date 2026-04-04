@@ -145,13 +145,12 @@ typedef enum
     cc_status_InvalidMove = 102,
     cc_status_MoveTooShort = 103,
     cc_status_ArcLtToolRad = 104,
-    cc_status_FlippedArc = 105,
-    cc_status_CompInCrossing = 106,
-    cc_status_CompOutCrossing = 107,
-    cc_status_UnresolvedGap = 108,
-    cc_status_InputBufferOverflow = 109,
-    cc_status_OutputBufferOverflow = 110,
-    cc_status_GlobalSelfIntersection = 111
+    cc_status_CompInCrossing = 105,
+    cc_status_CompOutCrossing = 106,
+    cc_status_UnresolvedGap = 107,
+    cc_status_InputBufferOverflow = 108,
+    cc_status_OutputBufferOverflow = 109,
+    cc_status_GlobalSelfIntersection = 110
 } cc_status_code_t;
 
 typedef enum {
