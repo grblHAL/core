@@ -300,6 +300,15 @@ should not be much greater than zero or to the minimum value necessary for the m
 #define MINIMUM_JUNCTION_SPEED 0.0f // (mm/min)
 #endif
 
+
+/*! \def CUTTER_COMP_ENABLE
+\brief Enables cutter compensation feature.
+*/
+#if !defined CUTTER_COMP_ENABLE || defined __DOXYGEN__
+#define CUTTER_COMP_ENABLE On  // Default disabled. Set to \ref On or 1 to enable.
+#endif
+
+
 /*! \def MINIMUM_FEED_RATE
 \brief
 Sets the minimum feed rate the planner will allow. Any value below it will be set to this minimum
@@ -519,7 +528,7 @@ by a driver or a plugin.
 #endif
 
 #if !defined ENABLE_BACKLASH_COMPENSATION || defined __DOXYGEN__
-#define ENABLE_BACKLASH_COMPENSATION Off
+#define ENABLE_BACKLASH_COMPENSATION On
 #endif
 
 #if COMPATIBILITY_LEVEL == 0 || defined __DOXYGEN__
@@ -528,7 +537,7 @@ by a driver or a plugin.
 Number of tools in tool table, edit to enable (max. 32 allowed)
 */
 #if !defined N_TOOLS || defined __DOXYGEN__
-#define N_TOOLS 0
+#define N_TOOLS 8
 #endif
 #endif
 
@@ -743,7 +752,7 @@ If set to \ref Off or 0 the `|DTG:` distance-to-go element is not included in th
 \internal Bit 13 in settings.status_report.
 */
 #if !defined DEFAULT_REPORT_DISTANCE_TO_GO || defined __DOXYGEN__
-#define DEFAULT_REPORT_DISTANCE_TO_GO Off // Default off. Set to \ref On or 1 to enable.
+#define DEFAULT_REPORT_DISTANCE_TO_GO On // Default off. Set to \ref On or 1 to enable.
 #endif
 
 ///@}
@@ -772,7 +781,7 @@ with 4 digits of precision.
 */
 ///@{
 #if !defined DEFAULT_REPORT_INCHES || defined __DOXYGEN__
-#define DEFAULT_REPORT_INCHES Off
+#define DEFAULT_REPORT_INCHES On
 #endif
 ///@}
 

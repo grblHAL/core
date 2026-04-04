@@ -34,6 +34,10 @@
 #include "ngc_params.h"
 #endif
 
+#if CUTTER_COMP_ENABLE  
+#include "cutter_comp_grblhal.h"
+#endif
+
 #if NGC_EXPRESSIONS_ENABLE
 #include "ngc_expr.h"
 #include "ngc_flowctrl.h"
@@ -531,7 +535,11 @@ FLASHMEM static modal_restore_actions_t *get_state_restore_commands (gc_modal_t 
         if((actions.command.G6 = modal->units_imperial != snapshot->modal.units_imperial))
             modal->units_imperial = snapshot->modal.units_imperial;
 
-        // G7 not supported: G40,G41,G41.1,G42,G42.1
+        // G7: G40,G41,G41.1,G42,G42.1
+#if CUTTER_COMP_ENABLE          
+        if((actions.command.G7 = modal->cutter_comp.side != snapshot->modal.cutter_comp.side))
+             modal->cutter_comp = snapshot->modal.cutter_comp;
+ #endif
 
         // G43,G43.1,G49
         if((actions.command.G8 = modal->tool_offset_mode != snapshot->modal.tool_offset_mode))
@@ -793,6 +801,9 @@ FLASHMEM void gc_init (bool stop)
 #endif
 #if NGC_PARAMETERS_ENABLE
     ngc_params_init();
+#endif
+#if CUTTER_COMP_ENABLE
+    cc_api_init(0.0f, gc_state.modal.units_imperial ? CC_UNITS_INCH : CC_UNITS_MM, cc_emit_via_mc, cc_message); // Reset cutter comp engine state on init/stop
 #endif
 #if ENABLE_ACCELERATION_PROFILES
     gc_state.modal.acceleration_factor = gc_get_accel_factor(0); // Initialize machine with default
@@ -1563,11 +1574,18 @@ status_code_t gc_execute_block (char *block)
                         gc_block.modal.units_imperial = int_value == 20;
                         break;
 
+ #if CUTTER_COMP_ENABLE 
+                    case 40: case 41: case 42:                     
+                        word_bit.modal_group.G7 = On;
+                        gc_block.modal.cutter_comp.side = int_value - 40;
+#else
                     case 40:
                         word_bit.modal_group.G7 = On;
                         // NOTE: Not required since cutter radius compensation is always disabled. Only here
                         // to support G40 commands that often appear in g-code program headers to setup defaults.
                         // gc_block.modal.cutter_comp = CUTTER_COMP_DISABLE; // G40
+                        
+#endif                        
                         break;
 
                     case 43: case 49:
@@ -2731,7 +2749,64 @@ status_code_t gc_execute_block (char *block)
     // [G40 Errors]: G2/3 arc is programmed after a G40. The linear move after disabling is less than tool diameter.
     //   NOTE: Since cutter radius compensation is never enabled, these G40 errors don't apply. grblHAL supports G40
     //   only for the purpose to not error when G40 is sent with a g-code program header to setup the default modes.
+#if CUTTER_COMP_ENABLE                
+    // [13. Cutter radius compensation ]: G41/42 SUPPORTED XY ONLY.
 
+    // Was on but now off, NO motion!
+    if(!axis_words.mask && gc_state.modal.cutter_comp.side != CComp_Off && gc_block.modal.cutter_comp.side == CComp_Off) {
+        cc_api_set_comp(CComp_Off);
+        cc_api_process_move(0);
+        report_message("CC_Off",Message_Plain);
+    }
+
+     // Explicit G41/G42 requested while comp is currently off.
+    if(command_words.G7 && gc_state.modal.cutter_comp.side == CComp_Off && gc_block.modal.cutter_comp.side != CComp_Off) {
+        // Enforce G17 (XY) when entering cutter comp.
+        if(gc_block.modal.plane_select != PlaneSelect_XY)
+            RETURN(Status_GcodeIllegalPlane);
+
+         gc_block.modal.cutter_comp.radius = 0.0f;
+        // Support R for radius and D for diameter. Prefer R if both are present.
+        if(gc_block.words.r) {
+            gc_block.modal.cutter_comp.radius = gc_block.values.r;
+            gc_block.words.r = Off;
+        } else if(gc_block.words.d) {
+            gc_block.modal.cutter_comp.radius = gc_block.values.d * 0.5f;
+            gc_block.words.d = Off;
+        } else {
+            if(grbl.tool_table.n_tools) {
+                tool_id_t t = gc_state.tool->tool_id;
+                if(gc_state.tool->tool_id == 0 && gc_state.tool_pending)
+                    t = gc_state.tool_pending;
+
+                tool_data_t *tool_data = grbl.tool_table.get_tool(t)->data;
+                if(tool_data)
+                    gc_block.modal.cutter_comp.radius = tool_data->radius;
+            }
+        }
+
+        if(gc_block.modal.units_imperial)
+            gc_block.modal.cutter_comp.radius *= MM_PER_INCH;
+
+        if(gc_block.modal.cutter_comp.radius == 0.0f) {
+            gc_block.modal.cutter_comp.side = CComp_Off; // No radius, so disable cutter comp.
+        } else {
+            gc_block.modal.cutter_comp.first_move = true;
+            cc_units u = gc_block.modal.units_imperial ? CC_UNITS_INCH : CC_UNITS_MM;
+            cc_api_init(gc_block.modal.cutter_comp.radius, u, cc_emit_via_mc, cc_message);
+            cc_mc_sync_input_pos(gc_state.position); // Ensure start pos is current, not stale
+        }
+
+        // set the corner treatment mode. If P word is 1, then chamfer, else round.
+        // This can be compile-time configured to be the default mode when cutter comp is enabled,
+        // but this allows for dynamic switching between the two modes for easy testing.
+        if(gc_block.words.p && gc_block.values.p == 1)
+            cc_api_set_corner_treatment_mode(CC_CTM_CHAMFER);
+
+        if(gc_block.words.p)
+            gc_block.words.p = Off;
+    }
+#endif
     // [14. Tool length compensation ]: G43.1 and G49 are always supported, G43 and G43.2 if grbl.tool_table.n_tools > 0
     // [G43.1 Errors]: Motion command in same line.
     // [G43.2 Errors]: Tool number not in the tool table,
@@ -4136,6 +4211,11 @@ status_code_t gc_execute_block (char *block)
 
     // [13. Cutter radius compensation ]: G41/42 NOT SUPPORTED
     // gc_state.modal.cutter_comp = gc_block.modal.cutter_comp; // NOTE: Not needed since always disabled.
+#if CUTTER_COMP_ENABLE
+    // [13. Cutter radius compensation ]: G41/42 SUPPORTED XY ONLY.
+    if(command_words.G7)
+        gc_state.modal.cutter_comp = gc_block.modal.cutter_comp;
+#endif
 
     // [14. Tool length compensation ]: G43, G43.1 and G49 supported. G43 supported when grbl.tool_table.n_tools > 0.
     // NOTE: If G43 were supported, its operation wouldn't be any different from G43.1 in terms
@@ -4348,7 +4428,16 @@ status_code_t gc_execute_block (char *block)
                 //??    gc_state.distance_per_rev = plan_data.feed_rate;
                     // check initial feed rate - fail if zero?
                 }
+#if CUTTER_COMP_ENABLE  
+                if(!cc_mc_line_in(gc_state.modal.cutter_comp, gc_block.values.xyz, &plan_data)== Status_OK){
+                    system_set_exec_state_flag(EXEC_FEED_HOLD); 
+                    protocol_execute_realtime();
+                    RETURN(Status_UserException);
+                }
+#else      
                 mc_line(gc_block.values.xyz, &plan_data);
+#endif
+
 #if NGC_PARAMETERS_ENABLE
                 if((command_words.G16 = gc_state.g66_args && gc_state.g66_args->call_level == ngc_call_level()))
                     gc_block.macro_call = gc_state.g66_args->call;
@@ -4358,6 +4447,10 @@ status_code_t gc_execute_block (char *block)
             case MotionMode_Seek:
                 plan_data.condition.rapid_motion = On; // Set rapid motion condition flag.
                 mc_line(gc_block.values.xyz, &plan_data);
+#if CUTTER_COMP_ENABLE
+                // Keep cc_mc_input_pos in sync so it is correct when comp is later enabled.
+                cc_mc_sync_input_pos(gc_block.values.xyz);
+#endif                
 #if NGC_PARAMETERS_ENABLE
                 // Run G66 macro?
                 if((command_words.G16 = gc_state.g66_args && gc_state.g66_args->call_level == ngc_call_level()))
@@ -4369,9 +4462,17 @@ status_code_t gc_execute_block (char *block)
             case MotionMode_CcwArc:
                 if(gc_state.modal.feed_mode == FeedMode_UnitsPerRev)
                     plan_data.condition.units_per_rev = plan_data.spindle.state.synchronized = On;
-
+#if CUTTER_COMP_ENABLE                
+                if(!cc_mc_arc_in(gc_state.modal.cutter_comp, gc_block.values.xyz, &plan_data, gc_state.position, gc_block.values.ijk, gc_block.values.r,
+                           plane, gc_parser_flags.arc_is_clockwise ? -gc_block.arc_turns : gc_block.arc_turns) == Status_OK){
+                    system_set_exec_state_flag(EXEC_FEED_HOLD); 
+                    protocol_execute_realtime();    
+                    RETURN(Status_UserException);
+                }
+#else      
                 mc_arc(gc_block.values.xyz, &plan_data, gc_state.position, gc_block.values.ijk, gc_block.values.r,
                         plane, gc_parser_flags.arc_is_clockwise ? -gc_block.arc_turns : gc_block.arc_turns);
+#endif
                 break;
 
             case MotionMode_CubicSpline:
@@ -4551,7 +4652,9 @@ status_code_t gc_execute_block (char *block)
             gc_state.modal.distance_incremental = false;
             gc_state.modal.feed_mode = FeedMode_UnitsPerMin;
 // TODO: check           gc_state.distance_per_rev = 0.0f;
-            // gc_state.modal.cutter_comp = CUTTER_COMP_DISABLE; // Not supported.
+#if CUTTER_COMP_ENABLE
+            gc_state.modal.cutter_comp = (gc_ccomp_t){0}; // reset
+#endif
             if(gc_state.modal.g5x_offset.id != CoordinateSystem_G54) {
                 gc_state.modal.g5x_offset.id = CoordinateSystem_G54;
                 report_add_realtime(Report_GWCO);

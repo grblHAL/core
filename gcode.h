@@ -345,6 +345,7 @@ typedef struct {
     float radius;
 } gc_ccomp_t;
 
+
 //! Parser flags for special cases.
 typedef union {
     uint16_t value;
@@ -509,6 +510,9 @@ typedef struct {
     //< uint8_t distance_arc;            //!< {G91.1} NOTE: Don't track. Only default supported.
     plane_select_t plane_select;         //!< {G17,G18,G19}
     //< gc_ccomp_t cutter_comp;          //!< {G40,G41,G41.1,G42,G42.1} NOTE: Don't track. Only default (G40) supported.
+#if CUTTER_COMP_ENABLE
+    gc_ccomp_t cutter_comp;              //!< {G40,G41,G42}
+#endif    
     tool_offset_mode_t tool_offset_mode; //!< {G43,G43.1,G49}
     coord_system_t g5x_offset;           //!< {G54,G55,G56,G57,G58,G59,G59.1,G59.2,G59.3}
 #if ENABLE_PATH_BLENDING

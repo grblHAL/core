@@ -984,6 +984,9 @@ FLASHMEM void report_build_info (char *line, bool extended)
         hal.stream.write(strcat(buf, "]" ASCII_EOL));
 
         strcpy(buf, "[NEWOPT:ENUMS,RT");
+        #if CUTTER_COMP_ENABLE
+            strcat(buf, " CCMP,");
+        #endif
         strcat(buf, settings.flags.legacy_rt_commands ? "+," : "-,");
 
         if(settings.homing.flags.enabled)
