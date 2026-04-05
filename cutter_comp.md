@@ -46,31 +46,31 @@ The shim expects these symbols/types to exist in your grblHAL build:
 
 ## Minimal control flow
 
-- `G41` or `G42`: set comp side before processing the move.
+- `G41` or `G42`: set comp side before processing the move and use the tool-table radius.
+- `G41.1` or `G42.1`: require `D<diameter>` and use that literal diameter.
 - Motion move (`G0/G1/G2/G3`): pass through `cc_mc_line_in` or `cc_mc_arc_in`.
 - `G40`: process the move, flush with `cc_api_process_move(0)`, then set comp off.
 
 ## How cutter radius is determined
 
-When entering compensation (`G41`/`G42`) from `G40`, grblHAL-side logic resolves radius in this order:
+When entering compensation (`G41`/`G42`/`G41.1`/`G42.1`) from `G40`, grblHAL-side logic resolves radius as follows:
 
 1. Require `G17` (XY plane). If not XY, return illegal-plane status.
 2. Start with radius `0.0`.
-3. If an `R` word is present on the block:
-  - Use `R` value directly as cutter radius.
-  - Clear the `R` word after consuming it.
-4. Else if a `D` word is present on the block:
-  - Use `D` value as cutter diameter (divided by 2 for radius).
-  - Clear the `D` word after consuming it.
-5. If neither `R` nor `D` is present:
-  - Try to use tool table radius for active tool.
-  - Use G10 L1 P[toolnum] R[toolRad] to set the tool radius in the tool table.
+3. For `G41.1`/`G42.1`:
+  - Require a `D` word.
+  - Use `D` as the tool diameter and divide by two for radius.
+4. For `G41`/`G42`:
+  - If `D` is present, it must be a nonzero integer tool number and resolve to a valid tool-table entry.
+  - If `D` is absent, use the active tool's radius from the tool table.
+  - If the current tool is `0` and a tool change is pending, use the pending tool instead.
+  - Use `G10 L1 P[toolnum] R[toolRad]` to set the tool radius in the tool table.
 
 
 Important behavior details:
 
-- `R` is interpreted as a radius, `D` as a diameter. If both are present, `R` takes priority.
-- Tool table radius is a fallback only when neither `R` nor `D` is supplied.
+- `G41.1`/`G42.1` consume `D` as a literal diameter value.
+- `G41`/`G42` consume `D` as an optional tool-number selector.
 - If zero radius the cutter comp engine is bypassed.
 - if `#define CC_ENABLE_LOOKAHEAD 1` a info message will report when trimming occurs.
 - if `#define CC_ENABLE_LOOKAHEAD 0` a hold command is issued and a message is reported.

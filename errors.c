@@ -88,6 +88,10 @@ PROGMEM static const status_detail_t status_detail[] = {
 #endif
     { Status_UnexpectedDemarcation, "Unexpected file demarcation." },
     { Status_AuxiliaryPortUnavailable, "Port is not available" },
+#if CUTTER_COMP_ENABLE
+    { Status_GcodeCutterCompActive, "Cutter compensation is already active." },
+    { Status_CutterCompConflict, "Command not allowed while cutter compensation is active." },
+#endif
 #if NGC_EXPRESSIONS_ENABLE
     { Status_ExpressionUknownOp, "Unknown operation found in expression." },
     { Status_ExpressionDivideByZero, "Divide by zero in expression attempted." },

@@ -725,6 +725,11 @@ FLASHMEM void report_gcode_modes (stream_write_ptr stream_write)
     stream_write(motionmode_to_str(buf, gc_state.modal.motion));
     stream_write(" ");
     stream_write(gc_coord_system_to_str(gc_state.modal.g5x_offset.id));
+#if CUTTER_COMP_ENABLE
+    if(gc_state.modal.cutter_comp.side != CComp_Off) {
+        stream_write(gc_state.modal.cutter_comp.side == CComp_Left ? " G41" : " G42");
+     }
+#endif        
 
 #if COMPATIBILITY_LEVEL < 10
 
