@@ -30,11 +30,12 @@ extern "C"
     bool mc_line(float *xyz, plan_line_data_t *pl_data);
     void mc_arc(float *xyz, plan_line_data_t *pl_data, float *position, float *ijk, float radius, plane_t plane, int32_t turns);
     void report_message(const char *msg, message_type_t type);
+    void debug_printf(const char *fmt, ...);
     static plan_line_data_t *cc_mc_active_plan_data = 0;
     static float cc_mc_input_pos[N_AXIS] = {0};
 
-#ifndef CC_DEBUG_TRACE
-#define CC_DEBUG_TRACE 0  // Set to 0 to disable debug tracing
+#ifndef DEBUG
+#define DEBUG 0  // Set to 0 to disable debug tracing
 #endif
 
     // Sync cc_mc_input_pos with the current parser position.
@@ -167,13 +168,11 @@ extern "C"
             mc_line(xyz, pl_data);
             return cc_status_OK;
         }
-#if CC_DEBUG_TRACE
+#if DEBUG
         {
-            char dbg[128];
-            snprintf(dbg, sizeof(dbg), "CC_IN side=%d first=%d inp=(%.3f,%.3f,%.3f) tgt=(%.3f,%.3f,%.3f)",
+            debug_printf("CC_IN side=%d first=%d inp=(%.3f,%.3f,%.3f) tgt=(%.3f,%.3f,%.3f)",
                      cc.side, cc.first_move, cc_mc_input_pos[0], cc_mc_input_pos[1], cc_mc_input_pos[2],
-                     xyz[0], xyz[1], xyz[2]);
-            report_message(dbg, Message_Info);
+                     xyz[0], xyz[1], xyz[2]);         
         }
 #endif
         comp_side side = CC_COMP_OFF;
@@ -289,12 +288,10 @@ extern "C"
         local_pl_data.condition.rapid_motion = (mv->type == CC_MOT_RAPID) ? 1 : 0;
 
 
-#if CC_DEBUG_TRACE
+#if DEBUG
         {
-            char dbg[128];
-            snprintf(dbg, sizeof(dbg), "CC_EMIT type=%d cm=%d p0=(%.3f,%.3f) p1=(%.3f,%.3f) z0=%.3f z1=%.3f",
+            debug_printf("CC_EMIT type=%d cm=%d p0=(%.3f,%.3f) p1=(%.3f,%.3f) z0=%.3f z1=%.3f",
                      mv->type, mv->compMode, mv->p_0.x, mv->p_0.y, mv->p_1.x, mv->p_1.y, mv->z_0, mv->z_1);
-            report_message(dbg, Message_Info);
         }
 #endif
 

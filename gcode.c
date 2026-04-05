@@ -73,7 +73,7 @@ typedef union {
                  G4 :1, //!< [G91.1] Arc IJK distance mode
                  G5 :1, //!< [G93,G94,G95] Feed rate mode
                  G6 :1, //!< [G20,G21] Units
-                 G7 :1, //!< [G40,G41,G41.1,G42,G42.1] Cutter radius compensation mode. ONLY G40 SUPPORTED.
+                 G7 :1, //!< [G40,G41,G41.1,G42,G42.1] Cutter radius compensation mode.
                  G8 :1, //!< [G43,G43.1,G49] Tool length offset
                 G10 :1, //!< [G98,G99] Return mode in canned cycles
                 G11 :1, //!< [G50,G51] Scaling
@@ -1312,7 +1312,6 @@ status_code_t gc_execute_block (char *block)
     modal_groups_t command_words = {0};         // Bitfield for tracking G and M command words. Also used for modal group violations.
     gc_parser_flags_t gc_parser_flags = {0};    // Parser flags for handling special cases.
     parameter_words_t user_words = {0};         // User M-code words "taken"
-    bool cutter_comp_dynamic = false;
 
     // Determine if the line is a jogging motion or a normal g-code block.
     if (block[0] == '$') { // NOTE: `$J=` already parsed when passed to this function.
@@ -1605,7 +1604,7 @@ status_code_t gc_execute_block (char *block)
                     case 40: case 41: case 42:
                         word_bit.modal_group.G7 = On;
                         if(mantissa == 0 || ((int_value == 41 || int_value == 42) && mantissa == 10)) {
-                            cutter_comp_dynamic = mantissa == 10;
+                            gc_block.modal.cutter_comp.dynamic = (mantissa == 10);
                             gc_block.modal.cutter_comp.side = int_value - 40;
                             mantissa = 0; // Set to zero to indicate valid non-integer G command.
                         } else
@@ -2806,7 +2805,7 @@ status_code_t gc_execute_block (char *block)
             RETURN(Status_GcodeIllegalPlane);
 
         gc_block.modal.cutter_comp.radius = 0.0f;
-        if(cutter_comp_dynamic) {
+        if(gc_block.modal.cutter_comp.dynamic) {
             if(!gc_block.words.d)
                 RETURN(Status_GcodeValueWordMissing);
             if(gc_block.values.d < 0.0f)

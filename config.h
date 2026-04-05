@@ -558,7 +558,7 @@ Set to \ref On or 1 to enable experimental support for expressions.
 Some LinuxCNC extensions are supported, conditionals and subroutines are not.
 */
 #if !defined NGC_EXPRESSIONS_ENABLE || defined __DOXYGEN__
-#define NGC_EXPRESSIONS_ENABLE Off
+#define NGC_EXPRESSIONS_ENABLE On
 #endif
 
 /*! \def NGC_PARAMETERS_ENABLE
