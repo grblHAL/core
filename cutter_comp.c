@@ -1990,6 +1990,11 @@ comp_side cc_api_get_comp(void)
     return (comp_side)g_core_ctx.compSide;
 }
 
+comp_mode cc_api_get_mode(void)
+{
+    return g_core_ctx.compMode;
+}
+
 void cc_api_set_corner_treatment_mode(cc_corner_treatment_mode mode)
 {
     g_core_ctx.cornerTreatmentMode = (uint8_t)mode;

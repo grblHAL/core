@@ -247,6 +247,7 @@ cc_status_code_t cc_api_process_move(const move2d *move);
 // comp_side is CC_COMP_OFF=0, CC_COMP_LEFT=1, or CC_COMP_RIGHT=-1
 void cc_api_set_comp(comp_side side);
 comp_side cc_api_get_comp(void);
+comp_mode cc_api_get_mode(void);
 
 //Requires CC_ENABLE_CORNER_TREATMENT set to 1
 void cc_api_set_corner_treatment_mode(cc_corner_treatment_mode mode);

@@ -31,7 +31,8 @@ extern "C"
     void mc_arc(float *xyz, plan_line_data_t *pl_data, float *position, float *ijk, float radius, plane_t plane, int32_t turns);
     void report_message(const char *msg, message_type_t type);
     void debug_printf(const char *fmt, ...);
-    static plan_line_data_t *cc_mc_active_plan_data = 0;
+    static plan_line_data_t cc_mc_active_plan_data = {0};
+    static bool cc_mc_have_plan_data = false;
     static float cc_mc_input_pos[N_AXIS] = {0};
 
 #ifndef DEBUG
@@ -98,17 +99,6 @@ extern "C"
     }
 
 
-    static inline uint8_t cc_mc_comp_mode_from_input(gc_ccomp_t cc)
-    {
-        if (cc.side == CComp_Left || cc.side == CComp_Right)
-            return (uint8_t)(cc.first_move ? CC_CM_IN : CC_CM_STEADY);
-
-        if (cc_api_get_comp() != CC_COMP_OFF)
-            return (uint8_t)CC_CM_OUT;
-
-        return (uint8_t)CC_CM_NONE;
-    }
-
     // Creates a move2d struct from the given grblHAL cutter compensation data.
     static inline move2d cc_mc_to_move2d(gc_ccomp_t cc,
                                          float *xyz,
@@ -126,7 +116,7 @@ extern "C"
         mv.z_1 = xyz[2];
         mv.feed = pl_data ? pl_data->feed_rate : 0.0f;
         mv.lineNum = pl_data ? pl_data->line_number : 0;
-        mv.compMode = cc_mc_comp_mode_from_input(cc);
+        mv.compMode = (uint8_t)cc_api_get_mode();
         mv.valid = true;
 
         if (is_arc)
@@ -158,7 +148,8 @@ extern "C"
     // replaces mc_line when cutter compensation is active. If compensation is not active, passes through to mc_line.
     cc_status_code_t cc_mc_line_in(gc_ccomp_t cc, float *xyz, plan_line_data_t *pl_data)
     {
-        cc_mc_active_plan_data = pl_data;
+        if((cc_mc_have_plan_data = pl_data != NULL))
+            cc_mc_active_plan_data = *pl_data;
 
         if (cc.side == CComp_Off && cc_api_get_comp() == CC_COMP_OFF)
         {
@@ -170,36 +161,21 @@ extern "C"
         }
 #if DEBUG
         {
-            debug_printf("CC_IN side=%d first=%d inp=(%.3f,%.3f,%.3f) tgt=(%.3f,%.3f,%.3f)",
-                     cc.side, cc.first_move, cc_mc_input_pos[0], cc_mc_input_pos[1], cc_mc_input_pos[2],
+            debug_printf("CC_IN side=%d inp=(%.3f,%.3f,%.3f) tgt=(%.3f,%.3f,%.3f)",
+                     cc.side, cc_mc_input_pos[0], cc_mc_input_pos[1], cc_mc_input_pos[2],
                      xyz[0], xyz[1], xyz[2]);         
         }
 #endif
-        comp_side side = CC_COMP_OFF;
-        bool turning_off = false;
-        bool turningOn = false;
-        // convert from grbl-style comp mode to cc style.
-        if (cc.side == CComp_Left)
-        {
-            side = CC_COMP_LEFT;
-            if (cc_api_get_comp() == CC_COMP_OFF)
-                turningOn = true;
-        }
-        else if (cc.side == CComp_Right)
-        {
-            side = CC_COMP_RIGHT;
-            if (cc_api_get_comp() == CC_COMP_OFF)
-                turningOn = true;
-        }
-        else if (cc_api_get_comp() != CC_COMP_OFF)
-            turning_off = true;
+        comp_side side = cc.side == CComp_Left ? CC_COMP_LEFT : (cc.side == CComp_Right ? CC_COMP_RIGHT : CC_COMP_OFF);
+        comp_side current_side = cc_api_get_comp();
+        bool turning_off = current_side != CC_COMP_OFF && side == CC_COMP_OFF;
 
-        if (side != CC_COMP_OFF)
-            cc_api_set_comp(side);// i should only do this if not already in comp, but just in case.
+        if (side != current_side || (side != CC_COMP_OFF && cc_api_get_mode() == CC_CM_NONE))
+            cc_api_set_comp(side);
 
         move2d mv = cc_mc_to_move2d(cc, xyz, pl_data, 0, 0, 0.0f, 0, false);
 
-        if (turningOn)
+        if (side != CC_COMP_OFF && mv.compMode == CC_CM_IN)
         {
             bool inch = cc_api_get_units() == CC_UNITS_INCH;
             float r = inch ? cc.radius / 25.4f : cc.radius;
@@ -208,20 +184,16 @@ extern "C"
             report_message(msg, Message_Info);
         }
 
-        if (turning_off)
-            cc_api_set_comp(CC_COMP_OFF);
-
         cc_status_code_t st = cc_api_process_move(&mv);
         if (st != cc_status_OK)
             return st;
 
-        if (cc.side == CComp_Off)
+        if (turning_off)
         {
             st = cc_api_process_move(0);
             if (st != cc_status_OK)
                 return st;
 
-            cc_api_set_comp(CC_COMP_OFF);
             report_message("CC_Off", Message_Info);
         }
 
@@ -231,7 +203,8 @@ extern "C"
     // replaces mc_arc when cutter compensation is active. If compensation is not active, passes through to mc_arc.
     cc_status_code_t cc_mc_arc_in(gc_ccomp_t cc, float *xyz, plan_line_data_t *pl_data, float *position, float *ijk, float radius, plane_t plane, int32_t turns)
     {
-        cc_mc_active_plan_data = pl_data;
+        if((cc_mc_have_plan_data = pl_data != NULL))
+            cc_mc_active_plan_data = *pl_data;
 
         if (cc.side == CComp_Off && cc_api_get_comp() == CC_COMP_OFF)
         {
@@ -242,32 +215,24 @@ extern "C"
             return cc_status_OK;
         }
 
-        comp_side side = CC_COMP_OFF;
-        bool turning_off = false;
-        if (cc.side == CComp_Left)
-            side = CC_COMP_LEFT;
-        else if (cc.side == CComp_Right)
-            side = CC_COMP_RIGHT;
-        else if (cc_api_get_comp() != CC_COMP_OFF)
-            turning_off = true;
-        if (side != CC_COMP_OFF)
+        comp_side side = cc.side == CComp_Left ? CC_COMP_LEFT : (cc.side == CComp_Right ? CC_COMP_RIGHT : CC_COMP_OFF);
+        comp_side current_side = cc_api_get_comp();
+        bool turning_off = current_side != CC_COMP_OFF && side == CC_COMP_OFF;
+
+        if (side != current_side || (side != CC_COMP_OFF && cc_api_get_mode() == CC_CM_NONE))
             cc_api_set_comp(side);
 
         move2d mv = cc_mc_to_move2d(cc, xyz, pl_data, position, ijk, radius, turns, true);
-
-        if (turning_off)
-            cc_api_set_comp(CC_COMP_OFF);
 
         cc_status_code_t st = cc_api_process_move(&mv);
         if (st != cc_status_OK)
             return st;
 
-        if (cc.side == CComp_Off) // this should never happen for arcs, but just in case
+        if (turning_off)
         {
             st = cc_api_process_move(0);
             if (st != cc_status_OK)
                 return st;
-            cc_api_set_comp(CC_COMP_OFF);
         }
 
         return cc_status_OK;
@@ -281,8 +246,8 @@ extern "C"
         if (!mv || !mv->valid)
             return;
 
-        if (cc_mc_active_plan_data)
-            local_pl_data = *cc_mc_active_plan_data;
+        if (cc_mc_have_plan_data)
+            local_pl_data = cc_mc_active_plan_data;
 
         local_pl_data.feed_rate = mv->feed;
         local_pl_data.condition.rapid_motion = (mv->type == CC_MOT_RAPID) ? 1 : 0;

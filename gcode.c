@@ -586,21 +586,25 @@ FLASHMEM static modal_restore_actions_t *get_state_restore_commands (gc_modal_t 
 }
 
 #if CUTTER_COMP_ENABLE
+FLASHMEM static inline comp_side cutter_comp_side_to_core (ccomp_mode_t side)
+{
+    return side == CComp_Left ? CC_COMP_LEFT : (side == CComp_Right ? CC_COMP_RIGHT : CC_COMP_OFF);
+}
+
 FLASHMEM static void cutter_comp_restore (const gc_ccomp_t *cutter_comp)
 {
     gc_state.modal.cutter_comp = *cutter_comp;
 
     if(gc_state.modal.cutter_comp.side == CComp_Off || gc_state.modal.cutter_comp.radius == 0.0f) {
         gc_state.modal.cutter_comp.side = CComp_Off;
-        gc_state.modal.cutter_comp.first_move = false;
         gc_state.modal.cutter_comp.radius = 0.0f;
-        cc_api_set_comp(CComp_Off);
         cc_api_process_move(0);
+        cc_api_set_comp(CC_COMP_OFF);
     } else {
         cc_units units = gc_state.modal.units_imperial ? CC_UNITS_INCH : CC_UNITS_MM;
-        gc_state.modal.cutter_comp.first_move = true;
         cc_api_init(gc_state.modal.cutter_comp.radius, units, cc_emit_via_mc, cc_message);
         cc_mc_sync_input_pos(gc_state.position);
+        cc_api_set_comp(cutter_comp_side_to_core(gc_state.modal.cutter_comp.side));
     }
 }
 #endif
@@ -2790,8 +2794,8 @@ status_code_t gc_execute_block (char *block)
 
     // Was on but now off, NO motion!
     if(!axis_words.mask && gc_state.modal.cutter_comp.side != CComp_Off && gc_block.modal.cutter_comp.side == CComp_Off) {
-        cc_api_set_comp(CComp_Off);
         cc_api_process_move(0);
+        cc_api_set_comp(CC_COMP_OFF);
         report_message("CC_Off",Message_Plain);
     }
 
@@ -2841,10 +2845,10 @@ status_code_t gc_execute_block (char *block)
         if(gc_block.modal.cutter_comp.radius == 0.0f) {
             gc_block.modal.cutter_comp.side = CComp_Off; // No radius, so disable cutter comp.
         } else {
-            gc_block.modal.cutter_comp.first_move = true;
             cc_units u = gc_block.modal.units_imperial ? CC_UNITS_INCH : CC_UNITS_MM;
             cc_api_init(gc_block.modal.cutter_comp.radius, u, cc_emit_via_mc, cc_message);
             cc_mc_sync_input_pos(gc_state.position); // Ensure start pos is current, not stale
+            cc_api_set_comp(cutter_comp_side_to_core(gc_block.modal.cutter_comp.side));
         }
 
         // set the corner treatment mode. If P word is 1, then chamfer, else round.
@@ -4736,8 +4740,8 @@ status_code_t gc_execute_block (char *block)
 // TODO: check           gc_state.distance_per_rev = 0.0f;
 #if CUTTER_COMP_ENABLE
             gc_state.modal.cutter_comp = (gc_ccomp_t){0}; // reset
-            cc_api_set_comp(CComp_Off);
             cc_api_process_move(0);
+            cc_api_set_comp(CC_COMP_OFF);
 #endif
             if(gc_state.modal.g5x_offset.id != CoordinateSystem_G54) {
                 gc_state.modal.g5x_offset.id = CoordinateSystem_G54;
