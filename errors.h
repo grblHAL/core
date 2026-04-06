@@ -89,7 +89,6 @@ typedef enum {
     Status_GCodeCoordSystemLocked = 56,
     Status_UnexpectedDemarcation = 57,
     Status_AuxiliaryPortUnavailable = 58,
-    Status_GcodeCutterCompActive = 59,
 
     Status_SDMountError = 60,
     Status_FileReadError = 61,
@@ -98,7 +97,7 @@ typedef enum {
     Status_SDNotMounted = 64,
     Status_FsNotMounted = 65,
     Status_FsReadOnly = 66,
-    Status_CutterCompConflict = 67,
+
 
     Status_BTInitError = 70,
 
@@ -124,6 +123,12 @@ typedef enum {
     Status_ToolInSPindle = 87,
     Status_NoToolInSPindle = 88,
     Status_StatusMax = Status_NoToolInSPindle,
+
+    Status_GcodeCutterCompActive = 90,
+    Status_CutterCompConflict = 91,
+    Status_CutterCompInvalid = 92,
+
+
     Status_UserException = 253,
     Status_Handled,   // For internal use only
     Status_Unhandled  // For internal use only

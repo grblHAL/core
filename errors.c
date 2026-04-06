@@ -91,6 +91,7 @@ PROGMEM static const status_detail_t status_detail[] = {
 #if CUTTER_COMP_ENABLE
     { Status_GcodeCutterCompActive, "Cutter compensation is already active." },
     { Status_CutterCompConflict, "Command not allowed while cutter compensation is active." },
+    { Status_CutterCompInvalid, "Cutter compensation is not valid for current move." },
 #endif
 #if NGC_EXPRESSIONS_ENABLE
     { Status_ExpressionUknownOp, "Unknown operation found in expression." },

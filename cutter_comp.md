@@ -72,6 +72,7 @@ Important behavior details:
 - `R` is interpreted as a radius, `D` as a diameter. If both are present, `R` takes priority.
 - Tool table radius is a fallback only when neither `R` nor `D` is supplied.
 - If zero radius the cutter comp engine is bypassed.
+- `G0` is only accepted for compensation entry/exit moves. Once compensation is in steady state, XY or Z rapid blocks are rejected as invalid moves.
 - if `#define CC_ENABLE_LOOKAHEAD 1` a info message will report when trimming occurs.
 - if `#define CC_ENABLE_LOOKAHEAD 0` a hold command is issued and a message is reported.
 

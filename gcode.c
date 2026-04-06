@@ -1574,6 +1574,10 @@ status_code_t gc_execute_block (char *block)
                     case 17: case 18: case 19:
                         word_bit.modal_group.G2 = On;
                         gc_block.modal.plane_select = (plane_select_t)(int_value - 17);
+#if CUTTER_COMP_ENABLE
+                        if(gc_block.modal.plane_select != PlaneSelect_XY && gc_block.modal.cutter_comp.side != CComp_Off)
+                            RETURN(Status_CutterCompConflict);
+#endif                        
                         break;
 
                     case 90: case 91:
@@ -2812,8 +2816,8 @@ status_code_t gc_execute_block (char *block)
         if(gc_block.modal.cutter_comp.dynamic) {
             if(!gc_block.words.d)
                 RETURN(Status_GcodeValueWordMissing);
-            if(gc_block.values.d < 0.0f)
-                RETURN(Status_NegativeValue);
+            // if(gc_block.values.d < 0.0f)
+            //     RETURN(Status_NegativeValue);
 
             gc_block.modal.cutter_comp.radius = gc_block.values.d * 0.5f;
             gc_block.words.d = Off;
@@ -2823,8 +2827,8 @@ status_code_t gc_execute_block (char *block)
             if(gc_block.words.d) {
                 if(!isintf(gc_block.values.d))
                     RETURN(Status_GcodeCommandValueNotInteger);
-                if(gc_block.values.d < 0.0f)
-                    RETURN(Status_NegativeValue);
+                // if(gc_block.values.d < 0.0f)
+                //     RETURN(Status_NegativeValue);
 
                 t = (tool_id_t)gc_block.values.d;
                 if(t == 0 || grbl.tool_table.get_tool(t)->data == NULL)
@@ -2979,7 +2983,7 @@ status_code_t gc_execute_block (char *block)
             }
 
 #if CUTTER_COMP_ENABLE
-            if(gc_block.values.l == 11 && gc_block.modal.cutter_comp.side != CComp_Off)
+            if(gc_block.modal.cutter_comp.side != CComp_Off)
                 RETURN(Status_CutterCompConflict);
 #endif
 
@@ -4516,9 +4520,7 @@ status_code_t gc_execute_block (char *block)
                 }
 #if CUTTER_COMP_ENABLE  
                 if(!cc_mc_line_in(gc_state.modal.cutter_comp, gc_block.values.xyz, &plan_data)== Status_OK){
-                    system_set_exec_state_flag(EXEC_FEED_HOLD); 
-                    protocol_execute_realtime();
-                    RETURN(Status_UserException);
+                    RETURN(Status_CutterCompInvalid);
                 }
 #else      
                 mc_line(gc_block.values.xyz, &plan_data);
@@ -4532,11 +4534,14 @@ status_code_t gc_execute_block (char *block)
 
             case MotionMode_Seek:
                 plan_data.condition.rapid_motion = On; // Set rapid motion condition flag.
+ #if CUTTER_COMP_ENABLE
+                if(cc_mc_line_in(gc_state.modal.cutter_comp, gc_block.values.xyz, &plan_data) != cc_status_OK) {
+                    RETURN(Status_CutterCompInvalid);
+                }
+#else
                 mc_line(gc_block.values.xyz, &plan_data);
-#if CUTTER_COMP_ENABLE
-                // Keep cc_mc_input_pos in sync so it is correct when comp is later enabled.
-                cc_mc_sync_input_pos(gc_block.values.xyz);
-#endif                
+#endif
+
 #if NGC_PARAMETERS_ENABLE
                 // Run G66 macro?
                 if((command_words.G16 = gc_state.g66_args && gc_state.g66_args->call_level == ngc_call_level()))
@@ -4551,9 +4556,7 @@ status_code_t gc_execute_block (char *block)
 #if CUTTER_COMP_ENABLE                
                 if(!cc_mc_arc_in(gc_state.modal.cutter_comp, gc_block.values.xyz, &plan_data, gc_state.position, gc_block.values.ijk, gc_block.values.r,
                            plane, gc_parser_flags.arc_is_clockwise ? -gc_block.arc_turns : gc_block.arc_turns) == Status_OK){
-                    system_set_exec_state_flag(EXEC_FEED_HOLD); 
-                    protocol_execute_realtime();    
-                    RETURN(Status_UserException);
+                    RETURN(Status_CutterCompInvalid);
                 }
 #else      
                 mc_arc(gc_block.values.xyz, &plan_data, gc_state.position, gc_block.values.ijk, gc_block.values.r,

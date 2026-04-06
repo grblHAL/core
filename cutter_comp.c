@@ -573,6 +573,18 @@ static inline bool cc_motion_valid(const move2d *m)
     return m->valid && m->type != CC_MOT_EMPTY;
 }
 
+static inline bool cc_validate_motion_mode(cc_context *ctx, const move2d *m)
+{
+    if (m->type != CC_MOT_RAPID)
+        return true;
+
+    if (m->compMode == CC_CM_IN || m->compMode == CC_CM_OUT)
+        return true;
+
+    cc_report_msg(ctx, cc_status_InvalidMove, CC_MSG_ERROR);
+    return false;
+}
+
 static inline bool cc_point_on_finite_elem(const move2d *m, vec2 p)
 {
     if (m->type == CC_MOT_LINE)
@@ -1830,6 +1842,10 @@ bool cc_process(cc_context *ctx)
             continue;
 
         cc_update_vectors(&curOff);
+        curOff.compMode = ctx->compMode;
+
+        if (!cc_validate_motion_mode(ctx, &curOff))
+            return false;
 
         // Z-only move: no XY displacement, nothing to offset
         if (cc_is_equalv(curOff.p_1, curOff.p_0) && !cc_is_equalf(curOff.z_1, curOff.z_0))
@@ -1842,8 +1858,6 @@ bool cc_process(cc_context *ctx)
             cc_stage_out(ctx, &curOff);
             continue;
         }
-
-        curOff.compMode = ctx->compMode;
 
         if (!cc_validate(ctx, &curOff))
             return false;
