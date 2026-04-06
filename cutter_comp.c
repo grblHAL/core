@@ -1881,8 +1881,7 @@ bool cc_process(cc_context *ctx)
             vec2 prevStart = ctx->prevOff.p_0;
             vec2 prevEnd = ctx->prevOff.p_1;
             ctx->prevOff.p_1 = curOff.p_0;
-            float moveLen = fminf(cc_len(cc_sub(prevEnd, prevStart)),
-                                  cc_len(cc_sub(ctx->prevOff.p_1, prevStart)));
+            float moveLen = cc_len(cc_sub(prevEnd, prevStart));
             if (moveLen <= ctx->toolR)
             {
                 cc_report_msg(ctx, cc_status_MoveTooShort, CC_MSG_ERROR);
@@ -1894,8 +1893,7 @@ bool cc_process(cc_context *ctx)
             vec2 curStart = curOff.p_0;
             vec2 curEnd = curOff.p_1;
             curOff.p_0 = ctx->prevOff.p_1;
-            float moveLen = fminf(cc_len(cc_sub(curEnd, curStart)),
-                                  cc_len(cc_sub(curEnd, curOff.p_0)));
+            float moveLen = cc_len(cc_sub(curEnd, curStart));
             if (moveLen <= ctx->toolR)
             {
                 cc_report_msg(ctx, cc_status_MoveTooShort, CC_MSG_ERROR);
