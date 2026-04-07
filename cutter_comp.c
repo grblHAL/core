@@ -220,9 +220,14 @@ static inline bool cc_is_near(vec2 a, vec2 b)
     return cc_dot(d, d) <= CC_TOL * CC_TOL;
 }
 
+static inline bool cc_is_line_like(const move2d *m)
+{
+    return m->type == CC_MOT_LINE || m->type == CC_MOT_RAPID;
+}
+
 static inline void cc_update_vectors(move2d *m)
 {
-    if (m->type == CC_MOT_LINE || m->type == CC_MOT_RAPID)
+    if (cc_is_line_like(m))
     {
         vec2 d = cc_sub(m->p_1, m->p_0);
         if (cc_dot(d, d) < CC_TOL * CC_TOL)
@@ -512,7 +517,7 @@ static inline void cc_report_msg(cc_context *ctx, cc_status_code_t msg,msg_type_
 
 static inline bool cc_validate(cc_context *ctx, move2d *m)
 {
-    if (m->type == CC_MOT_LINE)
+    if (cc_is_line_like(m))
     {
         if (cc_len(cc_sub(m->p_1, m->p_0)) < CC_TOL)
         {
@@ -573,21 +578,9 @@ static inline bool cc_motion_valid(const move2d *m)
     return m->valid && m->type != CC_MOT_EMPTY;
 }
 
-static inline bool cc_validate_motion_mode(cc_context *ctx, const move2d *m)
-{
-    if (m->type != CC_MOT_RAPID)
-        return true;
-
-    if (m->compMode == CC_CM_IN || m->compMode == CC_CM_OUT)
-        return true;
-
-    cc_report_msg(ctx, cc_status_InvalidMove, CC_MSG_ERROR);
-    return false;
-}
-
 static inline bool cc_point_on_finite_elem(const move2d *m, vec2 p)
 {
-    if (m->type == CC_MOT_LINE)
+    if (cc_is_line_like(m))
         return cc_point_on_segment(m->p_0, m->p_1, p);
 
     if (m->type == CC_MOT_ARC)
@@ -601,7 +594,7 @@ static inline bool cc_point_on_finite_elem(const move2d *m, vec2 p)
 
 static inline int cc_intersect_carrier(const move2d *a, const move2d *b, vec2 pts[2])
 {
-    if (a->type == CC_MOT_LINE && b->type == CC_MOT_LINE)
+    if (cc_is_line_like(a) && cc_is_line_like(b))
     {
         bool tip = false;
         intersect_type it = cc_intersect_line_line(a, b, &pts[0], &tip);
@@ -621,7 +614,7 @@ static inline int cc_intersect_carrier(const move2d *a, const move2d *b, vec2 pt
     }
 
     {
-        const move2d *line = ((a->type == CC_MOT_LINE) ? a : b);
+        const move2d *line = cc_is_line_like(a) ? a : b;
         const move2d *arc = (a->type == CC_MOT_ARC ? a : b);
         int count = 0;
         intersect_type it = cc_intersect_line_circle(line->p_0, line->p_1, arc->center, fabsf(arc->radius), &pts[0], &pts[1], &count);
@@ -1731,7 +1724,7 @@ static inline void cc_apply_logic(cc_context *ctx, move2d *a, move2d *b, move2d 
 {
     *insertCount = 0;
 
-    if ((a->type == CC_MOT_LINE ) && (b->type == CC_MOT_LINE ))
+    if (cc_is_line_like(a) && cc_is_line_like(b))
     {
         cc_handle_line_line(ctx, a, b, inserts, insertCount);
         return;
@@ -1843,9 +1836,6 @@ bool cc_process(cc_context *ctx)
 
         cc_update_vectors(&curOff);
         curOff.compMode = ctx->compMode;
-
-        if (!cc_validate_motion_mode(ctx, &curOff))
-            return false;
 
         // Z-only move: no XY displacement, nothing to offset
         if (cc_is_equalv(curOff.p_1, curOff.p_0) && !cc_is_equalf(curOff.z_1, curOff.z_0))
