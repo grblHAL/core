@@ -38,9 +38,9 @@ When `CUTTER_COMP_ENABLE` is enabled, the flow is:
 
 If `G40` is issued on a block without motion while compensation is active, the flush happens immediately in `gcode.c`. If the off transition happens on a motion block, the shim flushes after processing that move.
 
-## Motion caveats
+## Motion caveats (edge cases)
 
-- Z-only moves are not offset. If cutter compensation is already carrying a previous XY move, a Z-only move is held as a pending move and emitted only after that compensated XY move is committed. This keeps the Z change anchored to the compensated XY endpoint, but it also means a Z-only block may not appear immediately at the point it was parsed.
+- Z-only moves are allowed. Consecutive Z-only moves are combined to a single move using the last feedrate.(edge case)
 - Rapids are allowed while compensation is active. In the core they are treated as line-like moves for validation, junction handling, and look-ahead, while still being emitted back out with the rapid flag preserved.
 - If a line-line junction involves a rapid, no roll-around transition is inserted at that junction. The core falls back to trim, extend, or bevel handling instead of generating a roll move.
 

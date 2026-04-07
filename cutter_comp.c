@@ -230,6 +230,24 @@ static inline bool cc_has_rapid_move(const move2d *a, const move2d *b)
     return a->type == CC_MOT_RAPID || b->type == CC_MOT_RAPID;
 }
 
+static inline int cc_z_move_direction(float z0, float z1)
+{
+    if (cc_is_equalf(z0, z1))
+        return 0;
+    return (z1 > z0) ? 1 : -1;
+}
+
+static inline bool cc_should_replace_pending_z_target(const move2d *pending, const move2d *candidate)
+{
+    int pendingDir = cc_z_move_direction(pending->z_0, pending->z_1);
+    int candidateDir = cc_z_move_direction(candidate->z_0, candidate->z_1);
+
+    if (pendingDir != 0 && pendingDir == candidateDir)
+        return fabsf(candidate->z_1) > fabsf(pending->z_1);
+
+    return true;
+}
+
 static inline void cc_update_vectors(move2d *m)
 {
     m->hasXY = !cc_is_equalv(m->p_1, m->p_0);
@@ -1891,11 +1909,14 @@ bool cc_process(cc_context *ctx)
             {
                 if (ctx->havePendingZMove)
                 {
-                    ctx->pendingZMove.z_1 = curOff.z_1;
-                    ctx->pendingZMove.lineNum = curOff.lineNum;
-                    ctx->pendingZMove.feed = curOff.feed;
-                    ctx->pendingZMove.type = curOff.type;
-                    ctx->pendingZMove.hasZ = !cc_is_equalf(ctx->pendingZMove.z_1, ctx->pendingZMove.z_0);
+                    if (cc_should_replace_pending_z_target(&ctx->pendingZMove, &curOff))
+                    {
+                        ctx->pendingZMove.z_1 = curOff.z_1;
+                        ctx->pendingZMove.lineNum = curOff.lineNum;
+                        ctx->pendingZMove.feed = curOff.feed;
+                        ctx->pendingZMove.type = curOff.type;
+                        ctx->pendingZMove.hasZ = !cc_is_equalf(ctx->pendingZMove.z_1, ctx->pendingZMove.z_0);
+                    }
                 }
                 else
                 {
