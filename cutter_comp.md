@@ -132,6 +132,18 @@ Main compile-time knobs are in `cutter_comp.h`:
 - `CC_LOOKAHEAD_STEPS`
 - `CC_OUT_CAP`
 
+## Why a small lookahead still helps
+
+This implementation uses a bounded local lookahead instead of trying to inspect the entire compensated contour. With the default settings, up to 8 compensated moves are buffered and crossing checks search 4 moves ahead before older motion is emitted.
+
+That is usually enough to prevent gouging in small pockets, narrow slots, and other tight local features because the problematic self-intersection shows up within the next few offset segments. By holding back a few moves, the engine can detect that the offset path would cross back into itself, trim to the intersection point, invalidate the overlapped moves, and only then emit the surviving path.
+
+This matters most when compensation is being used as a true profile offset from nominal part geometry. If compensation is only being used as a small wear offset, the programmed path is already close to the tool-center path, so self-intersection is generally much less common than with part-profile G-code that relies on the controller to generate the full cutter-radius offset.
+
+The important limitation is scope: this is local protection, not full-path global planning. If a crossing would only become visible much farther ahead than the configured window, it will not be caught until it enters the lookahead buffer.
+
+This differs from LinuxCNC in that LinuxCNC is documented to have planner lookahead and blending, while its cutter compensation is documented to depend on upcoming motion at least at the next-move level. grblHAL uses a small fixed local buffer so it can run on embedded targets with predictable memory use and latency. In practice that means this implementation is intentionally local.
+
 ## Troubleshooting
 
 - No compensated motion emitted:
