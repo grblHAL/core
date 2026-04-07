@@ -1,155 +1,104 @@
-# MCU grblHAL Integration
+# Cutter Compensation
 
-This folder contains the C implementation of Cutter_Comp_XY for embedded targets and a shim layer for grblHAL.
+This tree contains the cutter compensation core and the grblHAL shim that is already wired into the local parser and motion path.
 
-## What is here
+## Files in this tree
 
 - `cutter_comp.c` and `cutter_comp.h`
-  - Core 2D cutter compensation engine.
+  - Core 2D compensation engine, move buffering, junction handling, and optional look-ahead.
 - `cutter_comp_grblhal.h`
-  - Adapter that translates grblHAL line/arc calls into `move2d` and emits compensated moves back through `mc_line`/`mc_arc`.
-- `grbl_data_portable.h`
-  - Portable type definitions used to compile/test the adapter outside a full grblHAL tree.
+  - grblHAL adapter that converts planner moves into `move2d`, feeds them into the core, and emits compensated moves back through `mc_line()` and `mc_arc()`.
+- `gcode.c`
+  - Parser/runtime integration for `G40`, `G41`, `G42`, `G41.1`, and `G42.1`.
 - `config.h`
-  - Build-time enable flag (`CUTTER_COMP_ENABLE`).
+  - Build-time gate for the feature via `CUTTER_COMP_ENABLE`.
+- `errors.c`, `report.c`, and `ngc_params.c`
+  - Status strings, modal reporting, and parameter exposure for cutter compensation state.
 
-## Prerequisites in grblHAL
+This repository does not include `grbl_data_portable.h` or `LOOKAHEAD_PROFILES.md`; those were part of an older documentation flow.
 
-The shim expects these symbols/types to exist in your grblHAL build:
+## What is implemented here
 
-- `mc_line(float *xyz, plan_line_data_t *pl_data)`
-- `mc_arc(float *xyz, plan_line_data_t *pl_data, float *position, float *ijk, float radius, plane_t plane, int32_t turns)`
-- `gc_ccomp_t`
-- `plan_line_data_t`
-- `plane_t`
-- `N_AXIS` (normally 3)
+- `CUTTER_COMP_ENABLE` gates the feature at compile time.
+- XY plane only. Entering compensation outside `G17` returns `Status_GcodeIllegalPlane`.
+- Linear moves, rapids, and XY arcs are routed through the shim when compensation is active.
+- `G40`, `G41`, `G42`, `G41.1`, and `G42.1` are parsed.
+- The core reports runtime issues such as invalid moves, inconsistent arc radii, unresolved gaps, and self-intersection trimming.
 
-## Integration steps
+## Runtime flow
 
-1. Copy these files into your grblHAL target:
-   - `cutter_comp.c`
-   - `cutter_comp.h`
-   - `cutter_comp_grblhal.h`
-   - optional for portability/testing: `grbl_data_portable.h`
-2. Ensure `CUTTER_COMP_ENABLE` is set to `1` in your build config.
-3. Include `cutter_comp_grblhal.h` in the motion path where `mc_line` and `mc_arc` are currently called.
-4. Initialize the core once (startup/reset) with your tool radius and callbacks:
-   - `cc_api_init(toolRadius, emitCb, errCb)`
-5. Route incoming motion through the shim when compensation is relevant:
-   - lines: `cc_mc_line_in(...)`
-   - arcs: `cc_mc_arc_in(...)`
-6. On compensation cancel (`G40`), flush pending output with:
-   - `cc_api_process_move(0)`
-   - then set side off via `cc_api_set_comp(CC_COMP_OFF)`
+When `CUTTER_COMP_ENABLE` is enabled, the flow is:
 
-## Minimal control flow
+1. `gcode.c` resolves the requested cutter compensation mode and radius when a block enters compensation.
+2. `cc_api_init()` initializes the core with the resolved tool radius, active units, emit callback, and message callback.
+3. `cc_mc_sync_input_pos()` seeds the shim with the current parser position so the first compensated move starts from the correct point.
+4. Motion is sent through `cc_mc_line_in()` or `cc_mc_arc_in()`.
+5. The shim emits compensated geometry back through `mc_line()` and `mc_arc()`.
+6. When compensation is turned off, pending moves are flushed with `cc_api_process_move(0)` and the mode is set back to `CC_COMP_OFF`.
 
-- `G41` or `G42`: enable left or right compensation using tool table radius resolution.
-- `G41.1` or `G42.1`: enable left or right dynamic compensation using `D` as cutter diameter.
-- Motion move (`G0/G1/G2/G3`): pass through `cc_mc_line_in` or `cc_mc_arc_in`.
-- `G40`: process the move, flush with `cc_api_process_move(0)`, then set comp off.
+If `G40` is issued on a block without motion while compensation is active, the flush happens immediately in `gcode.c`. If the off transition happens on a motion block, the shim flushes after processing that move.
 
-## How cutter radius is determined
+## Motion caveats
 
-When entering compensation (`G41`, `G42`, `G41.1`, or `G42.1`) from `G40`, grblHAL-side logic resolves radius in this order:
+- Z-only moves are not offset. If cutter compensation is already carrying a previous XY move, a Z-only move is held as a pending move and emitted only after that compensated XY move is committed. This keeps the Z change anchored to the compensated XY endpoint, but it also means a Z-only block may not appear immediately at the point it was parsed.
+- Rapids are allowed while compensation is active. In the core they are treated as line-like moves for validation, junction handling, and look-ahead, while still being emitted back out with the rapid flag preserved.
+- If a line-line junction involves a rapid, no roll-around transition is inserted at that junction. The core falls back to trim, extend, or bevel handling instead of generating a roll move.
 
-1. Require `G17` (XY plane). If not XY, return illegal-plane status.
-2. Start with radius `0.0`.
-3. If dynamic compensation mode is selected:
-  - A `D` word is required on the block.
-  - `D` is interpreted as cutter diameter and divided by 2 to obtain radius.
-  - The `D` word is consumed after use.
-4. Otherwise, tool table radius is used:
-  - If a `D` word is present, it is interpreted as the tool number to read from the tool table.
-  - If no `D` word is present, the active tool is used. If no tool is active but one is pending, the pending tool is used.
-  - Use `G10 L1 P[toolnum] R[toolRad]` to store the tool radius in the tool table.
-5. If the resolved radius is zero, compensation is left off and the engine is bypassed.
+## Radius resolution
+
+The current parser behavior is:
+
+### `G41.1` / `G42.1` dynamic compensation
+
+- A `D` word is required.
+- `D` is treated as a diameter.
+- The working radius is `D / 2`.
+- The `D` word is consumed after use.
+
+### `G41` / `G42` static compensation
+
+- Radius comes from the tool table.
+- If a `D` word is present, it is treated as a tool number selector, not as a diameter.
+- The `D` value must be an integer and must refer to a valid tool table entry.
+- If no `D` word is present, the active tool is used. If the active tool is zero and a tool change is pending, the pending tool is used.
+- The selected tool's stored radius becomes the compensation radius.
+
+### Common rules
+
+- If the active units are imperial, the resolved radius is converted before the core is initialized.
+- If the resolved radius is zero, compensation is silently disabled for that entry block.
+
+## Optional mode selection
+
+- A `P` word on the entry block selects the corner treatment mode.
+- `P == 1` switches to chamfer mode.
+- Any other value leaves the default roll mode in place.
+- The `P` word is consumed on entry.
+
+## Build-time knobs
+The main tunables live in `cutter_comp.h`:
 
 
-Important behavior details:
+## Look-ahead buffer
 
-- `G41` is left compensation in tool-table mode.
-- `G42` is right compensation in tool-table mode.
-- `G41.1` is left compensation in dynamic mode.
-- `G42.1` is right compensation in dynamic mode.
-- In dynamic mode, `D` is interpreted as diameter.
-- In non-dynamic mode, `D` is interpreted as tool number.
-- If zero radius, the cutter comp engine is bypassed and compensation remains off.
-- `G0` is accepted during compensation entry, steady state, and exit to match LinuxCNC behavior.
-- Rapid moves are treated as line-like geometry for validation, intersection, and junction handling.
-- If `#define CC_ENABLE_LOOKAHEAD 1`, an info message is reported when trimming avoids self-intersection.
-- If `#define CC_ENABLE_LOOKAHEAD 0`, a hold command is issued and a message is reported.
+When `CC_ENABLE_LOOKAHEAD` is enabled, compensated moves are staged in `lookahead_buffer` before they are emitted. This gives the core a short forward window to detect crossings, trim self-intersections, and hold back the newest moves until enough future context is available. When the pending count reaches `CC_LA_MIN_PENDING`, the core trims and emits the oldest moves in batches while keeping `CC_LA_EMIT_HOLDBACK` moves buffered. On flush, the buffer is trimmed once more and then drained in order. If the buffer still cannot make space at `CC_LOOKAHEAD_CAP`, an overflow is reported.
 
-## Restrictions while compensation is active
+In practice, global intersections are much less likely when compensation is being used as a small wear offset on an already valid tool-centerline path. They are more likely when the programmed path is the part profile and the controller is generating the full tool centerline from that geometry, because the offset path can fold back into itself around tight features, corners, or narrow channels. When the look-ahead logic trims moves to avoid a global self-intersection, a message is reported in the console.
 
-While cutter compensation is active, grblHAL rejects several commands and mode changes with a cutter compensation conflict.
+With the current defaults, the buffer holds 8 staged moves, looks 4 links ahead, emits up to 3 oldest moves per batch, and keeps 6 moves buffered until final drain.
 
-- Compensation is XY-only. Changing plane away from `G17` to `G18` or `G19` is rejected.
-- `M6` tool change is rejected while compensation is active.
-- A new `G41`, `G42`, `G41.1`, or `G42.1` cannot be issued while compensation is already active. Cancel first with `G40`.
-- Work offset selection changes (`G54` and related work coordinate system selection) are rejected.
-- `G10` offset or tool-table update commands are rejected.
-- `G28` and `G30` are rejected.
-- `G53` machine-coordinate override is rejected.
-- Canned cycles are rejected.
-- Probe cycles (`G38.x`) are rejected.
 
-## Compensation entry and exit behavior
+## User-visible messages and state
 
-- Compensation can only be enabled in the XY plane.
-- Rapid entry and exit moves are allowed. `G0` may be used for the move into compensation, while compensation is active, and for the move out of compensation.
-- `G40` with no axis words flushes pending compensated output, turns compensation off, and reports `CC_Off`.
-- `G40` with motion processes the move out of compensation, then flushes pending output and turns compensation off.
+- On entry through the line shim, an informational message of the form `CC_On R=...` is reported.
+- Turning compensation off reports `CC_Off`.
+- Modal reporting exposes active compensation as `G41` or `G42`.
+- `#4007` style modal state exposure in `ngc_params.c` differentiates `G40`, `G41`, `G42`, `G41.1`, and `G42.1`.
 
-## Runtime geometry limits
+## Enabling and troubleshooting
 
-Even when the G-code itself is accepted, the compensation engine can still reject or trim moves when the requested geometry cannot be compensated safely.
-
-Possible reported conditions include:
-
-- Arc radius less than tool radius
-- Arc radius inconsistent
-- Invalid move
-- Move too short to compensate
-- Crossing detected on move into compensation
-- Crossing detected on move out of compensation
-- Unresolved gap between moves
-- Cutter compensation input buffer overflow
-- Cutter compensation output buffer overflow
-- Self-intersection avoided by trimming move
-
-Optional mode selection on entry:
-
-- If `P` word is present and `P == 1`, corner treatment mode is set to chamfer.
-- `P` is consumed on entry after mode handling.
-
-## Build-time tuning
-
-Main compile-time knobs are in `cutter_comp.h`:
-
-- `CC_ENABLE_LOOKAHEAD`
-- `CC_LOOKAHEAD_CAP`
-- `CC_LOOKAHEAD_STEPS`
-- `CC_OUT_CAP`
-
-## Why a small lookahead still helps
-
-This implementation uses a bounded local lookahead instead of trying to inspect the entire compensated contour. With the default settings, up to 8 compensated moves are buffered and crossing checks search 4 moves ahead before older motion is emitted.
-
-That is usually enough to prevent gouging in small pockets, narrow slots, and other tight local features because the problematic self-intersection shows up within the next few offset segments. By holding back a few moves, the engine can detect that the offset path would cross back into itself, trim to the intersection point, invalidate the overlapped moves, and only then emit the surviving path.
-
-This matters most when compensation is being used as a true profile offset from nominal part geometry. If compensation is only being used as a small wear offset, the programmed path is already close to the tool-center path, so self-intersection is generally much less common than with part-profile G-code that relies on the controller to generate the full cutter-radius offset.
-
-The important limitation is scope: this is local protection, not full-path global planning. If a crossing would only become visible much farther ahead than the configured window, it will not be caught until it enters the lookahead buffer.
-
-This differs from LinuxCNC in that LinuxCNC is documented to have planner lookahead and blending, while its cutter compensation is documented to depend on upcoming motion at least at the next-move level. grblHAL uses a small fixed local buffer so it can run on embedded targets with predictable memory use and latency. In practice that means this implementation is intentionally local.
-
-## Troubleshooting
-
-- No compensated motion emitted:
-  - Verify `CUTTER_COMP_ENABLE == 1`.
-  - Verify your motion path is calling `cc_mc_line_in` / `cc_mc_arc_in`.
-- Build errors on planner/parser types:
-  - Confirm grblHAL headers are visible and match expected `gc_ccomp_t`/`plan_line_data_t` layout.
-- Bad transitions at end of comp:
-  - Confirm `G40` path flushes with `cc_api_process_move(0)` before turning comp off.
+- Verify `CUTTER_COMP_ENABLE` evaluates true in `config.h` for the build you are using.
+- If compensated motion is not emitted, check that the build is using the `gcode.c` paths that call `cc_mc_line_in()` and `cc_mc_arc_in()`.
+- If entry fails, check the plane selection and radius source first.
+- If static compensation does not engage, verify the selected tool table entry has a non-zero radius.
+- If dynamic compensation does not engage, verify `G41.1` or `G42.1` includes a `D` word.

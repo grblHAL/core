@@ -225,8 +225,22 @@ static inline bool cc_is_line_like(const move2d *m)
     return m->type == CC_MOT_LINE || m->type == CC_MOT_RAPID;
 }
 
+static inline bool cc_has_rapid_move(const move2d *a, const move2d *b)
+{
+    return a->type == CC_MOT_RAPID || b->type == CC_MOT_RAPID;
+}
+
 static inline void cc_update_vectors(move2d *m)
 {
+    m->hasXY = !cc_is_equalv(m->p_1, m->p_0);
+    m->hasZ = !cc_is_equalf(m->z_1, m->z_0);
+    if (!m->hasXY)
+    {
+        m->startDir = cc_v2(0.0f, 0.0f);
+        m->endDir = cc_v2(0.0f, 0.0f);
+        return;
+    }
+
     if (cc_is_line_like(m))
     {
         vec2 d = cc_sub(m->p_1, m->p_0);
@@ -575,7 +589,7 @@ static inline bool cc_validate(cc_context *ctx, move2d *m)
 
 static inline bool cc_motion_valid(const move2d *m)
 {
-    return m->valid && m->type != CC_MOT_EMPTY;
+    return m->valid && m->type != CC_MOT_EMPTY && m->hasXY;
 }
 
 static inline bool cc_point_on_finite_elem(const move2d *m, vec2 p)
@@ -770,7 +784,7 @@ static inline move2d cc_make_bevel(const move2d *a, const move2d *b)
     m.compMode = CC_CM_STEADY;
     m.p_0 = a->p_1;
     m.p_1 = b->p_0;
-    m.z_0 = a->z_1;
+    m.z_0 = b->z_0;
     m.z_1 = b->z_0;
     cc_update_vectors(&m);
     return m;
@@ -969,7 +983,7 @@ static inline void cc_init_all_aabb(const move2d *moves, cc_aabb2 *bounds, int s
     int i;
     for (i = start; i < count; ++i)
     {
-        if (moves[i].type != CC_MOT_EMPTY && moves[i].valid)
+        if (cc_motion_valid(&moves[i]))
             bounds[i] = cc_aabb_of(&moves[i]);
     }
 }
@@ -1019,7 +1033,7 @@ static inline cc_crossing_hit cc_look_ahead_for_crossing(move2d *moves,
     best.tip = cc_v2(0.0f, 0.0f);
     best.dist = 1e30f;
 
-    if (!moves[srcIdx].valid)
+    if (!cc_motion_valid(&moves[srcIdx]))
         return best;
 
     j = startTargetIdx + 1;
@@ -1031,7 +1045,7 @@ static inline cc_crossing_hit cc_look_ahead_for_crossing(move2d *moves,
         vec2 pick;
         float d;
 
-        if (!moves[j].valid)
+        if (!cc_motion_valid(&moves[j]))
             continue;
 
         if (srcIdx == firstCutIdx && j == lastCutIdx)
@@ -1341,7 +1355,7 @@ static inline move2d cc_make_roll_arc(const cc_context *ctx, const move2d *a, co
     roll.feed = (a->feed > 0.0f) ? a->feed : b->feed;
     roll.p_0 = a->p_1;
     roll.p_1 = b->p_0;
-    roll.z_0 = a->z_1;
+    roll.z_0 = b->z_0;
     roll.z_1 = b->z_0;    
     roll.center = cc_roll_center(a->p_1, a->endDir, useLeft, ctx->toolR);
 
@@ -1357,8 +1371,7 @@ static inline move2d cc_make_roll_arc(const cc_context *ctx, const move2d *a, co
         r = r0;
     else if (r1 >= CC_TOL)
         r = r1;
-    else
-
+        
     if (r0 >= CC_TOL)
         roll.p_0 = cc_add(roll.center, cc_scale(v0, r / r0));
     if (r1 >= CC_TOL)
@@ -1482,7 +1495,7 @@ static inline int cc_make_corner_treatment(cc_context *ctx, move2d *a, move2d *b
     cap.type = CC_MOT_LINE;
     cap.compMode = CC_CM_STEADY;
     cap.feed = (a->feed > 0.0f) ? a->feed : b->feed;
-    cap.z_0 = a->z_1;
+    cap.z_0 = b->z_0;
     cap.z_1 = b->z_0;
     {
         float halfLen = 0.5f * (ctx->toolR + 2.0f);
@@ -1526,6 +1539,8 @@ static inline int cc_make_corner_treatment(cc_context *ctx, move2d *a, move2d *b
     if (haveExtA)
     {
         extA.p_1 = ipForL1;
+        extA.z_0 = b->z_0;
+        extA.z_1 = b->z_0;
         cc_update_vectors(&extA);
         if (!cc_validate(ctx, &extA))
             return 0;
@@ -1538,6 +1553,8 @@ static inline int cc_make_corner_treatment(cc_context *ctx, move2d *a, move2d *b
     {
         extB.p_0 = ipForL2;
         extB.p_1 = b->p_0;
+        extB.z_0 = b->z_0;
+        extB.z_1 = b->z_0;
         cc_update_vectors(&extB);
         if (!cc_validate(ctx, &extB))
             return 0;
@@ -1593,7 +1610,8 @@ static inline void cc_handle_line_line(cc_context *ctx, move2d *a, move2d *b, mo
     junction junction;
     float gap = cc_dist(b->p_0, a->p_1);
     float gapTol = ctx->gapTol > 0 ? ctx->gapTol : CC_GAP_TOL_MM;
-    bool allowExtend = (gap < gapTol);
+    bool anyRapid = cc_has_rapid_move(a, b);
+    bool allowExtend = anyRapid || (gap < gapTol);
     bool resolved = cc_solve_junction(ctx, a, b, allowExtend, &junction);
 
     if (junction.jtype == CC_JT_TRIM_TO_INTERSECTION)
@@ -1631,7 +1649,7 @@ static inline void cc_handle_line_line(cc_context *ctx, move2d *a, move2d *b, mo
         return;
     }
 
-    if (resolved && junction.jtype == CC_JT_ROLL_AROUND)
+    if (!anyRapid && resolved && junction.jtype == CC_JT_ROLL_AROUND)
     {
         if (!cc_insert_roll_or_corner(ctx, a, b, inserts, insertCount))
             cc_report_msg(ctx, cc_status_UnresolvedGap, CC_MSG_ERROR);
@@ -1698,7 +1716,8 @@ static inline void cc_handle_arc_line(cc_context *ctx, move2d *a, move2d *b, mov
 
     gap = cc_len(cc_sub(b->p_0, a->p_1));
     float gapTol = ctx->gapTol > 0 ? ctx->gapTol : CC_GAP_TOL_MM;
-    resolved = cc_solve_junction(ctx, a, b, gap < gapTol, &junction);
+    bool anyRapid = cc_has_rapid_move(a, b);
+    resolved = cc_solve_junction(ctx, a, b, anyRapid || (gap < gapTol), &junction);
 
     if (junction.jtype == CC_JT_TRIM_TO_INTERSECTION && cc_trim_to(ctx, a, b, junction.p))
         return;
@@ -1706,7 +1725,7 @@ static inline void cc_handle_arc_line(cc_context *ctx, move2d *a, move2d *b, mov
     if (junction.jtype == CC_JT_EXTEND_TO_INTERSECTION && cc_extend_to(ctx, a, b, junction.p))
         return;
 
-    if (resolved && junction.jtype == CC_JT_ROLL_AROUND)
+    if (!anyRapid && resolved && junction.jtype == CC_JT_ROLL_AROUND)
     {
         if (!cc_insert_roll_or_corner(ctx, a, b, inserts, insertCount))
             cc_report_msg(ctx, cc_status_UnresolvedGap,true);
@@ -1746,9 +1765,37 @@ static inline void cc_apply_logic(cc_context *ctx, move2d *a, move2d *b, move2d 
 static inline void cc_reset_state(cc_context *ctx)
 {
     ctx->havePrevMove = false;
+    ctx->havePendingZMove = false;
 #if CC_ENABLE_LOOKAHEAD
     ctx->lookahead_count = 0;
 #endif
+}
+
+static inline bool cc_emit_pending_z_move_at(cc_context *ctx, const move2d *anchor)
+{
+    move2d zMove;
+
+    if (!ctx->havePendingZMove)
+        return true;
+
+    zMove = ctx->pendingZMove;
+    zMove.p_0 = anchor->p_1;
+    zMove.p_1 = anchor->p_1;
+    zMove.z_0 = anchor->z_1;
+    zMove.hasXY = false;
+    zMove.hasZ = !cc_is_equalf(zMove.z_1, zMove.z_0);
+
+    if (!zMove.hasZ)
+    {
+        ctx->havePendingZMove = false;
+        return true;
+    }
+
+    if (!cc_stage_out(ctx, &zMove))
+        return false;
+
+    ctx->havePendingZMove = false;
+    return true;
 }
 
 static void cc_init_internal(cc_context *ctx, float toolRadius)
@@ -1838,14 +1885,34 @@ bool cc_process(cc_context *ctx)
         curOff.compMode = ctx->compMode;
 
         // Z-only move: no XY displacement, nothing to offset
-        if (cc_is_equalv(curOff.p_1, curOff.p_0) && !cc_is_equalf(curOff.z_1, curOff.z_0))
+        if (!curOff.hasXY && curOff.hasZ)
         {
             if (ctx->havePrevMove)
             {
-                curOff.p_0 = ctx->prevOff.p_0;
-                curOff.p_1 = ctx->prevOff.p_0;
+                if (ctx->havePendingZMove)
+                {
+                    ctx->pendingZMove.z_1 = curOff.z_1;
+                    ctx->pendingZMove.lineNum = curOff.lineNum;
+                    ctx->pendingZMove.feed = curOff.feed;
+                    ctx->pendingZMove.type = curOff.type;
+                    ctx->pendingZMove.hasZ = !cc_is_equalf(ctx->pendingZMove.z_1, ctx->pendingZMove.z_0);
+                }
+                else
+                {
+                    ctx->pendingZMove = curOff;
+                    ctx->pendingZMove.p_0 = ctx->prevOff.p_1;
+                    ctx->pendingZMove.p_1 = ctx->prevOff.p_1;
+                    ctx->pendingZMove.z_0 = ctx->prevOff.z_1;
+                    ctx->pendingZMove.hasXY = false;
+                    ctx->pendingZMove.hasZ = !cc_is_equalf(ctx->pendingZMove.z_1, ctx->pendingZMove.z_0);
+                    ctx->havePendingZMove = ctx->pendingZMove.hasZ;
+                }
             }
-            cc_stage_out(ctx, &curOff);
+            else
+            {
+                if (!cc_stage_out(ctx, &curOff))
+                    return false;
+            }
             continue;
         }
 
@@ -1925,6 +1992,8 @@ bool cc_process(cc_context *ctx)
             int i;
             if (!cc_stage_out(ctx, &ctx->prevOff))
                 return false;
+            if (!cc_emit_pending_z_move_at(ctx, &ctx->prevOff))
+                return false;
             for (i = 0; i < insertCount; ++i)
             {
                 if (!cc_stage_out(ctx, &inserts[i]))
@@ -1949,6 +2018,8 @@ void cc_flush(cc_context *ctx)
     if (ctx->havePrevMove)
     {
         if (!cc_stage_out(ctx, &ctx->prevOff))
+            return;
+        if (!cc_emit_pending_z_move_at(ctx, &ctx->prevOff))
             return;
         ctx->havePrevMove = false;
     }

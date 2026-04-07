@@ -178,6 +178,8 @@ typedef struct
     uint8_t type;
     uint8_t arcDir;
     uint8_t compMode;
+    bool hasXY;
+    bool hasZ;
     bool valid;
 } move2d;
 
@@ -228,8 +230,10 @@ typedef struct
     int outCount;
     bool stopErr;
     bool havePrevMove;
+    bool havePendingZMove;
 
     move2d prevOff;
+    move2d pendingZMove;
     move2d input_buffer[CC_IN_CAP];
     move2d output_buffer[CC_OUT_CAP];
 #if CC_ENABLE_LOOKAHEAD

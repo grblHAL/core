@@ -25,6 +25,7 @@ extern "C"
 
 #include "cutter_comp.h"
 
+
     // forward declarations
     // these are implemented in grblhal's motion_control.c, but declared here so they can be called from the cc_emit_via_mc callback.
     bool mc_line(float *xyz, plan_line_data_t *pl_data);

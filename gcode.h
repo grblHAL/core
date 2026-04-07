@@ -341,6 +341,7 @@ typedef enum {
 
 typedef struct {
     ccomp_mode_t side;
+    //bool first_move;// not used;
     bool dynamic;//!< True if cutter compensation is dynamic, meaning the radius is specified by the 'D' word in the G41.1/G42.1 command, false if static and radius is specified by the G41/G42 command.
     float radius;
 } gc_ccomp_t;
