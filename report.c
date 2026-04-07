@@ -990,7 +990,7 @@ FLASHMEM void report_build_info (char *line, bool extended)
 
         strcpy(buf, "[NEWOPT:ENUMS,RT");
         #if CUTTER_COMP_ENABLE
-            strcat(buf, " CCMPv1.0,");
+            strcat(buf, " CCMP,");
         #endif
         strcat(buf, settings.flags.legacy_rt_commands ? "+," : "-,");
 

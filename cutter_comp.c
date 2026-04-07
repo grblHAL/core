@@ -1876,30 +1876,52 @@ bool cc_process(cc_context *ctx)
             continue;
         }
 
-        if (ctx->prevOff.compMode == CC_CM_IN)
+         if (ctx->prevOff.compMode == CC_CM_IN)
         {
-            vec2 prevStart = ctx->prevOff.p_0;
-            vec2 prevEnd = ctx->prevOff.p_1;
-            ctx->prevOff.p_1 = curOff.p_0;
-            float moveLen = cc_len(cc_sub(prevEnd, prevStart));
-            if (moveLen <= ctx->toolR)
+            float originalLen = cc_len(cc_sub(ctx->prevOff.p_1, ctx->prevOff.p_0));
+            if (originalLen <= ctx->toolR + CC_TOL)
             {
                 cc_report_msg(ctx, cc_status_MoveTooShort, CC_MSG_ERROR);
                 return false;
             }
+
+            /* Modify the previous move so that the end is the start of the current move. */
+            ctx->prevOff.p_1 = curOff.p_0;
+
+            {
+                float finalLen = cc_len(cc_sub(ctx->prevOff.p_1, ctx->prevOff.p_0));
+                if (finalLen <= CC_TOL)
+                {
+                    cc_report_msg(ctx, cc_status_MoveTooShort, CC_MSG_ERROR);
+                    return false;
+                }
+            }
+
+            cc_update_vectors(&ctx->prevOff);
         }
 
-        if (curOff.compMode == CC_CM_OUT){
-            vec2 curStart = curOff.p_0;
-            vec2 curEnd = curOff.p_1;
-            curOff.p_0 = ctx->prevOff.p_1;
-            float moveLen = cc_len(cc_sub(curEnd, curStart));
-            if (moveLen <= ctx->toolR)
+        if (curOff.compMode == CC_CM_OUT)
+        {
+            float originalLen = cc_len(cc_sub(curOff.p_1, curOff.p_0));
+            if (originalLen <= ctx->toolR + CC_TOL)
             {
                 cc_report_msg(ctx, cc_status_MoveTooShort, CC_MSG_ERROR);
                 return false;
             }
 
+            /* Modify the G40 move so that the start is the end of the previous move. */
+            curOff.p_0 = ctx->prevOff.p_1;
+
+            {
+                float finalLen = cc_len(cc_sub(curOff.p_1, curOff.p_0));
+                if (finalLen <= CC_TOL)
+                {
+                    cc_report_msg(ctx, cc_status_MoveTooShort, CC_MSG_ERROR);
+                    return false;
+                }
+            }
+
+            cc_update_vectors(&curOff);
         }
 
  

@@ -1,7 +1,7 @@
 /*
  * SHIM BETWEEN GRBLHAL AND THE CUTTER COMPENSATION CORE
  * Overall, this file serves as a bridge between grblHAL and the cutter compensation core, enabling them to work together seamlessly while keeping their internal implementations decoupled.
-
+  
  * code is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
@@ -36,7 +36,7 @@ extern "C"
     static float cc_mc_input_pos[N_AXIS] = {0};
 
 #ifndef DEBUG
-#define DEBUG 0 // Set to 0 to disable debug tracing
+#define DEBUG 0  // Set to 0 to disable debug tracing
 #endif
 
     // in cutter_comp_grblhal.h
@@ -44,6 +44,7 @@ extern "C"
     {
         report_message("Cutter compensation v" CUTTER_COMP_VERSION, Message_Info);
     }
+
 
     // Sync cc_mc_input_pos with the current parser position.
     // Must be called when enabling comp, and can be called any time cc_mc_input_pos
@@ -92,7 +93,7 @@ extern "C"
         case cc_status_GlobalSelfIntersection:
             msg = "Self-intersection avoided by trimming move";
             break;
-        }
+        }   
 
         if (lineNum != 0)
         {
@@ -103,6 +104,7 @@ extern "C"
 
         report_message(msg, (message_type_t)severity);
     }
+
 
     // Creates a move2d struct from the given grblHAL cutter compensation data.
     static inline move2d cc_mc_to_move2d(gc_ccomp_t cc,
@@ -153,7 +155,7 @@ extern "C"
     // replaces mc_line when cutter compensation is active. If compensation is not active, passes through to mc_line.
     cc_status_code_t cc_mc_line_in(gc_ccomp_t cc, float *xyz, plan_line_data_t *pl_data)
     {
-        if ((cc_mc_have_plan_data = pl_data != NULL))
+        if((cc_mc_have_plan_data = pl_data != NULL))
             cc_mc_active_plan_data = *pl_data;
 
         if (cc.side == CComp_Off && cc_api_get_comp() == CC_COMP_OFF)
@@ -167,8 +169,8 @@ extern "C"
 #if DEBUG
         {
             debug_printf("CC_IN side=%d inp=(%.3f,%.3f,%.3f) tgt=(%.3f,%.3f,%.3f)",
-                         cc.side, cc_mc_input_pos[0], cc_mc_input_pos[1], cc_mc_input_pos[2],
-                         xyz[0], xyz[1], xyz[2]);
+                     cc.side, cc_mc_input_pos[0], cc_mc_input_pos[1], cc_mc_input_pos[2],
+                     xyz[0], xyz[1], xyz[2]);         
         }
 #endif
         comp_side side = cc.side == CComp_Left ? CC_COMP_LEFT : (cc.side == CComp_Right ? CC_COMP_RIGHT : CC_COMP_OFF);
@@ -208,7 +210,7 @@ extern "C"
     // replaces mc_arc when cutter compensation is active. If compensation is not active, passes through to mc_arc.
     cc_status_code_t cc_mc_arc_in(gc_ccomp_t cc, float *xyz, plan_line_data_t *pl_data, float *position, float *ijk, float radius, plane_t plane, int32_t turns)
     {
-        if ((cc_mc_have_plan_data = pl_data != NULL))
+        if((cc_mc_have_plan_data = pl_data != NULL))
             cc_mc_active_plan_data = *pl_data;
 
         if (cc.side == CComp_Off && cc_api_get_comp() == CC_COMP_OFF)
@@ -257,10 +259,11 @@ extern "C"
         local_pl_data.feed_rate = mv->feed;
         local_pl_data.condition.rapid_motion = (mv->type == CC_MOT_RAPID) ? 1 : 0;
 
+
 #if DEBUG
         {
             debug_printf("CC_EMIT type=%d cm=%d p0=(%.3f,%.3f) p1=(%.3f,%.3f) z0=%.3f z1=%.3f",
-                         mv->type, mv->compMode, mv->p_0.x, mv->p_0.y, mv->p_1.x, mv->p_1.y, mv->z_0, mv->z_1);
+                     mv->type, mv->compMode, mv->p_0.x, mv->p_0.y, mv->p_1.x, mv->p_1.y, mv->z_0, mv->z_1);
         }
 #endif
 

@@ -20,6 +20,7 @@
 #if CUTTER_COMP_ENABLE
 
 #define CUTTER_COMP_VERSION "0.1"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
