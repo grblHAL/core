@@ -186,8 +186,9 @@ extern "C"
         {
             bool inch = cc_api_get_units() == CC_UNITS_INCH;
             float r = inch ? cc.radius / 25.4f : cc.radius;
-            char msg[64];
-            snprintf(msg, sizeof(msg), "CC_On R=%.4f %s", r, inch ? "in" : "mm");
+            const char *corner_mode = cc_api_get_corner_treatment_mode() == CC_CTM_CHAMFER ? "Chamfer" : "Roll";
+            char msg[96];
+            snprintf(msg, sizeof(msg), "CC_On R=%.4f %s Corner=%s", r, inch ? "in" : "mm", corner_mode);
             report_message(msg, Message_Info);
         }
 

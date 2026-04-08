@@ -2111,6 +2111,11 @@ comp_mode cc_api_get_mode(void)
     return g_core_ctx.compMode;
 }
 
+cc_corner_treatment_mode cc_api_get_corner_treatment_mode(void)
+{
+    return (cc_corner_treatment_mode)g_core_ctx.cornerTreatmentMode;
+}
+
 void cc_api_set_corner_treatment_mode(cc_corner_treatment_mode mode)
 {
     g_core_ctx.cornerTreatmentMode = (uint8_t)mode;

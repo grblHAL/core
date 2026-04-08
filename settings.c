@@ -96,6 +96,7 @@ PROGMEM const settings_t defaults = {
     .flags.keep_rapids_override_on_reset = DEFAULT_KEEP_RAPIDS_OVR_ON_RESET,
     .flags.keep_feed_override_on_reset = DEFAULT_KEEP_FEED_OVR_ON_RESET,
     .flags.tool_persistent = DEFAULT_PERSIST_TOOL,
+    .cutter_comp_flags.value = 0,
 
     .probe.disable_probe_pullup = DEFAULT_PROBE_SIGNAL_DISABLE_PULLUP,
     .probe.allow_feed_override = DEFAULT_ALLOW_FEED_OVERRIDE_DURING_PROBE_CYCLES,
@@ -938,6 +939,15 @@ static status_code_t set_suboptions (setting_id_t id, uint_fast16_t int_value)
     return Status_OK;
 }
 
+#if CUTTER_COMP_ENABLE
+static status_code_t set_cutter_comp_options (setting_id_t id, uint_fast16_t int_value)
+{
+    settings.cutter_comp_flags.value = int_value & 0x01;
+
+    return Status_OK;
+}
+#endif
+
 #if !LATHE_UVW_OPTION
 
 static status_code_t set_mode (setting_id_t id, uint_fast16_t int_value)
@@ -1721,6 +1731,12 @@ FLASHMEM static uint32_t get_int (setting_id_t id)
             value = settings.flags.m98_prescan_enable;
             break;
 
+#if CUTTER_COMP_ENABLE
+        case Setting_CutterCompOptions:
+            value = settings.cutter_comp_flags.value;
+            break;
+#endif
+
         default:
             break;
     }
@@ -2233,7 +2249,10 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_MotorFaultsInvert, Group_Stepper, "Invert motor fault inputs", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtended, &settings.motor_fault_invert, NULL, is_setting_available },
      { Setting_ResetActions, Group_General, "Reset actions", NULL, Format_Bitfield, "Clear homed status if position was lost,Clear offsets (except G92),Clear rapids override,Clear feed override", NULL, NULL, Setting_IsExtendedFn, set_reset_actions, get_int, NULL },
      { Setting_StepperEnableDelay, Group_Stepper, "Stepper enable delay", "ms", Format_Int16, "##0", NULL, "500", Setting_IsExtended, &settings.stepper_enable_delay, NULL, NULL },
-     { Setting_SubroutineOptions, Group_General, "Subroutine options", NULL, Format_Bitfield, "Prescan for internal M98 subroutines", NULL, NULL, Setting_IsExtendedFn, set_suboptions, get_int, is_setting_available }
+    { Setting_SubroutineOptions, Group_General, "Subroutine options", NULL, Format_Bitfield, "Prescan for internal M98 subroutines", NULL, NULL, Setting_IsExtendedFn, set_suboptions, get_int, is_setting_available }
+#if CUTTER_COMP_ENABLE
+    ,{ Setting_CutterCompOptions, Group_General, "Cutter compensation options", NULL, Format_Bitfield, "Default chamfer corner treatment", NULL, NULL, Setting_IsExtendedFn, set_cutter_comp_options, get_int, NULL }
+#endif
 };
 
 PROGMEM static const setting_descr_t setting_descr[] = {
@@ -2443,6 +2462,12 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_ResetActions, "Controls actions taken on a soft reset." },
     { Setting_StepperEnableDelay, "Delay from stepper enable to first step output. The driver typically adds ~2ms to this." },
 //    { Setting_SubroutineOptions, "Enable prescan for internal M98 subroutines." }
+#if CUTTER_COMP_ENABLE
+    { Setting_CutterCompOptions, "Controls default cutter compensation behavior.\n"
+                                 "Enable the option for chamfer corner-treatment mode; leave it off to default to roll mode.\n"
+                                 "A P word on the G41/G42 entry block overrides the default for that command."
+    }
+#endif
 /*
     { Setting_MotorWarningsEnable, "Motor warning enable" },
     { Setting_MotorWarningsInvert, "Invert motor warning inputs" },

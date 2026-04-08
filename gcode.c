@@ -2852,14 +2852,15 @@ status_code_t gc_execute_block (char *block)
             cc_units u = gc_block.modal.units_imperial ? CC_UNITS_INCH : CC_UNITS_MM;
             cc_api_init(gc_block.modal.cutter_comp.radius, u, cc_emit_via_mc, cc_message);
             cc_mc_sync_input_pos(gc_state.position); // Ensure start pos is current, not stale
+            cc_api_set_corner_treatment_mode(settings.cutter_comp_flags.default_chamfer_corner_treatment ? CC_CTM_CHAMFER : CC_CTM_ROLL);
             cc_api_set_comp(cutter_comp_side_to_core(gc_block.modal.cutter_comp.side));
         }
 
         // set the corner treatment mode. If P word is 1, then chamfer, else round.
         // This can be compile-time configured to be the default mode when cutter comp is enabled,
         // but this allows for dynamic switching between the two modes for easy testing.
-        if(gc_block.words.p && gc_block.values.p == 1)
-            cc_api_set_corner_treatment_mode(CC_CTM_CHAMFER);
+        if(gc_block.words.p)
+            cc_api_set_corner_treatment_mode(gc_block.values.p == 1 ? CC_CTM_CHAMFER : CC_CTM_ROLL);
 
         if(gc_block.words.p)
             gc_block.words.p = Off;

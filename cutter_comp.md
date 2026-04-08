@@ -72,8 +72,14 @@ The current parser behavior is:
 
 - A `P` word on the entry block selects the corner treatment mode.
 - `P == 1` switches to chamfer mode.
-- Any other value leaves the default roll mode in place.
+- Any other value selects roll mode.
 - The `P` word is consumed on entry.
+
+## Persistent setting
+
+- `$1000` exposes cutter compensation options.
+- Bit 0 enables chamfer corner treatment as the default mode when `G41` or `G42` enters compensation.
+- A `P` word on the entry block overrides the default for that command.
 
 ## Build-time knobs
 The main tunables live in `cutter_comp.h`:

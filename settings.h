@@ -528,7 +528,9 @@ typedef enum {
 //
 // 900-999 - reserved for automatic tool changers (ATC)
 //
-
+#if CUTTER_COMP_ENABLE
+    Setting_CutterCompOptions = 1000,
+#endif
 // ---
     Setting_SettingsMax,
     Setting_SettingsAll = Setting_SettingsMax,
@@ -863,6 +865,14 @@ typedef union {
     };
 } macro_atc_flags_t;
 
+typedef union {
+    uint8_t value;
+    struct {
+        uint8_t default_chamfer_corner_treatment :1,
+                unassigned                       :7;
+    };
+} cutter_comp_flags_t;
+
 typedef struct {
     uint8_t baud_rate;
     uint8_t stream_format;
@@ -920,7 +930,8 @@ typedef struct {
     uint16_t stepper_enable_delay; // Move to stepper_settings_t
     tool_id_t tool_id;
     serial_format_t modbus_stream_format; // TODO: remove in next version
-    char reserved[9];             // Reserved For future expansion
+    cutter_comp_flags_t cutter_comp_flags;
+    char reserved[8];             // Reserved For future expansion
 } settings_t;
 
 typedef enum {
