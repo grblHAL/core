@@ -112,10 +112,11 @@ With the current defaults, the buffer holds 8 staged moves, looks 4 links ahead,
 
 ## User-visible messages and state
 
-- On entry through the line shim, an informational message of the form `CC_On R=...` is reported.
+- On entry through the line shim, an informational message of the form `CC_On R=... Corner=...` is reported.
 - Turning compensation off reports `CC_Off`.
 - Modal reporting exposes active compensation as `G41` or `G42`.
-- `#4007` style modal state exposure in `ngc_params.c` differentiates `G40`, `G41`, `G42`, `G41.1`, and `G42.1`.
+- When gouging is avoided you will see `CC:Self-intersection avoided by trimming move at line...`
+- Exposure in `ngc_params.c` differentiates `G40`, `G41`, `G42`, `G41.1`, and `G42.1`.
 
 ## Enabling and troubleshooting
 
