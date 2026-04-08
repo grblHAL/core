@@ -68,6 +68,22 @@ The current parser behavior is:
 - If the active units are imperial, the resolved radius is converted before the core is initialized.
 - If the resolved radius is zero, compensation is silently disabled for that entry block.
 
+## When cutter comp is not allowed
+
+The parser rejects cutter compensation, or rejects the current block while compensation is active, in these cases:
+
+- Entering compensation outside `G17` is not allowed. `G41`, `G42`, `G41.1`, and `G42.1` require the XY plane.
+- Re-entering or switching compensation while it is already active is not allowed. Cancel first with `G40`.
+- Tool change commands are not allowed while compensation is active.
+- `G50` and `G51` scaling changes are not allowed while compensation remains active through the block. A combined `G40 G50` block is still allowed because compensation is being canceled in that same block.
+- Coordinate system selection changes such as `G54` through `G59.x` are not allowed while compensation is active.
+- `G10` coordinate and tool-table update commands are not allowed while compensation is active.
+- `G28`, `G30`, and `G53` are not allowed while compensation is active.
+- Canned cycles are not allowed while compensation is active.
+- Probing cycles such as `G38.x` are not allowed while compensation is active.
+
+In addition to these parser-level restrictions, the compensation core can still reject individual moves at runtime for geometric reasons such as invalid entry, arcs smaller than tool radius, unresolved gaps, or self-intersection trimming.
+
 ## Optional mode selection
 
 - A `P` word on the entry block selects the corner treatment mode.

@@ -2700,6 +2700,11 @@ status_code_t gc_execute_block (char *block)
     if(gc_block.modal.diameter_mode && bit_istrue(axis_words.mask, bit(X_AXIS)))
         gc_block.values.xyz[X_AXIS] /= 2.0f;
 
+#if CUTTER_COMP_ENABLE
+    if(axis_command == AxisCommand_Scaling && gc_state.modal.cutter_comp.side != CComp_Off && gc_block.modal.cutter_comp.side != CComp_Off)
+        RETURN(Status_CutterCompConflict);
+#endif
+
     // Scale axis words if commanded
     if(axis_command == AxisCommand_Scaling) {
 
