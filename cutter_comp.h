@@ -49,40 +49,8 @@ extern "C" {
 #endif
 #endif
 
-#ifndef CC_ENABLE_LOOKAHEAD
-#define CC_ENABLE_LOOKAHEAD 1
-#endif
-
-#ifndef CC_LOOKAHEAD_CAP
-#define CC_LOOKAHEAD_CAP 8
-#endif
-
-#ifndef CC_LOOKAHEAD_STEPS
-#define CC_LOOKAHEAD_STEPS 4
-#endif
-
-#ifndef CC_LA_TARGET_BATCH_EMIT
-#define CC_LA_TARGET_BATCH_EMIT 3
-#endif
-
-#ifndef CC_LA_TRIM_OVERLAP
-#define CC_LA_TRIM_OVERLAP (CC_LOOKAHEAD_STEPS + 2)
-#endif
-
-#ifndef CC_LA_EMIT_HOLDBACK
-#define CC_LA_EMIT_HOLDBACK CC_LA_TRIM_OVERLAP
-#endif
-
-#ifndef CC_LA_MIN_PENDING
-#define CC_LA_MIN_PENDING (CC_LA_EMIT_HOLDBACK + CC_LA_TARGET_BATCH_EMIT)
-#endif
-
 #ifndef CC_OUT_CAP
-#if CC_ENABLE_LOOKAHEAD
-#define CC_OUT_CAP (CC_LOOKAHEAD_CAP + 1)
-#else
-#define CC_OUT_CAP (1 + CC_INSERT_CAP)
-#endif
+#define CC_OUT_CAP (2 + CC_INSERT_CAP)
 #endif
 
 
@@ -147,12 +115,9 @@ typedef enum
     cc_status_InvalidMove = 102,
     cc_status_MoveTooShort = 103,
     cc_status_ArcLtToolRad = 104,
-    cc_status_CompInCrossing = 105,
-    cc_status_CompOutCrossing = 106,
     cc_status_UnresolvedGap = 107,
     cc_status_InputBufferOverflow = 108,
-    cc_status_OutputBufferOverflow = 109,
-    cc_status_GlobalSelfIntersection = 110
+    cc_status_OutputBufferOverflow = 109
 } cc_status_code_t;
 
 typedef enum {
@@ -236,10 +201,6 @@ typedef struct
     move2d pendingZMove;
     move2d input_buffer[CC_IN_CAP];
     move2d output_buffer[CC_OUT_CAP];
-#if CC_ENABLE_LOOKAHEAD
-    move2d lookahead_buffer[CC_LOOKAHEAD_CAP];
-    int lookahead_count;
-#endif
 } cc_context;
 cc_units cc_api_get_units(void);
 
@@ -249,6 +210,12 @@ void cc_api_init(float radius, cc_units units, emit_move_cb emitCb, cc_msg_cb er
 // Returns CC_OK if the move was processed and emitted successfully, or if flushing completed successfully.
 // Returns an appropriate error code otherwise.
 cc_status_code_t cc_api_process_move(const move2d *move);
+cc_status_code_t cc_api_process_move_nodrain(const move2d *move);
+cc_status_code_t cc_api_drain_ready(void);
+cc_status_code_t cc_api_drain_ready_one(void);
+cc_status_code_t cc_api_tail_step(void);
+bool cc_api_has_ready_output(void);
+bool cc_api_has_pending_work(void);
 
 // comp_side is CC_COMP_OFF=0, CC_COMP_LEFT=1, or CC_COMP_RIGHT=-1
 void cc_api_set_comp(comp_side side);

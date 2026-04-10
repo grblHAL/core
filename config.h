@@ -308,7 +308,6 @@ should not be much greater than zero or to the minimum value necessary for the m
 #define CUTTER_COMP_ENABLE On  // Default disabled. Set to \ref On or 1 to enable.
 #endif
 
-
 /*! \def MINIMUM_FEED_RATE
 \brief
 Sets the minimum feed rate the planner will allow. Any value below it will be set to this minimum

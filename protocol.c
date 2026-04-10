@@ -204,7 +204,6 @@ bool protocol_main_loop (void)
     keep_rt_commands = false;
 
     while(true) {
-
         // Process one line of incoming stream data, as the data becomes available. Performs an
         // initial filtering by removing leading spaces and control characters.
         while((c = hal.stream.read()) != SERIAL_NO_DATA) {
@@ -272,6 +271,13 @@ bool protocol_main_loop (void)
                         eol = '\0';
                 }
 
+#ifdef CUTTER_COMP_ENABLE
+                // Drain any deferred cutter comp work queued by gc_execute_block()
+                while(gc_cutter_comp_service_pending()) {
+                    if((gc_state.last_error = gc_cutter_comp_service()) != Status_OK)
+                        break;
+                }
+#endif
                 // Add a short delay for each block processed in Check Mode to
                 // avoid overwhelming the sender with fast reply messages.
                 // This is likely to happen when streaming is done via a protocol where

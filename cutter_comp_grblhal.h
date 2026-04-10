@@ -34,6 +34,7 @@ extern "C"
     static plan_line_data_t cc_mc_active_plan_data = {0};
     static bool cc_mc_have_plan_data = false;
     static float cc_mc_input_pos[N_AXIS] = {0};
+    static bool cc_mc_tail_active = false;
 
 #ifndef DEBUG
 #define DEBUG 0  // Set to 0 to disable debug tracing
@@ -53,6 +54,26 @@ extern "C"
     {
         for (int i = 0; i < N_AXIS; ++i)
             cc_mc_input_pos[i] = pos[i];
+    }
+
+    static inline bool cc_mc_tail_pending(void)
+    {
+        return cc_mc_tail_active && cc_api_has_pending_work();
+    }
+
+    static inline void cc_mc_tail_arm(void)
+    {
+        cc_mc_tail_active = cc_api_has_pending_work();
+    }
+
+    static inline cc_status_code_t cc_mc_tail_step(void)
+    {
+        cc_status_code_t st = cc_api_tail_step();
+
+        if (st == cc_status_OK && !cc_api_has_pending_work())
+            cc_mc_tail_active = false;
+
+        return st;
     }
 
     static void cc_message(cc_status_code_t msgcode, msg_type_t severity, uint32_t lineNum)
@@ -75,12 +96,6 @@ extern "C"
         case cc_status_ArcRadiusInconsistent:
             msg = "Arc radius inconsistent";
             break;
-        case cc_status_CompInCrossing:
-            msg = "Crossing detected on move into compensation";
-            break;
-        case cc_status_CompOutCrossing:
-            msg = "Crossing detected on move out of compensation";
-            break;
         case cc_status_UnresolvedGap:
             msg = "Unresolved gap between moves";
             break;
@@ -89,9 +104,6 @@ extern "C"
             break;
         case cc_status_OutputBufferOverflow:
             msg = "Cutter compensation output buffer overflow";
-            break;
-        case cc_status_GlobalSelfIntersection:
-            msg = "Self-intersection avoided by trimming move";
             break;
         }   
 
@@ -192,16 +204,18 @@ extern "C"
             report_message(msg, Message_Info);
         }
 
-        cc_status_code_t st = cc_api_process_move(&mv);
+        cc_status_code_t st = cc_api_process_move_nodrain(&mv);
+        if (st != cc_status_OK)
+            return st;
+
+        st = cc_api_drain_ready();
+
         if (st != cc_status_OK)
             return st;
 
         if (turning_off)
         {
-            st = cc_api_process_move(0);
-            if (st != cc_status_OK)
-                return st;
-
+            cc_mc_tail_arm();
             report_message("CC_Off", Message_Info);
         }
 
@@ -232,16 +246,17 @@ extern "C"
 
         move2d mv = cc_mc_to_move2d(cc, xyz, pl_data, position, ijk, radius, turns, true);
 
-        cc_status_code_t st = cc_api_process_move(&mv);
+        cc_status_code_t st = cc_api_process_move_nodrain(&mv);
+        if (st != cc_status_OK)
+            return st;
+
+        st = cc_api_drain_ready();
+
         if (st != cc_status_OK)
             return st;
 
         if (turning_off)
-        {
-            st = cc_api_process_move(0);
-            if (st != cc_status_OK)
-                return st;
-        }
+            cc_mc_tail_arm();
 
         return cc_status_OK;
     }

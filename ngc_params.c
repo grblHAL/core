@@ -490,6 +490,7 @@ FLASHMEM float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             break;
 
           case NGCParam_ccomp:
+#if CUTTER_COMP_ENABLE          
             if(gc_state.modal.cutter_comp.side == CComp_Off)
                 value = 400.0f;
             else if(gc_state.modal.cutter_comp.side == CComp_Left)
@@ -497,7 +498,9 @@ FLASHMEM float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             else
                 value = gc_state.modal.cutter_comp.dynamic ? 421.0f : 420.0f;
             break;
-            
+#else
+            value = 400.0f;
+#endif  
         case NGCParam_metric:
             value = gc_state.modal.units_imperial ? 0.0f : 1.0f;
             break;
