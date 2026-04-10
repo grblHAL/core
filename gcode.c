@@ -621,8 +621,7 @@ FLASHMEM static inline bool cutter_comp_single_block_can_defer (void)
 {
     return sys.flags.single_block &&
            gc_state.modal.cutter_comp.side != CComp_Off &&
-           cc_api_get_mode() == CC_CM_STEADY &&
-           cc_api_has_pending_work();
+           cc_api_get_mode() == CC_CM_STEADY && cc_api_has_pending_work();
 }
 
 FLASHMEM static inline void cutter_comp_single_block_note_motion (void)
@@ -5005,7 +5004,9 @@ status_code_t gc_execute_block (char *block)
             if(!check_mode || !settings.flags.m98_prescan_enable)
                 grbl.report.feedback_message(Message_ProgramEnd);
         }
+#if CUTTER_COMP_ENABLE        
 program_flow_done:
+#endif
         gc_state.modal.program_flow = ProgramFlow_Running; // Reset program flow.
     }
 
