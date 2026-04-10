@@ -51,6 +51,11 @@ cc_units cc_api_get_units(void)
     return g_core_ctx.units;
 }
 
+void cc_api_set_corner_treatment_mode(cc_corner_treatment_mode mode)
+{
+    g_core_ctx.cornerTreatmentMode = (uint8_t)mode;
+}
+
 static inline comp_side cc_effective_comp_side(const cc_context *ctx)
 {
     if (ctx->toolSign >= 0)
@@ -1606,20 +1611,6 @@ bool cc_pop_out(cc_context *ctx, move2d *m)
     return true;
 }
 
-static inline bool cc_has_pending_work(const cc_context *ctx)
-{
-    return ctx->inCount != 0 ||
-           ctx->outCount != 0 ||
-           ctx->havePrevMove ||
-           ctx->havePendingZMove ||
-           ctx->compMode != CC_CM_NONE;
-}
-
-static inline bool cc_has_ready_output(const cc_context *ctx)
-{
-    return ctx->outCount != 0;
-}
-
 static inline void cc_core_drain(void)
 {
     move2d out;
@@ -1632,49 +1623,6 @@ static inline void cc_core_drain(void)
         g_core_emit_cb(&out);
     }
 }
-
-static inline bool cc_core_drain_one(void)
-{
-    move2d out;
-
-    if (!g_core_emit_cb)
-        return false;
-
-    while (cc_pop_out(&g_core_ctx, &out))
-    {
-        if (!out.valid)
-            continue;
-        g_core_emit_cb(&out);
-        return true;
-    }
-
-    return false;
-}
-
-static inline bool cc_tail_stage_one(cc_context *ctx)
-{
-    if (ctx->outCount > 0)
-        return true;
-
-    if (ctx->inCount > 0 && !cc_process(ctx))
-        return false;
-
-    if (ctx->outCount > 0)
-        return true;
-
-    if (ctx->havePrevMove)
-    {
-        if (!cc_stage_out(ctx, &ctx->prevOff))
-            return false;
-        if (!cc_emit_pending_z_move_at(ctx, &ctx->prevOff))
-            return false;
-        ctx->havePrevMove = false;
-        return ctx->outCount > 0;
-    }
-
-    return ctx->outCount > 0;
-}
-
 
 // Usage:
 // Call cc_api_init() whenever you need to reset the compensation core state, such as:
@@ -1720,71 +1668,9 @@ cc_corner_treatment_mode cc_api_get_corner_treatment_mode(void)
     return (cc_corner_treatment_mode)g_core_ctx.cornerTreatmentMode;
 }
 
-void cc_api_set_corner_treatment_mode(cc_corner_treatment_mode mode)
-{
-    g_core_ctx.cornerTreatmentMode = (uint8_t)mode;
-}
-
-cc_status_code_t cc_api_process_move_nodrain(const move2d *move)
-{
-    if (!move)
-        return cc_status_InvalidMove;
-
-    if (!cc_push_in(&g_core_ctx, move))
-        return cc_status_InputBufferOverflow;
-
-    if (!cc_process(&g_core_ctx))
-        return g_core_ctx.status;
-
-    return cc_status_OK;
-}
-
-cc_status_code_t cc_api_drain_ready(void)
-{
-    if (g_core_ctx.stopErr)
-        return g_core_ctx.status;
-
-    cc_core_drain();
-
-    return cc_status_OK;
-}
-
-cc_status_code_t cc_api_drain_ready_one(void)
-{
-    if (g_core_ctx.stopErr)
-        return g_core_ctx.status;
-
-    (void)cc_core_drain_one();
-
-    return cc_status_OK;
-}
-
-cc_status_code_t cc_api_tail_step(void)
-{
-    if (g_core_ctx.stopErr)
-        return g_core_ctx.status;
-
-    if (!cc_tail_stage_one(&g_core_ctx))
-        return g_core_ctx.stopErr ? g_core_ctx.status : cc_status_OK;
-
-    (void)cc_core_drain_one();
-
-    return g_core_ctx.stopErr ? g_core_ctx.status : cc_status_OK;
-}
-
-bool cc_api_has_pending_work(void)
-{
-    return cc_has_pending_work(&g_core_ctx);
-}
-
-bool cc_api_has_ready_output(void)
-{
-    return cc_has_ready_output(&g_core_ctx);
-}
-
 cc_status_code_t cc_api_process_move(const move2d *move)
 {
-    if (!move)
+     if (!move)
     {
         cc_flush(&g_core_ctx);
         if (g_core_ctx.stopErr)
@@ -1793,9 +1679,13 @@ cc_status_code_t cc_api_process_move(const move2d *move)
         return cc_status_OK;
     }
 
-    if ((g_core_ctx.status = cc_api_process_move_nodrain(move)) != cc_status_OK)
+    if (!cc_push_in(&g_core_ctx, move))
+        return cc_status_InputBufferOverflow;
+
+    if (!cc_process(&g_core_ctx))
         return g_core_ctx.status;
 
-    return cc_api_drain_ready();
+    cc_core_drain();
+    return cc_status_OK;
 }
 #endif
