@@ -687,26 +687,54 @@ FLASHMEM status_code_t gc_cutter_comp_single_block_hold_execute (void)
     return Status_OK;
 }
 
+typedef enum {
+    CCSvc_None = 0,
+    CCSvc_HoldBeforeTail,
+    CCSvc_Tail,
+    CCSvc_HoldAfterTail
+} cutter_comp_service_action_t;
+
+FLASHMEM static inline cutter_comp_service_action_t gc_cutter_comp_next_service_action (void)
+{
+    if(gc_cutter_comp_single_block_hold_before_tail_pending())
+        return CCSvc_HoldBeforeTail;
+
+    if(gc_cutter_comp_tail_pending())
+        return CCSvc_Tail;
+
+    if(gc_cutter_comp_single_block_hold_pending())
+        return CCSvc_HoldAfterTail;
+
+    return CCSvc_None;
+}
+
+//Is there any cutter-comp follow-up work still waiting to be serviced?
 FLASHMEM bool gc_cutter_comp_service_pending (void)
 {
-    return gc_cutter_comp_single_block_hold_before_tail_pending() ||
-           gc_cutter_comp_tail_pending() ||
-           gc_cutter_comp_single_block_hold_pending();
+    return gc_cutter_comp_next_service_action() != CCSvc_None;
 }
 
 FLASHMEM status_code_t gc_cutter_comp_service (void)
 {
-    if(gc_cutter_comp_single_block_hold_before_tail_pending())
+    switch(gc_cutter_comp_next_service_action()) {
+
+    case CCSvc_HoldBeforeTail:
         return gc_cutter_comp_single_block_hold_before_tail_execute();
 
-    while(gc_cutter_comp_tail_pending()) {
-        status_code_t status = gc_cutter_comp_tail_execute();
-        if(status != Status_OK)
-            return status;
-    }
+    case CCSvc_Tail:
+        while(gc_cutter_comp_tail_pending()) {
+            status_code_t status = gc_cutter_comp_tail_execute();
+            if(status != Status_OK)
+                return status;
+        }
+        break;
 
-    if(gc_cutter_comp_single_block_hold_pending())
+    case CCSvc_HoldAfterTail:
         return gc_cutter_comp_single_block_hold_execute();
+
+    case CCSvc_None:
+        break;
+    }
 
     return Status_OK;
 }
