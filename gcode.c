@@ -132,6 +132,12 @@ DCRAM parser_state_t gc_state;
 
 #define RETURN(status) return gc_at_exit(status);
 
+#if CUTTER_COMP_ENABLE
+static bool cc_deferred_stop = false;
+static bool cc_stop_after_this_block = false;
+static bool cc_stop_check_mode = false;
+#endif
+
 m98_macro_t *m98_macros = NULL;
 static tool_data_t *pending_tool = NULL;
 static output_command_t *output_commands = NULL; // Linked list
@@ -751,40 +757,16 @@ FLASHMEM static void cutter_comp_restore (const gc_ccomp_t *cutter_comp)
     if(gc_state.modal.cutter_comp.side == CComp_Off || gc_state.modal.cutter_comp.radius == 0.0f) {
         gc_state.modal.cutter_comp.side = CComp_Off;
         gc_state.modal.cutter_comp.radius = 0.0f;
-        cutter_comp_deferred_single_block = false;
-        cutter_comp_single_block_holds_before_tail = 0;
-        cutter_comp_single_block_holds_after_tail = 0;
         cc_api_process_move(0);
         cc_api_set_comp(CC_COMP_OFF);
     } else {
         cc_units units = gc_state.modal.units_imperial ? CC_UNITS_INCH : CC_UNITS_MM;
-        cutter_comp_deferred_single_block = false;
-        cutter_comp_single_block_holds_before_tail = 0;
-        cutter_comp_single_block_holds_after_tail = 0;
         cc_api_init(gc_state.modal.cutter_comp.radius, units, cc_emit_via_mc, cc_message);
         cc_mc_sync_input_pos(gc_state.position);
         cc_api_set_comp(cutter_comp_side_to_core(gc_state.modal.cutter_comp.side));
     }
 }
 
-#ifdef CUTTER_COMP_ENABLE
-
-FLASHMEM bool gc_cutter_comp_tail_pending (void)
-{
-    return gc_state.modal.cutter_comp.side == CComp_Off && cc_mc_tail_pending();
-}
-
-FLASHMEM status_code_t gc_cutter_comp_tail_execute (void)
-{
-    if(!gc_cutter_comp_tail_pending())
-        return Status_OK;
-
-    if(cc_mc_tail_step() != cc_status_OK)
-        return Status_CutterCompInvalid;
-
-    return Status_OK;
-}
-#endif
 #endif
 
 FLASHMEM bool gc_modal_state_restore (gc_modal_snapshot_t *snapshot)
@@ -912,6 +894,17 @@ FLASHMEM static status_code_t macro_call (macro_id_t macro, parameter_words_t ar
 
 static status_code_t gc_at_exit (status_code_t status)
 {
+#if CUTTER_COMP_ENABLE
+    if((status == Status_OK || status == Status_Handled) && cc_stop_after_this_block) {
+        cc_stop_after_this_block = false;
+        protocol_buffer_synchronize();
+        if(!cc_stop_check_mode) {
+            system_set_exec_state_flag(EXEC_FEED_HOLD);
+            protocol_execute_realtime();
+        }
+    }
+#endif
+
     if(!(status == Status_OK || status == Status_Handled)) {
 
         pending_tool = NULL;
@@ -1011,6 +1004,7 @@ FLASHMEM void gc_init (bool stop)
     ngc_params_init();
 #endif
 #if CUTTER_COMP_ENABLE
+    cc_deferred_stop = false;
     cc_api_init(0.0f, gc_state.modal.units_imperial ? CC_UNITS_INCH : CC_UNITS_MM, cc_emit_via_mc, cc_message); // Reset cutter comp engine state on init/stop
 #endif
 #if ENABLE_ACCELERATION_PROFILES
@@ -1422,12 +1416,20 @@ status_code_t gc_execute_block (char *block)
 
     char *message = NULL;
     status_code_t status = Status_OK;
+    bool check_mode = state_get() == STATE_CHECK_MODE;
     struct {
         float f;
         uint32_t o;
         float s;
         float t;
     } single_meaning_value = {0};
+
+#if CUTTER_COMP_ENABLE
+    cc_stop_after_this_block = cc_deferred_stop;
+    cc_stop_check_mode = check_mode;
+    if(cc_stop_after_this_block)
+        cc_deferred_stop = false;
+#endif
 
     bool fs_changed;
     if((fs_changed = gc_state.file_stream ? hal.stream.file == NULL : hal.stream.file != NULL))
@@ -1530,7 +1532,7 @@ status_code_t gc_execute_block (char *block)
         if(letter == '#') {
 
             if(gc_state.skip_blocks)
-                return Status_OK;
+                RETURN(Status_OK);
 
             if(block[char_counter] == '<') {
 
@@ -1606,7 +1608,7 @@ status_code_t gc_execute_block (char *block)
             RETURN(status);
 
         if(gc_state.skip_blocks && letter != 'O')
-            return Status_OK;
+            RETURN(Status_OK);
 
         if(user_mcode != UserMCode_NoValueWords && isnan(value))
             RETURN(Status_BadNumberFormat);   // [Expected word value]
@@ -2423,7 +2425,7 @@ status_code_t gc_execute_block (char *block)
                     RETURN(Status_FlowControlStackOverflow);
                 // MacroCall_Modal is not invoked on initially, MacroCall_Modal1 is.
                 if(gc_block.macro_call == MacroCall_Modal)
-                    return Status_OK;
+                    RETURN(Status_OK);
             }
         }
 #endif // NGC_PARAMETERS_ENABLE
@@ -2982,7 +2984,6 @@ status_code_t gc_execute_block (char *block)
     // Was on but now off, NO motion!
     if(!axis_words.mask && gc_state.modal.cutter_comp.side != CComp_Off && gc_block.modal.cutter_comp.side == CComp_Off) {
         cc_api_set_comp(CC_COMP_OFF);
-        cc_mc_tail_arm();
         report_message("CC_Off",Message_Plain);
     }
 
@@ -4050,8 +4051,6 @@ status_code_t gc_execute_block (char *block)
         RETURN((status_code_t)int_value);
     }
 
-    bool check_mode = state_get() == STATE_CHECK_MODE;
-
     if(command_words.G16) switch(gc_block.macro_call) {
 
         case MacroCall_NonModal:
@@ -4688,9 +4687,6 @@ status_code_t gc_execute_block (char *block)
         plan_data.motion_mode = gc_state.modal.motion;
 #endif
         pos_update_t gc_update_pos = GCUpdatePos_Target;
-#if CUTTER_COMP_ENABLE
-    program_flow_t cutter_comp_deferred_pause_flow = ProgramFlow_Running;
-#endif
 
         switch(gc_state.modal.motion) {
 
@@ -4705,9 +4701,6 @@ status_code_t gc_execute_block (char *block)
                 if(!cc_mc_line_in(gc_state.modal.cutter_comp, gc_block.values.xyz, &plan_data)== Status_OK){
                     RETURN(Status_CutterCompInvalid);
                 }
-                cutter_comp_single_block_note_motion();
-                if(cutter_comp_pause_deferred_pending())
-                    cutter_comp_deferred_pause_flow = cutter_comp_pause_consume_deferred();
 #else      
                 mc_line(gc_block.values.xyz, &plan_data);
 #endif
@@ -4724,9 +4717,7 @@ status_code_t gc_execute_block (char *block)
                 if(cc_mc_line_in(gc_state.modal.cutter_comp, gc_block.values.xyz, &plan_data) != cc_status_OK) {
                     RETURN(Status_CutterCompInvalid);
                 }
-                cutter_comp_single_block_note_motion();
-                if(cutter_comp_pause_deferred_pending())
-                    cutter_comp_deferred_pause_flow = cutter_comp_pause_consume_deferred();
+
 #else
                 mc_line(gc_block.values.xyz, &plan_data);
 #endif
@@ -4747,9 +4738,7 @@ status_code_t gc_execute_block (char *block)
                            plane, gc_parser_flags.arc_is_clockwise ? -gc_block.arc_turns : gc_block.arc_turns) == Status_OK){
                     RETURN(Status_CutterCompInvalid);
                 }
-                cutter_comp_single_block_note_motion();
-                if(cutter_comp_pause_deferred_pending())
-                    cutter_comp_deferred_pause_flow = cutter_comp_pause_consume_deferred();
+
 #else      
                 mc_arc(gc_block.values.xyz, &plan_data, gc_state.position, gc_block.values.ijk, gc_block.values.r,
                         plane, gc_parser_flags.arc_is_clockwise ? -gc_block.arc_turns : gc_block.arc_turns);
@@ -4858,19 +4847,6 @@ status_code_t gc_execute_block (char *block)
         if(sys.cancel)
             gc_update_pos = GCUpdatePos_None;
 
-#if CUTTER_COMP_ENABLE
-        if(cutter_comp_deferred_pause_flow != ProgramFlow_Running) {
-            protocol_buffer_synchronize();
-
-            if(!check_mode) {
-                if(cutter_comp_deferred_pause_flow == ProgramFlow_CompletedM60 && hal.pallet_shuttle)
-                    hal.pallet_shuttle();
-                system_set_exec_state_flag(EXEC_FEED_HOLD);
-                protocol_execute_realtime();
-            }
-        }
-#endif
-
         // As far as the parser is concerned, the position is now == target. In reality the
         // motion control system might still be processing the action and the real tool position
         // in any intermediate location.
@@ -4882,7 +4858,6 @@ status_code_t gc_execute_block (char *block)
     }
 
     if(command_words.G16) switch(gc_block.macro_call) {
-
 #if NGC_PARAMETERS_ENABLE
         case MacroCall_Modal:
         case MacroCall_Modal1:
@@ -4913,20 +4888,22 @@ status_code_t gc_execute_block (char *block)
     // [21. Program flow ]:
     // M0,M1,M2,M30,M60: Perform non-running program flow actions. During a program pause, the buffer may
     // refill and can only be resumed by the cycle start run-time command.
-    if((gc_state.modal.program_flow = gc_block.modal.program_flow) || sys.flags.single_block) {
 
-#if CUTTER_COMP_ENABLE
-        if(cutter_comp_pause_can_defer(gc_block.modal.program_flow)) {
-            cutter_comp_pause_defer(gc_block.modal.program_flow);
-            gc_state.modal.program_flow = ProgramFlow_Running;
-            goto program_flow_done;
+    #if CUTTER_COMP_ENABLE
+        if((gc_block.modal.program_flow == ProgramFlow_Paused ||
+            gc_block.modal.program_flow == ProgramFlow_OptionalStop) &&
+           cc_api_get_comp() != CC_COMP_OFF) {
+            cc_deferred_stop = true;
+            gc_block.modal.program_flow = ProgramFlow_Running;
         }
-
-        if(sys.flags.single_block && gc_block.modal.program_flow == ProgramFlow_Running &&
-                (cutter_comp_deferred_single_block || cutter_comp_single_block_holds_before_tail != 0 || cutter_comp_single_block_holds_after_tail != 0))
-            goto program_flow_done;
-#endif
-
+    #endif
+        // existing line 4716:
+        if((gc_state.modal.program_flow = gc_block.modal.program_flow) || sys.flags.single_block) {
+//  #if CUTTER_COMP_ENABLE
+//         // Flush CC look-ahead so the pending move reaches the planner before sync
+//         if(cc_api_get_comp() != CC_COMP_OFF)
+//             cc_api_process_move(0);
+// #endif       
         protocol_buffer_synchronize(); // Sync and finish all remaining buffered motions before moving on.
 
         if(gc_state.modal.program_flow == ProgramFlow_Return) {
@@ -5032,9 +5009,7 @@ status_code_t gc_execute_block (char *block)
             if(!check_mode || !settings.flags.m98_prescan_enable)
                 grbl.report.feedback_message(Message_ProgramEnd);
         }
-#if CUTTER_COMP_ENABLE        
-program_flow_done:
-#endif
+
         gc_state.modal.program_flow = ProgramFlow_Running; // Reset program flow.
     }
 
@@ -5047,5 +5022,5 @@ program_flow_done:
 
     // TODO: % to denote start of program.
 
-    return Status_OK;
+    return gc_at_exit(Status_OK);
 }

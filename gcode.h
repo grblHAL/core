@@ -770,20 +770,6 @@ plane_t *gc_get_plane_data (plane_t *plane, plane_select_t select);
 axes_signals_t gc_claim_axis_words (parser_block_t *gc_block, axes_signals_t validate);
 size_t gc_macro_get_pos (macro_id_t id, vfs_file_t *file);
 
-#ifdef CUTTER_COMP_ENABLE
-// Cutter compensation single block processing after move is executed. 
-bool gc_cutter_comp_single_block_hold_before_tail_pending (void);
-status_code_t gc_cutter_comp_single_block_hold_before_tail_execute (void);
-bool gc_cutter_comp_single_block_hold_pending (void);
-status_code_t gc_cutter_comp_single_block_hold_execute (void);
-bool gc_cutter_comp_service_pending (void);
-status_code_t gc_cutter_comp_service (void);
-
-// Cutter compensation tail processing after move is executed.
-bool gc_cutter_comp_tail_pending (void);
-status_code_t gc_cutter_comp_tail_execute (void);
-#endif
-
 #if NGC_PARAMETERS_ENABLE
 parameter_words_t gc_get_g65_arguments (void);
 bool gc_modal_state_restore (gc_modal_snapshot_t *snapshot);

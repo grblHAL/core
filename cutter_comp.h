@@ -206,16 +206,7 @@ cc_units cc_api_get_units(void);
 
 void cc_api_init(float radius, cc_units units, emit_move_cb emitCb, cc_msg_cb errCb);
 
-// Process a move. If move is null, flushes any pending moves and reports any pending errors.
-// Returns CC_OK if the move was processed and emitted successfully, or if flushing completed successfully.
-// Returns an appropriate error code otherwise.
 cc_status_code_t cc_api_process_move(const move2d *move);
-cc_status_code_t cc_api_process_move_nodrain(const move2d *move);
-cc_status_code_t cc_api_drain_ready(void);
-cc_status_code_t cc_api_drain_ready_one(void);
-cc_status_code_t cc_api_tail_step(void);
-bool cc_api_has_ready_output(void);
-bool cc_api_has_pending_work(void);
 
 // comp_side is CC_COMP_OFF=0, CC_COMP_LEFT=1, or CC_COMP_RIGHT=-1
 void cc_api_set_comp(comp_side side);
