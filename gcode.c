@@ -592,6 +592,158 @@ FLASHMEM static modal_restore_actions_t *get_state_restore_commands (gc_modal_t 
 }
 
 #if CUTTER_COMP_ENABLE
+static program_flow_t cutter_comp_deferred_program_flow = ProgramFlow_Running;
+static bool cutter_comp_deferred_single_block = false;
+static uint8_t cutter_comp_single_block_holds_before_tail = 0;
+static uint8_t cutter_comp_single_block_holds_after_tail = 0;
+
+FLASHMEM static inline bool cutter_comp_pause_deferred_pending (void)
+{
+    return cutter_comp_deferred_program_flow != ProgramFlow_Running;
+}
+
+FLASHMEM static inline bool cutter_comp_pause_can_defer (program_flow_t program_flow)
+{
+    return (program_flow == ProgramFlow_Paused || program_flow == ProgramFlow_OptionalStop || program_flow == ProgramFlow_CompletedM60) &&
+            gc_state.modal.cutter_comp.side != CComp_Off &&
+            cc_api_get_mode() == CC_CM_STEADY &&
+            cc_api_has_pending_work();
+}
+
+FLASHMEM static inline void cutter_comp_pause_defer (program_flow_t program_flow)
+{
+    cutter_comp_deferred_program_flow = program_flow;
+}
+
+FLASHMEM static inline program_flow_t cutter_comp_pause_consume_deferred (void)
+{
+    program_flow_t program_flow = cutter_comp_deferred_program_flow;
+    cutter_comp_deferred_program_flow = ProgramFlow_Running;
+
+    return program_flow;
+}
+
+FLASHMEM static inline bool cutter_comp_single_block_can_defer (void)
+{
+    return sys.flags.single_block &&
+           gc_state.modal.cutter_comp.side != CComp_Off &&
+           cc_api_get_mode() == CC_CM_STEADY && cc_api_has_pending_work();
+}
+
+FLASHMEM static inline void cutter_comp_single_block_note_motion (void)
+{
+    bool have_deferred;
+    bool turning_off;
+
+    if(!sys.flags.single_block)
+        return;
+
+    have_deferred = cutter_comp_deferred_single_block;
+    turning_off = gc_state.modal.cutter_comp.side == CComp_Off && cc_mc_tail_pending();
+
+    cutter_comp_deferred_single_block = false;
+
+    if(have_deferred && cutter_comp_single_block_holds_before_tail < 2)
+        cutter_comp_single_block_holds_before_tail++;
+
+    if(cutter_comp_single_block_can_defer())
+        cutter_comp_deferred_single_block = true;
+    else if(turning_off) {
+        if(cutter_comp_single_block_holds_after_tail < 2)
+            cutter_comp_single_block_holds_after_tail++;
+    } else if(cutter_comp_single_block_holds_before_tail < 2)
+        cutter_comp_single_block_holds_before_tail++;
+}
+
+FLASHMEM bool gc_cutter_comp_single_block_hold_before_tail_pending (void)
+{
+    return cutter_comp_single_block_holds_before_tail != 0;
+}
+
+FLASHMEM status_code_t gc_cutter_comp_single_block_hold_before_tail_execute (void)
+{
+    if(!gc_cutter_comp_single_block_hold_before_tail_pending())
+        return Status_OK;
+
+    cutter_comp_single_block_holds_before_tail--;
+
+    protocol_buffer_synchronize();
+    system_set_exec_state_flag(EXEC_FEED_HOLD);
+    protocol_execute_realtime();
+
+    return Status_OK;
+}
+
+FLASHMEM bool gc_cutter_comp_single_block_hold_pending (void)
+{
+    return cutter_comp_single_block_holds_after_tail != 0 && !gc_cutter_comp_tail_pending();
+}
+
+FLASHMEM status_code_t gc_cutter_comp_single_block_hold_execute (void)
+{
+    if(!gc_cutter_comp_single_block_hold_pending())
+        return Status_OK;
+
+    cutter_comp_single_block_holds_after_tail--;
+
+    protocol_buffer_synchronize();
+    system_set_exec_state_flag(EXEC_FEED_HOLD);
+    protocol_execute_realtime();
+
+    return Status_OK;
+}
+
+typedef enum {
+    CCSvc_None = 0,
+    CCSvc_HoldBeforeTail,
+    CCSvc_Tail,
+    CCSvc_HoldAfterTail
+} cutter_comp_service_action_t;
+
+FLASHMEM static inline cutter_comp_service_action_t gc_cutter_comp_next_service_action (void)
+{
+    if(gc_cutter_comp_single_block_hold_before_tail_pending())
+        return CCSvc_HoldBeforeTail;
+
+    if(gc_cutter_comp_tail_pending())
+        return CCSvc_Tail;
+
+    if(gc_cutter_comp_single_block_hold_pending())
+        return CCSvc_HoldAfterTail;
+
+    return CCSvc_None;
+}
+
+//Is there any cutter-comp follow-up work still waiting to be serviced?
+FLASHMEM bool gc_cutter_comp_service_pending (void)
+{
+    return gc_cutter_comp_next_service_action() != CCSvc_None;
+}
+
+FLASHMEM status_code_t gc_cutter_comp_service (void)
+{
+    switch(gc_cutter_comp_next_service_action()) {
+
+    case CCSvc_HoldBeforeTail:
+        return gc_cutter_comp_single_block_hold_before_tail_execute();
+
+    case CCSvc_Tail:
+        while(gc_cutter_comp_tail_pending()) {
+            status_code_t status = gc_cutter_comp_tail_execute();
+            if(status != Status_OK)
+                return status;
+        }
+        break;
+
+    case CCSvc_HoldAfterTail:
+        return gc_cutter_comp_single_block_hold_execute();
+
+    case CCSvc_None:
+        break;
+    }
+
+    return Status_OK;
+}
 
 FLASHMEM static inline comp_side cutter_comp_side_to_core (ccomp_mode_t side)
 {
