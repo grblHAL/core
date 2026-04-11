@@ -82,6 +82,8 @@ The parser rejects cutter compensation, or rejects the current block while compe
 - `G28`, `G30`, and `G53` are not allowed while compensation is active.
 - Canned cycles are not allowed while compensation is active.
 - Probing cycles such as `G38.x` are not allowed while compensation is active.
+- Modal state save/restore commands `M70`, `M72`, and `M73` are not allowed while compensation is active.
+- Subprogram and macro calls are not allowed while compensation is active. This includes `G65`, `G66`, `G66.1`, and `M98`.
 
 In addition to these parser-level restrictions, the compensation core can still reject individual moves at runtime for geometric reasons such as invalid entry, arcs smaller than tool radius, or unresolved gaps.
 

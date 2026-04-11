@@ -132,12 +132,6 @@ DCRAM parser_state_t gc_state;
 
 #define RETURN(status) return gc_at_exit(status);
 
-#if CUTTER_COMP_ENABLE
-static bool cc_deferred_stop = false;
-static bool cc_stop_after_this_block = false;
-static bool cc_stop_check_mode = false;
-#endif
-
 m98_macro_t *m98_macros = NULL;
 static tool_data_t *pending_tool = NULL;
 static output_command_t *output_commands = NULL; // Linked list
@@ -742,17 +736,6 @@ FLASHMEM static status_code_t macro_call (macro_id_t macro, parameter_words_t ar
 
 static status_code_t gc_at_exit (status_code_t status)
 {
-#if CUTTER_COMP_ENABLE
-    if((status == Status_OK || status == Status_Handled) && cc_stop_after_this_block) {
-        cc_stop_after_this_block = false;
-        protocol_buffer_synchronize();
-        if(!cc_stop_check_mode) {
-            system_set_exec_state_flag(EXEC_FEED_HOLD);
-            protocol_execute_realtime();
-        }
-    }
-#endif
-
     if(!(status == Status_OK || status == Status_Handled)) {
 
         pending_tool = NULL;
@@ -852,7 +835,6 @@ FLASHMEM void gc_init (bool stop)
     ngc_params_init();
 #endif
 #if CUTTER_COMP_ENABLE
-    cc_deferred_stop = false;
     cc_api_init(0.0f, gc_state.modal.units_imperial ? CC_UNITS_INCH : CC_UNITS_MM, cc_emit_via_mc, cc_message); // Reset cutter comp engine state on init/stop
 #endif
 #if ENABLE_ACCELERATION_PROFILES
@@ -1271,13 +1253,6 @@ status_code_t gc_execute_block (char *block)
         float s;
         float t;
     } single_meaning_value = {0};
-
-#if CUTTER_COMP_ENABLE
-    cc_stop_after_this_block = cc_deferred_stop;
-    cc_stop_check_mode = check_mode;
-    if(cc_stop_after_this_block)
-        cc_deferred_stop = false;
-#endif
 
     bool fs_changed;
     if((fs_changed = gc_state.file_stream ? hal.stream.file == NULL : hal.stream.file != NULL))
@@ -2224,6 +2199,12 @@ status_code_t gc_execute_block (char *block)
 
     if(command_words.G16) {
 
+#if CUTTER_COMP_ENABLE
+                // Block sub/macro invocation while cutter compensation is active.
+                if(gc_state.modal.cutter_comp.side != CComp_Off && gc_block.macro_call != MacroCall_End)
+                        RETURN(Status_CutterCompConflict);
+#endif
+
         if(gc_block.macro_call && gc_state.g66_args == NULL) {
 
             if(!gc_block.words.p)
@@ -2279,6 +2260,14 @@ status_code_t gc_execute_block (char *block)
 #endif // NGC_PARAMETERS_ENABLE
     } else
         gc_block.words.m = Off;
+
+#if CUTTER_COMP_ENABLE && NGC_PARAMETERS_ENABLE
+    if(gc_state.modal.cutter_comp.side != CComp_Off &&
+       (gc_block.state_action == ModalState_Save ||
+        gc_block.state_action == ModalState_Restore ||
+        gc_block.state_action == ModalState_SaveAutoRestore))
+        RETURN(Status_CutterCompConflict);
+#endif
 
     // Determine implicit axis command conditions. Axis words have been passed, but no explicit axis
     // command has been sent. If so, set axis command to current motion mode.
@@ -4736,22 +4725,7 @@ status_code_t gc_execute_block (char *block)
     // [21. Program flow ]:
     // M0,M1,M2,M30,M60: Perform non-running program flow actions. During a program pause, the buffer may
     // refill and can only be resumed by the cycle start run-time command.
-
-    #if CUTTER_COMP_ENABLE
-        if((gc_block.modal.program_flow == ProgramFlow_Paused ||
-            gc_block.modal.program_flow == ProgramFlow_OptionalStop) &&
-           cc_api_get_comp() != CC_COMP_OFF) {
-            cc_deferred_stop = true;
-            gc_block.modal.program_flow = ProgramFlow_Running;
-        }
-    #endif
-        // existing line 4716:
         if((gc_state.modal.program_flow = gc_block.modal.program_flow) || sys.flags.single_block) {
-//  #if CUTTER_COMP_ENABLE
-//         // Flush CC look-ahead so the pending move reaches the planner before sync
-//         if(cc_api_get_comp() != CC_COMP_OFF)
-//             cc_api_process_move(0);
-// #endif       
         protocol_buffer_synchronize(); // Sync and finish all remaining buffered motions before moving on.
 
         if(gc_state.modal.program_flow == ProgramFlow_Return) {
