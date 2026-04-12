@@ -36,13 +36,13 @@ When `CUTTER_COMP_ENABLE` is enabled, the flow is:
 5. The shim emits compensated geometry back through `mc_line()` and `mc_arc()`.
 6. When compensation is turned off, pending moves are flushed with `cc_api_process_move(0)` and the mode is set back to `CC_COMP_OFF`.
 
-If `G40` is issued on a block without motion while compensation is active, the flush happens immediately in `gcode.c`. If the off transition happens on a motion block, the shim flushes after processing that move.
 
 ## Motion caveats (edge cases)
 
 - Z-only moves are allowed. Consecutive Z-only moves are combined to a single move using the last feedrate.(edge case)
 - Rapids are allowed while compensation is active. In the core they are treated as line-like moves for validation and junction handling, while still being emitted back out with the rapid flag preserved.
 - If a line-line junction involves a rapid, no roll-around transition is inserted at that junction. The core falls back to trim, extend, or bevel handling instead of generating a roll move.
+- The meaning of single block means single move when in cutter comp mode. Convex corner treatments become individual moves.
 
 ## Radius resolution
 
@@ -99,9 +99,6 @@ In addition to these parser-level restrictions, the compensation core can still 
 - `$1000` exposes cutter compensation options.
 - Bit 0 enables chamfer corner treatment as the default mode when `G41` or `G42` enters compensation.
 - A `P` word on the entry block overrides the default for that command.
-
-## Build-time knobs
-The main tunables live in `cutter_comp.h`:
 
 
 ## User-visible messages and state

@@ -593,7 +593,7 @@ FLASHMEM static inline comp_side cutter_comp_side_to_core (ccomp_mode_t side)
 
 FLASHMEM static void cutter_comp_restore (const gc_ccomp_t *cutter_comp)
 {
-    report_message("cutter_comp_restore", Message_Plain);
+    //report_message("cutter_comp_restore", Message_Plain);
     gc_state.modal.cutter_comp = *cutter_comp;
 
     if(gc_state.modal.cutter_comp.side == CComp_Off || gc_state.modal.cutter_comp.radius == 0.0f) {
@@ -2820,6 +2820,9 @@ status_code_t gc_execute_block (char *block)
 
     // Was on but now off, NO motion!
     if(!axis_words.mask && gc_state.modal.cutter_comp.side != CComp_Off && gc_block.modal.cutter_comp.side == CComp_Off) {
+        // Flush any queued compensated segment(s) now so a standalone G40 behaves as a complete block.
+        if(cc_api_process_move(0) != cc_status_OK)
+            RETURN(Status_CutterCompInvalid);
         cc_api_set_comp(CC_COMP_OFF);
         report_message("CC_Off",Message_Plain);
     }
@@ -4737,8 +4740,17 @@ status_code_t gc_execute_block (char *block)
             if(!check_mode) {
                 if(gc_block.modal.program_flow == ProgramFlow_CompletedM60 && hal.pallet_shuttle)
                     hal.pallet_shuttle();
+#if CUTTER_COMP_ENABLE
+                //if cc_mc_is_active() is true then we handle feed hold in the cc shim for finer control.
+                if(!cc_mc_is_active(true)) {
+                    system_set_exec_state_flag(EXEC_FEED_HOLD); // Use feed hold for program pause.
+                    protocol_execute_realtime(); // Execute suspend.
+                }
+#else
                 system_set_exec_state_flag(EXEC_FEED_HOLD); // Use feed hold for program pause.
                 protocol_execute_realtime(); // Execute suspend.
+
+#endif                
             }
         } else { // == ProgramFlow_Completed
             // Upon program complete, only a subset of g-codes reset to certain defaults, according to

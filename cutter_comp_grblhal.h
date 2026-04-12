@@ -33,11 +33,9 @@ extern "C"
     void debug_printf(const char *fmt, ...);
     static plan_line_data_t cc_mc_active_plan_data = {0};
     static bool cc_mc_have_plan_data = false;
+    static bool cc_mc_active = false;
+    static bool cc_mc_should_pause_once = false;
     static float cc_mc_input_pos[N_AXIS] = {0};
-
-#ifndef DEBUG
-#define DEBUG 0  // Set to 0 to disable debug tracing
-#endif
 
     // in cutter_comp_grblhal.h
     static inline void cc_report_version(void)
@@ -55,6 +53,12 @@ extern "C"
             cc_mc_input_pos[i] = pos[i];
     }
 
+    static bool cc_mc_is_active(bool pause_on_active)
+    {
+        if(pause_on_active)
+            cc_mc_should_pause_once = cc_mc_active;
+        return cc_mc_active;
+    }
 
     static void cc_message(cc_status_code_t msgcode, msg_type_t severity, uint32_t lineNum)
     {
@@ -152,19 +156,15 @@ extern "C"
 
         if (cc.side == CComp_Off && cc_api_get_comp() == CC_COMP_OFF)
         {
+            cc_mc_active = false;
             cc_mc_input_pos[0] = xyz[0];
             cc_mc_input_pos[1] = xyz[1];
             cc_mc_input_pos[2] = xyz[2];
             mc_line(xyz, pl_data);
             return cc_status_OK;
         }
-#if DEBUG
-        {
-            debug_printf("CC_IN side=%d inp=(%.3f,%.3f,%.3f) tgt=(%.3f,%.3f,%.3f)",
-                     cc.side, cc_mc_input_pos[0], cc_mc_input_pos[1], cc_mc_input_pos[2],
-                     xyz[0], xyz[1], xyz[2]);         
-        }
-#endif
+        cc_mc_active = true;    
+
         comp_side side = cc.side == CComp_Left ? CC_COMP_LEFT : (cc.side == CComp_Right ? CC_COMP_RIGHT : CC_COMP_OFF);
         comp_side current_side = cc_api_get_comp();
         bool turning_off = current_side != CC_COMP_OFF && side == CC_COMP_OFF;
@@ -173,7 +173,6 @@ extern "C"
             cc_api_set_comp(side);
 
         move2d mv = cc_mc_to_move2d(cc, xyz, pl_data, 0, 0, 0.0f, 0, false);
-
 
         if (side != CC_COMP_OFF && mv.compMode == CC_CM_IN)
         {
@@ -189,14 +188,15 @@ extern "C"
         if (st != cc_status_OK)
             return st;
 
+
         if (turning_off)
         {
             st = cc_api_process_move(0);
             if (st != cc_status_OK)
                 return st;
-
             report_message("CC_Off", Message_Info);
         }
+
 
         return cc_status_OK;
     }
@@ -209,16 +209,18 @@ extern "C"
 
         if (cc.side == CComp_Off && cc_api_get_comp() == CC_COMP_OFF)
         {
+            cc_mc_active = false;
             cc_mc_input_pos[0] = xyz[0];
             cc_mc_input_pos[1] = xyz[1];
             cc_mc_input_pos[2] = xyz[2];
             mc_arc(xyz, pl_data, position, ijk, radius, plane, turns);
             return cc_status_OK;
         }
-
+        cc_mc_active = true;
         comp_side side = cc.side == CComp_Left ? CC_COMP_LEFT : (cc.side == CComp_Right ? CC_COMP_RIGHT : CC_COMP_OFF);
         comp_side current_side = cc_api_get_comp();
         bool turning_off = current_side != CC_COMP_OFF && side == CC_COMP_OFF;
+        bool turned_off = false;
 
 
         if (side != current_side || (side != CC_COMP_OFF && cc_api_get_mode() == CC_CM_NONE))
@@ -235,8 +237,8 @@ extern "C"
             st = cc_api_process_move(0);
             if (st != cc_status_OK)
                 return st;
+            turned_off = cc_api_get_comp() == CC_COMP_OFF;
         }
-
         return cc_status_OK;
     }
 
@@ -244,6 +246,7 @@ extern "C"
     {
         plan_line_data_t local_pl_data = {0};
         plan_line_data_t *pl_data = &local_pl_data;
+        float xyz[N_AXIS] = {0};
 
         if (!mv || !mv->valid)
             return;
@@ -254,17 +257,8 @@ extern "C"
         local_pl_data.feed_rate = mv->feed;
         local_pl_data.condition.rapid_motion = (mv->type == CC_MOT_RAPID) ? 1 : 0;
 
-
-#if DEBUG
-        {
-            debug_printf("CC_EMIT type=%d cm=%d p0=(%.3f,%.3f) p1=(%.3f,%.3f) z0=%.3f z1=%.3f",
-                     mv->type, mv->compMode, mv->p_0.x, mv->p_0.y, mv->p_1.x, mv->p_1.y, mv->z_0, mv->z_1);
-        }
-#endif
-
         if (mv->type == CC_MOT_LINE || mv->type == CC_MOT_RAPID)
         {
-            float xyz[N_AXIS] = {0};
             xyz[0] = mv->p_1.x;
             xyz[1] = mv->p_1.y;
             xyz[2] = mv->z_1;
@@ -272,7 +266,6 @@ extern "C"
         }
         else if (mv->type == CC_MOT_ARC)
         {
-            float xyz[N_AXIS] = {0};
             xyz[0] = mv->p_1.x;
             xyz[1] = mv->p_1.y;
             xyz[2] = mv->z_1;
@@ -295,6 +288,14 @@ extern "C"
             int32_t turns = (mv->arcDir == CC_ARC_CCW) ? 1 : -1;
             mc_arc(xyz, pl_data, position, ijk, mv->radius, plane, turns);
         }
+
+        if(cc_mc_should_pause_once || sys.flags.single_block) {
+            cc_mc_should_pause_once = false;
+            protocol_buffer_synchronize();
+            system_set_exec_state_flag(EXEC_FEED_HOLD);
+            protocol_execute_realtime();
+        }
+
     }
 #endif
 #ifdef __cplusplus
