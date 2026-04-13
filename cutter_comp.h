@@ -63,7 +63,7 @@ extern "C" {
 #endif
 
 #ifndef CC_LA_TARGET_BATCH_EMIT
-#define CC_LA_TARGET_BATCH_EMIT 3
+#define CC_LA_TARGET_BATCH_EMIT 1
 #endif
 
 #ifndef CC_LA_TRIM_OVERLAP

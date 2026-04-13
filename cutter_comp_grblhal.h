@@ -34,7 +34,6 @@ extern "C"
     static plan_line_data_t cc_mc_active_plan_data = {0};
     static bool cc_mc_have_plan_data = false;
     static bool cc_mc_active = false;
-    static bool cc_mc_should_pause_once = false;
     static bool cc_mc_pause_after_next_motion = false;
     static float cc_mc_input_pos[N_AXIS] = {0};
 
@@ -56,22 +55,18 @@ extern "C"
 
      static bool cc_mc_is_active(void)
     {
-        cc_mc_should_pause_once = cc_mc_active;
         return cc_mc_active;
     }
 
     static inline cc_status_code_t cc_mc_enqueue_pause_marker(void)
     {
-        // if single block mode then return ok.
         if(sys.flags.single_block)
-            return cc_status_OK;    
-
+            return cc_status_OK; // No need to enqueue a marker if we're already in single block mode, the next block will be the one after the pause.
+        
         move2d marker = {0};
         marker.type = CC_MOT_EMPTY;
         marker.pause_after = true;
         marker.valid = true;
-
-        cc_mc_should_pause_once = false;
 
         return cc_api_process_move(&marker);
     }
@@ -267,6 +262,7 @@ extern "C"
 
     static inline void cc_emit_via_mc(const move2d *mv)
     {
+        //report_message("CC: cc_emit_via_mc", Message_Info);
         plan_line_data_t local_pl_data = {0};
         plan_line_data_t *pl_data = &local_pl_data;
         float xyz[N_AXIS] = {0};
@@ -277,8 +273,8 @@ extern "C"
 
         if (mv->pause_after)
         {
+            //synthetic move to indicate a M00 pause. Set the flag to pause after the next motion, and return without emitting a move.
             cc_mc_pause_after_next_motion = true;
-            cc_mc_should_pause_once = false;
             return;
         }
 
@@ -321,16 +317,11 @@ extern "C"
             mc_arc(xyz, pl_data, position, ijk, mv->radius, plane, turns);
             emitted_motion = true;
         }
-        // If single block mode is active, or if we just emitted a motion and pause on active is requested, then enqueue a pause.
-        if(sys.flags.single_block) {
-            report_message("CC: Pausing for single block", Message_Info);
-            protocol_buffer_synchronize();
-            system_set_exec_state_flag(EXEC_FEED_HOLD);
-            protocol_execute_realtime();
-        }else if((cc_mc_pause_after_next_motion || cc_mc_should_pause_once) && emitted_motion) {
-            report_message("CC: Pausing after move", Message_Info);
+
+        // Pause only after emitting a real motion.
+        if((sys.flags.single_block || cc_mc_pause_after_next_motion) && emitted_motion) {
+            //report_message("CC: Pausing after move", Message_Info);
             cc_mc_pause_after_next_motion = false;
-            cc_mc_should_pause_once = false;
             protocol_buffer_synchronize();
             system_set_exec_state_flag(EXEC_FEED_HOLD);
             protocol_execute_realtime();

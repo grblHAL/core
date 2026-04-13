@@ -4740,6 +4740,7 @@ status_code_t gc_execute_block (char *block)
             if(!check_mode) {
                 if(gc_block.modal.program_flow == ProgramFlow_CompletedM60 && hal.pallet_shuttle)
                     hal.pallet_shuttle();
+                    
 #if CUTTER_COMP_ENABLE
                 // If cutter comp is active, enqueue a deferred pause marker in the CC stream.
                 if(cc_mc_is_active()) {
