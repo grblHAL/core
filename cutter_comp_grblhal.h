@@ -35,6 +35,7 @@ extern "C"
     static bool cc_mc_have_plan_data = false;
     static bool cc_mc_active = false;
     static bool cc_mc_should_pause_once = false;
+    static bool cc_mc_pause_after_next_motion = false;
     static float cc_mc_input_pos[N_AXIS] = {0};
 
     // in cutter_comp_grblhal.h
@@ -53,11 +54,26 @@ extern "C"
             cc_mc_input_pos[i] = pos[i];
     }
 
-    static bool cc_mc_is_active(bool pause_on_active)
+     static bool cc_mc_is_active(void)
     {
-        if(pause_on_active)
-            cc_mc_should_pause_once = cc_mc_active;
+        cc_mc_should_pause_once = cc_mc_active;
         return cc_mc_active;
+    }
+
+    static inline cc_status_code_t cc_mc_enqueue_pause_marker(void)
+    {
+        // if single block mode then return ok.
+        if(sys.flags.single_block)
+            return cc_status_OK;    
+
+        move2d marker = {0};
+        marker.type = CC_MOT_EMPTY;
+        marker.pause_after = true;
+        marker.valid = true;
+
+        cc_mc_should_pause_once = false;
+
+        return cc_api_process_move(&marker);
     }
 
     static void cc_message(cc_status_code_t msgcode, msg_type_t severity, uint32_t lineNum)
@@ -84,10 +100,19 @@ extern "C"
             msg = "Unresolved gap between moves";
             break;
         case cc_status_InputBufferOverflow:
-            msg = "Cutter compensation input buffer overflow";
+            msg = "Input buffer overflow";
             break;
         case cc_status_OutputBufferOverflow:
-            msg = "Cutter compensation output buffer overflow";
+            msg = "Output buffer overflow";
+            break;
+        case cc_status_CompInCrossing:
+            msg = "Crossing error: move in cutting area";
+            break;
+        case cc_status_CompOutCrossing:
+            msg = "Crossing error: move out of cutting area";
+            break;
+        case cc_status_GlobalSelfIntersection:
+            msg = "Global self intersection detected";
             break;
         }   
 
@@ -220,8 +245,7 @@ extern "C"
         comp_side side = cc.side == CComp_Left ? CC_COMP_LEFT : (cc.side == CComp_Right ? CC_COMP_RIGHT : CC_COMP_OFF);
         comp_side current_side = cc_api_get_comp();
         bool turning_off = current_side != CC_COMP_OFF && side == CC_COMP_OFF;
-        bool turned_off = false;
-
+    
 
         if (side != current_side || (side != CC_COMP_OFF && cc_api_get_mode() == CC_CM_NONE))
             cc_api_set_comp(side);
@@ -237,8 +261,7 @@ extern "C"
             st = cc_api_process_move(0);
             if (st != cc_status_OK)
                 return st;
-            turned_off = cc_api_get_comp() == CC_COMP_OFF;
-        }
+         }
         return cc_status_OK;
     }
 
@@ -247,9 +270,17 @@ extern "C"
         plan_line_data_t local_pl_data = {0};
         plan_line_data_t *pl_data = &local_pl_data;
         float xyz[N_AXIS] = {0};
+        bool emitted_motion = false;
 
         if (!mv || !mv->valid)
             return;
+
+        if (mv->pause_after)
+        {
+            cc_mc_pause_after_next_motion = true;
+            cc_mc_should_pause_once = false;
+            return;
+        }
 
         if (cc_mc_have_plan_data)
             local_pl_data = cc_mc_active_plan_data;
@@ -263,6 +294,7 @@ extern "C"
             xyz[1] = mv->p_1.y;
             xyz[2] = mv->z_1;
             mc_line(xyz, pl_data);
+            emitted_motion = true;
         }
         else if (mv->type == CC_MOT_ARC)
         {
@@ -287,16 +319,23 @@ extern "C"
 
             int32_t turns = (mv->arcDir == CC_ARC_CCW) ? 1 : -1;
             mc_arc(xyz, pl_data, position, ijk, mv->radius, plane, turns);
+            emitted_motion = true;
         }
-
-        if(cc_mc_should_pause_once || sys.flags.single_block) {
+        // If single block mode is active, or if we just emitted a motion and pause on active is requested, then enqueue a pause.
+        if(sys.flags.single_block) {
+            report_message("CC: Pausing for single block", Message_Info);
+            protocol_buffer_synchronize();
+            system_set_exec_state_flag(EXEC_FEED_HOLD);
+            protocol_execute_realtime();
+        }else if((cc_mc_pause_after_next_motion || cc_mc_should_pause_once) && emitted_motion) {
+            report_message("CC: Pausing after move", Message_Info);
+            cc_mc_pause_after_next_motion = false;
             cc_mc_should_pause_once = false;
             protocol_buffer_synchronize();
             system_set_exec_state_flag(EXEC_FEED_HOLD);
             protocol_execute_realtime();
         }
-
-    }
+     }
 #endif
 #ifdef __cplusplus
 }

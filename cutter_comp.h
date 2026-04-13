@@ -15,6 +15,7 @@
 #ifndef CUTTER_COMP_H
 #define CUTTER_COMP_H
 #include "config.h"
+#include <stdbool.h>
 #include <stdint.h>
 
 #if CUTTER_COMP_ENABLE
@@ -49,8 +50,40 @@ extern "C" {
 #endif
 #endif
 
+#ifndef CC_ENABLE_LOOKAHEAD
+#define CC_ENABLE_LOOKAHEAD 1
+#endif
+
+#ifndef CC_LOOKAHEAD_CAP
+#define CC_LOOKAHEAD_CAP 8
+#endif
+
+#ifndef CC_LOOKAHEAD_STEPS
+#define CC_LOOKAHEAD_STEPS 4
+#endif
+
+#ifndef CC_LA_TARGET_BATCH_EMIT
+#define CC_LA_TARGET_BATCH_EMIT 3
+#endif
+
+#ifndef CC_LA_TRIM_OVERLAP
+#define CC_LA_TRIM_OVERLAP (CC_LOOKAHEAD_STEPS + 2)
+#endif
+
+#ifndef CC_LA_EMIT_HOLDBACK
+#define CC_LA_EMIT_HOLDBACK CC_LA_TRIM_OVERLAP
+#endif
+
+#ifndef CC_LA_MIN_PENDING
+#define CC_LA_MIN_PENDING (CC_LA_EMIT_HOLDBACK + CC_LA_TARGET_BATCH_EMIT)
+#endif
+
 #ifndef CC_OUT_CAP
-#define CC_OUT_CAP (2 + CC_INSERT_CAP)
+#if CC_ENABLE_LOOKAHEAD
+#define CC_OUT_CAP (CC_LOOKAHEAD_CAP + 1)
+#else
+#define CC_OUT_CAP (1 + CC_INSERT_CAP)
+#endif
 #endif
 
 
@@ -115,9 +148,12 @@ typedef enum
     cc_status_InvalidMove = 102,
     cc_status_MoveTooShort = 103,
     cc_status_ArcLtToolRad = 104,
+    cc_status_CompInCrossing = 105,
+    cc_status_CompOutCrossing = 106,
     cc_status_UnresolvedGap = 107,
     cc_status_InputBufferOverflow = 108,
-    cc_status_OutputBufferOverflow = 109
+    cc_status_OutputBufferOverflow = 109,
+    cc_status_GlobalSelfIntersection = 110
 } cc_status_code_t;
 
 typedef enum {
@@ -145,6 +181,7 @@ typedef struct
     uint8_t compMode;
     bool hasXY;
     bool hasZ;
+    bool pause_after;
     bool valid;
 } move2d;
 
@@ -188,6 +225,7 @@ typedef struct
     float arcTol;
     float gapTol;
     float minOutputLen;
+    bool lookaheadEnabled;
 
     int inHead;
     int inCount;
@@ -201,21 +239,30 @@ typedef struct
     move2d pendingZMove;
     move2d input_buffer[CC_IN_CAP];
     move2d output_buffer[CC_OUT_CAP];
+#if CC_ENABLE_LOOKAHEAD
+    move2d lookahead_buffer[CC_LOOKAHEAD_CAP];
+    int lookahead_count;
+#endif
 } cc_context;
 cc_units cc_api_get_units(void);
 
 void cc_api_init(float radius, cc_units units, emit_move_cb emitCb, cc_msg_cb errCb);
 
+// Process a move. If move is null, flushes any pending moves and reports any pending errors.
+// Returns CC_OK if the move was processed and emitted successfully, or if flushing completed successfully.
+// Returns an appropriate error code otherwise.
 cc_status_code_t cc_api_process_move(const move2d *move);
 
 // comp_side is CC_COMP_OFF=0, CC_COMP_LEFT=1, or CC_COMP_RIGHT=-1
 void cc_api_set_comp(comp_side side);
 comp_side cc_api_get_comp(void);
 comp_mode cc_api_get_mode(void);
-cc_corner_treatment_mode cc_api_get_corner_treatment_mode(void);
+bool cc_api_get_lookahead_enabled(void);
+void cc_api_set_lookahead_enabled(bool enabled);
 
 //Requires CC_ENABLE_CORNER_TREATMENT set to 1
 void cc_api_set_corner_treatment_mode(cc_corner_treatment_mode mode);
+cc_corner_treatment_mode cc_api_get_corner_treatment_mode(void);
 
 
 #ifdef __cplusplus

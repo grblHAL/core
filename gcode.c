@@ -4741,8 +4741,12 @@ status_code_t gc_execute_block (char *block)
                 if(gc_block.modal.program_flow == ProgramFlow_CompletedM60 && hal.pallet_shuttle)
                     hal.pallet_shuttle();
 #if CUTTER_COMP_ENABLE
-                //if cc_mc_is_active() is true then we handle feed hold in the cc shim for finer control.
-                if(!cc_mc_is_active(true)) {
+                // If cutter comp is active, enqueue a deferred pause marker in the CC stream.
+                if(cc_mc_is_active()) {
+                    if(cc_mc_enqueue_pause_marker() != cc_status_OK)
+                        RETURN(Status_CutterCompInvalid);
+                } else {
+                    //oitherwise, execute a normal feed hold.
                     system_set_exec_state_flag(EXEC_FEED_HOLD); // Use feed hold for program pause.
                     protocol_execute_realtime(); // Execute suspend.
                 }

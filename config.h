@@ -308,6 +308,15 @@ should not be much greater than zero or to the minimum value necessary for the m
 #define CUTTER_COMP_ENABLE On  // Default disabled. Set to \ref On or 1 to enable.
 #endif
 
+/*! \def CC_ENABLE_LOOKAHEAD
+#brief Enables cutter compensation lookahead.
+see cutter_comp_grblhal.h for more details and configuration options related to this feature.
+*/
+#if !defined CC_ENABLE_LOOKAHEAD || defined __DOXYGEN__
+#define CC_ENABLE_LOOKAHEAD On  // Default disabled. Set to \ref On or 1 to enable.
+#endif
+
+
 /*! \def MINIMUM_FEED_RATE
 \brief
 Sets the minimum feed rate the planner will allow. Any value below it will be set to this minimum

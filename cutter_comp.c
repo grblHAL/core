@@ -4,7 +4,7 @@
  *
  * Cutter compensation engine intended for grblHAL-style
  * integration.
- * 
+ *
  * code is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
@@ -41,20 +41,40 @@
 #define CC_TWO_PI 6.2831853071795864769f
 #define CC_MAX_SWEEP_DEG 359.9f
 #define CC_MIN_ARC_LEN 0.001f
+#define CC_MIN_OUTPUT_LEN_MM 0.001f
 
 static cc_context g_core_ctx;
 static emit_move_cb g_core_emit_cb = (emit_move_cb)0;
 static cc_msg_cb g_core_msg_cb = (cc_msg_cb)0;
+static inline void cc_core_drain(void);
 
 cc_units cc_api_get_units(void)
 {
     return g_core_ctx.units;
 }
 
-void cc_api_set_corner_treatment_mode(cc_corner_treatment_mode mode)
+#if CC_ENABLE_LOOKAHEAD
+typedef struct
 {
-    g_core_ctx.cornerTreatmentMode = (uint8_t)mode;
+    float minx;
+    float miny;
+    float maxx;
+    float maxy;
+} cc_aabb2;
+
+typedef struct
+{
+    bool hit;
+    int j;
+    vec2 tip;
+    float dist;
+} cc_crossing_hit;
+
+static inline bool cc_lookahead_runtime_enabled(const cc_context *ctx)
+{
+    return ctx->lookaheadEnabled;
 }
+#endif
 
 static inline comp_side cc_effective_comp_side(const cc_context *ctx)
 {
@@ -523,7 +543,7 @@ static inline intersect_type cc_intersect_line_circle(vec2 l1, vec2 l2, vec2 ctr
     return CC_IT_INTERSECT;
 }
 
-static inline void cc_report_msg(cc_context *ctx, cc_status_code_t msg,msg_type_t severity)
+static inline void cc_report_msg(cc_context *ctx, cc_status_code_t msg, msg_type_t severity)
 {
     ctx->stopErr = (severity == CC_MSG_ERROR);
     ctx->status = msg;
@@ -539,8 +559,8 @@ static inline bool cc_validate(cc_context *ctx, move2d *m)
     {
         if (cc_len(cc_sub(m->p_1, m->p_0)) < CC_TOL)
         {
-            m->valid = false;//VALIDATE FAIL
-            return false;//VALIDATE FAIL
+            m->valid = false; // VALIDATE FAIL
+            return false;     // VALIDATE FAIL
         }
 
         m->valid = true;
@@ -558,10 +578,16 @@ static inline bool cc_validate(cc_context *ctx, move2d *m)
         if (degenerate || !sweep_ok)
         {
             m->valid = false;
+
+#if CC_ENABLE_LOOKAHEAD
+            return m->valid;
+#else
             cc_report_msg(ctx, cc_status_ArcLtToolRad, CC_MSG_ERROR);
             return m->valid;
+#endif
         }
 
+#if !CC_ENABLE_LOOKAHEAD
         {
             comp_side side = cc_effective_comp_side(ctx);
             bool inner_arc = (side == CC_COMP_LEFT && m->arcDir == CC_ARC_CCW) ||
@@ -573,6 +599,7 @@ static inline bool cc_validate(cc_context *ctx, move2d *m)
                 return m->valid;
             }
         }
+#endif
 
         bool consistent = cc_is_radius_consistent(m);
         if (!consistent)
@@ -843,12 +870,14 @@ static inline bool cc_offset_arc(cc_context *ctx, move2d *m)
     else
         r1 = r0 + (left ? dr : -dr);
 
+#if !CC_ENABLE_LOOKAHEAD
     if (r1 <= CC_TOL)
     {
         cc_report_msg(ctx, cc_status_ArcLtToolRad, CC_MSG_ERROR);
         m->valid = false;
         return false;
     }
+#endif
 
     v0 = cc_sub(m->p_0, m->center);
     v1 = cc_sub(m->p_1, m->center);
@@ -887,6 +916,432 @@ static inline bool cc_trim_to(cc_context *ctx, move2d *a, move2d *b, vec2 tip)
     return a->valid && b->valid;
 }
 
+#if CC_ENABLE_LOOKAHEAD
+static inline bool cc_angle_on_arc_norm(float a0, float a1, float ap, uint8_t dir)
+{
+    if (dir == CC_ARC_CCW)
+        return cc_angle_on_sweep_ccw(a0, a1, ap);
+    return cc_angle_on_sweep_cw(a0, a1, ap);
+}
+
+static inline int cc_next_valid_index(const move2d *moves, int count, int i)
+{
+    int k;
+    for (k = i + 1; k < count; ++k)
+    {
+        if (cc_motion_valid(&moves[k]))
+            return k;
+    }
+    return -1;
+}
+
+static inline int cc_prev_valid_index(const move2d *moves, int i)
+{
+    int k;
+    for (k = i - 1; k >= 0; --k)
+    {
+        if (cc_motion_valid(&moves[k]))
+            return k;
+    }
+    return -1;
+}
+
+static inline int cc_first_comp_move(const move2d *moves, int count)
+{
+    int i;
+    for (i = 0; i < count; ++i)
+    {
+        if (moves[i].compMode == CC_CM_IN)
+            return cc_next_valid_index(moves, count, i);
+    }
+    return -1;
+}
+
+static inline int cc_last_comp_move(const move2d *moves, int count, int startAt)
+{
+    int i;
+    for (i = startAt; i < count; ++i)
+    {
+        if (moves[i].compMode == CC_CM_OUT)
+            return cc_prev_valid_index(moves, i);
+    }
+    return -1;
+}
+
+static inline void cc_invalidate_range(move2d *moves, int i, int j)
+{
+    int k;
+    for (k = i + 1; k < j; ++k)
+        if (!moves[k].pause_after)
+            moves[k].valid = false;
+}
+
+static inline cc_aabb2 cc_aabb_of(const move2d *m)
+{
+    cc_aabb2 b;
+    b.minx = fminf(m->p_0.x, m->p_1.x);
+    b.maxx = fmaxf(m->p_0.x, m->p_1.x);
+    b.miny = fminf(m->p_0.y, m->p_1.y);
+    b.maxy = fmaxf(m->p_0.y, m->p_1.y);
+
+    if (m->type == CC_MOT_ARC && fabsf(m->radius) > CC_TOL)
+    {
+        float a0n = cc_angle_norm(atan2f(m->p_0.y - m->center.y, m->p_0.x - m->center.x));
+        float a1n = cc_angle_norm(atan2f(m->p_1.y - m->center.y, m->p_1.x - m->center.x));
+        float r = fabsf(m->radius);
+
+        if (cc_angle_on_arc_norm(a0n, a1n, CC_PI, m->arcDir))
+            b.minx = m->center.x - r;
+        if (cc_angle_on_arc_norm(a0n, a1n, 0.0f, m->arcDir))
+            b.maxx = m->center.x + r;
+        if (cc_angle_on_arc_norm(a0n, a1n, CC_PI * 0.5f, m->arcDir))
+            b.maxy = m->center.y + r;
+        if (cc_angle_on_arc_norm(a0n, a1n, CC_PI * 1.5f, m->arcDir))
+            b.miny = m->center.y - r;
+    }
+
+    return b;
+}
+
+static inline void cc_init_all_aabb(const move2d *moves, cc_aabb2 *bounds, int start, int count)
+{
+    int i;
+    for (i = start; i < count; ++i)
+    {
+        if (cc_motion_valid(&moves[i]))
+            bounds[i] = cc_aabb_of(&moves[i]);
+    }
+}
+
+static inline bool cc_aabb_intersects(const cc_aabb2 *a, const cc_aabb2 *b)
+{
+    return !(a->maxx < b->minx || a->minx > b->maxx || a->maxy < b->miny || a->miny > b->maxy);
+}
+
+static inline int cc_common_tip_any(const move2d *a, const move2d *b, vec2 *tip1, vec2 *tip2)
+{
+    vec2 pts[2];
+    int count;
+
+    *tip1 = cc_v2(0.0f, 0.0f);
+    *tip2 = cc_v2(0.0f, 0.0f);
+
+    if (a->type == CC_MOT_ARC && b->type == CC_MOT_ARC)
+    {
+        if (cc_is_near(a->p_1, b->p_0) || cc_is_near(a->center, b->center))
+            return 0;
+    }
+
+    count = cc_finite_intersection_points(a, b, pts);
+    if (count >= 1)
+        *tip1 = pts[0];
+    if (count >= 2)
+        *tip2 = pts[1];
+    return count;
+}
+
+static inline cc_crossing_hit cc_look_ahead_for_crossing(move2d *moves,
+                                                         cc_aabb2 *bounds,
+                                                         int numMoves,
+                                                         int srcIdx,
+                                                         int startTargetIdx,
+                                                         int maxLookahead,
+                                                         int firstCutIdx,
+                                                         int lastCutIdx)
+{
+    cc_crossing_hit best;
+    int j;
+    int r;
+
+    best.hit = false;
+    best.j = -1;
+    best.tip = cc_v2(0.0f, 0.0f);
+    best.dist = 1e30f;
+
+    if (!cc_motion_valid(&moves[srcIdx]))
+        return best;
+
+    j = startTargetIdx + 1;
+    for (r = 0; r <= maxLookahead && j < numMoves; ++r, ++j)
+    {
+        vec2 t1;
+        vec2 t2;
+        int n;
+        vec2 pick;
+        float d;
+
+        if (!cc_motion_valid(&moves[j]))
+            continue;
+
+        if (srcIdx == firstCutIdx && j == lastCutIdx)
+            break;
+
+        if (j < srcIdx + 2)
+            continue;
+
+        if (!cc_aabb_intersects(&bounds[srcIdx], &bounds[j]))
+            continue;
+
+        if (fabsf(moves[srcIdx].z_0 - moves[j].z_0) > CC_TOL ||
+            fabsf(moves[srcIdx].z_0 - moves[j].z_1) > CC_TOL)
+            continue;
+
+        n = cc_common_tip_any(&moves[srcIdx], &moves[j], &t1, &t2);
+        if (n <= 0)
+            continue;
+
+        pick = t1;
+        d = cc_dist_from_start_along(&moves[srcIdx], t1);
+        if (n == 2)
+        {
+            float d2 = cc_dist_from_start_along(&moves[srcIdx], t2);
+            if (d2 < d)
+            {
+                d = d2;
+                pick = t2;
+            }
+        }
+
+        if (d <= best.dist)
+        {
+            best.hit = true;
+            best.j = j;
+            best.tip = pick;
+            best.dist = d;
+        }
+    }
+
+    return best;
+}
+
+static inline bool cc_trim_crossing_elements(cc_context *ctx, move2d *moves, int count, int lookahead)
+{
+    cc_aabb2 bounds[CC_LOOKAHEAD_CAP];
+    int srcIdx = 0;
+    int compInIdx = -1;
+    int compOutIdx = -1;
+    int firstCutIdx;
+    int lastCutIdx = -1;
+
+    if (count < 3)
+        return true;
+
+    cc_init_all_aabb(moves, bounds, 0, count);
+
+    firstCutIdx = cc_first_comp_move(moves, count);
+    if (firstCutIdx >= 0)
+        lastCutIdx = cc_last_comp_move(moves, count, firstCutIdx);
+
+    if (firstCutIdx >= 0)
+        compInIdx = firstCutIdx - 1;
+    if (lastCutIdx >= 0)
+        compOutIdx = lastCutIdx + 1;
+
+    if (moves[srcIdx].compMode == CC_CM_IN)
+    {
+        if (firstCutIdx > -1)
+        {
+            if (moves[firstCutIdx].type == CC_MOT_ARC && moves[firstCutIdx].radius <= 0.0f)
+            {
+                cc_report_msg(ctx, cc_status_ArcLtToolRad, CC_MSG_ERROR);
+                return false;
+            }
+        }
+    }
+
+    if (moves[srcIdx].compMode == CC_CM_OUT)
+    {
+        if (lastCutIdx > -1)
+        {
+            if (moves[lastCutIdx].type == CC_MOT_ARC && moves[lastCutIdx].radius <= 0.0f)
+            {
+                cc_report_msg(ctx, cc_status_ArcLtToolRad, CC_MSG_ERROR);
+                return false;
+            }
+        }
+    }
+
+    while (srcIdx < count)
+    {
+        int targetIdx;
+        cc_crossing_hit crossing;
+        bool shouldTrim;
+
+        while (srcIdx < count && !cc_motion_valid(&moves[srcIdx]))
+            srcIdx++;
+        if (srcIdx >= count)
+            break;
+
+        targetIdx = cc_next_valid_index(moves, count, srcIdx);
+        if (targetIdx < 0)
+            break;
+
+        crossing = cc_look_ahead_for_crossing(moves, bounds, count, srcIdx, targetIdx, lookahead, firstCutIdx, lastCutIdx);
+        if (!crossing.hit)
+        {
+            srcIdx++;
+            continue;
+        }
+
+        if (moves[srcIdx].compMode == CC_CM_IN)
+        {
+            if (crossing.j < lastCutIdx)
+            {
+                cc_report_msg(ctx, cc_status_CompInCrossing, CC_MSG_ERROR);
+                return false;
+            }
+            srcIdx++;
+            continue;
+        }
+
+        if (moves[crossing.j].compMode == CC_CM_OUT)
+        {
+            cc_report_msg(ctx, cc_status_CompOutCrossing, CC_MSG_ERROR);
+            return false;
+        }
+
+        shouldTrim = compInIdx != -1 && compOutIdx != -1 && srcIdx == compInIdx && crossing.j == compOutIdx;
+        if (!shouldTrim)
+        {
+            (void)cc_trim_to(ctx, &moves[srcIdx], &moves[crossing.j], crossing.tip);
+            cc_invalidate_range(moves, srcIdx, crossing.j);
+            cc_report_msg(ctx, cc_status_GlobalSelfIntersection, CC_MSG_INFO);
+        }
+
+        srcIdx = crossing.j;
+    }
+
+    return true;
+}
+
+static inline bool cc_la_emit_oldest(cc_context *ctx)
+{
+    move2d m;
+    int i;
+
+    if (ctx->lookahead_count <= 0)
+        return true;
+
+    m = ctx->lookahead_buffer[0];
+    if (m.valid)
+    {
+        if (!cc_out_has_space(ctx, 1))
+            return false;
+        cc_push_out(ctx, &m);
+    }
+
+    for (i = 1; i < ctx->lookahead_count; ++i)
+        ctx->lookahead_buffer[i - 1] = ctx->lookahead_buffer[i];
+
+    ctx->lookahead_count--;
+    return true;
+}
+
+static inline bool cc_la_trim(cc_context *ctx)
+{
+    return cc_trim_crossing_elements(ctx, ctx->lookahead_buffer, ctx->lookahead_count, CC_LOOKAHEAD_STEPS);
+}
+
+static inline bool cc_la_emit_batch(cc_context *ctx, int holdback, int target)
+{
+    int emitCount;
+    int i;
+
+    if (ctx->lookahead_count <= holdback)
+        return true;
+
+    emitCount = ctx->lookahead_count - holdback;
+    if (emitCount > target)
+        emitCount = target;
+
+    for (i = 0; i < emitCount; ++i)
+    {
+        if (!cc_la_emit_oldest(ctx))
+            return false;
+    }
+
+    return true;
+}
+
+static inline bool cc_stage_out(cc_context *ctx, const move2d *m)
+{
+    if (ctx->toolR < CC_TOL)
+    {
+        if (!cc_out_has_space(ctx, 1))
+            return false;
+        cc_push_out(ctx, m);
+        return true;
+    }
+
+    if (!cc_lookahead_runtime_enabled(ctx))
+    {
+        if (!cc_out_has_space(ctx, 1))
+            return false;
+        cc_push_out(ctx, m);
+        return true;
+    }
+
+    /* Keep using lookahead while compensation is active or draining.
+       During comp-out, compSide is already OFF but compMode/lookahead still
+       carry pending compensated elements that must preserve order. */
+    if (ctx->compSide == CC_COMP_OFF && ctx->compMode == CC_CM_NONE && ctx->lookahead_count == 0)
+    {
+        if (!cc_out_has_space(ctx, 1))
+            return false;
+        cc_push_out(ctx, m);
+        return true;
+    }
+
+    if (ctx->lookahead_count >= CC_LOOKAHEAD_CAP)
+    {
+        if (!cc_la_trim(ctx))
+            return false;
+        if (!cc_la_emit_batch(ctx, CC_LA_EMIT_HOLDBACK, CC_LA_TARGET_BATCH_EMIT))
+            return false;
+    }
+
+    if (ctx->lookahead_count >= CC_LOOKAHEAD_CAP)
+    {
+        cc_report_msg(ctx, cc_status_OutputBufferOverflow, CC_MSG_ERROR);
+        return false;
+    }
+
+    ctx->lookahead_buffer[ctx->lookahead_count++] = *m;
+
+    if (ctx->lookahead_count >= CC_LA_MIN_PENDING)
+    {
+        if (!cc_la_trim(ctx))
+            return false;
+        if (!cc_la_emit_batch(ctx, CC_LA_EMIT_HOLDBACK, CC_LA_TARGET_BATCH_EMIT))
+            return false;
+    }
+
+    return true;
+}
+
+static inline bool cc_stage_flush(cc_context *ctx)
+{
+    if (!cc_lookahead_runtime_enabled(ctx))
+        return true;
+
+    if (!cc_la_trim(ctx))
+        return false;
+
+    while (ctx->lookahead_count > CC_LA_EMIT_HOLDBACK)
+    {
+        if (!cc_la_emit_batch(ctx, CC_LA_EMIT_HOLDBACK, CC_LA_TARGET_BATCH_EMIT))
+            return false;
+    }
+
+    while (ctx->lookahead_count > 0)
+    {
+        if (!cc_la_emit_oldest(ctx))
+            return false;
+    }
+
+    return true;
+}
+#else
 static inline bool cc_stage_out(cc_context *ctx, const move2d *m)
 {
     if (!cc_out_has_space(ctx, 1))
@@ -900,6 +1355,7 @@ static inline bool cc_stage_flush(cc_context *ctx)
     (void)ctx;
     return true;
 }
+#endif
 
 static inline bool cc_extend_to(cc_context *ctx, move2d *a, move2d *b, vec2 fip)
 {
@@ -936,7 +1392,7 @@ static inline move2d cc_make_roll_arc(const cc_context *ctx, const move2d *a, co
     roll.p_0 = a->p_1;
     roll.p_1 = b->p_0;
     roll.z_0 = b->z_0;
-    roll.z_1 = b->z_0;    
+    roll.z_1 = b->z_0;
     roll.center = cc_roll_center(a->p_1, a->endDir, useLeft, ctx->toolR);
 
     v0 = cc_sub(roll.p_0, roll.center);
@@ -951,7 +1407,7 @@ static inline move2d cc_make_roll_arc(const cc_context *ctx, const move2d *a, co
         r = r0;
     else if (r1 >= CC_TOL)
         r = r1;
-        
+
     if (r0 >= CC_TOL)
         roll.p_0 = cc_add(roll.center, cc_scale(v0, r / r0));
     if (r1 >= CC_TOL)
@@ -988,7 +1444,7 @@ static inline move2d cc_make_arc_extension_line_only(const cc_context *ctx, cons
     ext.compMode = arc->compMode;
     ext.feed = arc->feed;
     ext.z_0 = fromEnd ? arc->z_1 : arc->z_0;
-    ext.z_1 = ext.z_0;    
+    ext.z_1 = ext.z_0;
     ext.p_0 = anchor;
     ext.p_1 = cc_add(anchor, cc_scale(dir, extent));
     ext.startDir = dir;
@@ -1251,7 +1707,7 @@ static inline void cc_handle_arc_arc(cc_context *ctx, move2d *a, move2d *b, move
     gap = cc_len(cc_sub(b->p_0, a->p_1));
     float gapTol = ctx->gapTol > 0 ? ctx->gapTol : CC_GAP_TOL_MM;
     resolved = cc_solve_junction(ctx, a, b, gap < gapTol, &junction);
-    if(!resolved)
+    if (!resolved)
     {
         if (gap < gapTol)
         {
@@ -1273,7 +1729,9 @@ static inline void cc_handle_arc_arc(cc_context *ctx, move2d *a, move2d *b, move
         return;
     }
 
+#if !CC_ENABLE_LOOKAHEAD
     cc_report_msg(ctx, cc_status_InvalidMove, CC_MSG_ERROR);
+#endif
 
     inserts[(*insertCount)++] = cc_make_bevel(a, b);
 }
@@ -1306,11 +1764,13 @@ static inline void cc_handle_arc_line(cc_context *ctx, move2d *a, move2d *b, mov
     if (!anyRapid && resolved && junction.jtype == CC_JT_ROLL_AROUND)
     {
         if (!cc_insert_roll_or_corner(ctx, a, b, inserts, insertCount))
-            cc_report_msg(ctx, cc_status_UnresolvedGap,true);
+            cc_report_msg(ctx, cc_status_UnresolvedGap, true);
         return;
     }
 
+#if !CC_ENABLE_LOOKAHEAD
     cc_report_msg(ctx, cc_status_InvalidMove, CC_MSG_ERROR);
+#endif
 
     inserts[(*insertCount)++] = cc_make_bevel(a, b);
 }
@@ -1342,6 +1802,9 @@ static inline void cc_reset_state(cc_context *ctx)
 {
     ctx->havePrevMove = false;
     ctx->havePendingZMove = false;
+#if CC_ENABLE_LOOKAHEAD
+    ctx->lookahead_count = 0;
+#endif
 }
 
 static inline bool cc_emit_pending_z_move_at(cc_context *ctx, const move2d *anchor)
@@ -1381,6 +1844,9 @@ static void cc_init_internal(cc_context *ctx, float toolRadius)
     ctx->cornerTreatmentMode = (uint8_t)CC_CORNER_TREATMENT_MODE;
     ctx->toolR = (toolRadius < 0.0f) ? -toolRadius : toolRadius;
     ctx->toolSign = (toolRadius < 0.0f) ? -1 : 1;
+#if CC_ENABLE_LOOKAHEAD
+    ctx->lookaheadEnabled = true;
+#endif
     cc_reset_state(ctx);
 }
 
@@ -1437,18 +1903,27 @@ bool cc_process(cc_context *ctx)
     if (ctx->stopErr)
         return false;
 
-     while (ctx->inCount > 0)
+    while (ctx->inCount > 0)
     {
         move2d curOff;
         move2d inserts[CC_INSERT_CAP];
         int insertCount = 0;
 
-        if (!cc_out_has_space(ctx, 2 + CC_INSERT_CAP))
+#if !CC_ENABLE_LOOKAHEAD
+        if (!cc_out_has_space(ctx, 1 + CC_INSERT_CAP))
             return false;
+#endif
 
         curOff = cc_pop_in(ctx);
         ctx->lastLineNum = curOff.lineNum;
-        
+
+        if (curOff.pause_after)
+        {
+            if (!cc_stage_out(ctx, &curOff))
+                return false;
+            continue;
+        }
+
         if (curOff.type == CC_MOT_EMPTY)
             continue;
 
@@ -1462,6 +1937,9 @@ bool cc_process(cc_context *ctx)
             {
                 if (ctx->havePendingZMove)
                 {
+                    // Edge case: if we get multiple Z-only moves in a row, only keep the longest one in the same direction
+                    // Check if the new Z move should replace the pending one
+                    // (e.g. if it's a longer move in the same direction)
                     if (cc_should_replace_pending_z_target(&ctx->pendingZMove, &curOff))
                     {
                         ctx->pendingZMove.z_1 = curOff.z_1;
@@ -1495,7 +1973,6 @@ bool cc_process(cc_context *ctx)
         if (!cc_offset_move(ctx, &curOff))
             return false;
 
-
         if (!ctx->havePrevMove)
         {
             ctx->prevOff = curOff;
@@ -1507,7 +1984,7 @@ bool cc_process(cc_context *ctx)
             continue;
         }
 
-         if (ctx->prevOff.compMode == CC_CM_IN)
+        if (ctx->prevOff.compMode == CC_CM_IN)
         {
             float originalLen = cc_len(cc_sub(ctx->prevOff.p_1, ctx->prevOff.p_0));
             if (originalLen <= ctx->toolR + CC_TOL)
@@ -1555,7 +2032,6 @@ bool cc_process(cc_context *ctx)
             cc_update_vectors(&curOff);
         }
 
- 
         if (curOff.compMode == CC_CM_STEADY)
             cc_apply_logic(ctx, &ctx->prevOff, &curOff, inserts, &insertCount);
 
@@ -1663,6 +2139,39 @@ comp_mode cc_api_get_mode(void)
     return g_core_ctx.compMode;
 }
 
+bool cc_api_get_lookahead_enabled(void)
+{
+#if CC_ENABLE_LOOKAHEAD
+    return g_core_ctx.lookaheadEnabled;
+#else
+    return false;
+#endif
+}
+
+void cc_api_set_lookahead_enabled(bool enabled)
+{
+#if CC_ENABLE_LOOKAHEAD
+    if (g_core_ctx.lookaheadEnabled == enabled)
+        return;
+
+    if (!enabled && g_core_ctx.lookahead_count > 0)
+    {
+        if (!cc_stage_flush(&g_core_ctx))
+            return;
+        cc_core_drain();
+    }
+
+    g_core_ctx.lookaheadEnabled = enabled;
+#else
+    (void)enabled;
+#endif
+}
+
+void cc_api_set_corner_treatment_mode(cc_corner_treatment_mode mode)
+{
+    g_core_ctx.cornerTreatmentMode = (uint8_t)mode;
+}
+
 cc_corner_treatment_mode cc_api_get_corner_treatment_mode(void)
 {
     return (cc_corner_treatment_mode)g_core_ctx.cornerTreatmentMode;
@@ -1670,7 +2179,7 @@ cc_corner_treatment_mode cc_api_get_corner_treatment_mode(void)
 
 cc_status_code_t cc_api_process_move(const move2d *move)
 {
-     if (!move)
+    if (!move)
     {
         cc_flush(&g_core_ctx);
         if (g_core_ctx.stopErr)

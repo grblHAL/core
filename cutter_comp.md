@@ -11,7 +11,7 @@ This tree contains the cutter compensation core and the grblHAL shim that is alr
 - `gcode.c`
   - Parser/runtime integration for `G40`, `G41`, `G42`, `G41.1`, and `G42.1`.
 - `config.h`
-  - Build-time gate for the feature via `CUTTER_COMP_ENABLE`.
+  - Build-time gates for the feature via `CUTTER_COMP_ENABLE` and look-ahead behavior via `CC_ENABLE_LOOKAHEAD`.
 - `errors.c`, `report.c`, and `ngc_params.c`
   - Status strings, modal reporting, and parameter exposure for cutter compensation state.
 
@@ -20,6 +20,7 @@ This repository does not include `grbl_data_portable.h` or `LOOKAHEAD_PROFILES.m
 ## What is implemented here
 
 - `CUTTER_COMP_ENABLE` gates the feature at compile time.
+- `CC_ENABLE_LOOKAHEAD` gates the cutter compensation global look-ahead pass (gouge checking) at compile time.
 - XY plane only. Entering compensation outside `G17` returns `Status_GcodeIllegalPlane`.
 - Linear moves, rapids, and XY arcs are routed through the shim when compensation is active.
 - `G40`, `G41`, `G42`, `G41.1`, and `G42.1` are parsed.
@@ -35,6 +36,12 @@ When `CUTTER_COMP_ENABLE` is enabled, the flow is:
 4. Motion is sent through `cc_mc_line_in()` or `cc_mc_arc_in()`.
 5. The shim emits compensated geometry back through `mc_line()` and `mc_arc()`.
 6. When compensation is turned off, pending moves are flushed with `cc_api_process_move(0)` and the mode is set back to `CC_COMP_OFF`.
+
+Global look-ahead, also referred to here as gouge checking, is available again with cutter compensation enabled. In check mode the parser still routes compensated line and arc blocks through the cutter compensation path so entry conditions and geometry can be validated across the program before running it.
+
+One purpose of this pass is to catch compensated paths that would cut back into already-kept material and overcut the part. When the look-ahead logic detects a global self-intersection in the compensated path, it trims the intersecting region and invalidates the affected source span instead of emitting the original move sequence unchanged. In practice, this means moves from the original g-code file may be avoided when following them would gouge the part.
+
+
 
 
 ## Motion caveats (edge cases)
@@ -105,12 +112,17 @@ In addition to these parser-level restrictions, the compensation core can still 
 
 - On entry through the line shim, an informational message of the form `CC_On R=... Corner=...` is reported.
 - Turning compensation off reports `CC_Off`.
+- When gouge checking trims away a would-be overcut because of a global self-intersection, an informational message `Global self intersection detected` is reported. If the originating line number is available, the shim formats it as `CC:Global self intersection detected at line N`.
 - Modal reporting exposes active compensation as `G41` or `G42`.
 - Exposure in `ngc_params.c` differentiates `G40`, `G41`, `G42`, `G41.1`, and `G42.1`.
 
 ## Enabling and troubleshooting
 
 - Verify `CUTTER_COMP_ENABLE` evaluates true in `config.h` for the build you are using.
+- `CC_ENABLE_LOOKAHEAD` is defined in `cutter_comp.h` with a default of `1`, but because `config.h` is included first, defining `CC_ENABLE_LOOKAHEAD` there overrides the local default.
+- Set `CC_ENABLE_LOOKAHEAD` to `On`/`1` to keep global look-ahead (gouge checking) enabled, or `Off`/`0` to compile a no-look-ahead path.
+- If your cutter compensation use case is only a very small diameter wear offset, global look-ahead is often not necessary and may be left disabled.
+- If you use global look-ahead / gouge checking, cutter compensation blocks are validated in that pass as well. Check mode suppresses normal runtime side effects such as emitted messages, so use a real run if you need to inspect the `CC_On` / `CC_Off` reporting path.
 - If compensated motion is not emitted, check that the build is using the `gcode.c` paths that call `cc_mc_line_in()` and `cc_mc_arc_in()`.
 - If entry fails, check the plane selection and radius source first.
 - If static compensation does not engage, verify the selected tool table entry has a non-zero radius.
