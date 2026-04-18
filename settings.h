@@ -529,8 +529,9 @@ typedef enum {
 // 900-999 - reserved for automatic tool changers (ATC)
 //
 #if CUTTER_COMP_ENABLE
-    Setting_CutterCompOptions = 1000,
-#endif
+    Setting_CutterCompFacetCorner = 1000,
+    Setting_CutterCompAllowLookahead = 1001,
+ #endif
 // ---
     Setting_SettingsMax,
     Setting_SettingsAll = Setting_SettingsMax,
@@ -865,12 +866,9 @@ typedef union {
     };
 } macro_atc_flags_t;
 
-typedef union {
-    uint8_t value;
-    struct {
-        uint8_t default_chamfer_corner_treatment :1,
-                unassigned                       :7;
-    };
+typedef struct {
+    bool chamfer_corner_treatment;
+    bool allow_lookahead;
 } cutter_comp_flags_t;
 
 typedef struct {

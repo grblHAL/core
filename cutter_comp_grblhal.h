@@ -1,7 +1,7 @@
 /*
  * SHIM BETWEEN GRBLHAL AND THE CUTTER COMPENSATION CORE
  * Overall, this file serves as a bridge between grblHAL and the cutter compensation core, enabling them to work together seamlessly while keeping their internal implementations decoupled.
-  
+
  * code is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
@@ -35,6 +35,7 @@ extern "C"
     static bool cc_mc_have_plan_data = false;
     static bool cc_mc_active = false;
     static bool cc_mc_pause_after_next_motion = false;
+    static float cc_mc_pending_dwell = 0.0f;
     static float cc_mc_input_pos[N_AXIS] = {0};
 
     // in cutter_comp_grblhal.h
@@ -43,29 +44,37 @@ extern "C"
         report_message("Cutter compensation v" CUTTER_COMP_VERSION, Message_Info);
     }
 
+    static inline void cc_mc_reset_runtime_state(const float *pos)
+    {
+        cc_mc_have_plan_data = false;
+        cc_mc_active = false;
+        cc_mc_pause_after_next_motion = false;
+        cc_mc_pending_dwell = 0.0f;
+
+        for (int i = 0; i < N_AXIS; ++i)
+            cc_mc_input_pos[i] = pos ? pos[i] : 0.0f;
+    }
 
     // Sync cc_mc_input_pos with the current parser position.
     // Must be called when enabling comp, and can be called any time cc_mc_input_pos
     // may be stale (e.g. after rapids that bypass cc_mc_line_in).
+    // This also clears transient bridge state so a restarted job cannot inherit
+    // a pending synthetic pause from the previous run.
     static inline void cc_mc_sync_input_pos(const float *pos)
     {
-        for (int i = 0; i < N_AXIS; ++i)
-            cc_mc_input_pos[i] = pos[i];
+        cc_mc_reset_runtime_state(pos);
     }
 
-     static bool cc_mc_is_active(void)
+    static bool cc_mc_is_active(void)
     {
         return cc_mc_active;
     }
 
-    static inline cc_status_code_t cc_mc_enqueue_pause_marker(void)
+    static inline cc_status_code_t cc_mc_enqueue_pause_marker(float dwell)
     {
-        if(sys.flags.single_block)
-            return cc_status_OK; // No need to enqueue a marker if we're already in single block mode, the next block will be the one after the pause.
-        
         move2d marker = {0};
         marker.type = CC_MOT_EMPTY;
-        marker.pause_after = true;
+        marker.pause_after = dwell;
         marker.valid = true;
 
         return cc_api_process_move(&marker);
@@ -109,7 +118,7 @@ extern "C"
         case cc_status_GlobalSelfIntersection:
             msg = "Global self intersection detected";
             break;
-        }   
+        }
 
         if (lineNum != 0)
         {
@@ -120,7 +129,6 @@ extern "C"
 
         report_message(msg, (message_type_t)severity);
     }
-
 
     // Creates a move2d struct from the given grblHAL cutter compensation data.
     static inline move2d cc_mc_to_move2d(gc_ccomp_t cc,
@@ -159,7 +167,7 @@ extern "C"
         }
         else
         {
-            mv.type = (uint8_t)((pl_data && pl_data->condition.rapid_motion) ? CC_MOT_RAPID : CC_MOT_LINE);
+            mv.type = ((pl_data && pl_data->condition.rapid_motion) ? CC_MOT_RAPID : CC_MOT_LINE);
         }
 
         cc_mc_input_pos[0] = xyz[0];
@@ -171,24 +179,25 @@ extern "C"
     // replaces mc_line when cutter compensation is active. If compensation is not active, passes through to mc_line.
     cc_status_code_t cc_mc_line_in(gc_ccomp_t cc, float *xyz, plan_line_data_t *pl_data)
     {
-        if((cc_mc_have_plan_data = pl_data != NULL))
+        if ((cc_mc_have_plan_data = pl_data != NULL))
             cc_mc_active_plan_data = *pl_data;
 
         if (cc.side == CComp_Off && cc_api_get_comp() == CC_COMP_OFF)
         {
             cc_mc_active = false;
+            cc_mc_pause_after_next_motion = false;
             cc_mc_input_pos[0] = xyz[0];
             cc_mc_input_pos[1] = xyz[1];
             cc_mc_input_pos[2] = xyz[2];
             mc_line(xyz, pl_data);
             return cc_status_OK;
         }
-        cc_mc_active = true;    
+        cc_mc_active = true;
 
         comp_side side = cc.side == CComp_Left ? CC_COMP_LEFT : (cc.side == CComp_Right ? CC_COMP_RIGHT : CC_COMP_OFF);
         comp_side current_side = cc_api_get_comp();
         bool turning_off = current_side != CC_COMP_OFF && side == CC_COMP_OFF;
- 
+
         if (side != current_side || (side != CC_COMP_OFF && cc_api_get_mode() == CC_CM_NONE))
             cc_api_set_comp(side);
 
@@ -208,7 +217,6 @@ extern "C"
         if (st != cc_status_OK)
             return st;
 
-
         if (turning_off)
         {
             st = cc_api_process_move(0);
@@ -217,19 +225,19 @@ extern "C"
             report_message("CC_Off", Message_Info);
         }
 
-
         return cc_status_OK;
     }
 
     // replaces mc_arc when cutter compensation is active. If compensation is not active, passes through to mc_arc.
     cc_status_code_t cc_mc_arc_in(gc_ccomp_t cc, float *xyz, plan_line_data_t *pl_data, float *position, float *ijk, float radius, plane_t plane, int32_t turns)
     {
-        if((cc_mc_have_plan_data = pl_data != NULL))
+        if ((cc_mc_have_plan_data = pl_data != NULL))
             cc_mc_active_plan_data = *pl_data;
 
         if (cc.side == CComp_Off && cc_api_get_comp() == CC_COMP_OFF)
         {
             cc_mc_active = false;
+            cc_mc_pause_after_next_motion = false;
             cc_mc_input_pos[0] = xyz[0];
             cc_mc_input_pos[1] = xyz[1];
             cc_mc_input_pos[2] = xyz[2];
@@ -240,7 +248,6 @@ extern "C"
         comp_side side = cc.side == CComp_Left ? CC_COMP_LEFT : (cc.side == CComp_Right ? CC_COMP_RIGHT : CC_COMP_OFF);
         comp_side current_side = cc_api_get_comp();
         bool turning_off = current_side != CC_COMP_OFF && side == CC_COMP_OFF;
-    
 
         if (side != current_side || (side != CC_COMP_OFF && cc_api_get_mode() == CC_CM_NONE))
             cc_api_set_comp(side);
@@ -256,13 +263,12 @@ extern "C"
             st = cc_api_process_move(0);
             if (st != cc_status_OK)
                 return st;
-         }
+        }
         return cc_status_OK;
     }
 
     static inline void cc_emit_via_mc(const move2d *mv)
     {
-        //report_message("CC: cc_emit_via_mc", Message_Info);
         plan_line_data_t local_pl_data = {0};
         plan_line_data_t *pl_data = &local_pl_data;
         float xyz[N_AXIS] = {0};
@@ -271,10 +277,13 @@ extern "C"
         if (!mv || !mv->valid)
             return;
 
-        if (mv->pause_after)
+        if (mv->pause_after != 0.0f)
         {
-            //synthetic move to indicate a M00 pause. Set the flag to pause after the next motion, and return without emitting a move.
+            // Synthetic marker for a deferred pause or dwell after the next emitted motion.
             cc_mc_pause_after_next_motion = true;
+            cc_mc_pending_dwell = 0.0f;
+            if(mv->pause_after > 0.0f)
+                cc_mc_pending_dwell = mv->pause_after;
             return;
         }
 
@@ -319,14 +328,24 @@ extern "C"
         }
 
         // Pause only after emitting a real motion.
-        if((sys.flags.single_block || cc_mc_pause_after_next_motion) && emitted_motion) {
-            //report_message("CC: Pausing after move", Message_Info);
+        if ((sys.flags.single_block || cc_mc_pause_after_next_motion) && emitted_motion)
+        {
+            float dwell = cc_mc_pending_dwell;
             cc_mc_pause_after_next_motion = false;
+            cc_mc_pending_dwell = 0.0f;
+
+            if (dwell > 0.0f)
+            {
+                report_message("CC: Dwell...", Message_Info);
+                mc_dwell(dwell);
+                if (!sys.flags.single_block)
+                    return;
+            }
             protocol_buffer_synchronize();
             system_set_exec_state_flag(EXEC_FEED_HOLD);
             protocol_execute_realtime();
         }
-     }
+    }
 #endif
 #ifdef __cplusplus
 }

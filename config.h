@@ -303,17 +303,10 @@ should not be much greater than zero or to the minimum value necessary for the m
 
 /*! \def CUTTER_COMP_ENABLE
 \brief Enables cutter compensation feature.
-*/
-#if !defined CUTTER_COMP_ENABLE || defined __DOXYGEN__
-#define CUTTER_COMP_ENABLE On  // Default disabled. Set to \ref On or 1 to enable.
-#endif
-
-/*! \def CC_ENABLE_LOOKAHEAD
-#brief Enables cutter compensation lookahead.
 see cutter_comp_grblhal.h for more details and configuration options related to this feature.
 */
-#if !defined CC_ENABLE_LOOKAHEAD || defined __DOXYGEN__
-#define CC_ENABLE_LOOKAHEAD On  // Default disabled. Set to \ref On or 1 to enable.
+#if !defined CUTTER_COMP_ENABLE || defined __DOXYGEN__
+#define CUTTER_COMP_ENABLE 2  // 0 disabled. Set to \ref On or 1 to enable. Set to 2 to enable switchable lookahead.
 #endif
 
 

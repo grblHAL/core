@@ -591,6 +591,12 @@ FLASHMEM static inline comp_side cutter_comp_side_to_core (ccomp_mode_t side)
     return side == CComp_Left ? CC_COMP_LEFT : (side == CComp_Right ? CC_COMP_RIGHT : CC_COMP_OFF);
 }
 
+FLASHMEM static inline void cutter_comp_apply_settings (void)
+{
+    cc_api_set_lookahead_enabled(settings.cutter_comp_flags.allow_lookahead);
+    cc_api_set_corner_treatment_mode(settings.cutter_comp_flags.chamfer_corner_treatment ? CC_CTM_CHAMFER : CC_CTM_ROLL);
+}
+
 FLASHMEM static void cutter_comp_restore (const gc_ccomp_t *cutter_comp)
 {
     //report_message("cutter_comp_restore", Message_Plain);
@@ -599,11 +605,10 @@ FLASHMEM static void cutter_comp_restore (const gc_ccomp_t *cutter_comp)
     if(gc_state.modal.cutter_comp.side == CComp_Off || gc_state.modal.cutter_comp.radius == 0.0f) {
         gc_state.modal.cutter_comp.side = CComp_Off;
         gc_state.modal.cutter_comp.radius = 0.0f;
-        cc_api_process_move(0);
-        cc_api_set_comp(CC_COMP_OFF);
     } else {
         cc_units units = gc_state.modal.units_imperial ? CC_UNITS_INCH : CC_UNITS_MM;
         cc_api_init(gc_state.modal.cutter_comp.radius, units, cc_emit_via_mc, cc_message);
+        cutter_comp_apply_settings();
         cc_mc_sync_input_pos(gc_state.position);
         cc_api_set_comp(cutter_comp_side_to_core(gc_state.modal.cutter_comp.side));
     }
@@ -836,6 +841,8 @@ FLASHMEM void gc_init (bool stop)
 #endif
 #if CUTTER_COMP_ENABLE
     cc_api_init(0.0f, gc_state.modal.units_imperial ? CC_UNITS_INCH : CC_UNITS_MM, cc_emit_via_mc, cc_message); // Reset cutter comp engine state on init/stop
+    cutter_comp_apply_settings();
+    cc_mc_reset_runtime_state(gc_state.position);
 #endif
 #if ENABLE_ACCELERATION_PROFILES
     gc_state.modal.acceleration_factor = gc_get_accel_factor(0); // Initialize machine with default
@@ -2198,13 +2205,6 @@ status_code_t gc_execute_block (char *block)
   // [0. Non-specific/common error-checks and miscellaneous setup]:
 
     if(command_words.G16) {
-
-#if CUTTER_COMP_ENABLE
-                // Block sub/macro invocation while cutter compensation is active.
-                if(gc_state.modal.cutter_comp.side != CComp_Off && gc_block.macro_call != MacroCall_End)
-                        RETURN(Status_CutterCompConflict);
-#endif
-
         if(gc_block.macro_call && gc_state.g66_args == NULL) {
 
             if(!gc_block.words.p)
@@ -2261,13 +2261,13 @@ status_code_t gc_execute_block (char *block)
     } else
         gc_block.words.m = Off;
 
-#if CUTTER_COMP_ENABLE && NGC_PARAMETERS_ENABLE
-    if(gc_state.modal.cutter_comp.side != CComp_Off &&
-       (gc_block.state_action == ModalState_Save ||
-        gc_block.state_action == ModalState_Restore ||
-        gc_block.state_action == ModalState_SaveAutoRestore))
-        RETURN(Status_CutterCompConflict);
-#endif
+// #if CUTTER_COMP_ENABLE && NGC_PARAMETERS_ENABLE
+//     if(gc_state.modal.cutter_comp.side != CComp_Off &&
+//        (gc_block.state_action == ModalState_Save ||
+//         gc_block.state_action == ModalState_Restore ||
+//         gc_block.state_action == ModalState_SaveAutoRestore))
+//         RETURN(Status_CutterCompConflict);
+// #endif
 
     // Determine implicit axis command conditions. Axis words have been passed, but no explicit axis
     // command has been sent. If so, set axis command to current motion mode.
@@ -2871,8 +2871,8 @@ status_code_t gc_execute_block (char *block)
         } else {
             cc_units u = gc_block.modal.units_imperial ? CC_UNITS_INCH : CC_UNITS_MM;
             cc_api_init(gc_block.modal.cutter_comp.radius, u, cc_emit_via_mc, cc_message);
+            cutter_comp_apply_settings();
             cc_mc_sync_input_pos(gc_state.position); // Ensure start pos is current, not stale
-            cc_api_set_corner_treatment_mode(settings.cutter_comp_flags.default_chamfer_corner_treatment ? CC_CTM_CHAMFER : CC_CTM_ROLL);
             cc_api_set_comp(cutter_comp_side_to_core(gc_block.modal.cutter_comp.side));
         }
 
@@ -4305,10 +4305,26 @@ status_code_t gc_execute_block (char *block)
         grbl.user_mcode.execute(state_get(), &gc_block);
         gc_block.words.mask = 0;
     }
-
+    
     // [10. Dwell ]:
-    if(gc_block.non_modal_command == NonModal_Dwell)
-        mc_dwell(gc_block.values.p);
+#if CUTTER_COMP_ENABLE
+        // If cutter comp is active, enqueue a deferred pause marker in the CC stream.
+        if(gc_block.non_modal_command == NonModal_Dwell){
+            if(cc_mc_is_active()) {
+                if(cc_mc_enqueue_pause_marker(gc_block.values.p) != cc_status_OK)
+                    RETURN(Status_CutterCompInvalid);
+            } else {
+                //otherwise, execute a normal dwell.
+                mc_dwell(gc_block.values.p);
+            }
+        }
+#else
+        if(gc_block.non_modal_command == NonModal_Dwell)
+            mc_dwell(gc_block.values.p);
+#endif                
+
+
+
 
     // [11. Set active plane ]:
     if(command_words.G2)
@@ -4744,10 +4760,10 @@ status_code_t gc_execute_block (char *block)
 #if CUTTER_COMP_ENABLE
                 // If cutter comp is active, enqueue a deferred pause marker in the CC stream.
                 if(cc_mc_is_active()) {
-                    if(cc_mc_enqueue_pause_marker() != cc_status_OK)
+                    if(cc_mc_enqueue_pause_marker(-1.0f) != cc_status_OK)
                         RETURN(Status_CutterCompInvalid);
                 } else {
-                    //oitherwise, execute a normal feed hold.
+                    //otherwise, execute a normal feed hold.
                     system_set_exec_state_flag(EXEC_FEED_HOLD); // Use feed hold for program pause.
                     protocol_execute_realtime(); // Execute suspend.
                 }
@@ -4778,6 +4794,7 @@ status_code_t gc_execute_block (char *block)
             gc_state.modal.cutter_comp = (gc_ccomp_t){0}; // reset
             cc_api_process_move(0);
             cc_api_set_comp(CC_COMP_OFF);
+            cc_mc_reset_runtime_state(gc_state.position);
 #endif
             if(gc_state.modal.g5x_offset.id != CoordinateSystem_G54) {
                 gc_state.modal.g5x_offset.id = CoordinateSystem_G54;

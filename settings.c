@@ -35,6 +35,9 @@
 #include "tool_change.h"
 #include "state_machine.h"
 #include "strutils.h"
+#if CUTTER_COMP_ENABLE
+#include "cutter_comp.h"
+#endif
 #if ENABLE_BACKLASH_COMPENSATION
 #include "motion_control.h"
 #endif
@@ -96,7 +99,7 @@ PROGMEM const settings_t defaults = {
     .flags.keep_rapids_override_on_reset = DEFAULT_KEEP_RAPIDS_OVR_ON_RESET,
     .flags.keep_feed_override_on_reset = DEFAULT_KEEP_FEED_OVR_ON_RESET,
     .flags.tool_persistent = DEFAULT_PERSIST_TOOL,
-    .cutter_comp_flags.value = 0,
+    .cutter_comp_flags = {0},
 
     .probe.disable_probe_pullup = DEFAULT_PROBE_SIGNAL_DISABLE_PULLUP,
     .probe.allow_feed_override = DEFAULT_ALLOW_FEED_OVERRIDE_DURING_PROBE_CYCLES,
@@ -942,7 +945,22 @@ static status_code_t set_suboptions (setting_id_t id, uint_fast16_t int_value)
 #if CUTTER_COMP_ENABLE
 static status_code_t set_cutter_comp_options (setting_id_t id, uint_fast16_t int_value)
 {
-    settings.cutter_comp_flags.value = int_value & 0x01;
+    bool enabled = int_value != 0;
+
+    switch(id) {
+        case Setting_CutterCompFacetCorner:
+            settings.cutter_comp_flags.chamfer_corner_treatment = enabled;
+            cc_api_set_corner_treatment_mode(enabled ? CC_CTM_CHAMFER : CC_CTM_ROLL);
+            break;
+
+        case Setting_CutterCompAllowLookahead:
+            settings.cutter_comp_flags.allow_lookahead = enabled;
+            cc_api_set_lookahead_enabled(enabled);
+            break;
+
+        default:
+            return Status_InvalidStatement;
+    }
 
     return Status_OK;
 }
@@ -1732,8 +1750,12 @@ FLASHMEM static uint32_t get_int (setting_id_t id)
             break;
 
 #if CUTTER_COMP_ENABLE
-        case Setting_CutterCompOptions:
-            value = settings.cutter_comp_flags.value;
+        case Setting_CutterCompFacetCorner:
+            value = settings.cutter_comp_flags.chamfer_corner_treatment;
+            break;
+
+        case Setting_CutterCompAllowLookahead:
+            value = settings.cutter_comp_flags.allow_lookahead;
             break;
 #endif
 
@@ -1999,6 +2021,17 @@ FLASHMEM static bool is_setting_available (const setting_detail_t *setting, uint
         case Setting_AxisHomingSeekRate:
             available = settings.homing.flags.per_axis_feedrates;
             break;
+#ifdef CUTTER_COMP_ENABLE
+        case Setting_CutterCompFacetCorner:
+            available = true;
+            break;
+        case Setting_CutterCompAllowLookahead:
+            available = false;
+            #if CUTTER_COMP_ENABLE == 2
+                available = true;
+            #endif    
+            break;    
+#endif            
 
 #ifndef NO_SAFETY_DOOR_SUPPORT
 
@@ -2251,7 +2284,9 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_StepperEnableDelay, Group_Stepper, "Stepper enable delay", "ms", Format_Int16, "##0", NULL, "500", Setting_IsExtended, &settings.stepper_enable_delay, NULL, NULL },
     { Setting_SubroutineOptions, Group_General, "Subroutine options", NULL, Format_Bitfield, "Prescan for internal M98 subroutines", NULL, NULL, Setting_IsExtendedFn, set_suboptions, get_int, is_setting_available }
 #if CUTTER_COMP_ENABLE
-    ,{ Setting_CutterCompOptions, Group_General, "Cutter compensation options", NULL, Format_Bitfield, "Default chamfer corner treatment", NULL, NULL, Setting_IsExtendedFn, set_cutter_comp_options, get_int, NULL }
+    ,{ Setting_CutterCompFacetCorner, Group_General, "Cutter comp corner", NULL, Format_Bool, "Cutter comp chamfer corner", NULL, NULL, Setting_IsExtendedFn, set_cutter_comp_options, get_int, is_setting_available }
+    ,{ Setting_CutterCompAllowLookahead, Group_General, "Cutter comp lookahead", NULL, Format_Bool, "Cutter comp allow lookahead", NULL, NULL, Setting_IsExtendedFn, set_cutter_comp_options, get_int, is_setting_available }
+
 #endif
 };
 
@@ -2463,9 +2498,13 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_StepperEnableDelay, "Delay from stepper enable to first step output. The driver typically adds ~2ms to this." },
 //    { Setting_SubroutineOptions, "Enable prescan for internal M98 subroutines." }
 #if CUTTER_COMP_ENABLE
-    { Setting_CutterCompOptions, "Controls default cutter compensation behavior.\n"
-                                 "Enable the option for chamfer corner-treatment mode; leave it off to default to roll mode.\n"
-                                 "A P word on the G41/G42 entry block overrides the default for that command."
+    { Setting_CutterCompFacetCorner, "Controls default corner treatment behavior.\\n"
+                                 "Enable the option for chamfer corner-treatment mode; leave it off to default to roll mode.\\n"
+                                 "A P1 word on the G41/G42 entry block overrides the default for that command."
+    },
+    { Setting_CutterCompAllowLookahead, "Allow lookahead data for gouge checking.\\n"
+                                 "When disabled, the system looks at the next move only.\\n"
+                                 "When enabled, the system utilizes lookahead data to avoid gouging."
     }
 #endif
 /*

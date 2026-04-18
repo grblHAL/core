@@ -89,8 +89,7 @@ The parser rejects cutter compensation, or rejects the current block while compe
 - `G28`, `G30`, and `G53` are not allowed while compensation is active.
 - Canned cycles are not allowed while compensation is active.
 - Probing cycles such as `G38.x` are not allowed while compensation is active.
-- Modal state save/restore commands `M70`, `M72`, and `M73` are not allowed while compensation is active.
-- Subprogram and macro calls are not allowed while compensation is active. This includes `G65`, `G66`, `G66.1`, and `M98`.
+
 
 In addition to these parser-level restrictions, the compensation core can still reject individual moves at runtime for geometric reasons such as invalid entry, arcs smaller than tool radius, or unresolved gaps.
 
@@ -101,11 +100,13 @@ In addition to these parser-level restrictions, the compensation core can still 
 - Any other value selects roll mode.
 - The `P` word is consumed on entry.
 
-## Persistent setting
+## Persistent settings
 
-- `$1000` exposes cutter compensation options.
-- Bit 0 enables chamfer corner treatment as the default mode when `G41` or `G42` enters compensation.
-- A `P` word on the entry block overrides the default for that command.
+- `$1000` is the boolean setting for the default cutter comp corner mode.
+- When `$1000=1`, chamfer corner treatment is the default on `G41` or `G42` entry. When `$1000=0`, roll mode is the default.
+- `$1001` is the boolean setting for cutter comp look-ahead when that support is compiled in.
+- These defaults are reapplied each time the cutter compensation core is initialized.
+- A `P` word on the entry block overrides the corner mode default for that command only.
 
 
 ## User-visible messages and state
