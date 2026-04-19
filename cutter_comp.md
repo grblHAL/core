@@ -93,12 +93,6 @@ The parser rejects cutter compensation, or rejects the current block while compe
 
 In addition to these parser-level restrictions, the compensation core can still reject individual moves at runtime for geometric reasons such as invalid entry, arcs smaller than tool radius, or unresolved gaps.
 
-## Optional mode selection
-
-- A `P` word on the entry block selects the corner treatment mode.
-- `P == 1` switches to chamfer mode.
-- Any other value selects roll mode.
-- The `P` word is consumed on entry.
 
 ## Persistent settings
 
@@ -106,7 +100,6 @@ In addition to these parser-level restrictions, the compensation core can still 
 - When `$1000=1`, chamfer corner treatment is the default on `G41` or `G42` entry. When `$1000=0`, roll mode is the default.
 - `$1001` is the boolean setting for cutter comp look-ahead when that support is compiled in.
 - These defaults are reapplied each time the cutter compensation core is initialized.
-- A `P` word on the entry block overrides the corner mode default for that command only.
 
 
 ## User-visible messages and state

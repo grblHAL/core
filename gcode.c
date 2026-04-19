@@ -2876,14 +2876,14 @@ status_code_t gc_execute_block (char *block)
             cc_api_set_comp(cutter_comp_side_to_core(gc_block.modal.cutter_comp.side));
         }
 
-        // set the corner treatment mode. If P word is 1, then chamfer, else round.
-        // This can be compile-time configured to be the default mode when cutter comp is enabled,
-        // but this allows for dynamic switching between the two modes for easy testing.
-        if(gc_block.words.p)
-            cc_api_set_corner_treatment_mode(gc_block.values.p == 1 ? CC_CTM_CHAMFER : CC_CTM_ROLL);
+        // // set the corner treatment mode. If P word is 1, then chamfer, else round.
+        // // This can be compile-time configured to be the default mode when cutter comp is enabled,
+        // // but this allows for dynamic switching between the two modes for easy testing.
+        // if(gc_block.words.p)
+        //     cc_api_set_corner_treatment_mode(gc_block.values.p == 1 ? CC_CTM_CHAMFER : CC_CTM_ROLL);
 
-        if(gc_block.words.p)
-            gc_block.words.p = Off;
+        // if(gc_block.words.p)
+        //     gc_block.words.p = Off;
     }
 #endif
     // [14. Tool length compensation ]: G43.1 and G49 are always supported, G43 and G43.2 if grbl.tool_table.n_tools > 0
