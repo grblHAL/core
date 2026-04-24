@@ -121,3 +121,5 @@ In addition to these parser-level restrictions, the compensation core can still 
 - If entry fails, check the plane selection and radius source first.
 - If static compensation does not engage, verify the selected tool table entry has a non-zero radius.
 - If dynamic compensation does not engage, verify `G41.1` or `G42.1` includes a `D` word.
+- If `CUTTER_COMP_ENABLE` then when using G10 L1 P[toolnum] R, the R value will honor the current units the same as axis values. 
+

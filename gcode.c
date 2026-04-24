@@ -596,22 +596,22 @@ FLASHMEM static inline void cutter_comp_apply_settings (void)
     cc_api_set_lookahead_enabled(settings.cutter_comp_flags.allow_lookahead);
     cc_api_set_corner_treatment_mode(settings.cutter_comp_flags.chamfer_corner_treatment ? CC_CTM_CHAMFER : CC_CTM_ROLL);
 }
-
-FLASHMEM static void cutter_comp_restore (const gc_ccomp_t *cutter_comp)
+FLASHMEM static void cutter_comp_save_state (void)
 {
-    //report_message("cutter_comp_restore", Message_Plain);
+    report_message("cutter_comp_save_state", Message_Plain);
+    cc_mc_save_modal_state();
+}
+FLASHMEM static void cutter_comp_invalidate_state (void)
+{
+    cc_mc_invalidate_modal_state();
+    report_message("cutter_comp_invalidate_state", Message_Plain);
+}
+FLASHMEM static void cutter_comp_restore_state (const gc_ccomp_t *cutter_comp)
+{
+    report_message("cutter_comp_restore_state", Message_Plain);
     gc_state.modal.cutter_comp = *cutter_comp;
-
-    if(gc_state.modal.cutter_comp.side == CComp_Off || gc_state.modal.cutter_comp.radius == 0.0f) {
-        gc_state.modal.cutter_comp.side = CComp_Off;
-        gc_state.modal.cutter_comp.radius = 0.0f;
-    } else {
-        cc_units units = gc_state.modal.units_imperial ? CC_UNITS_INCH : CC_UNITS_MM;
-        cc_api_init(gc_state.modal.cutter_comp.radius, units, cc_emit_via_mc, cc_message);
-        cutter_comp_apply_settings();
-        cc_mc_sync_input_pos(gc_state.position);
-        cc_api_set_comp(cutter_comp_side_to_core(gc_state.modal.cutter_comp.side));
-    }
+    //The state of the comp engine should now be the same as it was.
+    cc_mc_restore_modal_state();
 }
 
 #endif
@@ -643,8 +643,8 @@ FLASHMEM bool gc_modal_state_restore (gc_modal_snapshot_t *snapshot)
             report_add_realtime(Report_LatheXMode);
 
 #if CUTTER_COMP_ENABLE
-        if(actions->command.G7)
-            cutter_comp_restore(&snapshot->modal.cutter_comp);
+        if(actions->command.G7)//M73 save-with-auto-restore behavior 
+            cutter_comp_restore_state(&snapshot->modal.cutter_comp);
 #endif
 
         for(idx = 0; idx < N_SYS_SPINDLE; idx++) {
@@ -2260,15 +2260,6 @@ status_code_t gc_execute_block (char *block)
 #endif // NGC_PARAMETERS_ENABLE
     } else
         gc_block.words.m = Off;
-
-// #if CUTTER_COMP_ENABLE && NGC_PARAMETERS_ENABLE
-//     if(gc_state.modal.cutter_comp.side != CComp_Off &&
-//        (gc_block.state_action == ModalState_Save ||
-//         gc_block.state_action == ModalState_Restore ||
-//         gc_block.state_action == ModalState_SaveAutoRestore))
-//         RETURN(Status_CutterCompConflict);
-// #endif
-
     // Determine implicit axis command conditions. Axis words have been passed, but no explicit axis
     // command has been sent. If so, set axis command to current motion mode.
     if (axis_words.mask && !axis_command)
@@ -2818,14 +2809,7 @@ status_code_t gc_execute_block (char *block)
 #if CUTTER_COMP_ENABLE                
     // [13. Cutter radius compensation ]: G41/42 SUPPORTED XY ONLY.
 
-    // Was on but now off, NO motion!
-    if(!axis_words.mask && gc_state.modal.cutter_comp.side != CComp_Off && gc_block.modal.cutter_comp.side == CComp_Off) {
-        // Flush any queued compensated segment(s) now so a standalone G40 behaves as a complete block.
-        if(cc_api_process_move(0) != cc_status_OK)
-            RETURN(Status_CutterCompInvalid);
-        cc_api_set_comp(CC_COMP_OFF);
-        report_message("CC_Off",Message_Plain);
-    }
+    // A standalone G40 is modal-only. Drain queued compensation only when the block also carries motion.
 
     if(command_words.G7 && gc_state.modal.cutter_comp.side != CComp_Off && gc_block.modal.cutter_comp.side != CComp_Off)
         RETURN(Status_GcodeCutterCompActive);
@@ -2859,12 +2843,12 @@ status_code_t gc_execute_block (char *block)
                 t = gc_state.tool_pending;
 
             tool_data_t *tool_data = grbl.tool_table.get_tool(t)->data;
-            if(tool_data)
+            if(tool_data){
                 gc_block.modal.cutter_comp.radius = tool_data->radius;
+                if(gc_block.modal.units_imperial)
+                      gc_block.modal.cutter_comp.radius *= INCH_PER_MM;
+            }
         }
-
-        if(gc_block.modal.units_imperial)
-            gc_block.modal.cutter_comp.radius *= MM_PER_INCH;
 
         if(gc_block.modal.cutter_comp.radius == 0.0f) {
             gc_block.modal.cutter_comp.side = CComp_Off; // No radius, so disable cutter comp.
@@ -2875,15 +2859,7 @@ status_code_t gc_execute_block (char *block)
             cc_mc_sync_input_pos(gc_state.position); // Ensure start pos is current, not stale
             cc_api_set_comp(cutter_comp_side_to_core(gc_block.modal.cutter_comp.side));
         }
-
-        // // set the corner treatment mode. If P word is 1, then chamfer, else round.
-        // // This can be compile-time configured to be the default mode when cutter comp is enabled,
-        // // but this allows for dynamic switching between the two modes for easy testing.
-        // if(gc_block.words.p)
-        //     cc_api_set_corner_treatment_mode(gc_block.values.p == 1 ? CC_CTM_CHAMFER : CC_CTM_ROLL);
-
-        // if(gc_block.words.p)
-        //     gc_block.words.p = Off;
+ 
     }
 #endif
     // [14. Tool length compensation ]: G43.1 and G49 are always supported, G43 and G43.2 if grbl.tool_table.n_tools > 0
@@ -3088,7 +3064,11 @@ status_code_t gc_execute_block (char *block)
                         if(gc_block.words.r) {
                             tool_data->radius = gc_block.values.r;
                             gc_block.words.r = Off;
-                        }
+#if CUTTER_COMP_ENABLE
+                            if(gc_block.modal.units_imperial)
+                                tool_data->radius *= MM_PER_INCH;
+#endif                            
+}
 
 #if COMPATIBILITY_LEVEL <= 1
                         coord_system_data_t g59_3_offset;
@@ -4186,10 +4166,15 @@ status_code_t gc_execute_block (char *block)
 
             if(!ngc_modal_state_save(&gc_state.modal, &override, gc_state.feed_rate, gc_block.state_action == ModalState_SaveAutoRestore))
                 RETURN(Status_FlowControlOutOfMemory); // [Out of memory] TODO: allocate memory during validation? Static allocation?
+#if CUTTER_COMP_ENABLE                    
+            cutter_comp_save_state();//M70, M73
+#endif
             break;
-
         case ModalState_Invalidate:
             ngc_modal_state_invalidate();
+#if CUTTER_COMP_ENABLE                    
+            cutter_comp_invalidate_state();//M71
+#endif
             break;
 
         case ModalState_Restore:;
@@ -4205,9 +4190,9 @@ status_code_t gc_execute_block (char *block)
                     gc_state.modal.feed_mode = gc_block.modal.feed_mode;
 
 #if CUTTER_COMP_ENABLE                    
-                if (actions->command.G7) {
+                if (actions->command.G7) { //triggered by M72
                     actions->command.G7 = Off;
-                    cutter_comp_restore(&snapshot->modal.cutter_comp);
+                    cutter_comp_restore_state(&snapshot->modal.cutter_comp);
                 }
 #endif
 

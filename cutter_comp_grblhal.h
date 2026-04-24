@@ -37,6 +37,9 @@ extern "C"
     static bool cc_mc_pause_after_next_motion = false;
     static float cc_mc_pending_dwell = 0.0f;
     static float cc_mc_input_pos[N_AXIS] = {0};
+    static comp_side cc_mc_saved_comp_side = CC_COMP_OFF;
+    static comp_mode cc_mc_saved_comp_mode = CC_CM_NONE;
+    static bool cc_mc_saved_state_valid = false;
 
     // in cutter_comp_grblhal.h
     static inline void cc_report_version(void)
@@ -70,6 +73,38 @@ extern "C"
         return cc_mc_active;
     }
 
+    // M70: Save current comp modal state
+    static inline void cc_mc_save_modal_state(void)
+    {
+        cc_mc_saved_comp_side = cc_api_get_comp();
+        cc_mc_saved_comp_mode = cc_api_get_mode();
+        cc_mc_saved_state_valid = true;
+    }
+
+    // M71: Invalidate saved comp state
+    static inline void cc_mc_invalidate_modal_state(void)
+    {
+        cc_mc_saved_state_valid = false;
+    }
+
+    // M72/M73 return: Restore comp state.
+    // If comp is restored active, force STEADY so execution continues as if
+    // compensation had not been canceled in between.
+    static inline bool cc_mc_restore_modal_state(void)
+    {
+        if (!cc_mc_saved_state_valid)
+            return false;
+
+        comp_mode restore_mode = CC_CM_NONE;
+        if (cc_mc_saved_comp_side != CC_COMP_OFF)
+            restore_mode = CC_CM_STEADY;
+        else
+            restore_mode = cc_mc_saved_comp_mode;
+
+        cc_api_restore_comp(cc_mc_saved_comp_side, restore_mode);
+        return true;
+    }
+
     static inline cc_status_code_t cc_mc_enqueue_pause_marker(float dwell)
     {
         move2d marker = {0};
@@ -83,7 +118,6 @@ extern "C"
     static void cc_message(cc_status_code_t msgcode, msg_type_t severity, uint32_t lineNum)
     {
         const char *msg = "Unknown";
-        char formatted_msg[128];
         switch (msgcode)
         {
         case cc_status_OK:
@@ -120,14 +154,20 @@ extern "C"
             break;
         }
 
+        char formatted_msg[128] = {0};
         if (lineNum != 0)
         {
             snprintf(formatted_msg, sizeof(formatted_msg), "CC:%s at line %lu", msg, (unsigned long)lineNum);
             report_message(formatted_msg, (message_type_t)severity);
-            return;
         }
+        else
+        {
+            snprintf(formatted_msg, sizeof(formatted_msg), "CC:%s", msg);
+            report_message(formatted_msg, (message_type_t)severity);
+        }
+        if (severity == CC_MSG_ERROR)
+            system_set_exec_state_flag(EXEC_FEED_HOLD);
 
-        report_message(msg, (message_type_t)severity);
     }
 
     // Creates a move2d struct from the given grblHAL cutter compensation data.
@@ -205,11 +245,11 @@ extern "C"
 
         if (side != CC_COMP_OFF && mv.compMode == CC_CM_IN)
         {
-            bool inch = cc_api_get_units() == CC_UNITS_INCH;
-            float r = inch ? cc.radius / 25.4f : cc.radius;
+            cc_units units = cc_api_get_units();
+            float r = cc.radius;
             const char *corner_mode = cc_api_get_corner_treatment_mode() == CC_CTM_CHAMFER ? "Chamfer" : "Roll";
             char msg[96];
-            snprintf(msg, sizeof(msg), "CC_On R=%.4f %s Corner=%s", r, inch ? "in" : "mm", corner_mode);
+            snprintf(msg, sizeof(msg), "CC_On R=%.4f %s Corner=%s", r, units == CC_UNITS_INCH ? "in" : "mm", corner_mode);
             report_message(msg, Message_Info);
         }
 
@@ -269,6 +309,7 @@ extern "C"
 
     static inline void cc_emit_via_mc(const move2d *mv)
     {
+        // report_message("CC: cc_emit_via_mc", Message_Info);
         plan_line_data_t local_pl_data = {0};
         plan_line_data_t *pl_data = &local_pl_data;
         float xyz[N_AXIS] = {0};
@@ -331,16 +372,19 @@ extern "C"
         if ((sys.flags.single_block || cc_mc_pause_after_next_motion) && emitted_motion)
         {
             float dwell = cc_mc_pending_dwell;
+
+            report_message("CC: Pausing after move", Message_Info);
             cc_mc_pause_after_next_motion = false;
             cc_mc_pending_dwell = 0.0f;
 
-            if (dwell > 0.0f)
+             if (dwell > 0.0f)
             {
                 report_message("CC: Dwell...", Message_Info);
                 mc_dwell(dwell);
                 if (!sys.flags.single_block)
                     return;
             }
+
             protocol_buffer_synchronize();
             system_set_exec_state_flag(EXEC_FEED_HOLD);
             protocol_execute_realtime();

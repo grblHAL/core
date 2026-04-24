@@ -78,7 +78,7 @@ extern "C" {
 #endif
 
 #ifndef CC_LA_TRIM_OVERLAP
-#define CC_LA_TRIM_OVERLAP (CC_LOOKAHEAD_STEPS + 2)
+#define CC_LA_TRIM_OVERLAP (CC_LOOKAHEAD_STEPS + 3)
 #endif
 
 #ifndef CC_LA_EMIT_HOLDBACK
@@ -252,6 +252,8 @@ cc_status_code_t cc_api_process_move(const move2d *move);
 
 // comp_side is CC_COMP_OFF=0, CC_COMP_LEFT=1, or CC_COMP_RIGHT=-1
 void cc_api_set_comp(comp_side side);
+void cc_api_restore_comp(comp_side side, comp_mode mode);
+
 comp_side cc_api_get_comp(void);
 comp_mode cc_api_get_mode(void);
 
