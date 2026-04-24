@@ -105,7 +105,7 @@ In addition to these parser-level restrictions, the compensation core can still 
 ## User-visible messages and state
 
 - On entry through the line shim, an informational message of the form `CC_On R=... Corner=...` is reported.
-- Turning compensation off reports `CC_Off`.
+- Turning compensation off reports `CC_Off` when cancellation is handled through the line shim path.
 - When gouge checking trims away a would-be overcut because of a global self-intersection, an informational message `Global self intersection detected` is reported. If the originating line number is available, the shim formats it as `CC:Global self intersection detected at line N`.
 - Modal reporting exposes active compensation as `G41` or `G42`.
 - Exposure in `ngc_params.c` differentiates `G40`, `G41`, `G42`, `G41.1`, and `G42.1`.
@@ -113,8 +113,8 @@ In addition to these parser-level restrictions, the compensation core can still 
 ## Enabling and troubleshooting
 
 - Verify `CUTTER_COMP_ENABLE` evaluates true in `config.h` for the build you are using.
-- `CC_ENABLE_LOOKAHEAD` is defined in `cutter_comp.h` with a default of `1`, but because `config.h` is included first, defining `CC_ENABLE_LOOKAHEAD` there overrides the local default.
-- Set `CC_ENABLE_LOOKAHEAD` to `On`/`1` to keep global look-ahead (gouge checking) enabled, or `Off`/`0` to compile a no-look-ahead path.
+- `CC_ENABLE_LOOKAHEAD` is selected in `cutter_comp.h` from `CUTTER_COMP_ENABLE` mode: `2` enables look-ahead support, while `1` builds without look-ahead.
+- Runtime look-ahead toggling (`$1001`) is available only when built with `CUTTER_COMP_ENABLE=2`.
 - If your cutter compensation use case is only a very small diameter wear offset, global look-ahead is often not necessary and may be left disabled.
 - If you use global look-ahead / gouge checking, cutter compensation blocks are validated in that pass as well. Check mode suppresses normal runtime side effects such as emitted messages, so use a real run if you need to inspect the `CC_On` / `CC_Off` reporting path.
 - If compensated motion is not emitted, check that the build is using the `gcode.c` paths that call `cc_mc_line_in()` and `cc_mc_arc_in()`.
