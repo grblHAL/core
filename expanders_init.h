@@ -9,7 +9,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2025 Terje Io
+  Copyright (c) 2025-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -50,18 +50,34 @@ extern void mcp4725_init (void);
 #endif
 
 #if PCA9654E_ENABLE
-extern void pca9654e_init(void);
+extern void pca9654e_init (void);
 #endif
 
 // Third party I2C expander plugins goes after this line
 
 #if FLEXGPIO_ENABLE
-extern void flexgpio_init(void);
+extern void flexgpio_init (void);
 #endif
 
 #endif // I2C expanders
 
 // SPI expanders
+
+#if HC595_ENABLE
+
+#if defined(SPI_ENABLE) && !SPI_ENABLE
+#undef SPI_ENABLE
+#endif
+
+#ifndef SPI_ENABLE
+#define SPI_ENABLE 1
+#endif
+
+#endif
+
+#if HC595_ENABLE
+extern void hc595_init (void);
+#endif
 
 //
 
@@ -104,6 +120,10 @@ extern void picohal_io_init (void);
 static inline void io_expanders_init (void)
 {
     board_ports_init(); // can be implemented by board specific code
+
+#if HC595_ENABLE
+    hc595_init();
+#endif
 
 #if MCP3221_ENABLE
     mcp3221_init();

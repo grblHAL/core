@@ -327,9 +327,10 @@ static bool modbus_send_rtu (modbus_message_t *msg, const modbus_callbacks_t *ca
 
         packet = NULL;
         is_blocking = false;
+        sync_msg.msg.adu[1] = 0;
         state = silence_until > 0 ? ModBus_Silent : ModBus_Idle;
 
-    } else if(packet != &sync_msg) {
+    } else if(packet == NULL || sync_msg.msg.adu[1] == 0 || packet->msg.adu[0] != sync_msg.msg.adu[0]) {
         if(head->next != tail) {
             add_message((queue_entry_t *)head, msg, true, callbacks);
             head = head->next;

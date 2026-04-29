@@ -889,7 +889,7 @@ void debug_printf (const char *fmt, ...)
     debug_writeln(debug_out);
 }
 
-static bool debug_claim_stream (io_stream_properties_t const *stream)
+static bool debug_claim_stream (io_stream_properties_t const *stream, void *data)
 {
     io_stream_t const *claimed = NULL;
 

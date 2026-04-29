@@ -118,7 +118,7 @@
 #else
 #define add_aux_input(fn, aux, irq, signal_bit) { .function = fn, .irq_mode = irq, .signal.value = signal_bit, .port = IOPORT_UNASSIGNED, .gpio.port = (void *)aux##_PORT, .gpio.pin = aux##_PIN },
 #endif
-#if defined(__IMXRT1062__) || defined(ESP_PLATFORM)
+#if defined(__IMXRT1062__) // || defined(ESP_PLATFORM)
 #define add_aux_output(fn, aux) { .function = fn, .port = IOPORT_UNASSIGNED, .gpio.pin = aux##_PIN },
 #else
 #define add_aux_output(fn, aux) { .function = fn, .port = IOPORT_UNASSIGNED, .gpio.port = (void *)aux##_PORT, .gpio.pin = aux##_PIN },
@@ -433,6 +433,53 @@ static inline control_signals_t aux_ctrl_scan_status (control_signals_t signals)
     return signals;
 }
 
+#if defined(__IMXRT1062__) || defined(ESP_PLATFORM)
+/*
+#ifndef STEPPERS_ENABLE_PORT
+#define STEPPERS_ENABLE_PORT 0
+#endif
+*/
+#if defined(SPINDLE_ENABLE_PIN) && !defined(SPINDLE_ENABLE_PORT)
+#define SPINDLE_ENABLE_PORT 0
+#endif
+#if defined(SPINDLE_DIRECTION_PIN) && !defined(SPINDLE_DIRECTION_PORT)
+#define SPINDLE_DIRECTION_PORT 0
+#endif
+#if defined(SPINDLE_PWM_PIN) && !defined(SPINDLE_PWM_PORT)
+#define SPINDLE_PWM_PORT 0
+#endif
+
+#if defined(SPINDLE1_ENABLE_PIN) && !defined(SPINDLE1_ENABLE_PORT)
+#define SPINDLE1_ENABLE_PORT 0
+#endif
+#if defined(SPINDLE1_DIRECTION_PIN) && !defined(SPINDLE1_DIRECTION_PORT)
+#define SPINDLE1_DIRECTION_PORT 0
+#endif
+#if defined(SPINDLE1_PWM_PIN) && !defined(SPINDLE1_PWM_PORT)
+#define SPINDLE1_PWM_PORT 0
+#endif
+
+#if defined(COOLANT_FLOOD_PIN) && !defined(COOLANT_FLOOD_PORT)
+#define COOLANT_FLOOD_PORT 0
+#endif
+#if defined(COOLANT_MIST_PIN) && !defined(COOLANT_MIST_PORT)
+#define COOLANT_MIST_PORT 0
+#endif
+
+#if defined(COPROC_RESET_PIN) && !defined(COPROC_RESET_PORT)
+#define COPROC_RESET_PORT 0
+#endif
+#if defined(COPROC_BOOT0_PIN) && !defined(COPROC_BOOT0_PORT)
+#define COPROC_BOOT0_PORT 0
+#endif
+
+#if defined(SPI_RST_PIN) && !defined(SPI_RST_PORT)
+#define SPI_RST_PORT 0
+#endif
+
+#endif
+
+
 // The following pins are bound explicitly to aux output pins
 static aux_ctrl_out_t aux_ctrl_out[] = {
 #if defined(ESP_PLATFORM) || defined(RP2040) // for now
@@ -508,9 +555,6 @@ static aux_ctrl_out_t aux_ctrl_out[] = {
     add_aux_output(Output_CoProc_Boot0, COPROC_BOOT0)
 #endif
 #if defined(SPI_RST_PIN) && defined(RP2040)
- #ifndef SPI_RST_PORT
-  #define SPI_RST_PORT 0
- #endif
     add_aux_output(Output_SPIRST, SPI_RST)
 #endif
 };

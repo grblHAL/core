@@ -277,6 +277,29 @@ axes_signals_t gc_get_g51_state (void)
     return scaled;
 }
 
+void gc_clear_offset (coord_system_id_t id)
+{
+    bool clear;
+    coord_system_data_t coord_data = {0};
+
+    if((id == CoordinateSystem_G92)) {
+        clear = !settings.flags.g92_is_volatile;
+        gc_state.g92_offset_applied = false;
+        memcpy(&gc_state.g92_offset, &coord_data, sizeof(coord_system_data_t));
+#if COMPATIBILITY_LEVEL <= 1
+    } else if((clear = (id < CoordinateSystem_G59_1 || id > CoordinateSystem_G59_3 || bit_isfalse(settings.offset_lock.mask, bit(id - CoordinateSystem_G59_1))))) {
+#else
+    } else {
+        clear = true;
+#endif
+        if(id == gc_state.modal.g5x_offset.id)
+            memcpy(&gc_state.modal.g5x_offset.data, &coord_data, sizeof(coord_system_data_t));
+    }
+
+    if(clear)
+        settings_write_coord_data(id, &coord_data);
+}
+
 float gc_get_offset (uint_fast8_t idx, bool real_time)
 {
     offset_id_t offset_id;

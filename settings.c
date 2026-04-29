@@ -2391,7 +2391,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_RestoreOverrides, "Restore overrides to default values at program end." },
 #ifndef NO_SAFETY_DOOR_SUPPORT
     { Setting_DoorOptions, "Ignore when idle: disregard door signal in IDLE state to allow jogging etc. Available when controller has door input.\n"
-    		               "Keep coolant state on open: do not turn off coolant if on." },
+                           "Keep coolant state on open: do not turn off coolant if on." },
 #endif
     { Setting_SleepEnable, "Enable sleep mode." },
     { Setting_HoldActions, "Actions taken during feed hold and on resume from feed hold." },
@@ -2680,14 +2680,14 @@ FLASHMEM static tool_table_entry_t *settings_get_tool_data (tool_id_t tool_id)
 {
     static tool_table_entry_t tool = {0};
 
-	if(tool_id <= MAX_TOOL_NUMBER) {
-    	tool_data.tool_id = tool_id;
+    if(tool_id <= MAX_TOOL_NUMBER) {
+        tool_data.tool_id = tool_id;
         tool.pocket = (pocket_id_t)tool_id;
-    	tool.data = &tool_data;
-	} else {
+        tool.data = &tool_data;
+    } else {
         tool.data = NULL;
         tool.pocket = (pocket_id_t)-1;
-	}
+    }
 
     return &tool;
 }
@@ -2836,15 +2836,8 @@ FLASHMEM void settings_restore (settings_restore_t restore)
     }
 
     if(restore.parameters) {
-        coord_system_data_t coord_data = {0};
-        for(idx = 0; idx <= N_WorkCoordinateSystems; idx++) {
-#if COMPATIBILITY_LEVEL <= 1
-            if(idx < CoordinateSystem_G59_1 || idx > CoordinateSystem_G59_3 || bit_isfalse(settings.offset_lock.mask, bit(idx - CoordinateSystem_G59_1)))
-#endif
-                settings_write_coord_data((coord_system_id_t)idx, &coord_data);
-        }
-        settings_write_coord_data(CoordinateSystem_G92, &coord_data); // Clear G92 offsets
-
+        for(idx = 0; idx < N_CoordinateSystems; idx++)
+            gc_clear_offset((coord_system_id_t)idx);
 #if N_TOOLS
         settings_clear_tool_data();
 #endif

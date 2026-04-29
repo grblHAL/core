@@ -787,12 +787,14 @@ FLASHMEM static status_code_t rtc_action (sys_state_t state, char *args)
 
 FLASHMEM static status_code_t reboot_system (sys_state_t state, char *args)
 {
-    report_message("Rebooting controller, communication may be lost", Message_Warning);
-    hal.delay_ms(100, NULL);
+    if (hal.reboot) {
+        report_message("Rebooting controller, communication may be lost", Message_Warning);
+        hal.delay_ms(100, NULL);
 
-    hal.reboot();
+        hal.reboot();
+    }
     
-    return Status_OK;
+    return hal.reboot ? Status_OK : Status_InvalidStatement;
 }
 
 #ifdef DEBUG

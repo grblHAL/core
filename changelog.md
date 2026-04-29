@@ -1,5 +1,35 @@
 ## grblHAL changelog
 
+<a name="20260418">20260418
+
+Drivers:
+
+* RP2040: update for 16-bit shift register code not working with higher numbered pins, fix for FatFS compilation error.
+
+---
+
+<a name="20260416">Build 20260416
+
+Core:
+
+* Formalized SPI API, added init call for 74HC595 I/O expander.
+
+* Fix for G30 not cleared on $RST, added code for syncing parser state on offsets clear. Ref. issue [#940](https://github.com/grblHAL/core/issues/940).
+
+Drivers:
+
+* ESP32, RP2040, STM32F4xx and STM32F7xx: updated SPI implementation to match new formalized API.
+
+Plugins:
+
+* Misc: added support for 74HC595 shift register(s) I/O expansion via SPI, up to 4 chips can be chained.
+> [!NOTE]
+> Do not use for step/dir signals due to latency. The ESP32 is the slowest, it takes a long time to switch devices when the SPI bus is shared.
+
+* SD card: fix to allow listing files in littlefs if no SD card mounted.
+
+---
+
 <a name="20260331">Build 20260331
 
 Core:

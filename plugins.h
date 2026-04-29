@@ -226,13 +226,12 @@ extern bool i2c_transfer (i2c_transfer_t *i2c, bool read);
 
 // SPI interface:
 
-/*
-typedef void (*spi_cs_ptr)(const char c);
-
 typedef struct {
-    spi_cs_ptr cs;
-    uint32_t f_clk;
-} spi_cfg_t;
+    uint8_t cs_pin;
+    void *cs_port;
+    uint32_t f_clock;
+    void *handle;
+} spi_slave_t;
 
 typedef union {
     uint8_t ok;
@@ -244,14 +243,13 @@ typedef union {
     };
 } spi_cap_t;
 
-extern spi_cap_t spi_start (spi_cfg_t *cfg);
-extern uint32_t spi_set_speed (uint32_t prescaler);
+extern spi_cap_t spi_start (spi_slave_t *slave);
+extern bool spi_select (spi_slave_t *slave);
+extern bool spi_deselect (spi_slave_t *slave);
 extern uint8_t spi_get_byte (void);
 extern uint8_t spi_put_byte (uint8_t byte);
-extern void spi_write (uint8_t *data, size_t size);
-extern void spi_read (uint8_t *data, size_t size);
-extern void spi_write (uint8_t *data, size_t size);
-*/
+extern bool spi_read (uint8_t *data, uint16_t size);
+extern bool spi_write (uint8_t *data, uint16_t size);
 
 // EEPROM/FRAM:
 
