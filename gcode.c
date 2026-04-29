@@ -4768,8 +4768,12 @@ status_code_t gc_execute_block (char *block)
 #if CUTTER_COMP_ENABLE
                 // If cutter comp is active, enqueue a deferred pause marker in the CC stream.
                 if(cc_mc_is_active()) {
-                    if(cc_mc_enqueue_pause_marker(-1.0f) != cc_status_OK)
-                        RETURN(Status_CutterCompInvalid);
+                    //if this is ONLY a single block we do not add a marker.
+                    //only markers that are in the gcode M0 M1.
+                    if(!sys.flags.single_block) {
+                        if(cc_mc_enqueue_pause_marker(-1.0f) != cc_status_OK)
+                            RETURN(Status_CutterCompInvalid);
+                    }
                 } else {
                     //otherwise, execute a normal feed hold.
                     system_set_exec_state_flag(EXEC_FEED_HOLD); // Use feed hold for program pause.
