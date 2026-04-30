@@ -519,7 +519,10 @@ typedef enum {
 //
 // 773-779 - reserved for spindle offset settings
 //
-
+#if CUTTER_COMP_ENABLE
+    Setting_CutterCompFacetCorner = 780,
+    Setting_CutterCompAllowLookahead = 781,
+ #endif
 // Reserving settings in the range 800 - 899 for axis settings.
     Setting_AxisSettingsBase1 = 800,    // Reserved for driver/plugin settings
     Setting_AxisSettingsMax1 = Setting_AxisSettingsBase1 + AXIS_SETTINGS_INCREMENT * 9 + N_AXIS,
@@ -528,10 +531,6 @@ typedef enum {
 //
 // 900-999 - reserved for automatic tool changers (ATC)
 //
-#if CUTTER_COMP_ENABLE
-    Setting_CutterCompFacetCorner = 1000,
-    Setting_CutterCompAllowLookahead = 1001,
- #endif
 // ---
     Setting_SettingsMax,
     Setting_SettingsAll = Setting_SettingsMax,
@@ -866,9 +865,13 @@ typedef union {
     };
 } macro_atc_flags_t;
 
-typedef struct {
-    bool chamfer_corner_treatment;
-    bool allow_lookahead;
+typedef union {
+    uint8_t value;
+    struct {
+        uint8_t chamfer_corner_treatment :1,
+                allow_lookahead          :1,
+                unassigned               :6;
+    };
 } cutter_comp_flags_t;
 
 typedef struct {

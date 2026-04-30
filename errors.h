@@ -122,11 +122,10 @@ typedef enum {
     Status_AuxiliaryPortUnusable = 86,
     Status_ToolInSPindle = 87,
     Status_NoToolInSPindle = 88,
-    Status_StatusMax = Status_NoToolInSPindle,
-
-    Status_GcodeCutterCompActive = 90,
-    Status_CutterCompConflict = 91,
-    Status_CutterCompInvalid = 92,
+    Status_GcodeCutterCompActive = 89,
+    Status_CutterCompConflict = 90,
+    Status_CutterCompInvalid = 91,
+    Status_StatusMax = Status_CutterCompInvalid,
 
 
     Status_UserException = 253,
