@@ -1218,7 +1218,7 @@ FLASHMEM static status_code_t macro_modbus_msg (parameter_words_t args)
     return status;
 }
 
-FLASHMEM static status_code_t onMacroExecute (macro_id_t macro_id, parameter_words_t args, uint32_t repeats)
+FLASHMEM static status_code_t onMacroExecute (macro_id_t macro_id, line_number_t line_number, parameter_words_t args, uint32_t repeats)
 {
     status_code_t status = repeats > 1 && macro_id >= 1 && macro_id <= G65Macro_LastInbuilt
                    ? Status_GcodeValueOutOfRange
@@ -1254,10 +1254,9 @@ FLASHMEM static status_code_t onMacroExecute (macro_id_t macro_id, parameter_wor
         case G65Macro_ModbusMessage:
             status = modbus_isup().ok ? macro_modbus_msg(args) : Status_GcodeUnsupportedCommand;
             break;
-
     }
 
-    return status == Status_Unhandled && on_macro_execute ? on_macro_execute(macro_id, args, repeats) : status;
+    return status == Status_Unhandled && on_macro_execute ? on_macro_execute(macro_id, line_number, args, repeats) : status;
 }
 
 FLASHMEM void ngc_params_init (void)

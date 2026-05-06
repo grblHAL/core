@@ -400,18 +400,18 @@ corresponding \a words (#parameter_words_t) union holds which parameters were fo
 __NOTE:__ Avoid using single-meaning words in user defined M-codes.
 */
 typedef struct {
-    float d;                        //!< Max spindle RPM in Constant Surface Speed Mode (G96)
-    float e;                        //!< Thread taper length (G76), M67 output number
-    float f;                        //!< Feed rate - single-meaning word
-    float h;                        //!< Tool number or number of G76 thread spring passes
-    float ijk[3];                   //!< I,J,K Axis arc offsets
-    float k;                        //!< G33 distance per revolution
+    float d;                        //!< Max spindle RPM in Constant Surface Speed Mode (G96).
+    float e;                        //!< Thread taper length (G76), M67 output number.
+    float f;                        //!< Feed rate - single-meaning word.
+    float h;                        //!< Tool number or number of G76 thread spring passes.
+    float ijk[3];                   //!< I,J,K Axis arc offsets.
+    float k;                        //!< G33 distance per revolution.
     float m;                        //!< G65 argument.
-    float p;                        //!< G10, 664 or dwell parameters
-    float q;                        //!< User defined M-code parameter, M67 output value, G64 naive CAM tolerance, G83 delta increment
-    float r;                        //!< Arc radius or retract position
-    float s;                        //!< Spindle speed - single-meaning word
-    float t;                        //!< Tool selection - single-meaning word               //
+    float p;                        //!< G10, 664 or dwell parameters.
+    float q;                        //!< User defined M-code parameter, M67 output value, G64 naive CAM tolerance, G83 delta increment.
+    float r;                        //!< Arc radius or retract position.
+    float s;                        //!< Spindle speed - single-meaning word.
+    float t;                        //!< Tool selection - single-meaning word.
 #ifndef A_AXIS
     float a;                        //!< G65 argument.
 #endif
@@ -430,14 +430,14 @@ typedef struct {
 #ifndef W_AXIS
     float w;                        //!< G65 argument.
 #endif
-    float xyz[N_AXIS];              //!< X,Y,Z (and A,B,C,U,V when enabled) translational axes
+    float xyz[N_AXIS];              //!< X,Y,Z (and A,B,C,U,V when enabled) translational axes.
 #if LATHE_UVW_OPTION
-    float uvw[3];                   //!< U,V,W lathe mode incremental mode motion
+    float uvw[3];                   //!< U,V,W lathe mode incremental mode motion.
 #endif
     int32_t $;                      //!< Spindle id - single-meaning word
-    int32_t n;                      //!< Line number - single-meaning word
-    uint32_t o;                     //!< Subroutine identifier - single-meaning word
-    uint32_t l;                     //!< G10, G65, G66 or canned cycles parameters
+    int32_t n;                      //!< Line number - single-meaning word. NOTE: LinuxCNC allows real numbers.
+    uint32_t o;                     //!< Subroutine identifier - single-meaning word.
+    uint32_t l;                     //!< G10, G65, G66 or canned cycles parameters.
 } gc_values_t;
 
 //! Parameter words found by parser - do NOT change order!
@@ -634,7 +634,7 @@ typedef struct {
     float path_tolerance;           //!< Path blending tolerance
     float cam_tolerance;            //!< Naive CAM tolerance
 #endif
-    uint32_t line_number;           //!< Last line number sent
+    line_number_t line_number;      //!< Last line number sent
     tool_id_t tool_pending;         //!< Tool to be selected on next M6
     tool_id_t g43_pending;          //!< Tool offset from tool in tool table to be applied on M6 completed, set when G43 is in block with M6
     bool file_run;                  //!< Tracks % command
@@ -682,8 +682,8 @@ typedef struct {
     output_command_t output_command;    //!< Details about M62-M68 output command to execute if present in block.
     uint32_t arc_turns;                 //
     parameter_words_t g65_words;        //!< Parameter words to pass to G65 macro.
-#if NGC_PARAMETERS_ENABLE
     macro_call_t macro_call;
+#if NGC_PARAMETERS_ENABLE
     modal_state_action_t state_action;  //!< M70-M73 modal state action
 #endif
 #if N_AXIS > 3

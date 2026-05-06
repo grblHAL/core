@@ -2062,6 +2062,96 @@ FLASHMEM static bool is_setting_available (const setting_detail_t *setting, uint
     return available;
 }
 
+// Sanity check of settings, board map could have been changed...
+FLASHMEM static void sanity_check (void)
+{
+#if LATHE_UVW_OPTION
+    settings.mode = Mode_Lathe;
+#else
+    if(settings.mode == Mode_Laser && !spindle_get_caps(false).laser)
+        settings.mode = Mode_Standard;
+#endif
+
+    if(settings.planner_buffer_blocks < 30 || settings.planner_buffer_blocks > 1000)
+        settings.planner_buffer_blocks = 35;
+
+    if(!hal.driver_cap.spindle_encoder)
+        settings.spindle.ppr = 0;
+
+    if(settings.steppers.pulse_microseconds < hal.step_us_min)
+        settings.steppers.pulse_microseconds = hal.step_us_min;
+
+    if(hal.max_step_rate) {
+
+        uint_fast8_t idx = N_AXIS;
+        do {
+            idx--;
+#if N_AXIS > 3
+            if(bit_isfalse(settings.steppers.is_rotary.mask, bit(idx)) &&
+#else
+            if(
+#endif
+            (settings.axis[idx].max_rate * settings.axis[idx].steps_per_mm) / 60.0f > (float)hal.max_step_rate)
+                settings.axis[idx].max_rate = (float)hal.max_step_rate * 60.0f / settings.axis[idx].steps_per_mm;
+            // TODO: warn if changed?
+        } while(idx);
+    }
+
+    if(settings.tool_change.mode > ToolChange_Ignore) {
+        settings.tool_change.mode = ToolChange_SemiAutomatic;
+        settings.flags.tool_change_fast_pulloff = On;
+    }
+
+    settings.probe.probe2_auto_select &= hal.driver_cap.probe2 && hal.probe.select;
+    settings.probe.toolsetter_auto_select &= hal.driver_cap.toolsetter && hal.probe.select;
+
+    if(SLEEP_DURATION <= 0.0f)
+        settings.flags.sleep_enable = Off;
+
+#if COMPATIBILITY_LEVEL > 1 && DEFAULT_DISABLE_G92_PERSISTENCE
+    settings.flags.g92_is_volatile = On;
+#endif
+
+#if COMPATIBILITY_LEVEL > 2
+    if(settings.steppers.enable_invert.mask)
+        settings.steppers.enable_invert.mask = AXES_BITMASK;
+#endif
+
+#if N_AXIS > 3
+    settings.steppers.rotary_wrap.mask &= settings.steppers.is_rotary.mask;
+#endif
+
+#if N_SPINDLE == 1
+    settings.pwm_spindle.flags.ignore_delays = Off;
+#endif
+
+    settings.control_invert.mask |= limits_override.mask;
+    settings.control_disable_pullup.mask &= ~limits_override.mask;
+}
+
+// Read global settings from persistent storage.
+// Checks version-byte of non-volatile storage and global settings copy.
+FLASHMEM bool read_global_settings (void)
+{
+    bool ok = hal.nvs.type != NVS_None && SETTINGS_VERSION == hal.nvs.get_byte(0) && hal.nvs.memcpy_from_nvs((uint8_t *)&settings, NVS_ADDR_GLOBAL, sizeof(settings_t), true) == NVS_TransferResult_OK;
+
+    sanity_check();
+
+    return ok && settings.version.id == SETTINGS_VERSION;
+}
+
+// Write global settings to persistent storage
+FLASHMEM static void _settings_write_global (void)
+{
+    if(override_backup.valid)
+        restore_override_backup();
+
+    settings.flags.compatibility_level = COMPATIBILITY_LEVEL;
+
+    if(hal.nvs.type != NVS_None)
+        hal.nvs.memcpy_to_nvs(NVS_ADDR_GLOBAL, (uint8_t *)&settings, sizeof(settings_t), true);
+}
+
 PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_PulseMicroseconds, Group_Stepper, "Step pulse time", "microseconds", Format_Decimal, "#0.0", step_us_min, NULL, Setting_IsLegacyFn, set_pulse_width, get_float, NULL },
      { Setting_StepperIdleLockTime, Group_Stepper, "Step idle delay", "milliseconds", Format_Int16, "####0", NULL, "65535", Setting_IsLegacy, &settings.steppers.idle_lock_time, NULL, NULL },
@@ -2451,7 +2541,7 @@ PROGMEM static const setting_descr_t setting_descr[] = {
 */
 };
 
-static setting_details_t setting_details = {
+static setting_details_t global_settings = {
     .is_core = true,
     .groups = setting_group_detail,
     .n_groups = sizeof(setting_group_detail) / sizeof(setting_group_detail_t),
@@ -2459,10 +2549,10 @@ static setting_details_t setting_details = {
     .n_settings = sizeof(setting_detail) / sizeof(setting_detail_t),
     .descriptions = setting_descr,
     .n_descriptions = sizeof(setting_descr) / sizeof(setting_descr_t),
-    .save = settings_write_global
+    .save = _settings_write_global
 };
 
-static setting_details_t *settingsd = &setting_details;
+static setting_details_t *settingsd = &global_settings;
 
 FLASHMEM void settings_register (setting_details_t *details)
 {
@@ -2472,7 +2562,23 @@ FLASHMEM void settings_register (setting_details_t *details)
 
 FLASHMEM setting_details_t *settings_get_details (void)
 {
-    return &setting_details;
+    return &global_settings;
+}
+
+FLASHMEM driver_settings_save_ptr settings_claim_save (driver_settings_save_ptr save)
+{
+    driver_settings_save_ptr save_org = global_settings.save;
+
+    if(save)
+        global_settings.save = save;
+
+    return save_org;
+}
+
+// Write global settings to persistent storage
+FLASHMEM void settings_write_global (void)
+{
+    global_settings.save();
 }
 
 /**/
@@ -2638,95 +2744,6 @@ FLASHMEM static bool settings_clear_tool_data (void)
 
 #endif // N_TOOLS
 
-// Sanity check of settings, board map could have been changed...
-FLASHMEM static void sanity_check (void)
-{
-#if LATHE_UVW_OPTION
-    settings.mode = Mode_Lathe;
-#else
-    if(settings.mode == Mode_Laser && !spindle_get_caps(false).laser)
-        settings.mode = Mode_Standard;
-#endif
-
-    if(settings.planner_buffer_blocks < 30 || settings.planner_buffer_blocks > 1000)
-        settings.planner_buffer_blocks = 35;
-
-    if(!hal.driver_cap.spindle_encoder)
-        settings.spindle.ppr = 0;
-
-    if(settings.steppers.pulse_microseconds < hal.step_us_min)
-        settings.steppers.pulse_microseconds = hal.step_us_min;
-
-    if(hal.max_step_rate) {
-
-        uint_fast8_t idx = N_AXIS;
-        do {
-            idx--;
-#if N_AXIS > 3
-            if(bit_isfalse(settings.steppers.is_rotary.mask, bit(idx)) &&
-#else
-            if(
-#endif
-            (settings.axis[idx].max_rate * settings.axis[idx].steps_per_mm) / 60.0f > (float)hal.max_step_rate)
-                settings.axis[idx].max_rate = (float)hal.max_step_rate * 60.0f / settings.axis[idx].steps_per_mm;
-            // TODO: warn if changed?
-        } while(idx);
-    }
-
-    if(settings.tool_change.mode > ToolChange_Ignore) {
-        settings.tool_change.mode = ToolChange_SemiAutomatic;
-        settings.flags.tool_change_fast_pulloff = On;
-    }
-
-    settings.probe.probe2_auto_select &= hal.driver_cap.probe2 && hal.probe.select;
-    settings.probe.toolsetter_auto_select &= hal.driver_cap.toolsetter && hal.probe.select;
-
-    if(SLEEP_DURATION <= 0.0f)
-        settings.flags.sleep_enable = Off;
-
-#if COMPATIBILITY_LEVEL > 1 && DEFAULT_DISABLE_G92_PERSISTENCE
-    settings.flags.g92_is_volatile = On;
-#endif
-
-#if COMPATIBILITY_LEVEL > 2
-    if(settings.steppers.enable_invert.mask)
-        settings.steppers.enable_invert.mask = AXES_BITMASK;
-#endif
-
-#if N_AXIS > 3
-    settings.steppers.rotary_wrap.mask &= settings.steppers.is_rotary.mask;
-#endif
-
-#if N_SPINDLE == 1
-    settings.pwm_spindle.flags.ignore_delays = Off;
-#endif
-
-    settings.control_invert.mask |= limits_override.mask;
-    settings.control_disable_pullup.mask &= ~limits_override.mask;
-}
-
-// Read global settings from persistent storage.
-// Checks version-byte of non-volatile storage and global settings copy.
-FLASHMEM bool read_global_settings (void)
-{
-    bool ok = hal.nvs.type != NVS_None && SETTINGS_VERSION == hal.nvs.get_byte(0) && hal.nvs.memcpy_from_nvs((uint8_t *)&settings, NVS_ADDR_GLOBAL, sizeof(settings_t), true) == NVS_TransferResult_OK;
-
-    sanity_check();
-
-    return ok && settings.version.id == SETTINGS_VERSION;
-}
-
-// Write global settings to persistent storage
-FLASHMEM void settings_write_global (void)
-{
-    if(override_backup.valid)
-        restore_override_backup();
-
-    settings.flags.compatibility_level = COMPATIBILITY_LEVEL;
-
-    if(hal.nvs.type != NVS_None)
-        hal.nvs.memcpy_to_nvs(NVS_ADDR_GLOBAL, (uint8_t *)&settings, sizeof(settings_t), true);
-}
 
 #if N_SPINDLE > 1
 
@@ -2768,7 +2785,7 @@ FLASHMEM void settings_restore (settings_restore_t restore)
 #if N_SPINDLE > 1
         spindle_enumerate_spindles(get_default_spindle, (void *)DEFAULT_SPINDLE);
 #endif
-        settings_write_global();
+        global_settings.save();
     }
 
     if(restore.parameters) {
@@ -2792,7 +2809,7 @@ FLASHMEM void settings_restore (settings_restore_t restore)
     if(restore.defaults && hal.settings_changed)
         hal.settings_changed(&settings, (settings_changed_flags_t){-1});
 
-    setting_details_t *details = setting_details.next;
+    setting_details_t *details = global_settings.next;
 
     if(details) do {
         if(details->is_core ? restore.defaults : restore.driver_parameters) {
@@ -2849,7 +2866,7 @@ FLASHMEM bool settings_is_group_available (setting_group_t id)
         default:
             {
                 uint_fast16_t idx;
-                setting_details_t *details = &setting_details;
+                setting_details_t *details = &global_settings;
 
                 do {
                     if(details->settings) {
@@ -3291,7 +3308,7 @@ FLASHMEM status_code_t settings_store_setting (setting_id_t id, char *svalue)
 
     if(setting == NULL) {
         if(id == Setting_SpindlePWMBehaviour) {
-            set = &setting_details;
+            set = &global_settings;
             setting = &setting_detail[Setting_SpindlePWMBehaviour];
         } else
             return Status_SettingDisabled;
@@ -3387,7 +3404,7 @@ FLASHMEM status_code_t settings_store_setting (setting_id_t id, char *svalue)
         if(set->save)
             set->save();
 
-        if(set == &setting_details)
+        if(set == &global_settings)
             set->on_changed = hal.settings_changed;
 
         if(set->on_changed) {
@@ -3432,13 +3449,6 @@ FLASHMEM void onFileDemarcate (bool start)
 
     if(on_file_demarcate)
         on_file_demarcate(start);
-}
-
-// Clear settings chain
-FLASHMEM void settings_clear (void)
-{
-    setting_details.next = NULL;
-    settingsd = &setting_details;
 }
 
 // Initialize the config subsystem
@@ -3543,7 +3553,7 @@ FLASHMEM void settings_init (void)
     } while(idx);
 #endif
 
-    setting_details_t *details = setting_details.next;
+    setting_details_t *details = global_settings.next;
 
     if(details) do {
         if(details->load)
@@ -3587,10 +3597,10 @@ FLASHMEM void settings_init (void)
 
         settings.version.build = (GRBL_BUILD - 20000000UL);
 
-        settings_write_global();
+        global_settings.save();
     }
 
-    setting_details.on_changed = hal.settings_changed;
+    global_settings.on_changed = hal.settings_changed;
 
     on_file_demarcate = grbl.on_file_demarcate;
     grbl.on_file_demarcate = onFileDemarcate;

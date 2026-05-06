@@ -33,6 +33,8 @@
 
 #if (DRIVER_SPINDLE_ENABLE & SPINDLE_DIR) && !defined(SPINDLE_DIRECTION_PIN)
 #warning "Selected spindle is not fully supported - no direction output!"
+#undef DRIVER_SPINDLE_ENABLE
+#define DRIVER_SPINDLE_ENABLE (defined(SPINDLE_ENABLE_PIN)|(defined(SPINDLE_PWM_PIN)<<1))
 #endif
 
 #if (DRIVER_SPINDLE_ENABLE & SPINDLE_PWM) && !defined(SPINDLE_PWM_PIN)
@@ -41,6 +43,12 @@
 
 #if (DRIVER_SPINDLE1_ENABLE & SPINDLE_PWM) && !defined(SPINDLE1_PWM_PIN)
 #warning "Selected spindle 1 is not supported!"
+#endif
+
+#if (DRIVER_SPINDLE1_ENABLE & SPINDLE_DIR) && !defined(SPINDLE1_DIRECTION_PIN)
+#warning "Selected spindle is not fully supported - no direction output!"
+#undef DRIVER_SPINDLE1_ENABLE
+#define DRIVER_SPINDLE1_ENABLE (defined(SPINDLE1_ENABLE_PIN)|(defined(SPINDLE1_PWM_PIN)<<1))
 #endif
 
 #if ENCODER_ENABLE > 0 && !(defined(QEI_A_PIN) && defined(QEI_B_PIN))

@@ -75,8 +75,9 @@ typedef union {
 typedef union {
     uint16_t value; //!< All bitmap flags.
     struct {
-        uint16_t variable          :1, //!< Variable spindle speed is supported.
-                 direction         :1, //!< Spindle direction (M4) is supported.
+        uint16_t enable            :1, //!< Spindle enable signal is supported.
+                 direction         :1, //!< Spindle direction signal (M4) is supported.
+                 variable          :1, //!< Variable spindle speed is supported.
                  at_speed          :1, //!< Spindle at speed feedback is supported.
                  laser             :1, //!< Spindle can control a laser.
                  pwm_invert        :1, //!< Spindle PWM output can be inverted.
@@ -87,7 +88,7 @@ typedef union {
                  cmd_controlled    :1, //!< Command controlled, e.g. over ModBus.
                  cloned            :1, //!< Spindle is cloned.
                  torch             :1, //!< Spindle is plasma torch.
-                 unassigned        :4;
+                 unassigned        :3;
     };
 } spindle_cap_t;
 
@@ -239,7 +240,8 @@ typedef union {
     struct {
         uint8_t allow_axis_control    :1,
                 sync_position         :1,
-                unassigned            :6;
+                cfg_as_rotary         :1,
+                unassigned            :5;
     };
 } stepper_spindle_settings_flags_t;
 

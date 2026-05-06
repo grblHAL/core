@@ -1022,13 +1022,15 @@ typedef union {
 } setting_limit_t;
 
 typedef union {
-    uint8_t value;
+    uint16_t value;
     struct {
-        uint8_t reboot_required :1,
-                allow_null      :1,
-                subgroups       :1,
-                increment       :4,
-                hidden          :1; //!< Hide from reporting, allow setting
+        uint16_t reboot_required :1,
+                 allow_null      :1,
+                 subgroups       :1,
+                 increment       :4,
+                 hidden          :1, //!< Hide from reporting, allow setting
+                 reload_required :1,
+                 unused          :7;
     };
 } setting_detail_flags_t;
 
@@ -1106,9 +1108,6 @@ typedef setting_details_t *(*on_get_settings_ptr)(void);
 
 extern settings_t settings;
 
-// Clear settings chain (unlinks plugin/driver settings from core settings)
-void settings_clear (void);
-
 // Initialize the configuration subsystem (load settings from persistent storage)
 void settings_init();
 
@@ -1165,5 +1164,6 @@ bool setting_is_integer (const setting_detail_t *setting);
 void setting_remove_elements (setting_id_t id, uint32_t mask, bool trim);
 bool settings_add_spindle_type (const char *type);
 limit_signals_t settings_get_homing_source (void);
+driver_settings_save_ptr settings_claim_save (driver_settings_save_ptr save);
 
 #endif

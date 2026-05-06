@@ -1297,7 +1297,7 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
     if(settings.status_report.line_numbers) {
         // Report current line number
         plan_block_t *cur_block = plan_get_current_block();
-        uint32_t line_number = cur_block ? cur_block->line_number : gc_state.line_number;
+        line_number_t line_number = cur_block ? cur_block->line_number : gc_state.line_number;
         if(line_number)
             stream_write(appendbuf(2, "|Ln:", uitoa(line_number)));
     }

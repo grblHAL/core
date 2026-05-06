@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2023-2024 Terje Io
+  Copyright (c) 2023-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -26,6 +26,6 @@
 
 void ngc_flowctrl_init (void);
 void ngc_flowctrl_unwind_stack (vfs_file_t *file);
-status_code_t ngc_flowctrl (uint32_t o_label, char *line, uint_fast8_t *pos, bool *skip);
+status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number, char *line, uint_fast8_t *pos, bool *skip);
 
 #endif

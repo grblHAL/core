@@ -118,6 +118,7 @@ typedef union {
 
 typedef struct m98_macro {
     macro_id_t id;
+    line_number_t line_number;
     vfs_file_t *file;
     size_t pos;
     struct m98_macro *next;
@@ -682,13 +683,14 @@ FLASHMEM static void macros_clear (void)
     } while((m98_macros = next));
 }
 
-FLASHMEM static status_code_t macro_add (macro_id_t id, vfs_file_t *file)
+FLASHMEM static status_code_t macro_add (macro_id_t id, line_number_t line_number, vfs_file_t *file)
 {
     m98_macro_t *sub = macro_find(id);
 
     if(sub == NULL && (sub = calloc(1, sizeof(m98_macro_t)))) {
         sub->id = id;
         sub->file = file;
+        sub->line_number = line_number;
         if(m98_macros) {
             m98_macro_t *add = m98_macros;
             while(add->next)
@@ -701,14 +703,14 @@ FLASHMEM static status_code_t macro_add (macro_id_t id, vfs_file_t *file)
     return sub ? Status_OK : Status_FlowControlOutOfMemory;
 }
 
-FLASHMEM static status_code_t macro_call (macro_id_t macro, parameter_words_t args, uint8_t repeats)
+FLASHMEM static status_code_t macro_call (macro_id_t macro, line_number_t line_number, parameter_words_t args, uint8_t repeats)
 {
 #if NGC_PARAMETERS_ENABLE
     ngc_named_param_set("_value", 0.0f);
     ngc_named_param_set("_value_returned", 0.0f);
 #endif
 
-    status_code_t status = grbl.on_macro_execute(macro, args, repeats);
+    status_code_t status = grbl.on_macro_execute(macro, line_number, args, repeats);
 
 #if NGC_PARAMETERS_ENABLE
     if(status != Status_Handled)
@@ -1242,9 +1244,9 @@ status_code_t gc_execute_block (char *block)
         RETURN(status);
 
     // Determine if the line is a program start/end marker.
-    if(block[0] == CMD_PROGRAM_DEMARCATION && block[1] == '\0') {
+    if(*block == CMD_PROGRAM_DEMARCATION && block[1] == '\0') {
 
-        block[0] = '\0';
+        *block = '\0';
 
         if(gc_state.file_stream) {
 
@@ -1264,12 +1266,6 @@ status_code_t gc_execute_block (char *block)
 
         if(status == Status_OK && grbl.on_file_demarcate)
             grbl.on_file_demarcate(gc_state.file_run);
-    }
-
-    if(block[0] == '\0') {
-        if(message)
-            gc_output_message(message);
-        return status;
     }
 
   /* -------------------------------------------------------------------------------------
@@ -1298,9 +1294,23 @@ status_code_t gc_execute_block (char *block)
     modal_groups_t command_words = {0};         // Bitfield for tracking G and M command words. Also used for modal group violations.
     gc_parser_flags_t gc_parser_flags = {0};    // Parser flags for handling special cases.
     parameter_words_t user_words = {0};         // User M-code words "taken"
+#if NGC_EXPRESSIONS_ENABLE
+    bool skip_blocks = gc_state.skip_blocks && *block != 'N';   // Parse line number if present (first word) in blocks to be skipped.
+#endif
+
+    if(*block != 'N' && hal.stream.file && grbl.on_line_number_assigned)
+        gc_block.values.n = (int32_t)grbl.on_line_number_assigned((line_number_t)0);
+
+    if(*block == '\0') {
+
+        if(message)
+            gc_output_message(message);
+
+        return Status_OK;
+    }
 
     // Determine if the line is a jogging motion or a normal g-code block.
-    if (block[0] == '$') { // NOTE: `$J=` already parsed when passed to this function.
+    if(*block == '$') { // NOTE: `$J=` already parsed when passed to this function.
         // Set G1 and G94 enforced modes to ensure accurate error checks.
         gc_parser_flags.jog_motion = On;
         gc_block.modal.motion = MotionMode_Linear;
@@ -1323,7 +1333,7 @@ status_code_t gc_execute_block (char *block)
     user_mcode_type_t user_mcode = UserMCode_Unsupported;
     word_bit_t word_bit = { .parameter = {0}, .modal_group = {0} }; // Bit-value for assigning tracking variables
 
-    while ((letter = block[char_counter++]) != '\0') { // Loop until no more g-code words in block.
+    while((letter = block[char_counter++]) != '\0') { // Loop until no more g-code words in block.
 
         // Import the next g-code word, expecting a letter followed by a value. Otherwise, error out.
 
@@ -1333,7 +1343,7 @@ status_code_t gc_execute_block (char *block)
 
         if(letter == '#') {
 
-            if(gc_state.skip_blocks)
+            if(skip_blocks)
                 return Status_OK;
 
             if(block[char_counter] == '<') {
@@ -1397,8 +1407,12 @@ status_code_t gc_execute_block (char *block)
         }
 
         if((gc_block.words.mask & o_label.mask) && (gc_block.words.mask & ~o_label.mask) == 0) {
+
+            if(grbl.on_line_number_assigned)
+                gc_block.values.n = (int32_t)grbl.on_line_number_assigned((line_number_t)gc_block.values.n);
+
             char_counter--;
-            RETURN(ngc_flowctrl(gc_block.values.o, block, &char_counter, &gc_state.skip_blocks));
+            RETURN(ngc_flowctrl(gc_block.values.o, (line_number_t)gc_block.values.n, block, &char_counter, &gc_state.skip_blocks));
         }
 
         if((letter < 'A' && letter != '$') || letter > 'Z')
@@ -1409,7 +1423,7 @@ status_code_t gc_execute_block (char *block)
         else if((status = ngc_read_real_value(block, &char_counter, &value)) != Status_OK)
             RETURN(status);
 
-        if(gc_state.skip_blocks && letter != 'O')
+        if(skip_blocks && letter != 'O')
             return Status_OK;
 
         if(user_mcode != UserMCode_NoValueWords && isnan(value))
@@ -1428,7 +1442,7 @@ status_code_t gc_execute_block (char *block)
             if(user_mcode == UserMCode_NoValueWords)    // Valueless parameters allowed for user defined M-codes.
                 value = NAN;                            // Parameter validation deferred to implementation.
             else
-                RETURN(Status_BadNumberFormat);           // [Expected word value]
+                RETURN(Status_BadNumberFormat);         // [Expected word value]
         }
 
 #endif
@@ -1648,7 +1662,9 @@ status_code_t gc_execute_block (char *block)
 #endif
 
                     case 65:
+#if NGC_PARAMETERS_ENABLE
                     case 66:
+#endif
                         // NOTE: Fanuc style, not supported by LinuxCNC
                         if(command_words.mask & m_groups.mask) {
                             gc_block.words.m = On;
@@ -1662,6 +1678,7 @@ status_code_t gc_execute_block (char *block)
                             RETURN(Status_GcodeUnsupportedCommand);
                         break;
 
+#if NGC_PARAMETERS_ENABLE
                     case 67:
                         // NOTE: Fanuc style, not supported by LinuxCNC
                         if(grbl.on_macro_execute) {
@@ -1671,6 +1688,7 @@ status_code_t gc_execute_block (char *block)
                         } else
                             RETURN(Status_GcodeUnsupportedCommand);
                         break;
+#endif
 
                     case 96: case 97:
                         if(settings.mode == Mode_Lathe) {
@@ -1963,6 +1981,9 @@ status_code_t gc_execute_block (char *block)
                     case 'N':
                         word_bit.parameter.n = On;
                         gc_block.values.n = (int32_t)truncf(value);
+#if NGC_EXPRESSIONS_ENABLE
+                        skip_blocks = gc_state.skip_blocks;
+#endif
                         break;
 
                     case 'O':
@@ -1972,7 +1993,7 @@ status_code_t gc_execute_block (char *block)
                             if(hal.stream.state.m98_macro_prescan && (macro = macro_find((macro_id_t)int_value))) {
                                 macro->file = hal.stream.file;
                                 macro->pos = vfs_tell(macro->file);
-                                RETURN(Status_OK);
+                                return Status_OK;
                             } else {
                                 word_bit.parameter.o = On;
                                 gc_block.values.o = int_value;
@@ -2160,10 +2181,16 @@ status_code_t gc_execute_block (char *block)
 
   // [0. Non-specific/common error-checks and miscellaneous setup]:
 
+    if(grbl.on_line_number_assigned)
+        gc_block.values.n = (int32_t)grbl.on_line_number_assigned((line_number_t)gc_block.values.n);
+
     if(command_words.G16) {
 
-        if(gc_block.macro_call && gc_state.g66_args == NULL) {
-
+        if(gc_block.macro_call
+#if NGC_PARAMETERS_ENABLE
+            && gc_state.g66_args == NULL
+#endif
+        ) {
             if(!gc_block.words.p)
                 RETURN(Status_GcodeValueWordMissing); // [P word missing]
             if(gc_block.values.p > 65535.0f)
@@ -3290,6 +3317,10 @@ status_code_t gc_execute_block (char *block)
                     gc_state.canned.rapid_retract = On;
                     gc_state.canned.spindle_off = Off;
                 }
+#if N_AXIS > 3
+                if(axis_words.mask & settings.steppers.is_rotary.mask)
+                    RETURN(Status_GcodeAxisCommandConflict);
+#endif
 
                 if(!gc_block.words.l)
                     gc_block.values.l = 1;
@@ -3695,8 +3726,7 @@ status_code_t gc_execute_block (char *block)
     */
 
     // Initialize planner data struct for motion blocks.
-    plan_line_data_t plan_data;
-    memset(&plan_data, 0, sizeof(plan_line_data_t)); // Zero plan_data struct
+    plan_line_data_t plan_data = {0};
     plan_data.offset_id = gc_state.offset_id;
     plan_data.overrides = gc_state.modal.override_ctrl;
     plan_data.condition.target_validated = plan_data.condition.target_valid = sys.soft_limits.mask == 0;
@@ -3740,7 +3770,7 @@ status_code_t gc_execute_block (char *block)
     if(command_words.G16) switch(gc_block.macro_call) {
 
         case MacroCall_NonModal:
-            RETURN(macro_call((macro_id_t)gc_block.values.p, gc_block.g65_words, gc_block.values.l));
+            RETURN(macro_call((macro_id_t)gc_block.values.p, (line_number_t)gc_block.values.n, gc_block.g65_words, gc_block.values.l));
             break;
 
 #if NGC_PARAMETERS_ENABLE
@@ -3783,7 +3813,7 @@ status_code_t gc_execute_block (char *block)
 
     // [0. Non-specific/common error-checks and miscellaneous setup]:
     // NOTE: If no line number is present, the value is zero.
-    plan_data.line_number = gc_state.line_number = (uint32_t)gc_block.values.n; // Record data for planner use.
+    plan_data.line_number = gc_state.line_number = (line_number_t)gc_block.values.n; // Record data for planner use.
 
     // [1. Comments feedback ]: Extracted in protocol.c if HAL entry point provided
     if(message && !check_mode && (plan_data.message = malloc(strlen(message) + 1)))
@@ -4519,15 +4549,15 @@ status_code_t gc_execute_block (char *block)
 
             macro_arguments_push(&gc_state.g66_args->values, gc_state.g66_args->words, NULL);
 
-            RETURN(macro_call((macro_id_t)gc_state.g66_args->values.p, gc_state.g66_args->words, gc_state.g66_args->values.l));
+            RETURN(macro_call((macro_id_t)gc_state.g66_args->values.p, (line_number_t)gc_block.values.n, gc_state.g66_args->words, gc_state.g66_args->values.l));
             break;
 #endif
 
         case MacroCall_NonModal98:
             if(check_mode) {
-                RETURN(macro_add((macro_id_t)gc_block.values.p, hal.stream.file));
+                RETURN(macro_add((macro_id_t)gc_block.values.p, (line_number_t)gc_block.values.n, hal.stream.file));
             } else {
-                RETURN(macro_call((macro_id_t)gc_block.values.p, (parameter_words_t){ .$ = On}, gc_block.values.l));
+                RETURN(macro_call((macro_id_t)gc_block.values.p, (line_number_t)gc_block.values.n, (parameter_words_t){ .$ = On}, gc_block.values.l));
             }
             break;
 

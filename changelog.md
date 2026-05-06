@@ -1,5 +1,32 @@
 ## grblHAL changelog
 
+<a name="20260506">Build 20260506
+
+Core:
+
+* Setting `NGC_PARAMETERS_ENABLE` to `Off` results compiling errors, ref. issue [#919](https://github.com/grblHAL/core/issues/919).
+
+* Changes to allow stepper spindle to use per degree settings, ref. issue [926](https://github.com/grblHAL/core/issues/926).
+
+* Changes for improved line number reporting for subroutines and branching gcode.
+
+Drivers:
+
+* ESP32: fix for incorrect pin mapping for MKS DLC32 MAX. Ref. issue [#192](https://github.com/grblHAL/ESP32/issues/194).
+
+* RP2040: added driver support for second PWM spindle and ADC inputs. Updated PIO code to allow use of RP2350 higher numbered pins.
+
+Plugins:
+
+* Motor: improved handling of StallGuard result filtering.
+
+* Spindle, stepper: added `$677` option flag to use per degree motor settings instead of per revolution.  
+Fix for spindle sync, ref. issue [#46](https://github.com/grblHAL/Plugins_spindle/issues/46)
+
+* SD card and keypad, macros: updated for core changes related to improved line number reporting.
+
+---
+
 <a name="20260418">20260418
 
 Drivers:
