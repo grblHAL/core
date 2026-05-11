@@ -1,18 +1,34 @@
 ## grblHAL changelog
 
+<a name="20260511">20260511
+
+Drivers:
+
+* STM32F1xx: added code guards to allow no spindle etc. configs. Ref. issue [#89](https://github.com/grblHAL/STM32F1xx/issues/89).
+
+* STM32F4xx: reduced SD card SPI clock to default value for LongBoards. Ref. [discussion](https://github.com/grblHAL/core/discussions/944).
+
+* ESP32: fixed regression that set SPI clock too high for Trinamic drivers. Ref. [issue comment](https://github.com/grblHAL/core/issues/945#issuecomment-4415003159).
+
+Plugins:
+
+* Misc, FNC Expander: adopted some bug fixes from PR [#6](https://github.com/grblHAL/Plugins_misc/pull/6).
+
+---
+
 <a name="20260506">Build 20260506
 
 Core:
 
 * Setting `NGC_PARAMETERS_ENABLE` to `Off` results compiling errors, ref. issue [#919](https://github.com/grblHAL/core/issues/919).
 
-* Changes to allow stepper spindle to use per degree settings, ref. issue [926](https://github.com/grblHAL/core/issues/926).
+* Changes to allow stepper spindle to use per degree settings, ref. issue [#926](https://github.com/grblHAL/core/issues/926).
 
 * Changes for improved line number reporting for subroutines and branching gcode.
 
 Drivers:
 
-* ESP32: fix for incorrect pin mapping for MKS DLC32 MAX. Ref. issue [#192](https://github.com/grblHAL/ESP32/issues/194).
+* ESP32: fix for incorrect pin mapping for MKS DLC32 MAX. Ref. issue [#194](https://github.com/grblHAL/ESP32/issues/194).
 
 * RP2040: added driver support for second PWM spindle and ADC inputs. Updated PIO code to allow use of RP2350 higher numbered pins.
 
