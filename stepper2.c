@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2023-2025 Terje Io
+  Copyright (c) 2023-2026 Terje Io
 
   Algorithm based on article/code by David Austin:
   https://www.embedded.com/generate-stepper-motor-speed-profiles-in-real-time/
@@ -70,6 +70,7 @@ struct st2_motor {
     uint32_t n;                 // accel/decel steps
     float speed;                // speed steps/s
     float prev_speed;           // speed steps/s
+    float steps_per_mm;         // acceleration steps/s^2
     float acceleration;         // acceleration steps/s^2
     axes_signals_t dir;         // current direction
     uint64_t next_step;
@@ -81,7 +82,7 @@ struct st2_motor {
 static st2_motor_t *motors = NULL;
 static uint8_t spindle_motors = 0;
 static settings_changed_ptr settings_changed;
-static on_set_axis_setting_unit_ptr on_set_axis_setting_unit;
+static on_set_axis_setting_unit_ptr on_set_axis_setting_unit = NULL;
 static on_setting_get_description_ptr on_setting_get_description;
 static on_reset_ptr on_reset;
 
@@ -91,9 +92,10 @@ static void motor_irq (void *context);
 
 \param motor pointer to a \a st2_motor structure.
 */
-static void st_motor_config (st2_motor_t *motor)
+FLASHMEM static void st2_motor_config (st2_motor_t *motor, axis_settings_t *cfg)
 {
-    motor->acceleration = settings.axis[motor->idx].acceleration * settings.axis[motor->idx].steps_per_mm / 3600.0f;
+    motor->steps_per_mm = cfg->steps_per_mm;
+    motor->acceleration = cfg->acceleration * cfg->steps_per_mm / 3600.0f;
     motor->first_delay = (uint32_t)(0.676f * sqrtf(2.0f / motor->acceleration) * 1000000.0f);
 }
 
@@ -103,7 +105,7 @@ This will be called on a soft reset and stops all running motors abruptly.
 
 __NOTE:__ position will likely be lost for running motors.
 */
-static void st2_reset (void)
+FLASHMEM static void st2_reset (void)
 {
     st2_motor_t *motor = motors;
 
@@ -119,7 +121,7 @@ static void st2_reset (void)
 \param settings pointer to a \a settings_t structure.
 \param changed a \a settings_changed_flags_t structure.
 */
-static void st2_settings_changed (settings_t *settings, settings_changed_flags_t changed)
+FLASHMEM static void st2_settings_changed (settings_t *settings, settings_changed_flags_t changed)
 {
     st2_motor_t *motor = motors;
 
@@ -127,7 +129,7 @@ static void st2_settings_changed (settings_t *settings, settings_changed_flags_t
 
     while(motor) {
         if(motor->is_bound)
-            st_motor_config(motor);
+            st2_motor_config(motor, &settings->axis[motor->idx]);
         motor = motor->next;
     }
 }
@@ -138,11 +140,11 @@ static void st2_settings_changed (settings_t *settings, settings_changed_flags_t
 \param axis_idx axis index, X = 0, Y = 1, Z = 2, ...
 \returns pointer to new unit string or NULL if no change.
 */
-static const char *st2_set_axis_setting_unit (setting_id_t setting_id, uint_fast8_t axis_idx)
+FLASHMEM static const char *st2_set_axis_setting_unit (setting_id_t setting_id, uint_fast8_t axis_idx)
 {
     const char *unit = NULL;
 
-    if(bit_istrue(spindle_motors, bit(axis_idx))) switch(setting_id) {
+    if(!settings.stepper_spindle_flags.cfg_as_rotary && bit_istrue(spindle_motors, bit(axis_idx))) switch(setting_id) {
 
         case Setting_AxisStepsPerMM:
             unit = "step/rev";
@@ -175,12 +177,12 @@ static const char *st2_set_axis_setting_unit (setting_id_t setting_id, uint_fast
 \param setting_id id of setting.
 \returns pointer to new description string or original string if no change.
 */
-static const char *st2_setting_get_description (setting_id_t id)
+FLASHMEM static const char *st2_setting_get_description (setting_id_t id)
 {
     uint_fast8_t axis_idx;
     const char *descr = NULL;
 
-    switch(settings_get_axis_base(id, &axis_idx)) {
+    if(!settings.stepper_spindle_flags.cfg_as_rotary) switch(settings_get_axis_base(id, &axis_idx)) {
 
         case Setting_AxisStepsPerMM:
             if(bit_istrue(spindle_motors, bit(axis_idx)))
@@ -211,7 +213,7 @@ static const char *st2_setting_get_description (setting_id_t id)
                  : (on_setting_get_description ? on_setting_get_description(id) : NULL);
 }
 
-void st2_motor_register_stopped_callback (st2_motor_t *motor, foreground_task_ptr callback)
+FLASHMEM void st2_motor_register_stopped_callback (st2_motor_t *motor, foreground_task_ptr callback)
 {
     motor->on_stopped = callback;
 }
@@ -222,7 +224,7 @@ Binds motor 0 as a spindle.
 \param axis_idx axis index of motor to bind to. 3 = A, 4 = B, ...
 \returns \a true if successful, \a false if not.
 */
-bool st2_motor_bind_spindle (uint_fast8_t axis_idx)
+FLASHMEM bool st2_motor_bind_spindle (uint_fast8_t axis_idx, axis_settings_t *cfg)
 {
     if(motors && N_AXIS > 3 && axis_idx > Z_AXIS) {
 
@@ -232,13 +234,16 @@ bool st2_motor_bind_spindle (uint_fast8_t axis_idx)
 
         spindle_motors |= motors->axis.mask;
 
-        on_set_axis_setting_unit = grbl.on_set_axis_setting_unit;
-        grbl.on_set_axis_setting_unit = st2_set_axis_setting_unit;
+        if(!settings.stepper_spindle_flags.cfg_as_rotary && on_set_axis_setting_unit == NULL) {
 
-        on_setting_get_description = grbl.on_setting_get_description;
-        grbl.on_setting_get_description = st2_setting_get_description;
+            on_set_axis_setting_unit = grbl.on_set_axis_setting_unit;
+            grbl.on_set_axis_setting_unit = st2_set_axis_setting_unit;
 
-        st_motor_config(motors);
+            on_setting_get_description = grbl.on_setting_get_description;
+            grbl.on_setting_get_description = st2_setting_get_description;
+        }
+
+        st2_motor_config(motors, cfg);
     }
 
     return motors && axis_idx > Z_AXIS;
@@ -254,7 +259,7 @@ If \a is_spindle is set \a true then axis settings will be changed to step/rev e
 \param is_spindle set to \a true if axis is to be used as a spindle (infinite motion).
 \returns pointer to a \a st2_motor structure if successful, \a NULL if not.
 */
-st2_motor_t *st2_motor_init (uint_fast8_t axis_idx, bool is_spindle)
+FLASHMEM st2_motor_t *st2_motor_init (uint_fast8_t axis_idx, bool is_spindle)
 {
     st2_motor_t *motor = NULL, *new = motors;
 
@@ -280,7 +285,7 @@ st2_motor_t *st2_motor_init (uint_fast8_t axis_idx, bool is_spindle)
             motor->axis.mask = 1 << axis_idx;
             motor->is_bound = true;
 
-            st_motor_config(motor);
+            st2_motor_config(motor, NULL);
         }
 
         if(new == NULL) {
@@ -306,9 +311,9 @@ st2_motor_t *st2_motor_init (uint_fast8_t axis_idx, bool is_spindle)
 \param motor pointer to a \a st2_motor structure.
 \returns current speed in RPM.
 */
-float st2_get_speed (st2_motor_t *motor)
+FLASHMEM float st2_get_speed (st2_motor_t *motor)
 {
-    return motor->state == State_Idle ? 0.0f : 60.0f / ((float)motor->delay * settings.axis[motor->idx].steps_per_mm / 1000000.0f);
+    return motor->state == State_Idle ? 0.0f : 60.0f / ((float)motor->delay * motor->steps_per_mm / 1000000.0f);
 }
 
 /*! \brief Set speed.
@@ -319,7 +324,7 @@ Motor will be accelerated or decelerated to the new speed.
 \param speed new speed.
 \returns new speed in steps/s.
 */
-float st2_motor_set_speed (st2_motor_t *motor, float speed)
+FLASHMEM float st2_motor_set_speed (st2_motor_t *motor, float speed)
 {
     if(speed == 0.0f) {
         st2_motor_stop(motor);
@@ -327,7 +332,7 @@ float st2_motor_set_speed (st2_motor_t *motor, float speed)
     }
 
     motor->speed = speed > settings.axis[motor->idx].max_rate ? settings.axis[motor->idx].max_rate : speed;
-    motor->speed *= settings.axis[motor->idx].steps_per_mm / 60.0f;
+    motor->speed *= motor->steps_per_mm / 60.0f;
 
     if(motor->speed == motor->prev_speed)
        return motor->speed;
@@ -386,7 +391,7 @@ that calls st2_motor_run().
 \param type a #position_t enum.
 \returns \a true if command is accepted, \a false if not.
 */
-bool st2_motor_move (st2_motor_t *motor, const float move, const float speed, position_t type)
+FLASHMEM bool st2_motor_move (st2_motor_t *motor, const float move, const float speed, position_t type)
 {
     if(speed == 0.0f)
         return false;
@@ -402,7 +407,7 @@ bool st2_motor_move (st2_motor_t *motor, const float move, const float speed, po
             break;
 
         case Stepper2_mm:
-            motor->move = (uint32_t)lroundf(fabsf(move * settings.axis[motor->idx].steps_per_mm));
+            motor->move = (uint32_t)lroundf(fabsf(move * motor->steps_per_mm));
             break;
     }
 
@@ -450,7 +455,7 @@ bool st2_motor_move (st2_motor_t *motor, const float move, const float speed, po
         cn -= (2.0f * cn) / (4.0f * nn + 1);
     } while(--nn);
 
-    debug_printf("mv: %.2f %.3f %d %d %d %.2f %.2f", speed, settings.axis[motor->idx].steps_per_mm, motor->n, move, motor->delay, cn, motor->speed);
+    debug_printf("mv: %.2f %.3f %d %d %d %.2f %.2f", speed, motor->steps_per_mm, motor->n, move, motor->delay, cn, motor->speed);
 #endif
 
     return true;
@@ -472,7 +477,7 @@ __NOTE:__ position will _not_ be set if motor is moving.
 \param position position to set.
 \returns \a true if new position was accepted, \a false if not.
 */
-bool st2_set_position (st2_motor_t *motor, int64_t position)
+FLASHMEM bool st2_set_position (st2_motor_t *motor, int64_t position)
 {
     if(motor->state == State_Idle) {
         motor->position = position;
@@ -576,7 +581,7 @@ when step output is not driven by interrupts (polling mode).
 \param motor pointer to a \a st2_motor structure.
 \returns \a true if motor is moving (steps are output), \a false if not (motion is completed).
 */
-bool st2_motor_run (st2_motor_t *motor)
+FLASHMEM bool st2_motor_run (st2_motor_t *motor)
 {
     if(motor->polling && motor->state != State_Idle) {
 
@@ -598,7 +603,7 @@ This will initiate deceleration to stop the motor if it is running.
 \param motor pointer to a \a st2_motor structure.
 \returns \a true if motor was running, \a false if not.
 */
-bool st2_motor_stop (st2_motor_t *motor)
+FLASHMEM bool st2_motor_stop (st2_motor_t *motor)
 {
     switch(motor->state) {
 

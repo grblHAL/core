@@ -332,8 +332,6 @@ FLASHMEM int grbl_enter (void)
     sys.cold_start = true;
 
     limits_init();
-
-    settings_clear();
     report_init_fns();
 
 #ifdef KINEMATICS_API

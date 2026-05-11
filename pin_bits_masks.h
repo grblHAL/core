@@ -334,7 +334,7 @@ typedef bool (*aux_claim_explicit_ptr)(aux_ctrl_t *aux_ctrl);
 
 static bool __claim_in_port (xbar_t *properties, uint8_t port, void *data)
 {
-    if(ioport_claim(Port_Digital, Port_Input, &port, NULL)) {
+    if(!(((aux_ctrl_t *)data)->scan && properties->cap.external) && ioport_claim(Port_Digital, Port_Input, &port, NULL)) {
         ((aux_ctrl_t *)data)->port = port;
         ((aux_ctrl_t *)data)->gpio.port = properties->port;
         ((aux_ctrl_t *)data)->gpio.pin = properties->pin;

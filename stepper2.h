@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2023 - 2024 Terje Io
+  Copyright (c) 2023 - 2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -35,7 +35,7 @@ typedef struct st2_motor st2_motor_t;
 
 st2_motor_t *st2_motor_init (uint_fast8_t axis_idx, bool is_spindle);
 bool st2_motor_poll (st2_motor_t *motor);
-bool st2_motor_bind_spindle (uint_fast8_t axis_idx);
+bool st2_motor_bind_spindle (uint_fast8_t axis_idx, axis_settings_t *cfg);
 float st2_get_speed (st2_motor_t *motor);
 float st2_motor_set_speed (st2_motor_t *motor, float speed);
 bool st2_motor_move (st2_motor_t *motor, const float move, const float speed, position_t type);
