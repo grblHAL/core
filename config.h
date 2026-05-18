@@ -1351,7 +1351,7 @@ Defines the parameters for the fourth entry in the spindle RPM linearization tab
 #define DEFAULT_PWM_SPINDLE1_ENABLE_RAMP Off
 #endif
 #if !defined DEFAULT_PWM_SPINDLE1_IGNORE_DELAYS || defined __DOXYGEN__
-#define DEFAULT_PWM_IGNORE_SPINDLE1_DELAYS Off
+#define DEFAULT_PWM_SPINDLE1_IGNORE_DELAYS Off
 #endif
 ///@}
 
