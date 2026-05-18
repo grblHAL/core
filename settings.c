@@ -201,6 +201,7 @@ PROGMEM const settings_t defaults = {
     .pwm_spindle.flags.enable_rpm_controlled = DEFAULT_SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED,
     .pwm_spindle.flags.laser_mode_disable = DEFAULT_PWM_SPINDLE_DISABLE_LASER_MODE,
     .pwm_spindle.flags.pwm_ramped = DEFAULT_PWM_SPINDLE_ENABLE_RAMP,
+    .pwm_spindle.flags.ignore_delays = DEFAULT_PWM_SPINDLE_IGNORE_DELAYS,
     .pwm_spindle.invert.on = DEFAULT_INVERT_SPINDLE_ENABLE_PIN,
     .pwm_spindle.invert.ccw = DEFAULT_INVERT_SPINDLE_CCW_PIN,
     .pwm_spindle.invert.pwm = DEFAULT_INVERT_SPINDLE_PWM_PIN,

@@ -201,6 +201,16 @@ FLASHMEM bool stream_rx_suspend (stream_rx_buffer_t *rxbuffer, bool suspend)
     return ok;
 }
 
+FLASHMEM bool stream_await_tx_clear (const io_stream_t *stream)
+{
+    if(stream->get_tx_buffer_count) {
+        while(stream->get_tx_buffer_count())
+            grbl.on_execute_realtime(state_get());
+    }
+
+    return !!stream->get_tx_buffer_count;
+}
+
 ISR_CODE bool ISR_FUNC(stream_buffer_all)(uint8_t c)
 {
     return false;
@@ -346,9 +356,7 @@ FLASHMEM static bool stream_select (const io_stream_t *stream, bool add)
             if(active_stream && active_stream->type != StreamType_Serial && connection_is_up((io_stream_t *)stream)) {
                 hal.stream.write = stream->write;
                 report_message("SERIAL STREAM ACTIVE", Message_Plain);
-                if(stream->get_tx_buffer_count)
-                    while(stream->get_tx_buffer_count());
-                else
+                if(!stream_await_tx_clear(stream))
                     hal.delay_ms(100, NULL);
             }
             break;
@@ -854,8 +862,7 @@ void debug_write (const char *s)
 {
     if(dbg_write) {
         dbg_write(s);
-        while(hal.debug.get_tx_buffer_count()) // Wait until message is delivered
-            grbl.on_execute_realtime(state_get());
+        stream_await_tx_clear(&hal.debug); // Wait until message is delivered
     }
 }
 
@@ -869,9 +876,7 @@ void debug_writeln (const char *s)
 
         dbg_write(s);
         dbg_write(ASCII_EOL);
-
-        while(hal.debug.get_tx_buffer_count()) // Wait until message is delivered
-            grbl.on_execute_realtime(state_get());
+        stream_await_tx_clear(&hal.debug); // Wait until message is delivered
 
         lock = false;
     }
@@ -934,10 +939,7 @@ void debug_printf (const char *fmt, ...)
 
     if(hal.stream.write) {
         report_message(debug_out, Message_Debug);
-        if(hal.stream.get_tx_buffer_count) {
-            while(hal.stream.get_tx_buffer_count()) // Wait until message is delivered
-                grbl.on_execute_realtime(state_get());
-        }
+        stream_await_tx_clear(&hal.stream); // Wait until message is delivered
     }
 }
 

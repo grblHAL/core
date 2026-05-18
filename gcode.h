@@ -683,6 +683,7 @@ typedef struct {
     uint32_t arc_turns;                 //
     parameter_words_t g65_words;        //!< Parameter words to pass to G65 macro.
     macro_call_t macro_call;
+    bool select_probe;                  // Set to \a true if the probe has to be selected before executing G38.x.
 #if NGC_PARAMETERS_ENABLE
     modal_state_action_t state_action;  //!< M70-M73 modal state action
 #endif

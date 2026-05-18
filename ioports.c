@@ -472,6 +472,13 @@ static float _get_value (io_port_cfg_t *p, uint8_t port)
     return port > p->port_max ? -1.0f : (float)port;
 }
 
+/*! \brief Set $-setting port number.
+\param p a pointer to a \a io_port_cfg_t struct.
+\param port a pointer to a port number to set.
+\param caps as an \a #pin_cap_t union.
+\param value the required port number or -1 to set the port as not assigned.
+\returns status_code_t Status_Ok if port is available and capable.
+*/
 static status_code_t _set_value (io_port_cfg_t *p, uint8_t *port, pin_cap_t caps, float value)
 {
     status_code_t status;
@@ -492,6 +499,11 @@ static status_code_t _set_value (io_port_cfg_t *p, uint8_t *port, pin_cap_t caps
     }
 
     return status;
+}
+
+static xbar_t *_get_info (io_port_cfg_t *p, uint8_t port)
+{
+    return hal.port.get_pin_info(p->handle->type >> 1, p->handle->type & 1, map_reverse(&ports_cfg[p->handle->type], port));
 }
 
 uint8_t _get_next (io_port_cfg_t *p, uint8_t port, const char *description, pin_cap_t caps)
@@ -539,6 +551,7 @@ FLASHMEM io_port_cfg_t *ioports_cfg (io_port_cfg_t *pp, io_port_type_t type, io_
             p->port_max = ioport_find_free(type, dir, (pin_cap_t){ .claimable = On }, NULL);
             p->get_value = _get_value;
             p->set_value = _set_value;
+            p->get_info = _get_info;
             p->get_next = _get_next;
             p->claim = _claim;
             strcpy((char *)p->port_maxs, uitoa(p->port_max));

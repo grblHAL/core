@@ -255,21 +255,21 @@ void state_set (sys_state_t new_state)
                 break;
 
             case STATE_CYCLE:
-                if (sys_state == STATE_IDLE) {
+                if(sys_state == STATE_IDLE) {
                     // Start cycle only if queued motions exist in planner buffer and the motion is not canceled.
                     plan_block_t *block;
-                    if ((block = plan_get_current_block())) {
+                    if((block = plan_get_current_block())) {
                         sys_state = new_state;
                         sys.steppers_deenergize = false;    // Cancel stepper deenergize if pending.
                         st_prep_buffer();                   // Initialize step segment buffer before beginning cycle.
-                        if (block->spindle.state.synchronized) {
-
-                            uint32_t ms = hal.get_elapsed_ticks();
-
-                            if (block->spindle.hal->reset_data)
-                                block->spindle.hal->reset_data();
+                        if(block->spindle.state.synchronized) {
 
                             if(!block->condition.units_per_rev) {
+
+                                uint32_t ms = hal.get_elapsed_ticks();
+
+                                if(block->spindle.hal->reset_data)
+                                    block->spindle.hal->reset_data();
 
                                 uint32_t index = block->spindle.hal->get_data(SpindleData_Counters)->index_count + 2;
 
@@ -286,7 +286,12 @@ void state_set (sys_state_t new_state)
                                         system_set_exec_state_flag(EXEC_RESET);
                                         return;
                                     }
-                                    // TODO: allow real time reporting?
+/* TODO: allow real time reporting?
+                                    if(bit_istrue(sys.rt_exec_state, EXEC_STATUS_REPORT)) {
+                                        system_clear_exec_state_flag(EXEC_STATUS_REPORT);
+                                        report_realtime_status(hal.stream.write_all, &hal.stream.report);
+                                    }
+*/
                                 }
                             } else if(block->spindle.hal->get_data(SpindleData_RPM)->rpm == 0.0f) {
                                 system_raise_alarm(Alarm_Spindle);

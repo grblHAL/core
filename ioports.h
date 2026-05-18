@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2021-2025 Terje Io
+  Copyright (c) 2021-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -198,6 +198,7 @@ struct ioports_handle; // members defined in ioports.c
 
 typedef status_code_t (*ioport_set_value_ptr)(struct ioports_cfg *p, uint8_t *port, pin_cap_t caps, float value);
 typedef float (*ioport_get_value_ptr)(struct ioports_cfg *p, uint8_t port);
+typedef xbar_t *(*ioport_get_info_ptr)(struct ioports_cfg *p, uint8_t port);
 typedef uint8_t (*ioport_get_next_ptr)(struct ioports_cfg *p, uint8_t port, const char *description, pin_cap_t caps);
 typedef xbar_t *(*ioport_claim_ptr)(struct ioports_cfg *p, uint8_t *port, const char *description, pin_cap_t caps);
 
@@ -208,6 +209,7 @@ struct ioports_cfg {
     const char port_maxs[4];
     ioport_get_value_ptr get_value;
     ioport_set_value_ptr set_value;
+    ioport_get_info_ptr get_info;
     ioport_get_next_ptr get_next;
     ioport_claim_ptr claim;
 };

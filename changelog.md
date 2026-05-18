@@ -1,5 +1,34 @@
 ## grblHAL changelog
 
+<a name="20260518">20260518
+
+Drivers:
+
+* Reworked feed mode handling (G93-G95), now keeps current feed rate over spindle synced motion. Ref. issue [#954](https://github.com/grblHAL/core/issues/954).
+
+* Added P-word option to `G38.x` probe commands, use to temporarily switch the probe input when multiple probes are available.  
+The `P` value is the probe id: `0` - primary probe, `1` - toolsetter, `2` - secondary probe.
+> [!NOTE]
+> If probing at the toolsetter \(G59.3 position\) and the `$65 option` _Auto select toolsetter_ is enabled the toolsetter input will be used regardless.
+
+* Fixed PWM spindle ramping, did not hit the target RPM.
+
+Drivers:
+
+* Added link to [new driver](https://github.com/hoshigarasu/grblHAL-STM32U585) for STM32U585 \(Arduino UNO Q\).
+
+* STM32F7xx: fix for not handling non-interrupt capable probe pins correctly. Ref. STM32H7xx [issue 65](https://github.com/dresco/STM32H7xx/issues/65).
+
+Plugins:
+
+* Misc, eventout: fix to make it work with all port configurations. Ref. [issue comment](https://github.com/grblHAL/core/discussions/645#discussioncomment-16921652).
+
+* Networking: exposed TX buffer bytes remaining to the stream API.
+
+* SD card: increased ymodem input buffer to make it work with networking protocols.
+
+---
+
 <a name="20260511">20260511
 
 Drivers:

@@ -2324,62 +2324,60 @@ status_code_t gc_execute_block (char *block)
 
     // [1. Comments ]: MSG's may be supported by driver layer. Comment handling performed by protocol.
 
-    // [2. Set feed rate mode ]: G93 F word missing with G1,G2/3 active, implicitly or explicitly. Feed rate
-    //   is not defined after switching between G93, G94 and G95.
+    // [2. Set feed rate mode ]: G93 F word missing with G1,G2/3 active, implicitly or explicitly.
+    // Feed rate is not defined after switching between G93, G94 and G95.
     // NOTE: For jogging, ignore prior feed rate mode. Enforce G94 and check for required F word.
-    if(gc_parser_flags.jog_motion) {
+    if(!gc_parser_flags.jog_motion) {
 
-        if(!gc_block.words.f)
-            RETURN(Status_GcodeUndefinedFeedRate);
+        // Switching to G94 or G95 from G93, so don't push last state feed rate.
+        if(gc_block.modal.feed_mode != gc_state.modal.feed_mode)
+            gc_state.feed_rate = 0.0f;
 
+        if(gc_block.modal.feed_mode == FeedMode_InverseTime) { // = G93
+
+            // NOTE: G38 can also operate in inverse time, but is undefined as an error. Missing F word check added here.
+            if(!gc_block.words.f && axis_command == AxisCommand_MotionMode &&
+                !(gc_block.modal.motion == MotionMode_None ||
+                   gc_block.modal.motion == MotionMode_Seek ||
+                    gc_block.modal.motion == MotionMode_SpindleSynchronized ||
+                     gc_block.modal.motion == MotionMode_RigidTapping))
+                RETURN(Status_GcodeUndefinedFeedRate); // [F word missing]
+
+            // NOTE: It seems redundant to check for an F word to be passed after switching from G94 to G93. We would
+            // accomplish the exact same thing if the feed rate value is always reset to zero and undefined after each
+            // inverse time block, since the commands that use this value already perform undefined checks. This would
+            // also allow other commands, following this switch, to execute and not error out needlessly. This code is
+            // combined with the above feed rate mode and the below set feed rate error-checking.
+
+            // - In inverse time mode: Always implicitly zero the feed rate value before and after block completion.
+            // NOTE: If in G93 mode or switched into it from G94, just keep F value as initialized zero or passed F word
+            // value in the block. If no F word is passed with a motion command that requires a feed rate, this will error
+            // out in the motion modes error-checking. However, if no F word is passed with NO motion command that requires
+            // a feed rate, we simply move on and the state feed rate value gets updated to zero and remains undefined.
+
+        } else if(!gc_block.words.f)
+            gc_block.values.f = gc_state.feed_rate; // Push last state feed rate
+
+    } else if(!gc_block.words.f)
+        RETURN(Status_GcodeUndefinedFeedRate);
+
+    // [3. Set feed rate ]:
+    // if F word passed, ensure value is in mm/min or mm/rev depending on mode.
+    if(gc_block.words.f) {
         if(gc_block.values.f < 0.0f)
             RETURN(Status_NegativeValue); // [Word value cannot be negative]
-
-        if(gc_block.modal.units_imperial)
+        if(gc_block.modal.feed_mode != FeedMode_InverseTime && gc_block.modal.units_imperial)
             gc_block.values.f *= MM_PER_INCH;
+    }
 
-    } else if(gc_block.modal.motion == MotionMode_SpindleSynchronized) {
-
-        if (!gc_block.words.k) {
+    if(gc_block.modal.motion == MotionMode_SpindleSynchronized || gc_block.modal.motion == MotionMode_RigidTapping) {
+        if(!gc_block.words.k) {
             gc_block.values.k = gc_state.distance_per_rev;
         } else {
             gc_block.words.k = Off;
             gc_block.values.k = gc_block.modal.units_imperial ? gc_block.values.ijk[K_VALUE] *= MM_PER_INCH : gc_block.values.ijk[K_VALUE];
         }
-
-    } else if (gc_block.modal.feed_mode == FeedMode_InverseTime) { // = G93
-        // NOTE: G38 can also operate in inverse time, but is undefined as an error. Missing F word check added here.
-        if (axis_command == AxisCommand_MotionMode) {
-            if (!(gc_block.modal.motion == MotionMode_None || gc_block.modal.motion == MotionMode_Seek)) {
-                if (!gc_block.words.f)
-                    RETURN(Status_GcodeUndefinedFeedRate); // [F word missing]
-            }
-        }
-        // NOTE: It seems redundant to check for an F word to be passed after switching from G94 to G93. We would
-        // accomplish the exact same thing if the feed rate value is always reset to zero and undefined after each
-        // inverse time block, since the commands that use this value already perform undefined checks. This would
-        // also allow other commands, following this switch, to execute and not error out needlessly. This code is
-        // combined with the above feed rate mode and the below set feed rate error-checking.
-
-        // [3. Set feed rate ]: F is negative (done.)
-        // - In inverse time mode: Always implicitly zero the feed rate value before and after block completion.
-        // NOTE: If in G93 mode or switched into it from G94, just keep F value as initialized zero or passed F word
-        // value in the block. If no F word is passed with a motion command that requires a feed rate, this will error
-        // out in the motion modes error-checking. However, if no F word is passed with NO motion command that requires
-        // a feed rate, we simply move on and the state feed rate value gets updated to zero and remains undefined.
-
-    } else if (gc_block.modal.feed_mode == FeedMode_UnitsPerMin || gc_block.modal.feed_mode == FeedMode_UnitsPerRev) {
-          // if F word passed, ensure value is in mm/min or mm/rev depending on mode, otherwise push last state value.
-        if (!gc_block.words.f) {
-            if(gc_block.modal.feed_mode == gc_state.modal.feed_mode)
-                gc_block.values.f = gc_state.feed_rate; // Push last state feed rate
-        } else {
-            if(gc_block.values.f < 0.0f)
-                RETURN(Status_NegativeValue); // [Word value cannot be negative]
-            if(gc_block.modal.units_imperial)
-                gc_block.values.f *= MM_PER_INCH;
-        }
-    } // else, switching to G94 from G93, so don't push last state feed rate. Its undefined or the passed F word value.
+    }
 
     // bit_false(gc_block.words,bit(Word_F)); // NOTE: Single-meaning value word. Set at end of error-checking.
 
@@ -3685,16 +3683,36 @@ status_code_t gc_execute_block (char *block)
 
                 case MotionMode_ProbeToward:
                 case MotionMode_ProbeAway:
-                    if(gc_block.modal.motion == MotionMode_ProbeAway || gc_block.modal.motion == MotionMode_ProbeAwayNoError)
-                        gc_parser_flags.probe_is_away = On;
+                    gc_parser_flags.probe_is_away = gc_block.modal.motion == MotionMode_ProbeAway || gc_block.modal.motion == MotionMode_ProbeAwayNoError;
                     // [G38 Errors]: Target is same current. No axis words. Cutter compensation is enabled. Feed rate
                     //   is undefined. Probe is triggered. NOTE: Probe check moved to probe cycle. Instead of returning
                     //   an error, it issues an alarm to prevent further motion to the probe. It's also done there to
                     //   allow the planner buffer to empty and move off the probe trigger before another probing cycle.
-                    if (!axis_words.mask)
+                    if(!axis_words.mask)
                         RETURN(Status_GcodeNoAxisWords); // [No axis words]
-                    if (isequal_position_vector(gc_state.position, gc_block.values.xyz))
+
+                    if(isequal_position_vector(gc_state.position, gc_block.values.xyz))
                         RETURN(Status_GcodeInvalidTarget); // [Invalid target]
+
+                    if(gc_block.words.p) {
+                        if(hal.probe.select) switch((int32_t)gc_block.values.p) {
+
+                            case Probe_Default:
+                                gc_block.select_probe = hal.driver_cap.probe;
+                                break;
+
+                            case Probe_Toolsetter:
+                                gc_block.select_probe = hal.driver_cap.toolsetter;
+                                break;
+
+                            case Probe_2:
+                                gc_block.select_probe = hal.driver_cap.probe2;
+                                break;
+                        }
+                        if(gc_block.values.p != 0.0f && !gc_block.select_probe)
+                            RETURN(Status_GcodeValueOutOfRange); // [Invalid probe]
+                        gc_block.words.p = Off;
+                    }
                     break;
 
                 default:
@@ -4513,10 +4531,23 @@ status_code_t gc_execute_block (char *block)
             case MotionMode_ProbeTowardNoError:
             case MotionMode_ProbeAway:
             case MotionMode_ProbeAwayNoError:
-                // NOTE: gc_block.values.xyz is returned from mc_probe_cycle with the updated position value. So
-                // upon a successful probing cycle, the machine position and the returned value should be the same.
-                plan_data.condition.no_feed_override = !settings.probe.allow_feed_override;
-                gc_update_pos = (pos_update_t)mc_probe_cycle(gc_block.values.xyz, &plan_data, gc_parser_flags);
+                {
+                    // NOTE: gc_block.values.xyz is returned from mc_probe_cycle with the updated position value. So
+                    // upon a successful probing cycle, the machine position and the returned value should be the same.
+                    probe_id_t probe_id;
+                    plan_data.condition.no_feed_override = !settings.probe.allow_feed_override;
+                    if(gc_block.select_probe){
+                        if((gc_block.select_probe = (probe_id_t)gc_block.values.p != (probe_id = hal.probe.get_state().probe_id))) {
+                            hal.probe.select((probe_id_t)gc_block.values.p);
+                            report_add_realtime(Report_ProbeId);
+                        }
+                    }
+                    gc_update_pos = (pos_update_t)mc_probe_cycle(gc_block.values.xyz, &plan_data, gc_parser_flags);
+                    if(gc_block.select_probe) {
+                        hal.probe.select(probe_id);
+                        report_add_realtime(Report_ProbeId);
+                    }
+                }
                 break;
 
             default:
