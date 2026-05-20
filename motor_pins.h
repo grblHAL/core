@@ -93,7 +93,7 @@
  #endif
  #if !defined(M3_LIMIT_BIT)
   #ifdef M3_LIMIT_PIN
-   #define M3_LIMIT_BIT (1>>M3_LIMIT_PIN)
+   #define M3_LIMIT_BIT (1<<M3_LIMIT_PIN)
   #else
    #define M3_LIMIT_BIT 0
   #endif
@@ -137,7 +137,7 @@
  #endif
  #if !defined(M4_LIMIT_BIT)
   #ifdef M4_LIMIT_PIN
-   #define M4_LIMIT_BIT (1>>M4_LIMIT_PIN)
+   #define M4_LIMIT_BIT (1<<M4_LIMIT_PIN)
   #else
    #define M4_LIMIT_BIT 0
   #endif
@@ -181,7 +181,7 @@
  #endif
  #if !defined(M5_LIMIT_BIT)
   #ifdef M5_LIMIT_PIN
-   #define M5_LIMIT_BIT (1>>M5_LIMIT_PIN)
+   #define M5_LIMIT_BIT (1<<M5_LIMIT_PIN)
   #else
    #define M5_LIMIT_BIT 0
   #endif
@@ -225,7 +225,7 @@
  #endif
  #if !defined(M6_LIMIT_BIT)
   #ifdef M6_LIMIT_PIN
-   #define M6_LIMIT_BIT (1>>M6_LIMIT_PIN)
+   #define M6_LIMIT_BIT (1<<M6_LIMIT_PIN)
   #else
    #define M6_LIMIT_BIT 0
   #endif
@@ -269,7 +269,7 @@
  #endif
  #if !defined(M7_LIMIT_BIT)
   #ifdef M7_LIMIT_PIN
-   #define M7_LIMIT_BIT (1>>M7_LIMIT_PIN)
+   #define M7_LIMIT_BIT (1<<M7_LIMIT_PIN)
   #else
    #define M7_LIMIT_BIT 0
   #endif
