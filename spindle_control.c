@@ -687,14 +687,14 @@ FLASHMEM static void spindle_ramp (spindle_ptrs_t *spindle, spindle_state_t stat
             if(ramp.rpm_delta > 0.0f) {
                 if(spindle->param->state.on != state.on || state.ccw != spindle->param->state.ccw) {
                     spindle->param->state.on = state.on;
-                    spindle->set_state(spindle, state, (rpm = rpm + ramp.rpm_delta));
+                    spindle->set_state(spindle, state, (rpm += ramp.rpm_delta));
                 }
-                while(ok && (rpm = rpm + ramp.rpm_delta) < target_rpm) {
-                    spindle->update_pwm(spindle, spindle->get_pwm(spindle, rpm));
+                while(ok && (rpm + ramp.rpm_delta) < target_rpm) {
+                    spindle->update_pwm(spindle, spindle->get_pwm(spindle, rpm += ramp.rpm_delta));
                     ok = delay_sec(delay, sys.suspend ? DelayMode_SysSuspend : DelayMode_Dwell);
                 }
-            } else while(ok && (rpm = rpm + ramp.rpm_delta) > target_rpm) {
-                spindle->update_pwm(spindle, spindle->get_pwm(spindle, rpm));
+            } else while(ok && (rpm + ramp.rpm_delta) > target_rpm) {
+                spindle->update_pwm(spindle, spindle->get_pwm(spindle, rpm += ramp.rpm_delta));
                 ok = delay_sec(delay, sys.suspend ? DelayMode_SysSuspend : DelayMode_Dwell);
             }
             ramp.end = hal.get_elapsed_ticks();
@@ -1323,9 +1323,10 @@ FLASHMEM static void spindle1_settings_restore (void)
         .rpm_max = DEFAULT_SPINDLE1_RPM_MAX,
         .rpm_min = DEFAULT_SPINDLE1_RPM_MIN,
         .flags.pwm_disable = false,
-        .flags.enable_rpm_controlled = 0, //DEFAULT_SPINDLE_ENABLE_OFF_WITH_ZERO_SPEED,
-        .flags.pwm_ramped = DEFAULT_PWM_SPINDLE_ENABLE_RAMP,
-        .flags.laser_mode_disable = 0, // TODO: Not possible?
+        .flags.enable_rpm_controlled = DEFAULT_PWM_SPINDLE1_ENABLE_OFF_WITH_ZERO_SPEED,
+        .flags.laser_mode_disable = DEFAULT_PWM_SPINDLE1_DISABLE_LASER_MODE,
+        .flags.pwm_ramped = DEFAULT_PWM_SPINDLE1_ENABLE_RAMP,
+        .flags.ignore_delays = DEFAULT_PWM_SPINDLE1_IGNORE_DELAYS,
         .invert.on = DEFAULT_INVERT_SPINDLE1_ENABLE_PIN,
         .invert.ccw = DEFAULT_INVERT_SPINDLE1_CCW_PIN,
         .invert.pwm = DEFAULT_INVERT_SPINDLE1_PWM_PIN,

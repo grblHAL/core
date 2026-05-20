@@ -1138,6 +1138,9 @@ Useful for some pre-built electronic boards.
 #if !defined DEFAULT_PWM_SPINDLE_ENABLE_RAMP || defined __DOXYGEN__
 #define DEFAULT_PWM_SPINDLE_ENABLE_RAMP Off
 #endif
+#if !defined DEFAULT_PWM_SPINDLE_IGNORE_DELAYS || defined __DOXYGEN__
+#define DEFAULT_PWM_SPINDLE_IGNORE_DELAYS Off
+#endif
 ///@}
 
 /*! @name $16 - Setting_SpindleInvertMask
@@ -1344,6 +1347,23 @@ Defines the parameters for the fourth entry in the spindle RPM linearization tab
 #endif // ENABLE_SPINDLE_LINEARIZATION
 
 // Settings for second PWM spindle
+
+/*! @name $709 - Setting_SpindlePWMOptions1
+*/
+///@{
+#if !defined DEFAULT_PWM_SPINDLE1_ENABLE_OFF_WITH_ZERO_SPEED || defined __DOXYGEN__
+#define DEFAULT_PWM_SPINDLE1_ENABLE_OFF_WITH_ZERO_SPEED Off
+#endif
+#if !defined DEFAULT_PWM_SPINDLE1_DISABLE_LASER_MODE || defined __DOXYGEN__
+#define DEFAULT_PWM_SPINDLE1_DISABLE_LASER_MODE Off
+#endif
+#if !defined DEFAULT_PWM_SPINDLE1_ENABLE_RAMP || defined __DOXYGEN__
+#define DEFAULT_PWM_SPINDLE1_ENABLE_RAMP Off
+#endif
+#if !defined DEFAULT_PWM_SPINDLE1_IGNORE_DELAYS || defined __DOXYGEN__
+#define DEFAULT_PWM_SPINDLE1_IGNORE_DELAYS Off
+#endif
+///@}
 
 /*! @name $716 - Setting_SpindleInvertMask1
 Inverts the selected spindle output signals from active high to active low. Useful for some pre-built electronic boards.
