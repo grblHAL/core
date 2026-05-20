@@ -1,8 +1,20 @@
 ## grblHAL changelog
 
-<a name="20260518">20260518
+<a name="20260520">20260520
+
+Core:
+
+* Fixed typos that may affect STM32 drivers assignment priority of interrupt capable pins.
 
 Drivers:
+
+* ESP32: updated code for BlackBox X32 to match current core.
+
+---
+
+<a name="20260518">20260518
+
+Core:
 
 * Reworked feed mode handling (G93-G95), now keeps current feed rate over spindle synced motion. Ref. issue [#954](https://github.com/grblHAL/core/issues/954).
 
