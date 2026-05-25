@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+<a name="20260518">Build 20260525
+
+Core:
+
+* Allow full circle arcs without axis words. Ref. issue [#958](https://github.com/grblHAL/core/issues/958).
+
+Drivers:
+
+* RP2040: added pin definition for THCAD2 input to the RP23U5XBB board. It maps to the RX input of the serial 1 port.
+
+* STM32F4xx: fixed regression in Triniamic SPI code.
+
+---
+
 <a name="20260520">20260520
 
 Core:
@@ -12,7 +26,7 @@ Drivers:
 
 ---
 
-<a name="20260518">20260518
+<a name="20260518">Build 20260518
 
 Core:
 

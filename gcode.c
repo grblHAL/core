@@ -3412,18 +3412,20 @@ status_code_t gc_execute_block (char *block)
                 case MotionMode_CcwArc:
                     // [G2/3 Errors All-Modes]: Feed rate undefined.
                     // [G2/3 Radius-Mode Errors]: No axis words in selected plane. Target point is same as current.
-                    // [G2/3 Offset-Mode Errors]: No axis words and/or offsets in selected plane. The radius to the current
+                    // [G2/3 Offset-Mode Errors]: No axis offsets in selected plane. The radius to the current
                     //   point and the radius to the target point differs more than 0.002mm (EMC def. 0.5mm OR 0.005mm and 0.1% radius).
-                    // [G2/3 Full-Circle-Mode Errors]: Axis words exist. No offsets programmed. P must be an integer.
+                    // [G2/3 Full-Circle-Mode Errors]: No offsets programmed. P must be an integer.
                     // NOTE: Both radius and offsets are required for arc tracing and are pre-computed with the error-checking.
 
-                    if (!axis_words.mask)
-                        RETURN(Status_GcodeNoAxisWords); // [No axis words]
+                    if(gc_block.words.r) { // Arc Radius Mode
+                        if(!axis_words.mask)
+                            RETURN(Status_GcodeNoAxisWords); // [No axis words]
 
-                    if (!(axis_words.mask & (bit(plane.axis_0)|bit(plane.axis_1))))
-                        RETURN(Status_GcodeNoAxisWordsInPlane); // [No axis words in plane]
+                        if(!(axis_words.mask & (bit(plane.axis_0)|bit(plane.axis_1))))
+                            RETURN(Status_GcodeNoAxisWordsInPlane); // [No axis words in plane]
+                    }
 
-                    if (gc_block.words.p) { // Number of turns
+                    if(gc_block.words.p) { // Number of turns
                         if(!isintf(gc_block.values.p))
                             RETURN(Status_GcodeCommandValueNotInteger); // [P word is not an integer]
                         gc_block.arc_turns = (uint32_t)truncf(gc_block.values.p);
@@ -3441,7 +3443,7 @@ status_code_t gc_execute_block (char *block)
                     if(gc_state.modal.scaling_active && scale_factor.ijk[plane.axis_0] * scale_factor.ijk[plane.axis_1] < 0.0f)
                         gc_parser_flags.arc_is_clockwise = !gc_parser_flags.arc_is_clockwise;
 
-                    if (gc_block.words.r) { // Arc Radius Mode
+                    if(gc_block.words.r) { // Arc Radius Mode
 
                         gc_block.words.r = Off;
 
