@@ -4536,7 +4536,7 @@ status_code_t gc_execute_block (char *block)
                 {
                     // NOTE: gc_block.values.xyz is returned from mc_probe_cycle with the updated position value. So
                     // upon a successful probing cycle, the machine position and the returned value should be the same.
-                    probe_id_t probe_id;
+                    probe_id_t probe_id = Probe_Default; // initialized to shut up compiler warning
                     plan_data.condition.no_feed_override = !settings.probe.allow_feed_override;
                     if(gc_block.select_probe){
                         if((gc_block.select_probe = (probe_id_t)gc_block.values.p != (probe_id = hal.probe.get_state().probe_id))) {

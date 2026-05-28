@@ -1,6 +1,18 @@
 ## grblHAL changelog
 
-<a name="20260518">Build 20260525
+<a name="20260528">20260528
+
+Core:
+
+* Minor change to shut up some compilers incorrectly warning about a potentially uninitialized variable. Ref. issue [#959](https://github.com/grblHAL/core/issues/959).
+
+Plugins:
+
+* EEPROM: increased the write delay somewhat to avoid hangs. Ref. issue [#2](https://github.com/grblHAL/Plugin_EEPROM/issues/2).
+
+---
+
+<a name="20260525">Build 20260525
 
 Core:
 
