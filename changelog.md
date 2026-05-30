@@ -1,5 +1,31 @@
 ## grblHAL changelog
 
+<a name="20260528">20260528
+
+Core:
+
+* Minor change to shut up some compilers incorrectly warning about a potentially uninitialized variable. Ref. issue [#959](https://github.com/grblHAL/core/issues/959).
+
+Plugins:
+
+* EEPROM: increased the write delay somewhat to avoid hangs. Ref. issue [#2](https://github.com/grblHAL/Plugin_EEPROM/issues/2).
+
+---
+
+<a name="20260525">Build 20260525
+
+Core:
+
+* Allow full circle arcs without axis words. Ref. issue [#958](https://github.com/grblHAL/core/issues/958).
+
+Drivers:
+
+* RP2040: added pin definition for THCAD2 input to the RP23U5XBB board. It maps to the RX input of the serial 1 port.
+
+* STM32F4xx: fixed regression in Triniamic SPI code.
+
+---
+
 <a name="20260520">20260520
 
 Core:
@@ -12,7 +38,7 @@ Drivers:
 
 ---
 
-<a name="20260518">20260518
+<a name="20260518">Build 20260518
 
 Core:
 
