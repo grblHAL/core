@@ -285,7 +285,7 @@ FLASHMEM st2_motor_t *st2_motor_init (uint_fast8_t axis_idx, bool is_spindle)
             motor->axis.mask = 1 << axis_idx;
             motor->is_bound = true;
 
-            st2_motor_config(motor, NULL);
+            st2_motor_config(motor, &settings.axis[motor->idx]);
         }
 
         if(new == NULL) {
