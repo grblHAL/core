@@ -263,6 +263,11 @@
     thermistor_init();
 #endif
 
+#if SPINDLE_INTERLOCK_ENABLE
+    extern void spindle_interlock_init (void);
+    spindle_interlock_init();
+#endif
+
 // End third party plugin definitions.
 
 #if ODOMETER_ENABLE
