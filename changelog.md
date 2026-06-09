@@ -1,5 +1,17 @@
 ## grblHAL changelog
 
+<a name="20260602">Build 20260602
+
+Core:
+
+* Fix for regression affecting step injection code.
+
+Drivers:
+
+* ESP32: some fixes for ethernet to make it usable.
+
+---
+
 <a name="20260528">20260528
 
 Core:
