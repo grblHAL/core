@@ -333,18 +333,16 @@
 #define SPINDLE3_ENABLE     0
 #elif SPINDLE3_ENABLE == -1 || SPINDLE3_ENABLE == SPINDLE_ALL || SPINDLE3_ENABLE == SPINDLE_ALL_VFD
 #warning "SPINDLE3_ENABLE cannot be set to -1, SPINDLE_ALL or SPINDLE_ALL_VFD"
-#undef SPINDLE3_ENABLE
-#define SPINDLE3_ENABLE     0
+#undef SPINDLE1_ENABLE
+#define SPINDLE1_ENABLE     0
 #endif
 
-#ifndef SPINDLE_ENABLE
 #if SPINDLE0_ENABLE == -1 || SPINDLE0_ENABLE == SPINDLE_ALL
 #define SPINDLE_ENABLE (SPINDLE_ALL|(1<<SPINDLE1_ENABLE)|(1<<SPINDLE2_ENABLE)|(1<<SPINDLE3_ENABLE))
 #elif SPINDLE0_ENABLE == SPINDLE_ALL_VFD
 #define SPINDLE_ENABLE (SPINDLE_ALL_VFD|SPINDLE_ALL|(1<<SPINDLE1_ENABLE)|(1<<SPINDLE2_ENABLE)|(1<<SPINDLE3_ENABLE))
 #else
 #define SPINDLE_ENABLE ((1<<SPINDLE0_ENABLE)|(1<<SPINDLE1_ENABLE)|(1<<SPINDLE2_ENABLE)|(1<<SPINDLE3_ENABLE))
-#endif
 #endif
 
 // Driver spindle 0
@@ -697,13 +695,25 @@
 #define SDCARD_ENABLE       0
 #endif
 
+// When both SDCARD and LITTLEFS=2 are requested, SDCARD owns root and
+// LittleFS falls back to sibling-mount semantics. We still need to remember
+// the user's "=2" intent so FS_ENABLE downstream can grant YMODEM. Capture
+// that into LITTLEFS_YMODEM_REQUESTED, then downgrade LITTLEFS_ENABLE to 1
+// for the rest of the file (mount-dir selection, etc.).
 #if LITTLEFS_ENABLE == 2 && SDCARD_ENABLE
+#define LITTLEFS_YMODEM_REQUESTED   1
 #undef LITTLEFS_ENABLE
 #define LITTLEFS_ENABLE     1
+#else
+#define LITTLEFS_YMODEM_REQUESTED   0
 #endif
 
 #if LITTLEFS_ENABLE
-#if LITTLEFS_ENABLE == 2
+// LittleFS only takes "/" when it would otherwise be unclaimed (no SDCARD).
+// With SDCARD also enabled, SDCARD owns "/" and LittleFS mounts at /littlefs
+// regardless of LITTLEFS_ENABLE value. (LITTLEFS_ENABLE=2 still requests
+// YMODEM uploads via FS_ENABLE — see the FS_ENABLE block below.)
+#if LITTLEFS_ENABLE == 2 && !SDCARD_ENABLE
 #define LITTLEFS_MOUNT_DIR "/"
 #else
 #define LITTLEFS_MOUNT_DIR "/littlefs"
@@ -716,8 +726,11 @@
 #define FS_LFS_ROOT 0b01000
 #define FS_YMODEM   0b10000
 
+// LITTLEFS_ENABLE=2 now means "enable YMODEM uploads" in addition to its
+// existing semantic of "mount LittleFS as root" (the latter only applies
+// when SDCARD is not also enabled — SDCARD owns "/" when both are present).
 #if SDCARD_ENABLE && LITTLEFS_ENABLE
-#if SDCARD_ENABLE == 2
+#if SDCARD_ENABLE == 2 || LITTLEFS_YMODEM_REQUESTED
 #define FS_ENABLE (FS_SDCARD|FS_FATFS|FS_LFS|FS_YMODEM)
 #else
 #define FS_ENABLE (FS_SDCARD|FS_FATFS|FS_LFS)
