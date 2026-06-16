@@ -1107,6 +1107,19 @@ FLASHMEM void report_build_info (char *line, bool extended)
             hal.stream.write("]" ASCII_EOL);
         }
 
+        // Compile-time stamp for confirming the running .hex matches a
+        // specific local build, rather than relying on GRBL_BUILD (a
+        // hand-edited literal in grbl.h that doesn't track local rebuilds).
+        // Opt-in: a driver that provides a build_stamp.h with a
+        // BUILD_TIMESTAMP string macro gets the [BUILD:...] line; drivers
+        // that don't provide the header are unaffected.
+#if defined(__has_include)
+  #if __has_include("build_stamp.h")
+        #include "build_stamp.h"
+        hal.stream.write("[BUILD:" BUILD_TIMESTAMP "]" ASCII_EOL);
+  #endif
+#endif
+
         if(hal.driver_options) {
             hal.stream.write("[DRIVER OPTIONS:");
             hal.stream.write(hal.driver_options);
