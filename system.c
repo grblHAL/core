@@ -33,6 +33,8 @@
 #include "kinematics.h"
 #endif
 
+static uint8_t n_axis = N_AXIS;
+
 /*! \internal \brief Simple hypotenuse computation function.
 \param x length
 \param y height
@@ -41,6 +43,27 @@
 inline static float hypot_f (float x, float y)
 {
     return sqrtf(x * x + y * y);
+}
+
+FLASHMEM uint8_t system_claim_axis (void)
+{
+    return n_axis > 3 ? n_axis-- : 0;
+}
+
+uint8_t system_n_axis (void)
+{
+    return n_axis;
+}
+
+FLASHMEM uint8_t system_axis_mask (void)
+{
+    uint8_t axis_mask = 0;
+    uint_fast32_t idx = n_axis;
+
+    while(idx--)
+        axis_mask = (axis_mask << 1) | 1;
+
+    return axis_mask;
 }
 
 void system_init_switches (void)
@@ -165,6 +188,8 @@ FLASHMEM void system_execute_startup (void *data)
 
         uint_fast8_t idx;
         char line[sizeof(stored_line_t)];
+        bool single_block = sys.flags.single_block;
+        sys.flags.single_block = Off; // Disable single block mode when executing startup code.
 
         for(idx = 0; idx < N_STARTUP_LINE; idx++) {
             if(!settings_read_startup_line(idx, line))
@@ -176,6 +201,8 @@ FLASHMEM void system_execute_startup (void *data)
                 } while((block = strtok(NULL, "|")));
             }
         }
+
+        sys.flags.single_block = single_block;
     }
 }
 

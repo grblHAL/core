@@ -45,22 +45,6 @@
 #include "kinematics.h"
 #endif
 
-#if COREXY
-#include "kinematics/corexy.h"
-#endif
-
-#if WALL_PLOTTER
-#include "kinematics/wall_plotter.h"
-#endif
-
-#if DELTA_ROBOT
-#include "kinematics/delta.h"
-#endif
-
-#if POLAR_ROBOT
-#include "kinematics/polar.h"
-#endif
-
 static void task_execute (sys_state_t state);
 
 typedef union {
@@ -357,19 +341,28 @@ FLASHMEM int grbl_enter (void)
 #endif
 
 #if COREXY
+    extern void corexy_init (void);
     corexy_init();
 #endif
 
 #if WALL_PLOTTER
+    extern void wall_plotter_init (void);
     wall_plotter_init();
 #endif
 
 #if DELTA_ROBOT
+    extern void delta_robot_init (void);
     delta_robot_init();
 #endif
 
 #if POLAR_ROBOT
+    extern void polar_init (void);
     polar_init();
+#endif
+
+#if defined(ASYMMETRIC_GANGING) || defined(ASYMMETRIC_AUTO_SQUARE)
+    extern void asymmetric_ganging_init (void);
+    asymmetric_ganging_init();
 #endif
 
 #if NVSDATA_BUFFER_ENABLE

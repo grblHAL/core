@@ -120,15 +120,6 @@ generate a solution.
 
 //#define KINEMATICS_API // Uncomment to add HAL entry points for custom kinematics
 
-/*! \def MASLOW_ROUTER
-\brief Enable Maslow router kinematics.
-Experimental - testing required and homing needs to be worked out.
-*/
-#if !defined MASLOW_ROUTER || defined __DOXYGEN__
-// Enable Maslow router kinematics.
-// Experimental - testing required and homing needs to be worked out.
-#define MASLOW_ROUTER Off
-#endif
 
 /*! \def WALL_PLOTTER
 \brief Enable wall plotter kinematics.
@@ -159,7 +150,6 @@ Experimental - testing required and homing needs to be worked out.
 #define POLAR_ROBOT Off
 #endif
 
-
 /*! \def COREXY
 \brief Enable CoreXY kinematics. Use ONLY with CoreXY machines.
 <br>__IMPORTANT:__ If homing is enabled, you must reconfigure the homing cycle \#defines above to
@@ -172,6 +162,18 @@ have the same steps per mm internally.
 #if !defined COREXY || defined __DOXYGEN__
 #define COREXY Off
 #endif
+
+/*! \def ASYMMETRIC_GANGING
+\brief Enable asymmetric ganging for X, Y or Z axis.
+<br> To be used when the screw pitch is not equal. The highest numbered axis is claimed for the second motor.
+*/
+//#define ASYMMETRIC_GANGING Y_AXIS	// Uncomment to enable
+
+/*! \def ASYMMETRIC_AUTO_SQUARE
+\brief Enable asymmetric ganging + auto squaring for X, Y or Z axis.
+<br> To be used when the screw pitch is not equal. The highest numbered axis is claimed for the second motor.
+*/
+//#define ASYMMETRIC_AUTO_SQUARE Y_AXIS	// Uncomment to enable
 
 /*! \def CHECK_MODE_DELAY
 \brief

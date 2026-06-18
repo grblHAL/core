@@ -42,7 +42,7 @@
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_BUILD 20260602
+#define GRBL_BUILD 20260618
 
 #define GRBL_URL "https://github.com/grblHAL"
 
@@ -86,7 +86,7 @@
 #define __STATIC_FORCEINLINE __attribute__((always_inline)) static inline
 #endif
 
-#if (COREXY || WALL_PLOTTER || DELTA_ROBOT || POLAR_ROBOT || MASLOW_ROUTER) && !defined(KINEMATICS_API)
+#if (COREXY || WALL_PLOTTER || DELTA_ROBOT || POLAR_ROBOT || ASYMMETRIC_GANGING || ASYMMETRIC_AUTO_SQUARE) && !defined(KINEMATICS_API)
 #define KINEMATICS_API
 #endif
 

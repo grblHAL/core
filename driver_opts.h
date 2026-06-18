@@ -310,7 +310,11 @@
 #define SPINDLE_DIR         0b100
 
 #ifndef SPINDLE0_ENABLE
-#define SPINDLE0_ENABLE DEFAULT_SPINDLE
+#ifdef SPINDLE_ENABLE
+#define SPINDLE0_ENABLE     0
+#else
+#define SPINDLE0_ENABLE     DEFAULT_SPINDLE
+#endif
 #endif
 
 #ifndef SPINDLE1_ENABLE

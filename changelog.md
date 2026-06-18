@@ -1,5 +1,34 @@
 ## grblHAL changelog
 
+<a name="20260618">Build 20260618
+
+Core:
+
+* Added kinematics for asymmetric \(differing step/mm\) ganged or auto squared axis, claims the highest number axis > Z for the second motor.
+
+* Ignore single block mode while executing startup code. Ref. issue [#963](https://github.com/grblHAL/core/issues/963).
+
+* For developers: added API call, `system_claim_axis()`, for claiming highest numbered axis > Z, hides its related settings.
+
+* Fixed a typo causing ganged Z compilation failure.
+
+* Fixed code guard. Ref. discussion [#968](https://github.com/grblHAL/core/discussions/968).
+
+Plugins:
+
+* Misc, MCP23017: added plugin for [MCP23017](https://ww1.microchip.com/downloads/en/devicedoc/20001952c.pdf) 16 channel I2C I/O expander,
+compile time configurable for 8 channel input and output, 16 channel input or 16 channel output.
+
+Drivers:
+
+* RP2040: "hardened" neopixel code.
+
+* IMXRT1062: fixed typo causing compilation to fail if axis is remapped as C. Fixed incorrect function decorators in the core. Ref. issue #[965](https://github.com/grblHAL/core/issues/965).
+
+* STM32F7xx: fixed copy paste error affecting handling of AUX IRQ for pins 10 - 15.
+
+---
+
 <a name="20260602">Build 20260602
 
 Core:

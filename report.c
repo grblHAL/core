@@ -80,12 +80,12 @@ static char *get_axis_values_mm (float *axis_values)
 
     buf[0] = '\0';
 
-    for (idx = 0; idx < N_AXIS; idx++) {
+    for (idx = 0; idx < system_n_axis(); idx++) {
         if(idx == X_AXIS && gc_state.modal.diameter_mode)
             strcat(buf, ftoa(axis_values[idx] * 2.0f, N_DECIMAL_COORDVALUE_MM));
         else
             strcat(buf, ftoa(axis_values[idx], N_DECIMAL_COORDVALUE_MM));
-        if (idx < (N_AXIS - 1))
+        if(idx < (system_n_axis() - 1))
             strcat(buf, ",");
     }
 
@@ -99,7 +99,7 @@ static char *get_axis_values_inches (float *axis_values)
 
     buf[0] = '\0';
 
-    for (idx = 0; idx < N_AXIS; idx++) {
+    for (idx = 0; idx < system_n_axis(); idx++) {
         if(idx == X_AXIS && gc_state.modal.diameter_mode)
             strcat(buf, ftoa(axis_values[idx] * INCH_PER_MM * 2.0f, N_DECIMAL_COORDVALUE_INCH));
 #if N_AXIS > 3
@@ -108,7 +108,7 @@ static char *get_axis_values_inches (float *axis_values)
 #endif
         else
              strcat(buf, ftoa(axis_values[idx] * INCH_PER_MM, N_DECIMAL_COORDVALUE_INCH));
-        if (idx < (N_AXIS - 1))
+        if (idx < (system_n_axis() - 1))
             strcat(buf, ",");
     }
 
@@ -691,7 +691,7 @@ FLASHMEM void report_ngc_parameters (void)
 static inline bool is_g92_active (void)
 {
     bool active = false;
-    uint_fast32_t idx = N_AXIS;
+    uint_fast32_t idx = system_n_axis();
 
     do {
         idx--;
@@ -959,7 +959,7 @@ FLASHMEM void report_build_info (char *line, bool extended)
     hal.stream.write(uitoa(hal.rx_buffer_size));
     if(extended) {
         hal.stream.write(",");
-        hal.stream.write(uitoa((uint32_t)N_AXIS));
+        hal.stream.write(uitoa((uint32_t)system_n_axis()));
         hal.stream.write(",");
         hal.stream.write(uitoa(grbl.tool_table.n_tools));
     }
@@ -971,12 +971,12 @@ FLASHMEM void report_build_info (char *line, bool extended)
         nvs_io_t *nvs = nvs_buffer_get_physical();
         atc_status_t atc = hal.tool.atc_get_state();
 
-        strcat(strcpy(buf, "[AXS:"), uitoa(N_AXIS));
+        strcat(strcpy(buf, "[AXS:"), uitoa((uint32_t)system_n_axis()));
 
         append = &buf[6];
         *append++ = ':';
 
-        for(idx = 0; idx < N_AXIS; idx++)
+        for(idx = 0; idx < system_n_axis(); idx++)
             *append++ = *axis_letter[idx];
 
         *append = '\0';
@@ -1267,7 +1267,7 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
         // Calculate distance-to-go in current block (i.e., difference between target / end-of-block) and current position)
         plan_block_t *cur_block = plan_get_current_block();
         if((report->flags.distance_to_go = !!cur_block)) {
-            for(idx = 0; idx < N_AXIS; idx++) {
+            for(idx = 0; idx < system_n_axis(); idx++) {
                 dist_remaining[idx] = cur_block->target_mm[idx] - print_position[idx];
             }
         }
@@ -1275,7 +1275,7 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
 
     if(!settings.status_report.machine_position) {
         // Apply work coordinate offsets and tool length offset to current position.
-        for(idx = 0; idx < N_AXIS; idx++) {
+        for(idx = 0; idx < system_n_axis(); idx++) {
             wco[idx] = gc_get_offset(idx, true);
             print_position[idx] -= wco[idx];
         }
@@ -1433,7 +1433,7 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
 
         if(report->flags.wco) {
             if(settings.status_report.machine_position) {
-                for(idx = 0; idx < N_AXIS; idx++)
+                for(idx = 0; idx < system_n_axis(); idx++)
                     wco[idx] = gc_get_offset(idx, true);
             }
             stream_write("|WCO:");
