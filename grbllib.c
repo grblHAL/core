@@ -75,7 +75,6 @@ DCRAM grbl_t grbl;
 DCRAM grbl_hal_t hal;
 
 static driver_startup_t driver = { .ok = 0xFF };
-static on_linestate_changed_ptr on_linestate_changed;
 static settings_changed_ptr hal_settings_changed;
 static stepper_enable_ptr stepper_enable;
 DCRAM static struct {
@@ -191,22 +190,6 @@ ISR_CODE static home_signals_t ISR_FUNC(get_homing_status2)(void)
     return home;
 }
 
-FLASHMEM static void output_welcome_message (void *data)
-{
-    grbl.report.init_message(hal.stream.write);
-}
-
-FLASHMEM static void onLinestateChanged (serial_linestate_t state)
-{
-    if(state.dtr) {
-        task_delete(output_welcome_message, NULL);
-        task_add_delayed(output_welcome_message, NULL, 200);
-    }
-
-    if(on_linestate_changed)
-        on_linestate_changed(state);
-}
-
 FLASHMEM static void stepperEnable (axes_signals_t enable, bool hold)
 {
     if(stepper_enable)
@@ -232,9 +215,9 @@ FLASHMEM static void print_pos_msg (void *data)
 #pragma GCC diagnostic pop
 #endif
 
-FLASHMEM static void onPosFailure (serial_linestate_t state)
+FLASHMEM static void onPosFailure (io_stream_properties_t *stream, serial_linestate_t state)
 {
-    if(state.dtr) // delay a bit to let the USB stack come up
+    if(state.dtr && stream->flags.is_usb == hal.stream.state.is_usb) // delay a bit to let the USB stack come up
         task_add_delayed(print_pos_msg, NULL, 50);
 }
 
@@ -459,11 +442,6 @@ FLASHMEM int grbl_enter (void)
         fs_options.lfs_hidden = hal.driver_cap.littlefs;
         fs_options.sd_mount_on_boot = hal.driver_cap.sd_card;
         setting_remove_elements(Setting_FSOptions, fs_options.mask, true);
-    }
-
-    if(hal.stream.state.linestate_event && !hal.stream.state.passthru) {
-        on_linestate_changed = hal.stream.on_linestate_changed;
-        hal.stream.on_linestate_changed = onLinestateChanged;
     }
 
     if(grbl.on_probe_toolsetter == NULL && hal.driver_cap.toolsetter && hal.probe.select)

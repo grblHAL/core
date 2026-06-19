@@ -1496,6 +1496,20 @@ and less range over the total 255 PWM levels to signal different spindle speeds.
 #endif
 ///@}
 
+/*! @name $675 - Setting_MacroATC_Options
+*/
+///@{
+#if !defined DEFAULT_MACRO_ATC_OPTION_EXECUTEM6T0 || defined __DOXYGEN__
+#define DEFAULT_MACRO_ATC_OPTION_EXECUTEM6T0 Off
+#endif
+#if !defined DEFAULT_MACRO_ATC_ERROR_NO_MACRO || defined __DOXYGEN__
+#define DEFAULT_MACRO_ATC_ERROR_NO_MACRO Off
+#endif
+#if !defined DEFAULT_MACRO_ATC_RANDOM_TOOLCHANGER || defined __DOXYGEN__
+#define DEFAULT_MACRO_ATC_RANDOM_TOOLCHANGER Off
+#endif
+///@}
+
 // Homing settings (Group_Homing)
 
 /*! @name $22 - Setting_HomingEnable
@@ -2202,12 +2216,12 @@ Filing systems options.
 #define DEFAULT_FS_SD_AUTOMOUNT Off // Default disabled. Set to \ref On or 1 to enable.
 #endif
 
-/*! /def DEFAULT_FS_LITLLEFS_HIDDEN
+/*! /def DEFAULT_FS_LITTLEFS_HIDDEN
 \brief Hides LittleFS mount from directory listings.
 \internal Bit 1 in settings.fs_options.mask.
 */
-#if !defined DEFAULT_FS_LITLLEFS_HIDDEN || defined __DOXYGEN__
-#define DEFAULT_FS_LITLLEFS_HIDDEN Off // Default disabled. Set to \ref On or 1 to enable.
+#if !defined DEFAULT_FS_LITTLEFS_HIDDEN || defined __DOXYGEN__
+#define DEFAULT_FS_LITTLEFS_HIDDEN Off // Default disabled. Set to \ref On or 1 to enable.
 #endif
 
 /*! /def DEFAULT_FS_HIERACHICAL_LISTING
@@ -2219,7 +2233,6 @@ Adds directory entries in $F and $F+ output to allow hierarchical navigation of 
 #define DEFAULT_FS_HIERACHICAL_LISTING Off // Default disabled. Set to \ref On or 1 to enable.
 #endif
 ///@}
-
 
 // Axis settings (Group_XAxis - Group_VAxis)
 

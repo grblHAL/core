@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2024-2025 Terje Io
+  Copyright (c) 2024-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -70,7 +70,7 @@ static void forward_uart_rx (void *data)
     task_add_delayed(forward_uart_rx, NULL, 8);
 }
 
-static void onLinestateChanged (serial_linestate_t state)
+static void onLinestateChanged (io_stream_properties_t *stream, serial_linestate_t state)
 {
     /*
     Auto program
@@ -80,7 +80,7 @@ static void onLinestateChanged (serial_linestate_t state)
     1 0 0 1
     0 1 1 0
      */
-    if(conn_ok) {
+    if(conn_ok && stream->flags.is_usb) {
 
         if(state.dtr == state.rts) {
             ioport_digital_out(boot0_port, 0);

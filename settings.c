@@ -370,6 +370,10 @@ PROGMEM static const settings_t defaults = {
     .tool_change.seek_rate = DEFAULT_TOOLCHANGE_SEEK_RATE,
     .tool_change.pulloff_rate = DEFAULT_TOOLCHANGE_PULLOFF_RATE,
 
+    .macro_atc_flags.execute_m6t0 = DEFAULT_MACRO_ATC_OPTION_EXECUTEM6T0,
+    .macro_atc_flags.error_on_no_macro = DEFAULT_MACRO_ATC_ERROR_NO_MACRO,
+    .macro_atc_flags.random_toolchanger = DEFAULT_MACRO_ATC_RANDOM_TOOLCHANGER,
+
     .parking.flags.enabled = DEFAULT_PARKING_ENABLE,
     .parking.flags.deactivate_upon_init = DEFAULT_DEACTIVATE_PARKING_UPON_INIT,
     .parking.flags.enable_override_control= DEFAULT_ENABLE_PARKING_OVERRIDE_CONTROL,
@@ -385,7 +389,7 @@ PROGMEM static const settings_t defaults = {
     .safety_door.coolant_on_delay = DEFAULT_SAFETY_DOOR_COOLANT_DELAY,
 
     .fs_options.sd_mount_on_boot = DEFAULT_FS_SD_AUTOMOUNT,
-    .fs_options.lfs_hidden = DEFAULT_FS_LITLLEFS_HIDDEN,
+    .fs_options.lfs_hidden = DEFAULT_FS_LITTLEFS_HIDDEN,
     .fs_options.hierarchical_listing = DEFAULT_FS_HIERACHICAL_LISTING,
 
     .modbus_baud = DEFAULT_MODBUS_STREAM_BAUD,

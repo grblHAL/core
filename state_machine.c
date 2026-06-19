@@ -535,7 +535,7 @@ FLASHMEM static void state_await_hold (uint_fast16_t rt_exec)
 
                 // Parking requires parking axis homed, the current location not exceeding the
                 // parking target location, and laser mode disabled.
-                if (settings.parking.flags.enabled && !sys.override.control.parking_disable && settings.mode != Mode_Laser) {
+                if (settings.parking.flags.enabled && !sys.override.control.parking_disable && gc_spindle_get(0)->hal->cap.laser) {
 
                     // Get current position and store as restore location.
                     if (!park.flags.active) {
