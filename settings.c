@@ -2375,7 +2375,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_StepperEnableDelay, Group_Stepper, "Stepper enable delay", "ms", Format_Int16, "##0", NULL, "500", Setting_IsExtended, &settings.stepper_enable_delay, NULL, NULL },
     { Setting_SubroutineOptions, Group_General, "Subroutine options", NULL, Format_Bitfield, "Prescan for internal M98 subroutines", NULL, NULL, Setting_IsExtendedFn, set_suboptions, get_int, is_setting_available }
 #if CUTTER_COMP_ENABLE
-    ,{ Setting_CutterCompFacetCorner, Group_General, "Cutter comp corner", NULL, Format_Bool, "Cutter comp chamfer corner", NULL, NULL, Setting_IsExtendedFn, set_cutter_comp_options, get_int, is_setting_available }
+    ,{ Setting_CutterCompFacetCorner, Group_General, "Cutter comp chamfer corner", NULL, Format_Bool, "Cutter comp chamfer corner", NULL, NULL, Setting_IsExtendedFn, set_cutter_comp_options, get_int, is_setting_available }
     ,{ Setting_CutterCompAllowLookahead, Group_General, "Cutter comp lookahead", NULL, Format_Bool, "Cutter comp allow lookahead", NULL, NULL, Setting_IsExtendedFn, set_cutter_comp_options, get_int, is_setting_available }
 
 #endif

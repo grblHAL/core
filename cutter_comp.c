@@ -321,13 +321,13 @@ static inline bool cc_is_radius_consistent(const move2d *m)
     return fabsf(r0 - r1) <= tol;
 }
 
-static inline float cc_wrap2pi(float a)
-{
-    a = fmodf(a, CC_TWO_PI);
-    if (a < 0.0f)
-        a += CC_TWO_PI;
-    return a;
-}
+// static inline float cc_wrap2pi(float a)
+// {
+//     a = fmodf(a, CC_TWO_PI);
+//     if (a < 0.0f)
+//         a += CC_TWO_PI;
+//     return a;
+// }
 
 static inline float cc_arc_sweep_deg(const move2d *m)
 {
@@ -443,6 +443,7 @@ static inline intersect_type cc_intersect_line_line(const move2d *ln1, const mov
     if (lr < CC_TOL || ls < CC_TOL || cc_len(r) < CC_TOL || cc_len(s) < CC_TOL)
     {
         *tip = false;
+        return CC_IT_NONE;
     }
 
     den = cc_cross(r, s);
@@ -622,13 +623,12 @@ static inline bool cc_validate(cc_context *ctx, move2d *m)
         return m->valid;
 
     {
-        // bool hasArcDirs = cc_len(m->startDir) >= CC_TOL || cc_len(m->endDir) >= CC_TOL;
         bool degenerate = fabsf(m->radius) < CC_TOL;
         float sw = cc_arc_sweep_deg(m);
-        bool keepTinyArc = (degenerate || sw < CC_MIN_ARC_LEN);
+        bool keepTinyArc = (!degenerate && sw < CC_MIN_ARC_LEN);
         bool sweep_ok = sw <= CC_MAX_SWEEP_DEG && (sw >= CC_MIN_ARC_LEN || keepTinyArc);
 
-        if ((degenerate || !sweep_ok) && !keepTinyArc)
+        if (degenerate || !sweep_ok)
         {
             m->valid = false;
             if (ctx->lookaheadEnabled)
@@ -730,10 +730,10 @@ static inline bool cc_is_forward_extension_point(const move2d *a, const move2d *
     return fipDir1 > 0.0f && fipDir2 < 0.0f;
 }
 
-static inline bool cc_is_usable_degenerate_arc(const move2d *m)
-{
-    return m->type == CC_MOT_ARC && fabsf(m->radius) < CC_TOL && m->hasXY;
-}
+// static inline bool cc_is_usable_degenerate_arc(const move2d *m)
+// {
+//     return m->type == CC_MOT_ARC && fabsf(m->radius) < CC_TOL && m->hasXY;
+// }
 
 static inline bool cc_try_get_best_trim_point(const move2d *a, const move2d *b, vec2 *bestPoint)
 {
@@ -761,33 +761,33 @@ static inline bool cc_try_get_best_trim_point(const move2d *a, const move2d *b, 
     return true;
 }
 
-static inline bool cc_try_get_best_extend_point(const move2d *a, const move2d *b, vec2 *bestPoint)
-{
-    vec2 pts[2];
-    int count = cc_intersect_carrier(a, b, pts);
-    bool found = false;
-    float bestScore = 0.0f;
-    int i;
+// static inline bool cc_try_get_best_extend_point(const move2d *a, const move2d *b, vec2 *bestPoint)
+// {
+//     vec2 pts[2];
+//     int count = cc_intersect_carrier(a, b, pts);
+//     bool found = false;
+//     float bestScore = 0.0f;
+//     int i;
 
-    for (i = 0; i < count; ++i)
-    {
-        vec2 p = pts[i];
-        if (!cc_is_forward_extension_point(a, b, p))
-            continue;
+//     for (i = 0; i < count; ++i)
+//     {
+//         vec2 p = pts[i];
+//         if (!cc_is_forward_extension_point(a, b, p))
+//             continue;
 
-        {
-            float score = cc_dist(a->p_1, p) + cc_dist(b->p_0, p);
-            if (!found || score < bestScore)
-            {
-                bestScore = score;
-                *bestPoint = p;
-                found = true;
-            }
-        }
-    }
+//         {
+//             float score = cc_dist(a->p_1, p) + cc_dist(b->p_0, p);
+//             if (!found || score < bestScore)
+//             {
+//                 bestScore = score;
+//                 *bestPoint = p;
+//                 found = true;
+//             }
+//         }
+//     }
 
-    return found;
-}
+//     return found;
+// }
 
 static inline bool cc_convex_from_winding(const cc_context *ctx, int winding)
 {
@@ -1020,7 +1020,6 @@ static inline bool cc_offset_arc(cc_context *ctx, move2d *m)
         return false;
     }
 
-    m->center = m->center;
     m->p_0 = cc_add(m->center, cc_scale(v0, r1 / lv0));
     m->p_1 = cc_add(m->center, cc_scale(v1, r1 / lv1));
     return true;

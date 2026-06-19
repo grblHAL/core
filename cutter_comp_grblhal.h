@@ -368,7 +368,7 @@ extern "C"
             emitted_motion = true;
         }
 
-        // Pause only after emitting a real motion or if single block is on.
+        // Pause only after emitting a real motion.
         if ((sys.flags.single_block || cc_mc_pause_after_next_motion) && emitted_motion)
         {
             float dwell = cc_mc_pending_dwell;
