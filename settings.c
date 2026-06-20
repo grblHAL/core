@@ -608,9 +608,9 @@ FLASHMEM static status_code_t set_axis_mask (setting_id_t id, uint_fast16_t valu
 
         case Setting_LimitPinsInvertMask:
 #if COMPATIBILITY_LEVEL > 1
-    		settings.steppers.enable_invert.mask = value ? 0 : AXES_BITMASK;
+            settings.limits.invert.mask = value ? (~DEFAULT_LIMIT_SIGNALS_INVERT_MASK & AXES_BITMASK) : DEFAULT_LIMIT_SIGNALS_INVERT_MASK;
 #else
-    		settings.steppers.enable_invert.mask = value;
+            settings.limits.invert.mask = value;
 #endif
             break;
 
@@ -687,9 +687,9 @@ FLASHMEM static uint32_t get_axis_mask (setting_id_t id, uint_fast16_t int_value
 
         case Setting_LimitPinsInvertMask:
 #if COMPATIBILITY_LEVEL > 1
-            value = settings.steppers.enable_invert.mask == DEFAULT_LIMIT_SIGNALS_INVERT_MASK ? 0 : 1;
+            value = settings.limits.invert.mask == DEFAULT_LIMIT_SIGNALS_INVERT_MASK ? 0 : 1;
 #else
-            value = settings.steppers.enable_invert.mask;
+            value = settings.limits.invert.mask;
 #endif
             break;
 
