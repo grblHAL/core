@@ -24,6 +24,7 @@
 
 #include "hal.h"
 #include "protocol.h"
+#include "task.h"
 #include "state_machine.h"
 
 #if defined(DEBUG) || defined(DEBUGOUT)
@@ -300,24 +301,39 @@ FLASHMEM static stream_connection_t *add_connection (const io_stream_t *stream)
     return connection;
 }
 
+FLASHMEM static void output_welcome_message (void *data)
+{
+    grbl.report.init_message(hal.stream.write);
+}
+
+FLASHMEM void stream_usb_linestate_changed (uint8_t instance, serial_linestate_t state)
+{
+    if(state.dtr && hal.stream.state.is_usb && !hal.stream.state.passthru) {
+        task_delete(output_welcome_message, NULL);
+        task_add_delayed(output_welcome_message, NULL, 200);
+    }
+
+    if(hal.stream.on_linestate_changed) {
+
+        io_stream_properties_t prop = {
+            .type = StreamType_Serial,
+            .instance = instance,
+            .flags.is_usb = On
+        };
+
+        hal.stream.on_linestate_changed(&prop, state);
+    }
+}
+
 FLASHMEM static bool stream_select (const io_stream_t *stream, bool add)
 {
     static const io_stream_t *active_stream = NULL;
 
     bool send_init_message = false, mpg_enable = false;
-    static struct {
-        const io_stream_t *stream;
-        on_linestate_changed_ptr on_linestate_changed;
-    } usb = {};
 
     if(stream == base.stream) {
         base.is_up = add ? (stream->is_connected ? stream->is_connected : stream_connected) : is_not_connected;
         return true;
-    }
-
-    if(active_stream != NULL && hal.stream.state.is_usb) {
-        usb.stream = active_stream;
-        usb.on_linestate_changed = hal.stream.on_linestate_changed;
     }
 
     if(!add) { // disconnect
@@ -391,8 +407,8 @@ FLASHMEM static bool stream_select (const io_stream_t *stream, bool add)
 
     memcpy(&hal.stream, stream, offsetof(io_stream_t, report));
 
-    if(stream == usb.stream)
-        hal.stream.on_linestate_changed = usb.on_linestate_changed;
+//    if(stream == usb.stream)
+//        hal.stream.on_linestate_changed = usb.on_linestate_changed;
 
     if(stream == base.stream && base.is_up == is_not_connected)
         base.is_up = stream_connected;

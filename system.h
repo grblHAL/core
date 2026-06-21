@@ -319,6 +319,10 @@ typedef struct sys_commands_str {
 
 extern system_t sys;
 
+uint8_t system_n_axis (void);
+uint8_t system_axis_mask (void);
+uint8_t system_claim_axis (void);
+
 status_code_t system_execute_line (char *line);
 void system_execute_startup (void *data);
 void system_flag_wco_change (void);

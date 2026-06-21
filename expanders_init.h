@@ -31,7 +31,7 @@ extern void board_ports_init (void); // default is a weak function
 
 // I2C expanders
 
-#if PCA9654E_ENABLE || MCP3221_ENABLE || MCP4725_ENABLE || FLEXGPIO_ENABLE
+#if PCA9654E_ENABLE || MCP3221_ENABLE || MCP4725_ENABLE || MCP23017_ENABLE || FLEXGPIO_ENABLE
 
 #if defined(I2C_ENABLE) && !I2C_ENABLE
 #undef I2C_ENABLE
@@ -51,6 +51,10 @@ extern void mcp4725_init (void);
 
 #if PCA9654E_ENABLE
 extern void pca9654e_init (void);
+#endif
+
+#if MCP23017_ENABLE
+extern void mcp23017_init (void);
 #endif
 
 // Third party I2C expander plugins goes after this line
@@ -131,6 +135,10 @@ static inline void io_expanders_init (void)
 
 #if MCP4725_ENABLE
     mcp4725_init();
+#endif
+
+#if MCP23017_ENABLE
+    mcp23017_init();
 #endif
 
 #if R4SLS08_ENABLE

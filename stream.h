@@ -85,8 +85,8 @@ typedef enum {
     StreamType_Bluetooth,
     StreamType_Telnet,
     StreamType_WebSocket,
-    StreamType_SDCard, // deprecated, use StreamType_File instead
-    StreamType_File = StreamType_SDCard,
+    StreamType_File,
+    StreamType_SDCard = StreamType_File, // deprecated, use StreamType_File instead
     StreamType_Redirected,
     StreamType_Null
 } stream_type_t;
@@ -202,6 +202,9 @@ typedef struct {
     uint8_t override_counter;       //!< Tracks when to add override data to status reports.
     uint8_t wco_counter;            //!< Tracks when to add work coordinate offset data to status reports.
 } status_report_tracking_t;
+
+struct io_stream_properties;
+typedef struct io_stream_properties io_stream_properties_t;
 
 /*! \brief Pointer to function for getting stream connected status.
 \returns \a true connected, \a false otherwise.
@@ -326,7 +329,7 @@ typedef bool (*disable_rx_stream_ptr)(bool disable);
 
 \param \a serial_linestate_t enum.
 */
-typedef void (*on_linestate_changed_ptr)(serial_linestate_t state);
+typedef void (*on_linestate_changed_ptr)(io_stream_properties_t *stream, serial_linestate_t state);
 
 typedef union {
     uint8_t value;
@@ -338,7 +341,7 @@ typedef union {
                 modbus_ready  :1,
                 rts_handshake :1,
                 init_ok       :1,
-                unused        :1;
+                is_usb        :1;
     };
 } io_stream_flags_t;
 
@@ -380,9 +383,10 @@ typedef struct {
     set_baud_rate_ptr set_baud_rate;                        //!< Optional handler for setting the stream baud rate. Required for Modbus/RS-485 support, recommended for Bluetooth support.
     set_format_ptr set_format;                              //!< Optional handler for setting the stream format.
     stream_set_direction_ptr set_direction;                 //!< Optional handler for setting the transfer direction for half-duplex communication.
-    on_linestate_changed_ptr on_linestate_changed;          //!< Optional handler to be called when line state changes. Set by client.
     vfs_file_t *file;                                       //!< File handle, non-null if streaming from a file.
+// The following fields are kept over a stream change
     status_report_tracking_t report;                        //!< Tracks when to add data to status reports.
+    on_linestate_changed_ptr on_linestate_changed;          //!< Optional handler to be called when line state changes. Set by client.
 } io_stream_t;
 
 typedef struct {
@@ -396,14 +400,14 @@ typedef const io_stream_t *(*stream_claim_ptr)(uint32_t baud_rate);
 typedef bool (*stream_release_ptr)(uint8_t instance);
 typedef const io_stream_status_t *(*stream_get_status_ptr)(uint8_t instance);
 
-typedef struct {
+struct io_stream_properties {
     stream_type_t type;                                     //!< Type of stream.
     uint8_t instance;                                       //!< Instance of stream type, starts from 0.
     io_stream_flags_t flags;
     stream_claim_ptr claim;
     stream_release_ptr release;
     stream_get_status_ptr get_status;                       //!< Optional handler for getting stream status, for UART streams only
-} io_stream_properties_t;
+};
 
 typedef bool (*stream_enumerate_callback_ptr)(io_stream_properties_t const *properties, void *data);
 
@@ -511,6 +515,8 @@ io_stream_flags_t stream_get_flags (io_stream_t stream);
 const io_stream_status_t *stream_get_uart_status (uint8_t instance);
 
 const io_stream_t *stream_null_init (uint32_t baud_rate);
+
+void stream_usb_linestate_changed (uint8_t instance, serial_linestate_t state);
 
 io_stream_t const *stream_open_instance (uint8_t instance, uint32_t baud_rate, stream_write_char_ptr rx_handler, const char *description);
 bool stream_close (io_stream_t const *stream);

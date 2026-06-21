@@ -591,7 +591,7 @@ starting at the index given by the pos offset.
 */
 FLASHMEM status_code_t ngc_read_name (char *line, uint_fast8_t *pos, char *buffer)
 {
-    char *s;
+    char c, *s;
     uint_fast8_t len = 0;
     status_code_t status = Status_BadNumberFormat;
 
@@ -599,13 +599,13 @@ FLASHMEM status_code_t ngc_read_name (char *line, uint_fast8_t *pos, char *buffe
 
         s++;
 
-        while(*s && *s != '>' && len <= NGC_MAX_PARAM_LENGTH) {
-            *buffer++ = *s++;
+        while((c = *s++) && c != '>' && len <= NGC_MAX_PARAM_LENGTH) {
+            *buffer++ = LCAPS(c);
             (*pos)++;
             len++;
         }
 
-        if((status = *s == '>' ? Status_OK : Status_FlowControlSyntaxError) == Status_OK) {
+        if((status = c == '>' ? Status_OK : Status_FlowControlSyntaxError) == Status_OK) {
             *buffer = '\0';
             (*pos)++;
         }

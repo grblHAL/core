@@ -139,8 +139,6 @@ FLASHMEM void limits_set_work_envelope (void)
     } while(idx);
 }
 
-#ifndef KINEMATICS_API
-
 // Set machine positions for homed limit switches. Don't update non-homed axes.
 // NOTE: settings.max_travel[] is stored as a negative value.
 FLASHMEM void limits_set_machine_positions (axes_signals_t cycle, bool add_pulloff)
@@ -163,8 +161,6 @@ FLASHMEM void limits_set_machine_positions (axes_signals_t cycle, bool add_pullo
         }
     } while(idx);
 }
-
-#endif
 
 // Set, get homing pulloff
 FLASHMEM coord_data_t *limits_homing_pulloff (coord_data_t *distance)
@@ -204,11 +200,12 @@ FLASHMEM static bool limits_pull_off (axes_signals_t axis, coord_data_t *distanc
     plan_data.feed_rate = settings.axis[0].homing_seek_rate * sqrtf(n_axis); // Adjust so individual axes all move at pull-off rate.
     plan_data.condition.coolant = gc_state.modal.coolant;
 
+    // Bypass mc_line(). Directly plan homing motion.
 #ifdef KINEMATICS_API
     coord_data_t k_target;
-    plan_buffer_line(kinematics.transform_from_cartesian(k_target.values, target.values), &plan_data);    // Bypass mc_line(). Directly plan homing motion.;
+    plan_buffer_line(kinematics.transform_from_cartesian(k_target.values, target.values), &plan_data);
 #else
-    plan_buffer_line(target.values, &plan_data);    // Bypass mc_line(). Directly plan homing motion.
+    plan_buffer_line(target.values, &plan_data);
 #endif
 
     sys.step_control.flags = 0;                 // Clear existing flags and
@@ -419,7 +416,7 @@ FLASHMEM static bool homing_cycle (axes_signals_t cycle, axes_signals_t auto_squ
                 idx = N_AXIS;
                 do {
                     idx--;
-                    if ((axislock.mask & step_pin[idx]) && (homing_state.mask & bit(idx))) {
+                    if((axislock.mask & step_pin[idx]) && (homing_state.mask & bit(idx))) {
 #ifdef KINEMATICS_API
                         axislock.mask &= ~kinematics.limits_get_axis_mask(idx);
 #else
@@ -432,7 +429,7 @@ FLASHMEM static bool homing_cycle (axes_signals_t cycle, axes_signals_t auto_squ
 
                 sys.homing_axis_lock.mask = axislock.mask;
 
-                if (autosquare_check && abs(initial_trigger_position - sys.position[dual_motor_axis]) > autosquare_fail_distance) {
+                if(autosquare_check && abs(initial_trigger_position - sys.position[dual_motor_axis]) > autosquare_fail_distance) {
                     system_set_exec_alarm(Alarm_HomingFailAutoSquaringApproach);
                     mc_reset();
                     protocol_execute_realtime();
@@ -523,9 +520,11 @@ FLASHMEM static bool homing_cycle (axes_signals_t cycle, axes_signals_t auto_squ
     if(auto_square.mask && settings.axis[dual_motor_axis].dual_axis_offset != 0.0f) {
         hal.stepper.disable_motors(auto_square, settings.axis[dual_motor_axis].dual_axis_offset < 0.0f ? SquaringMode_B : SquaringMode_A);
         distance.values[dual_motor_axis] = fabs(settings.axis[dual_motor_axis].dual_axis_offset);
+#if defined(ASYMMETRIC_GANGING) || defined(ASYMMETRIC_AUTO_SQUARE)
+        auto_square.mask |= (1 << (N_AXIS - 1));
+#endif
         if(!limits_pull_off(auto_square, &distance, 1.0f))
             return false;
-        hal.stepper.disable_motors((axes_signals_t){0}, SquaringMode_Both);
     }
 
     // The active cycle axes should now be homed and machine limits have been located. By
@@ -615,6 +614,8 @@ FLASHMEM status_code_t limits_go_home (axes_signals_t cycle)
 
         if((auto_squared.mask & homing_signals_select(hal.homing.get_state(), (axes_signals_t){0}, SquaringMode_Both).mask) && !limits_pull_off(auto_square, &homing_pulloff, HOMING_AXIS_LOCATE_SCALAR))
             return Status_LimitsEngaged; // Auto squaring with limit switch asserted is not allowed.
+
+        hal.stepper.disable_motors((axes_signals_t){0}, SquaringMode_Both);
     }
 
     return grbl.home_machine(cycle, auto_square) ? Status_OK : Status_Unhandled;

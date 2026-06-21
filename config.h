@@ -120,15 +120,6 @@ generate a solution.
 
 //#define KINEMATICS_API // Uncomment to add HAL entry points for custom kinematics
 
-/*! \def MASLOW_ROUTER
-\brief Enable Maslow router kinematics.
-Experimental - testing required and homing needs to be worked out.
-*/
-#if !defined MASLOW_ROUTER || defined __DOXYGEN__
-// Enable Maslow router kinematics.
-// Experimental - testing required and homing needs to be worked out.
-#define MASLOW_ROUTER Off
-#endif
 
 /*! \def WALL_PLOTTER
 \brief Enable wall plotter kinematics.
@@ -159,7 +150,6 @@ Experimental - testing required and homing needs to be worked out.
 #define POLAR_ROBOT Off
 #endif
 
-
 /*! \def COREXY
 \brief Enable CoreXY kinematics. Use ONLY with CoreXY machines.
 <br>__IMPORTANT:__ If homing is enabled, you must reconfigure the homing cycle \#defines above to
@@ -172,6 +162,18 @@ have the same steps per mm internally.
 #if !defined COREXY || defined __DOXYGEN__
 #define COREXY Off
 #endif
+
+/*! \def ASYMMETRIC_GANGING
+\brief Enable asymmetric ganging for X, Y or Z axis.
+<br> To be used when the screw pitch is not equal. The highest numbered axis is claimed for the second motor.
+*/
+//#define ASYMMETRIC_GANGING Y_AXIS	// Uncomment to enable
+
+/*! \def ASYMMETRIC_AUTO_SQUARE
+\brief Enable asymmetric ganging + auto squaring for X, Y or Z axis.
+<br> To be used when the screw pitch is not equal. The highest numbered axis is claimed for the second motor.
+*/
+//#define ASYMMETRIC_AUTO_SQUARE Y_AXIS	// Uncomment to enable
 
 /*! \def CHECK_MODE_DELAY
 \brief
@@ -1504,6 +1506,20 @@ and less range over the total 255 PWM levels to signal different spindle speeds.
 #endif
 ///@}
 
+/*! @name $675 - Setting_MacroATC_Options
+*/
+///@{
+#if !defined DEFAULT_MACRO_ATC_OPTION_EXECUTEM6T0 || defined __DOXYGEN__
+#define DEFAULT_MACRO_ATC_OPTION_EXECUTEM6T0 Off
+#endif
+#if !defined DEFAULT_MACRO_ATC_ERROR_NO_MACRO || defined __DOXYGEN__
+#define DEFAULT_MACRO_ATC_ERROR_NO_MACRO Off
+#endif
+#if !defined DEFAULT_MACRO_ATC_RANDOM_TOOLCHANGER || defined __DOXYGEN__
+#define DEFAULT_MACRO_ATC_RANDOM_TOOLCHANGER Off
+#endif
+///@}
+
 // Homing settings (Group_Homing)
 
 /*! @name $22 - Setting_HomingEnable
@@ -2210,12 +2226,12 @@ Filing systems options.
 #define DEFAULT_FS_SD_AUTOMOUNT Off // Default disabled. Set to \ref On or 1 to enable.
 #endif
 
-/*! /def DEFAULT_FS_LITLLEFS_HIDDEN
+/*! /def DEFAULT_FS_LITTLEFS_HIDDEN
 \brief Hides LittleFS mount from directory listings.
 \internal Bit 1 in settings.fs_options.mask.
 */
-#if !defined DEFAULT_FS_LITLLEFS_HIDDEN || defined __DOXYGEN__
-#define DEFAULT_FS_LITLLEFS_HIDDEN Off // Default disabled. Set to \ref On or 1 to enable.
+#if !defined DEFAULT_FS_LITTLEFS_HIDDEN || defined __DOXYGEN__
+#define DEFAULT_FS_LITTLEFS_HIDDEN Off // Default disabled. Set to \ref On or 1 to enable.
 #endif
 
 /*! /def DEFAULT_FS_HIERACHICAL_LISTING
@@ -2227,7 +2243,6 @@ Adds directory entries in $F and $F+ output to allow hierarchical navigation of 
 #define DEFAULT_FS_HIERACHICAL_LISTING Off // Default disabled. Set to \ref On or 1 to enable.
 #endif
 ///@}
-
 
 // Axis settings (Group_XAxis - Group_VAxis)
 

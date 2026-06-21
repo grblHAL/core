@@ -45,6 +45,7 @@ target_sources(grbl INTERFACE
  ${CMAKE_CURRENT_LIST_DIR}/encoders.c
  ${CMAKE_CURRENT_LIST_DIR}/pid.c
  ${CMAKE_CURRENT_LIST_DIR}/fs_device.c
+ ${CMAKE_CURRENT_LIST_DIR}/kinematics/asymmetric_ganging.c
  ${CMAKE_CURRENT_LIST_DIR}/kinematics/corexy.c
  ${CMAKE_CURRENT_LIST_DIR}/kinematics/wall_plotter.c
  ${CMAKE_CURRENT_LIST_DIR}/kinematics/delta.c
