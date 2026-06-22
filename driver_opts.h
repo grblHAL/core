@@ -309,6 +309,13 @@
 #define SPINDLE_PWM         0b010
 #define SPINDLE_DIR         0b100
 
+#ifdef SPINDLE_ENABLE
+#undef SPINDLE0_ENABLE
+#undef SPINDLE1_ENABLE
+#undef SPINDLE2_ENABLE
+#undef SPINDLE3_ENABLE
+#endif
+
 #ifndef SPINDLE0_ENABLE
 #ifdef SPINDLE_ENABLE
 #define SPINDLE0_ENABLE     0
