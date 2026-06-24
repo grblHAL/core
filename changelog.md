@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+<a name="20260622">Build 20260622
+
+Core:
+
+* PR#974 applied.
+
+* Added preprocessor logic for handling potentially bad spindle definitions.
+
+Plugins:
+
+* Spindle: added preprocessor validation of default spindle settings.
+
+---
+
 <a name="20260619">Build 20260619
 
 Core:
