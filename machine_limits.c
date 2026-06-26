@@ -626,7 +626,7 @@ FLASHMEM status_code_t limits_go_home (axes_signals_t cycle)
 // NOTE: Also used by jogging to block travel outside soft-limit volume.
 FLASHMEM void limits_soft_check (float *target, planner_cond_t condition)
 {
-#ifdef KINEMATICS_API
+#if defined(KINEMATICS_API) && !(defined(ASYMMETRIC_GANGING) || defined(ASYMMETRIC_AUTO_SQUARE))
     if(condition.target_validated ? !condition.target_valid : !grbl.check_travel_limits(target, sys.soft_limits, false, &sys.work_envelope)) {
 #else
     if(condition.target_validated ? !condition.target_valid : !grbl.check_travel_limits(target, sys.soft_limits, true, &sys.work_envelope)) {
