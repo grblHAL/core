@@ -1,5 +1,13 @@
 ## grblHAL changelog
 
+<a name="20260626">20260626
+
+Core:
+
+* Fix for asymmetric axis kinematics triggering soft limits when enabled.
+
+---
+
 <a name="20260622">Build 20260622
 
 Core:
