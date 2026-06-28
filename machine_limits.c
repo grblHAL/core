@@ -429,7 +429,7 @@ FLASHMEM static bool homing_cycle (axes_signals_t cycle, axes_signals_t auto_squ
 
                 sys.homing_axis_lock.mask = axislock.mask;
 
-                if(autosquare_check && abs(initial_trigger_position - sys.position[dual_motor_axis]) > autosquare_fail_distance) {
+                if(autosquare_check && labs(initial_trigger_position - sys.position[dual_motor_axis]) > autosquare_fail_distance) {
                     system_set_exec_alarm(Alarm_HomingFailAutoSquaringApproach);
                     mc_reset();
                     protocol_execute_realtime();
