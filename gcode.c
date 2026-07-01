@@ -3053,7 +3053,12 @@ status_code_t gc_execute_block (char *block)
 #ifdef ROTATION_ENABLE
                 axes_signals_t r_axes, r_around;
                 uint_fast8_t idx_0, idx_1;
-                if(!gc_parser_flags.jog_motion && (r_axes.mask = (gc_block.modal.g5x_offset.data.rotation == 0.0f ? 0 : (axis_words.mask & (r_around.mask = rotate_axes[gc_block.modal.plane_select].mask))))) {
+                r_axes.mask = 0;   // keep defined when the transform is bypassed (jog / G53)
+                // G53 (absolute machine override) must ignore the active WCS entirely - rotation AND offset. Without
+                // the AbsoluteOverride guard this block adds the g5x offset to the plane axes, so e.g. "G53 G0 X0 Y0"
+                // goes to the work origin instead of machine 0,0 (and false soft-limits when that lands out of travel).
+                // A near-zero garbage rotation (stale NVS after enabling ROTATION_ENABLE) is enough to arm it.
+                if(!gc_parser_flags.jog_motion && gc_block.non_modal_command != NonModal_AbsoluteOverride && (r_axes.mask = (gc_block.modal.g5x_offset.data.rotation == 0.0f ? 0 : (axis_words.mask & (r_around.mask = rotate_axes[gc_block.modal.plane_select].mask))))) {
 
                     if(r_axes.mask != r_around.mask) {
                         point_3d_t pos;
