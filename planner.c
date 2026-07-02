@@ -497,24 +497,31 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
 
     if(!block->condition.inverse_time &&
         !block->condition.rapid_motion &&
-         (motion.mask & settings.steppers.is_rotary.mask) &&
-          (motion.mask & ~settings.steppers.is_rotary.mask)) {
+        (motion.mask & settings.steppers.is_rotary.mask)){
+            
+        if(motion.mask & ~settings.steppers.is_rotary.mask) {
 
-        float linear_magnitude = 0.0f;
+            float linear_magnitude = 0.0f;
 
-        idx = 0;
-        motion.mask &= ~settings.steppers.is_rotary.mask;
+            idx = 0;
+            motion.mask &= ~settings.steppers.is_rotary.mask;
 
-        while(motion.mask) {
-            if(motion.mask & 0x01)
-                linear_magnitude += unit_vec[idx] * unit_vec[idx];
-            motion.mask >>= 1;
-            idx++;
+            while(motion.mask) {
+                if(motion.mask & 0x01)
+                    linear_magnitude += unit_vec[idx] * unit_vec[idx];
+                motion.mask >>= 1;
+                idx++;
+            }
+
+            pl_data->feed_rate = 1.0f / (sqrtf(linear_magnitude) / pl_data->feed_rate);
+
+            block->condition.inverse_time = On;
+
+        } else {
+            // Reverse in/min to mm/min conversion for rotary axes
+            if(gc_state.modal.units_imperial)
+                pl_data->feed_rate /= 25.4f;
         }
-
-        pl_data->feed_rate = 1.0f / (sqrtf(linear_magnitude) / pl_data->feed_rate);
-
-        block->condition.inverse_time = On;
     }
 
 #endif
