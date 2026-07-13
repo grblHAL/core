@@ -432,6 +432,11 @@ int vfs_chdir (const char *path)
     vfs_errno = 0;
     path = parse_path(path);
 
+    if(strlen(path) >= sizeof(cwd)) { // Fail if the normalized path would not fit the cwd buffer.
+        vfs_errno = -1;
+        return -1;
+    }
+
     if((mount = get_mount(path))) {
         if(mount->vfs->fchdir)
             ret = mount->vfs->fchdir(get_filename(mount, path));
