@@ -230,17 +230,20 @@ char *vfs_fixpath (char *path)
 
 static const char *parse_path (const char *path)
 {
-    static char *abspath;
-    static size_t maxlen = 0;
+    static char *abspath, *newpath;
+    static size_t maxlen = 0, newpathlen = 0;
 
     if(strlen(cwd) + strlen(path) + 2 > maxlen) {
         maxlen = max(VFS_CWD_LENGTH, strlen(cwd) + strlen(path) + 2);
         abspath = realloc(abspath, maxlen);
     }
 
-    if(abspath) {
+    if(strlen(path) + 1 > newpathlen) {
+        newpathlen = max(VFS_CWD_LENGTH, strlen(path) + 1);
+        newpath = realloc(newpath, newpathlen);
+    }
 
-        char newpath[VFS_CWD_LENGTH];
+    if(abspath && newpath) {
 
         strcpy(newpath, path);
         strcpy(abspath, *path == '/' ? "/" : cwd);
@@ -260,9 +263,9 @@ static const char *parse_path (const char *path)
             el = strtok(NULL, "/");
         }
     } else
-        maxlen = 0;
+        maxlen = newpathlen = 0;
 
-    return abspath ? (const char *)abspath : path;
+    return abspath && newpath ? (const char *)abspath : path;
 }
 
 static vfs_mount_t *get_mount (const char *path)
