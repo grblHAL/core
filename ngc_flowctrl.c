@@ -321,8 +321,11 @@ FLASHMEM static void stack_unwind_sub (uint32_t o_label)
 FLASHMEM void ngc_flowctrl_unwind_stack (vfs_file_t *file)
 {
     clear_subs(file);
-    while(stack_idx >= 0 && stack[stack_idx].file == file)
+    while(stack_idx >= 0 && stack[stack_idx].file == file) {
+        if(stack[stack_idx].o_label > NGC_MAX_PARAM_ID)
+            stream_redirect_close(stack[stack_idx].file);
         stack_pull();
+    }
 }
 
 FLASHMEM static status_code_t onGcodeComment (char *comment)
@@ -358,8 +361,15 @@ FLASHMEM void ngc_flowctrl_init (void)
     }
 
     clear_subs(NULL);
-    while(stack_idx >= 0)
+    // Close any still-open named-subroutine file redirect before dropping this stack entry - a Reset
+    // landing mid-O-call previously left hal.stream.read permanently stuck on the file reader
+    // (stream_file.c's stream_read_file), since this loop only cleared the stack's own bookkeeping.
+    // Mirrors stack_unwind_sub()'s handling of the same entry kind.
+    while(stack_idx >= 0) {
+        if(stack[stack_idx].o_label > NGC_MAX_PARAM_ID)
+            stream_redirect_close(stack[stack_idx].file);
         stack_pull();
+    }
 }
 
 // NOTE: onNamedSubError will be called recursively for each
