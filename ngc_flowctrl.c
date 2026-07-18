@@ -384,7 +384,7 @@ FLASHMEM static status_code_t onNamedSubError (status_code_t status)
                 char *name, msg[100];
                 closing = true;
                 if((name = ngc_string_param_get((ngc_string_id_t)o_label))) {
-                    sprintf(msg, "error %d in named sub %s.macro", (uint8_t)status, name);
+                    snprintf(msg, sizeof(msg), "error %d in named sub %s.macro", (uint8_t)status, name);
                     report_message(msg, Message_Warning);
                 }
             }
@@ -674,14 +674,14 @@ FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number
                             char filename[60];
                             vfs_file_t *file;
 #if LITTLEFS_ENABLE == 1
-                            sprintf(filename, "/littlefs/%s.macro", subname);
+                            snprintf(filename, sizeof(filename), "/littlefs/%s.macro", subname);
 
                             if((file = stream_redirect_read(filename, onNamedSubError, onNamedSubEOF)) == NULL) {
-                                sprintf(filename, "/%s.macro", subname);
+                                snprintf(filename, sizeof(filename), "/%s.macro", subname);
                                 file = stream_redirect_read(filename, onNamedSubError, onNamedSubEOF);
                             }
 #else
-                            sprintf(filename, "/%s.macro", subname);
+                            snprintf(filename, sizeof(filename), "/%s.macro", subname);
                             file = stream_redirect_read(filename, onNamedSubError, onNamedSubEOF);
 #endif
                             if(file) {
