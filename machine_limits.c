@@ -525,6 +525,7 @@ FLASHMEM static bool homing_cycle (axes_signals_t cycle, axes_signals_t auto_squ
 #endif
         if(!limits_pull_off(auto_square, &distance, 1.0f))
             return false;
+        hal.stepper.disable_motors((axes_signals_t){0}, SquaringMode_Both);
     }
 
     // The active cycle axes should now be homed and machine limits have been located. By

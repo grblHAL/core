@@ -384,8 +384,8 @@ FLASHMEM static status_code_t onNamedSubError (status_code_t status)
                 char *name, msg[100];
                 closing = true;
                 if((name = ngc_string_param_get((ngc_string_id_t)o_label))) {
-                    sprintf(msg, "error %d in named sub %s.macro", (uint8_t)status, name);
-                    report_message(msg, Message_Warning);
+                    int len = snprintf(msg, sizeof(msg) - 10, "error %d in named sub %s", (uint8_t)status, name);
+                    report_message(strcat(msg, len >= sizeof(msg) - 11 ? "*.macro" : ".macro)"), Message_Warning);
                 }
             }
 
@@ -671,33 +671,38 @@ FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number
 
                         char *subname;
                         if((subname = ngc_string_param_get((ngc_string_id_t)o_label))) {
-                            char filename[60];
+                            char _name[60];
                             vfs_file_t *file;
-#if LITTLEFS_ENABLE == 1
-                            sprintf(filename, "/littlefs/%s.macro", subname);
+                            vfs_path_t macro = { .name = _name, .len = sizeof(_name) - 1 };
+                            size_t len = strlen(subname) + 20;
 
-                            if((file = stream_redirect_read(filename, onNamedSubError, onNamedSubEOF)) == NULL) {
-                                sprintf(filename, "/%s.macro", subname);
-                                file = stream_redirect_read(filename, onNamedSubError, onNamedSubEOF);
+                            if(len > macro.len && (macro.name = malloc(len + 1)) == NULL)
+                                status = Status_FlowControlOutOfMemory;
+
+                            if(status == Status_OK) {
+
+                                sprintf(macro.name, "/littlefs/%s.macro", subname);
+                                if((file = stream_redirect_read(macro.name, onNamedSubError, onNamedSubEOF)) == NULL) {
+                                    sprintf(macro.name, "/%s.macro", subname);
+                                    file = stream_redirect_read(macro.name, onNamedSubError, onNamedSubEOF);
+                                }
+
+                                if(macro.name != _name)
+                                    free(macro.name);
+
+                                if(file) {
+                                    if((sub = add_sub(o_label, line_number, file)) == NULL)
+                                        status = Status_FlowControlOutOfMemory;
+                                } else
+                                    status = Status_FileOpenFailed;
                             }
-#else
-                            sprintf(filename, "/%s.macro", subname);
-                            file = stream_redirect_read(filename, onNamedSubError, onNamedSubEOF);
-#endif
-                            if(file) {
-                                if((sub = add_sub(o_label, line_number, file)) == NULL)
-                                    status = Status_FlowControlOutOfMemory;
-                            } else
-                                status = Status_FileOpenFailed;
                        }
                     } else if((sub = subs)) do {
                         if(sub->o_label == o_label && sub->file == hal.stream.file)
                             break;
                     } while((sub = sub->next));
 
-                    if(sub == NULL)
-                        status = Status_FlowControlSyntaxError;
-                    else {
+                    if(sub) {
 
                         float params[30];
                         ngc_param_id_t param_id = 1;
@@ -731,7 +736,8 @@ FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number
                                 stream_reposition(sub->file, sub->file_pos, sub->line_number);
                             }
                         }
-                    }
+                    } else if(status == Status_OK)
+                        status = Status_FlowControlSyntaxError;
                 }
             } else
                 status = Status_FlowControlNotExecutingMacro;

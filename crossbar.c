@@ -139,6 +139,16 @@ axes_signals_t xbar_fn_to_axismask (pin_function_t fn)
     return mask;
 }
 
+bool xbar_fn_for_secondary_motor (pin_function_t fn)
+{
+    return fn == Input_LimitX_2 ||
+            fn == Input_LimitY_2 ||
+             fn == Input_LimitZ_2 ||
+              fn == Input_MotorFaultX2 ||
+               fn == Input_MotorFaultY2 ||
+                fn == Input_MotorFaultZ2;
+}
+
 // Sets limit signals used by homing when home signals are not available.
 // For internal use, called by settings.c when homing direction mask is changed.
 void xbar_set_homing_source (void)

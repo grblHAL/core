@@ -41,6 +41,10 @@
 #define MODBUS_SET_LSB16(v) ((v) & 0xFF)
 #define MODBUS_MAX_REGISTERS ((MODBUS_MAX_ADU_SIZE - 6) / 2)
 
+#if MODBUS_MAX_ADU_SIZE < 12
+#error 'MODBUS_MAX_ADU_SIZE has to be at least 12'
+#endif
+
 typedef enum {
     Modbus_InterfaceRTU = 0,
     Modbus_InterfaceASCII,

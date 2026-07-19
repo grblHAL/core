@@ -1,5 +1,60 @@
 ## grblHAL changelog
 
+<a name="20260719">Build 20260719
+
+Core:
+
+* Updated VFS to correctly handle long working directory paths that would otherwise lead to buffer overflows. Ref. PR#986 which is a partial fix.
+> [!NOTE]
+> The underlying file systems may impose their own limits to path lengths.
+
+
+* Updated named O calls to allow name lengths only limited by available heap. Ref. PR#989 which likely would return an error on overly long names and would potentially execute incorrect code if not.
+
+Plugins:
+
+* Networking, ftp: updated to correctly handle long working directory paths. Allow access to file systems not mounted as root when no real root file system mounted.
+
+* SD card, littlefs: updated to correctly handle long working directory paths.
+
+---
+
+<a name="20260718">Build 20260718
+
+Core:
+
+* Changes to VFS API signatures to aid improved handling of file system formatting.
+
+* Now turns off spindle\(s\) on spindle related settings changes.
+
+Drivers:
+
+* ESP32, PiBot Ultra board: force stream assignments for modbus and MPG.
+
+* iMXRT1062: fixed typo preventing use of serial port 0 in some configurations.
+
+Plugins:
+
+* SD card, networking, WebUI: updated for VFS API changes, improved formatting of SD card \(FatFs\) and littlefs.
+
+* EEPROM: added support for 1Mbit EEPROMS, improved littlefs EEPROM low-level driver.
+
+* Keypad, display interface: fix for missing probe state report.
+
+---
+
+<a name="20260709">Build 20260709
+
+Core:
+
+* Added support for MPG real time command character stream switching for RX only streams.
+
+Drivers:
+
+* RP2040: added support for optional third PIO based UART port. Added tentative map for Bolangsk board.
+
+---
+
 <a name="20260626">20260626
 
 Core:

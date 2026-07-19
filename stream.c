@@ -664,6 +664,9 @@ FLASHMEM bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stre
         if(grbl.on_mpg_registered)
             grbl.on_mpg_registered(&mpg.stream, false);
 
+        if(mpg.write_char)
+            mpg.stream.set_enqueue_rt_handler(mpg.write_char);
+
         return true;
     }
 

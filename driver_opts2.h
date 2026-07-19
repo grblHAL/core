@@ -326,6 +326,10 @@
 #endif
 #endif
 
+#if defined(MPG_STREAM) && MPG_STREAM == 0 && (MODBUS_ENABLE & MODBUS_RTU_ENABLED) && !defined(MODBUS_RTU_STREAM)
+#define MODBUS_RTU_STREAM (MPG_STREAM + 1)
+#endif
+
 #if MPG_ENABLE && MPG_ENABLE != 2 && MPG_STREAM == 20 && BLUETOOTH_ENABLE != 1
 #error "MPG can only be used with native Bluetooth and character mode switching!"
 #endif

@@ -970,6 +970,7 @@ void xbar_set_homing_source (void);
 limit_signals_t xbar_get_homing_source (void);
 limit_signals_t xbar_get_homing_source_from_cycle (axes_signals_t homing_cycle);
 axes_signals_t xbar_fn_to_axismask (pin_function_t id);
+bool xbar_fn_for_secondary_motor (pin_function_t fn);
 const char *xbar_fn_to_pinname (pin_function_t id);
 const char *xbar_group_to_description ( pin_group_t group);
 const char *xbar_resolution_to_string (pin_cap_t cap);

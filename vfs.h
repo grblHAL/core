@@ -57,6 +57,12 @@ struct tm {
 };
 #endif // __time_t_defined
 
+typedef struct
+{
+    char *name;
+    size_t len;
+} vfs_path_t;
+
 typedef union
 {
     uint8_t mode;
@@ -137,6 +143,7 @@ typedef int (*vfs_utime_ptr)(const char *filename, struct tm *modified);
 
 typedef bool (*vfs_getfree_ptr)(vfs_free_t *free);
 typedef int (*vfs_format_ptr)(void);
+typedef bool (*vfs_device_mount_ptr)(const void *dev, bool mount);
 
 typedef struct
 {
@@ -163,6 +170,7 @@ typedef struct
     vfs_getcwd_ptr fgetcwd;
     vfs_getfree_ptr fgetfree;
     vfs_format_ptr format;
+    vfs_device_mount_ptr device_mount;
 } vfs_t;
 
 typedef void (*on_vfs_changed_ptr)(const vfs_t *fs);
@@ -178,6 +186,7 @@ typedef struct {
 typedef struct vfs_mount
 {
     char path[VFS_MOUNT_PATH_LEN];
+    const void *device;
     const vfs_t *vfs;
     vfs_st_mode_t mode;
 #ifdef ESP_PLATFORM // some versions of ESP-IDF/Compiler combos are fcked up
@@ -217,8 +226,8 @@ extern vfs_events_t vfs;
 
 char *vfs_fixpath (char *path);
 
-bool vfs_mount (const char *path, const vfs_t *fs, vfs_st_mode_t mode);
-bool vfs_unmount (const char *path);
+bool vfs_mount (const void *device, const char *path, const vfs_t *fs, vfs_st_mode_t mode);
+bool vfs_unmount (const void *device, const char *path);
 vfs_file_t *vfs_open (const char *filename, const char *mode);
 void vfs_close (vfs_file_t *file);
 size_t vfs_read (void *buffer, size_t size, size_t count, vfs_file_t *file);

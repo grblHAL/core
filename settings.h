@@ -610,7 +610,7 @@ typedef union {
                  keep_rapids_override_on_reset   :1,
                  keep_feed_override_on_reset     :1,
                  m98_prescan_enable              :1,
-         		 unassigned                      :8;
+                 unassigned                      :8;
     };
 } settingflags_t;
 
@@ -1070,8 +1070,9 @@ typedef struct {
 typedef union {
     uint8_t value;
     struct {
-        uint8_t spindle    :1,
-                unassigned :7;
+        uint8_t spindle          :1,
+                restore_defaults :1,
+                unassigned       :6;
     };
 } settings_changed_flags_t;
 

@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2025 Terje Io
+  Copyright (c) 2025-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -220,5 +220,5 @@ void fs_device_mount (void)
     static bool ok = false;
 
     if(!ok)
-        ok = vfs_mount("/dev", &fs, (vfs_st_mode_t){ .directory = true, .hidden = true });
+        ok = vfs_mount(NULL, "/dev", &fs, (vfs_st_mode_t){ .directory = true, .hidden = true });
 }
