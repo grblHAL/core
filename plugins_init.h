@@ -191,6 +191,11 @@
     add_to_rt_report_init();
 #endif
 
+// #if RPM_FEEDBACK_ENABLE
+//     extern void rpm_feedback_init (void);
+//     rpm_feedback_init();
+// #endif
+
     extern void my_plugin_init (void);
     my_plugin_init();
 
