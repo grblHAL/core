@@ -151,10 +151,19 @@ static void fs_closedir (vfs_dir_t *dir)
 
 static int fs_stat (const char *filename, vfs_stat_t *st)
 {
-    char path[64];
+    char path[64], *fpath = path;
     vfs_mount_t *mount;
+    size_t len = strlen(filename) + 2; // leading '/' + terminating '\0'
 
-    if((mount = path_is_mount_dir(strcat(strcpy(path, "/"), filename)))) {
+    if(len > sizeof(path) && (fpath = malloc(len)) == NULL)
+        return (vfs_errno = -1);
+
+    mount = path_is_mount_dir(strcat(strcpy(fpath, "/"), filename));
+
+    if(fpath != path)
+        free(fpath);
+
+    if(mount) {
 
         if(!(mount->vfs->fstat && (vfs_errno = mount->vfs->fstat("/", st) == 0))) {
 
