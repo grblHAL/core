@@ -2147,7 +2147,7 @@ FLASHMEM static bool is_setting_available (const setting_detail_t *setting, uint
         case Setting_AxisHomingSeekRate:
             available = settings.homing.flags.per_axis_feedrates;
             break;
-#ifdef CUTTER_COMP_ENABLE
+#if CUTTER_COMP_ENABLE
         case Setting_CutterCompFacetCorner:
             available = true;
             break;

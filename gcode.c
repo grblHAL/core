@@ -882,6 +882,7 @@ FLASHMEM void gc_init (bool stop)
     cc_api_init(0.0f, gc_state.modal.units_imperial ? CC_UNITS_INCH : CC_UNITS_MM, cc_emit_via_mc, cc_message); // Reset cutter comp engine state on init/stop
     cutter_comp_apply_settings();
     cc_mc_reset_runtime_state(gc_state.position);
+    cc_mc_install_control_hook();
 #endif
 #if ENABLE_ACCELERATION_PROFILES
     gc_state.modal.acceleration_factor = gc_get_accel_factor(0); // Initialize machine with default

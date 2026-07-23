@@ -31,6 +31,8 @@ extern "C"
     void mc_arc(float *xyz, plan_line_data_t *pl_data, float *position, float *ijk, float radius, plane_t plane, int32_t turns);
     void report_message(const char *msg, message_type_t type);
     void debug_printf(const char *fmt, ...);
+    static bool cc_mc_is_active(void);
+
     static plan_line_data_t cc_mc_active_plan_data = {0};
     static bool cc_mc_have_plan_data = false;
     static bool cc_mc_active = false;
@@ -40,6 +42,33 @@ extern "C"
     static comp_side cc_mc_saved_comp_side = CC_COMP_OFF;
     static comp_mode cc_mc_saved_comp_mode = CC_CM_NONE;
     static bool cc_mc_saved_state_valid = false;
+
+    // cutter_comp_grblhal.h
+
+    static on_control_signals_changed_ptr cc_prev_on_control_signals_changed = NULL;
+    static bool cc_control_hook_attached = false;
+
+    static void cc_on_control_signals_changed(control_signals_t signals)
+    {
+        if (signals.single_block && sys.flags.single_block && cc_mc_is_active() && state_get() == STATE_CYCLE) {
+            system_set_exec_state_flag(EXEC_FEED_HOLD);
+            cc_mc_pause_after_next_motion = true;
+            report_message("CC Buffer remains active!", Message_Info);
+        }
+
+        if (cc_prev_on_control_signals_changed)
+            cc_prev_on_control_signals_changed(signals);
+    }
+
+    static inline void cc_mc_install_control_hook(void)
+    {
+        if (cc_control_hook_attached)
+            return;
+
+        cc_control_hook_attached = true;
+        cc_prev_on_control_signals_changed = grbl.on_control_signals_changed;
+        grbl.on_control_signals_changed = cc_on_control_signals_changed;
+    }
 
     // in cutter_comp_grblhal.h
     static inline void cc_report_version(void)
@@ -167,7 +196,6 @@ extern "C"
         }
         if (severity == CC_MSG_ERROR)
             system_set_exec_state_flag(EXEC_FEED_HOLD);
-
     }
 
     // Creates a move2d struct from the given grblHAL cutter compensation data.
@@ -323,7 +351,7 @@ extern "C"
             // Synthetic marker for a deferred pause or dwell after the next emitted motion.
             cc_mc_pause_after_next_motion = true;
             cc_mc_pending_dwell = 0.0f;
-            if(mv->pause_after > 0.0f)
+            if (mv->pause_after > 0.0f)
                 cc_mc_pending_dwell = mv->pause_after;
             return;
         }
@@ -377,7 +405,7 @@ extern "C"
             cc_mc_pause_after_next_motion = false;
             cc_mc_pending_dwell = 0.0f;
 
-             if (dwell > 0.0f)
+            if (dwell > 0.0f)
             {
                 report_message("CC: Dwell...", Message_Info);
                 mc_dwell(dwell);
