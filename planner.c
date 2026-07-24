@@ -51,6 +51,24 @@ typedef struct {
 static planner_t pl;
 static block_buffer_t block_buffer;
 
+// Revision counter for the plan export API. Incremented by plan_signal_changed() every time the buffer
+// contents or the computed velocity profile change. Declared volatile as it is read from a different
+// context (a subscribing driver/plugin) than the one mutating the plan.
+static volatile uint32_t plan_revision = 0;
+
+// Records that the planner buffer contents or the computed velocity profile have changed.
+// Bumps the revision counter polled via plan_get_revision() and notifies any subscriber so it can
+// re-export the plan. Kept as a single choke point so every mutation path stays in sync.
+static void plan_signal_changed (void)
+{
+    plan_revision++;
+
+    // Notify a subscribed driver/plugin. This may be reached from the stepper prep context when a
+    // block is consumed, so subscribers must keep the handler short (typically just set a flag).
+    if(grbl.on_planner_changed)
+        grbl.on_planner_changed();
+}
+
 /*                            PLANNER SPEED DEFINITION
                                      +--------+   <- current->nominal_speed
                                     /          \
@@ -257,6 +275,8 @@ FLASHMEM bool plan_reset (void)
 
     plan_reset_buffer(&block_buffer, block_buffer.blocks[0].next == NULL);
 
+    plan_signal_changed(); // Buffer emptied.
+
     return true;
 }
 
@@ -268,6 +288,8 @@ void plan_discard_current_block (void)
         if (block_buffer.tail == block_buffer.planned)
             block_buffer.planned = block_buffer.tail->next;
         block_buffer.tail = block_buffer.tail->next;
+
+        plan_signal_changed(); // A block was consumed, the set of executing/queued blocks changed.
     }
 }
 
@@ -290,6 +312,64 @@ plan_block_t *plan_get_current_block (void)
 plan_block_t *plan_get_recent_block (void)
 {
     return block_buffer.head == block_buffer.tail ? NULL : block_buffer.head->prev;
+}
+
+
+// Returns the current plan revision. See declaration in planner.h for usage.
+uint32_t plan_get_revision (void)
+{
+    return plan_revision;
+}
+
+
+// Starts a read-only iteration over the planner buffer. See declaration in planner.h.
+bool plan_export_first (plan_export_cursor_t *cursor, plan_export_block_t *block)
+{
+    // Capture the revision so the caller can detect whether the plan changed mid-iteration.
+    cursor->revision = plan_revision;
+    // Begin at the buffer tail (block being executed or first to execute), NULL when the buffer is empty.
+    cursor->block = plan_get_current_block();
+    // Blocks are stable until the optimally planned pointer is reached, see plan_export_next().
+    cursor->stable = true;
+
+    return plan_export_next(cursor, block);
+}
+
+
+// Continues an iteration started by plan_export_first(). See declaration in planner.h.
+bool plan_export_next (plan_export_cursor_t *cursor, plan_export_block_t *block)
+{
+    plan_block_t *current = cursor->block;
+
+    // No (more) blocks to export.
+    if(current == NULL)
+        return false;
+
+    // The buffer head is the always-empty slot following the last queued block, so a next pointer that
+    // reaches the head means the current block is the last (newest) one in the buffer.
+    plan_block_t *next = current->next;
+    bool next_is_valid = next != block_buffer.head;
+
+    // block_buffer.planned points to the first block after the last optimally planned block. Once it is
+    // reached the remaining blocks may still be re-planned, so they are reported as not yet stable.
+    if(current == block_buffer.planned)
+        cursor->stable = false;
+
+    // Populate the caller supplied read-only view from the internal block.
+    block->identity = current;
+    memcpy(block->target_mm, current->target_mm, sizeof(block->target_mm));
+    block->profile_velocity = plan_compute_profile_nominal_speed(current);
+    // Exit speed of block N is the entry speed of block N+1; the newest block always plans to a stop.
+    block->end_velocity = next_is_valid ? sqrtf(next->entry_speed_sqr) : 0.0f;
+    block->acceleration = current->acceleration;
+    block->condition = current->condition;
+    block->line_number = current->line_number;
+    block->stable = cursor->stable;
+
+    // Advance the cursor, stopping when the head (empty slot) is reached.
+    cursor->block = next_is_valid ? next : NULL;
+
+    return true;
 }
 
 
@@ -659,6 +739,8 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
 
         // Finish up by recalculating the plan with the new block.
         planner_recalculate();
+
+        plan_signal_changed(); // A new block was queued and the velocity profile recomputed.
     }
 
     return true;
@@ -708,6 +790,8 @@ void plan_cycle_reinitialize (void)
     st_update_plan_block_parameters(false);
     if((block_buffer.planned = block_buffer.tail) != block_buffer.head)
         planner_recalculate();
+
+    plan_signal_changed(); // Velocity profile re-planned after a feed hold, override or RPM change.
 }
 
 // Re-calculates buffered motions profile parameters upon a motion-based override change.
