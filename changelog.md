@@ -18,6 +18,8 @@ to allow board code to sequence registration by implementing the weak function `
 
 Drivers:
 
+* ESP32: fixed bug blocking direction output for the second PWM spindle. Removed pin definition interfering with the third serial port for the Pibot Ultra v5.88 controller.
+
 * iMRXT1062, RP2040 and STM32F4xx: I/O expander code updated for core change.
 
 Plugins:
