@@ -34,7 +34,7 @@
 #include "../hal.h"
 #include "../settings.h"
 #include "../planner.h"
-#include "../kinematics.h"
+#include "interface.h"
 
 #define A_MOTOR X_AXIS // Must be X_AXIS
 #define B_MOTOR Y_AXIS // Must be Y_AXIS
@@ -63,34 +63,34 @@ static settings_changed_ptr settings_changed;
 
 // Returns machine position in mm converted from system position steps.
 // TODO: perhaps change to double precision here - float calculation results in errors of a couple of micrometers.
-static float *wp_convert_array_steps_to_mpos (float *position, int32_t *steps)
+static coord_data_t *wp_convert_array_steps_to_mpos (coord_data_t *position, mpos_t *steps)
 {
     coord_t len;
 
-    len.a = (float)steps[A_MOTOR] / settings.axis[A_MOTOR].steps_per_mm;
-    len.b = (float)steps[B_MOTOR] / settings.axis[B_MOTOR].steps_per_mm;
+    len.a = (float)steps->values[A_MOTOR] / settings.axis[A_MOTOR].steps_per_mm;
+    len.b = (float)steps->values[B_MOTOR] / settings.axis[B_MOTOR].steps_per_mm;
 
-    position[X_AXIS] = (machine.width_pow + len.a * len.a - len.b * len.b) / (2.0f * machine.width_mm);
-    len.a = machine.width_mm - position[X_AXIS];
-    position[Y_AXIS] = sqrtf(len.b * len.b - len.a * len.a );
-    position[Z_AXIS] = steps[Z_AXIS] / settings.axis[Z_AXIS].steps_per_mm;
+    position->x = (machine.width_pow + len.a * len.a - len.b * len.b) / (2.0f * machine.width_mm);
+    len.a = machine.width_mm - position->x;
+    position->y = sqrtf(len.b * len.b - len.a * len.a );
+    position->z = (float)steps->z / settings.axis[Z_AXIS].steps_per_mm;
 
     return position;
 }
 
 // Returns machine position in mm converted from system position steps.
 // TODO: perhaps change to double precision here - float calculation results in errors of a couple of micrometers.
-static float *transform_to_cartesian (float *target, float *position)
+static coord_data_t *transform_to_cartesian (coord_data_t *target, coord_data_t *position)
 {
     coord_t len;
 
-    len.a = position[A_MOTOR];
-    len.b = position[B_MOTOR];
+    len.a = position->values[A_MOTOR];
+    len.b = position->values[B_MOTOR];
 
-    target[X_AXIS] = (machine.width_pow + len.a * len.a - len.b * len.b) / (2.0f * machine.width_mm);
-    len.a = machine.width_mm - target[X_AXIS];
-    target[Y_AXIS] = sqrtf(len.b * len.b - len.a * len.a );
-    target[Z_AXIS] = position[Z_AXIS];
+    target->x = (machine.width_pow + len.a * len.a - len.b * len.b) / (2.0f * machine.width_mm);
+    len.a = machine.width_mm - target->x;
+    target->y = sqrtf(len.b * len.b - len.a * len.a );
+    target->z = position->z;
 
     return target;
 }
@@ -98,49 +98,48 @@ static float *transform_to_cartesian (float *target, float *position)
 // Wall plotter calculation only. Returns x or y-axis "steps" based on wall plotter motor steps.
 // A length = sqrt( X^2 + Y^2 )
 // B length = sqrt( (MACHINE_WIDTH - X)^2 + Y^2 )
-inline static float wp_convert_to_a_motor_steps (float *target)
+inline static float wp_convert_to_a_motor_steps (coord_data_t *target)
 {
-    return sqrtf(target[A_MOTOR] * target[A_MOTOR] + target[B_MOTOR] * target[B_MOTOR]);
+    return sqrtf(target->values[A_MOTOR] * target->values[A_MOTOR] + target->values[B_MOTOR] * target->values[B_MOTOR]);
 }
 
-inline static float wp_convert_to_b_motor_steps (float *target)
+inline static float wp_convert_to_b_motor_steps (coord_data_t *target)
 {
-    float xpos = machine.width_mm - target[A_MOTOR];
+    float xpos = machine.width_mm - target->values[A_MOTOR];
 
-    return sqrtf(xpos * xpos + target[B_MOTOR] * target[B_MOTOR]);
+    return sqrtf(xpos * xpos + target->values[B_MOTOR] * target->values[B_MOTOR]);
 }
 
 // Transform absolute position from cartesian coordinate system to wall plotter coordinate system
-static float *transform_from_cartesian (float *target, float *position)
+static coord_data_t *transform_from_cartesian (coord_data_t *target, coord_data_t *position)
 {
     uint_fast8_t idx = N_AXIS - 1;
 
     do {
-        target[idx] = position[idx];
+        target->values[idx] = position->values[idx];
     } while(--idx > Y_AXIS);
 
-    target[A_MOTOR] = wp_convert_to_a_motor_steps(position);
-    target[B_MOTOR] = wp_convert_to_b_motor_steps(position);
+    target->values[A_MOTOR] = wp_convert_to_a_motor_steps(position);
+    target->values[B_MOTOR] = wp_convert_to_b_motor_steps(position);
 
     return target;
 }
 
-
-static inline float get_distance (float *p0, float *p1)
+static inline float get_distance (coord_data_t *p0, coord_data_t *p1)
 {
-    uint_fast8_t idx = Z_AXIS;
+    uint_fast8_t idx = N_AXIS;
     float distance = 0.0f;
 
     do {
         idx--;
-        distance += (p0[idx] - p1[idx]) * (p0[idx] - p1[idx]);
+        distance += (p0->values[idx] - p1->values[idx]) * (p0->values[idx] - p1->values[idx]);
     } while(idx);
 
     return sqrtf(distance);
 }
 
 // Wall plotter is circular in motion, so long lines must be divided up
-static float *wp_segment_line (float *target, float *position, plan_line_data_t *pl_data, bool init)
+static coord_data_t *wp_segment_line (coord_data_t *target, coord_data_t *position, plan_line_data_t *pl_data, bool init)
 {
     static uint_fast16_t iterations;
     static bool segmented;
@@ -155,11 +154,11 @@ static float *wp_segment_line (float *target, float *position, plan_line_data_t 
 
         memcpy(final_target.values, target, sizeof(final_target));
 
-        transform_to_cartesian(segment_target.values, position);
+        transform_to_cartesian(&segment_target, position);
 
-        delta.x = target[X_AXIS] - segment_target.x;
-        delta.y = target[Y_AXIS] - segment_target.y;
-        delta.z = target[Z_AXIS] - segment_target.z;
+        delta.x = target->x - segment_target.x;
+        delta.y = target->y - segment_target.y;
+        delta.z = target->z - segment_target.z;
 
         float distance = sqrtf(delta.x * delta.x + delta.y * delta.y);
 
@@ -193,10 +192,10 @@ static float *wp_segment_line (float *target, float *position, plan_line_data_t 
         } else
             memcpy(&segment_target, &final_target, sizeof(coord_data_t));
 
-        transform_from_cartesian(cpos.values, segment_target.values);
+        transform_from_cartesian(&cpos, &segment_target);
     }
 
-    return iterations == 0 || jog_cancel ? NULL : cpos.values;
+    return iterations == 0 || jog_cancel ? NULL : &cpos;
 }
 
 
@@ -208,20 +207,20 @@ static uint_fast8_t wp_limits_get_axis_mask (uint_fast8_t idx)
 
 static void wp_limits_set_target_pos (uint_fast8_t idx) // fn name?
 {
-    float xy[2];
+    coord_data_t xy;
     int32_t axis_position;
 
-    xy[X_AXIS] = sys.position[X_AXIS] / settings.axis[X_AXIS].steps_per_mm;
-    xy[Y_AXIS] = sys.position[Y_AXIS] / settings.axis[Y_AXIS].steps_per_mm;
+    xy.x = sys.position[X_AXIS] / settings.axis[X_AXIS].steps_per_mm;
+    xy.y = sys.position[Y_AXIS] / settings.axis[Y_AXIS].steps_per_mm;
 
     switch(idx) {
         case X_AXIS:
-            axis_position = wp_convert_to_b_motor_steps(xy);
+            axis_position = wp_convert_to_b_motor_steps(&xy);
             sys.position[A_MOTOR] = axis_position;
             sys.position[B_MOTOR] = -axis_position;
             break;
         case Y_AXIS:
-            sys.position[A_MOTOR] = sys.position[B_MOTOR] = wp_convert_to_a_motor_steps(xy);
+            sys.position[A_MOTOR] = sys.position[B_MOTOR] = wp_convert_to_a_motor_steps(&xy);
             break;
         default:
             sys.position[idx] = 0;
@@ -234,21 +233,21 @@ static void wp_limits_set_target_pos (uint_fast8_t idx) // fn name?
 // NOTE: settings.max_travel[] is stored as a negative value.
 static void wp_limits_set_machine_positions (axes_signals_t cycle)
 {
-    float xy[2];
+    coord_data_t xy;
     uint_fast8_t idx = N_AXIS;
 
-    xy[X_AXIS] = sys.position[X_AXIS] / settings.axis[X_AXIS].steps_per_mm;
-    xy[Y_AXIS] = sys.position[Y_AXIS] / settings.axis[Y_AXIS].steps_per_mm;
+    xy.x = sys.position[X_AXIS] / settings.axis[X_AXIS].steps_per_mm;
+    xy.y = sys.position[Y_AXIS] / settings.axis[Y_AXIS].steps_per_mm;
 
     if(settings.homing.flags.force_set_origin) {
         if (cycle.mask & bit(--idx)) do {
             switch(--idx) {
                 case X_AXIS:
-                    sys.position[A_MOTOR] = wp_convert_to_b_motor_steps(xy);
+                    sys.position[A_MOTOR] = wp_convert_to_b_motor_steps(&xy);
                     sys.position[B_MOTOR] = - sys.position[A_MOTOR];
                     break;
                 case Y_AXIS:
-                    sys.position[A_MOTOR] = wp_convert_to_a_motor_steps(xy);
+                    sys.position[A_MOTOR] = wp_convert_to_a_motor_steps(&xy);
                     sys.position[B_MOTOR] = sys.position[A_MOTOR];
                     break;
                 default:
@@ -267,12 +266,12 @@ static void wp_limits_set_machine_positions (axes_signals_t cycle)
                                           : lroundf(-pulloff->values[idx] * settings.axis[idx].steps_per_mm);
              switch(idx) {
                  case X_AXIS:
-                     off_axis_position = wp_convert_to_b_motor_steps(xy);
+                     off_axis_position = wp_convert_to_b_motor_steps(&xy);
                      sys.position[A_MOTOR] = set_axis_position + off_axis_position;
                      sys.position[B_MOTOR] = set_axis_position - off_axis_position;
                      break;
                  case Y_AXIS:
-                     off_axis_position = wp_convert_to_a_motor_steps(xy);
+                     off_axis_position = wp_convert_to_a_motor_steps(&xy);
                      sys.position[A_MOTOR] = off_axis_position + set_axis_position;
                      sys.position[B_MOTOR] = off_axis_position - set_axis_position;
                      break;

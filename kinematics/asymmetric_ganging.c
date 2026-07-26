@@ -32,7 +32,7 @@
 #include "../hal.h"
 #include "../settings.h"
 #include "../planner.h"
-#include "../kinematics.h"
+#include "interface.h"
 
 #ifdef ASYMMETRIC_AUTO_SQUARE
 #define PRIMARY_AXIS ASYMMETRIC_AUTO_SQUARE
@@ -155,23 +155,23 @@ static axes_signals_t onGetGangedAxes (bool auto_squared)
 
 #endif // ASYMMETRIC_AUTO_SQUARE
 
-static float *convert_array_steps_to_mpos (float *position, int32_t *steps)
+static coord_data_t *convert_array_steps_to_mpos (coord_data_t *position, mpos_t *steps)
 {
     uint_fast8_t idx = N_AXIS;
     do {
         idx--;
-        position[idx] = steps[idx] / settings.axis[idx].steps_per_mm;
+        position->values[idx] = steps->values[idx] / settings.axis[idx].steps_per_mm;
     } while(idx);
 
     return position;
 }
 
 // Transform position from cartesian coordinate system to corexy coordinate system
-static inline float *transform_from_cartesian (float *target, float *position)
+static inline coord_data_t *transform_from_cartesian (coord_data_t *target, coord_data_t *position)
 {
     memcpy(target, position, sizeof(coord_data_t));
 
-    target[GANGED_AXIS] = position[PRIMARY_AXIS];
+    target->values[GANGED_AXIS] = position->values[PRIMARY_AXIS];
 
     return target;
 }
@@ -197,22 +197,28 @@ static void set_machine_positions (axes_signals_t cycle)
 }
 
 // called from mc_line() to segment lines if not overridden, default implementation for pass-through
-static float *kinematics_segment_line (float *target, float *position, plan_line_data_t *pl_data, bool init)
+static coord_data_t *kinematics_segment_line (coord_data_t *target, coord_data_t *position, plan_line_data_t *pl_data, bool init)
 {
     static uint_fast8_t iterations;
     static coord_data_t trsf;
 
     if(init) {
         iterations = 2;
-        transform_from_cartesian(trsf.values, target);
+        transform_from_cartesian(&trsf, target);
     }
 
-    return iterations-- == 0 ? NULL : trsf.values;
+    return iterations-- == 0 ? NULL : &trsf;
 }
 
 static float homing_cycle_get_feedrate (axes_signals_t cycle, float feedrate, homing_mode_t mode)
 {
     return feedrate;
+}
+
+static bool validate_steps_mm (float value)
+{
+    // max diff 1%
+    return fabs(settings.axis[PRIMARY_AXIS].steps_per_mm - value) <= settings.axis[PRIMARY_AXIS].steps_per_mm / 100.0f;
 }
 
 static void onSettingsChanged (settings_t *settings, settings_changed_flags_t changed)
@@ -225,7 +231,12 @@ static void onSettingsChanged (settings_t *settings, settings_changed_flags_t ch
 
     memcpy(&settings->axis[GANGED_AXIS], &settings->axis[PRIMARY_AXIS], sizeof(axis_settings_t));
 
-    settings->axis[GANGED_AXIS].steps_per_mm = steps_per_mm;
+    if(!changed.restore_defaults) {
+        if(validate_steps_mm(steps_per_mm))
+            settings->axis[GANGED_AXIS].steps_per_mm = steps_per_mm;
+        else
+            report_message("Ganged axis step/mm is out of range, reset to default.", Message_Warning);
+    }
 
     do {
         if(settings->homing.cycle[--idx].bits & PRIMARY_AXIS_BIT)
@@ -286,8 +297,23 @@ PROGMEM static const char label[] = {
 #endif
 };
 
+FLASHMEM static status_code_t set_steps_mm (setting_id_t setting, float value)
+{
+    if(!validate_steps_mm(value))
+        return Status_SettingValueOutOfRange;
+
+    settings.axis[GANGED_AXIS].steps_per_mm = value;
+
+    return Status_OK;
+}
+
+FLASHMEM static float get_steps_mm (setting_id_t setting)
+{
+    return settings.axis[GANGED_AXIS].steps_per_mm;
+}
+
 PROGMEM static const setting_detail_t axis_settings[] = {
-    { Setting_AxisStepsPerMM + GANGED_AXIS, Group_Axis0 + PRIMARY_AXIS, label, "step/mm", Format_Decimal, "#####0.000##", NULL, NULL, Setting_IsLegacy, &settings.axis[GANGED_AXIS].steps_per_mm, NULL, NULL },
+    { Setting_AxisStepsPerMM + GANGED_AXIS, Group_Axis0 + PRIMARY_AXIS, label, "step/mm", Format_Decimal, "#####0.000##", NULL, NULL, Setting_IsLegacyFn, set_steps_mm, get_steps_mm, NULL },
 };
 
 static void report_options (bool newopt)
@@ -295,7 +321,7 @@ static void report_options (bool newopt)
     on_report_options(newopt);
 
     if(!newopt)
-        hal.stream.write("[KINEMATICS:Asymmetric ganging v0.01]" ASCII_EOL);
+        hal.stream.write("[KINEMATICS:Asymmetric ganging v0.02]" ASCII_EOL);
 }
 
 // Initialize API pointers for xxx kinematics

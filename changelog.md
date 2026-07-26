@@ -1,15 +1,46 @@
 ## grblHAL changelog
 
+<a name="20260726">Build 20260726
+
+Core:
+
+* Fix for M3 enabled laser turned off on feed hold when $63 option _Disable laser during hold_ is off. Ref. issue [#991](https://github.com/grblHAL/core/issues/991).
+
+* Improved handling of some VFS file system actions \(`unlink`, `mkdirv` and `rmdir`\), added support for `truncate`.
+
+* Changed some kinematics API function signatures for readability/debugability.
+
+* For developers: the ioports implementation has been changed to allow for consecutive pin numbers for external \(expander based\) I/O
+so that external pins can be assigned to a given expander for basic I/O functions.
+Plugins should thus declare themself as external before registering and add a pin base, provided by the core, to their pin information output.
+In addition they should allow multiple calls to their init function, with only the first acted upon,
+to allow board code to sequence registration by implementing the weak function `board_ports_init()`.
+
+Drivers:
+
+* iMRXT1062, RP2040 and STM32F4xx: I/O expander code updated for core change.
+
+Plugins:
+
+* SDCard, YModem: no longer stores the file name to avoid potential buffer overflow. Files will be truncated to zero length on aborted transfers.
+
+* SDCard, filing systems: added support for creating and deleting subdirectories via `$FMD` and `$FRD`.
+Based on PR [#15](https://github.com/grblHAL/Plugin_SD_card/pull/15) which was not accepted due to the core VFS had to be changed to properly support the new commands.
+
+* Misc: updated for core changes.
+
+---
+
 <a name="20260719">Build 20260719
 
 Core:
 
-* Updated VFS to correctly handle long working directory paths that would otherwise lead to buffer overflows. Ref. PR#986 which is a partial fix.
+* Updated VFS to correctly handle long working directory paths that would otherwise lead to buffer overflows. Ref. PR [#986](https://github.com/grblHAL/core/pull/986) which is a partial fix.
 > [!NOTE]
 > The underlying file systems may impose their own limits to path lengths.
 
 
-* Updated named O calls to allow name lengths only limited by available heap. Ref. PR#989 which likely would return an error on overly long names and would potentially execute incorrect code if not.
+* Updated named O calls to allow name lengths only limited by available heap. Ref. PR [#989](https://github.com/grblHAL/core/pull/989) which likely would return an error on overly long names and would potentially execute incorrect code if not.
 
 Plugins:
 

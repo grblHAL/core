@@ -42,7 +42,7 @@
 #include "motion_control.h"
 #endif
 #ifdef KINEMATICS_API
-#include "kinematics.h"
+#include "kinematics/interface.h"
 #endif
 
 static void task_execute (sys_state_t state);

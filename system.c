@@ -30,7 +30,7 @@
 #include "state_machine.h"
 #include "machine_limits.h"
 #ifdef KINEMATICS_API
-#include "kinematics.h"
+#include "kinematics/interface.h"
 #endif
 
 static uint8_t n_axis = N_AXIS;
@@ -1240,7 +1240,7 @@ __NOTE:__ If motor steps and machine position are not in the same coordinate fra
 void system_convert_array_steps_to_mpos (float *position, int32_t *steps)
 {
 #ifdef KINEMATICS_API
-    kinematics.transform_steps_to_cartesian(position, steps);
+    kinematics.transform_steps_to_cartesian((coord_data_t *)position, (mpos_t *)steps);
 #else
     uint_fast8_t idx = N_AXIS;
     do {

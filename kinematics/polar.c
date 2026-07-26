@@ -31,7 +31,7 @@
 #include "../hal.h"
 #include "../settings.h"
 #include "../planner.h"
-#include "../kinematics.h"
+#include "interface.h"
 
 #define RADIUS_AXIS X_AXIS
 #define POLAR_AXIS Y_AXIS
@@ -57,22 +57,22 @@ inline static float abs_angle (float ang)
 }
 
 // Returns machine position in mm converted from system position steps.
-static float *transform_to_cartesian (float *target, float *position)
+static coord_data_t *transform_to_cartesian (coord_data_t *target, coord_data_t *position)
 {
     uint_fast8_t idx = N_AXIS;
     do {
         switch(--idx) {
 
             case X_AXIS:
-                target[X_AXIS] = cosf(position[POLAR_AXIS] * RADDEG) * position[RADIUS_AXIS];
+                target->x = cosf(position->values[POLAR_AXIS] * RADDEG) * position->values[RADIUS_AXIS];
                 break;
 
             case Y_AXIS:
-                target[Y_AXIS] = sinf(position[POLAR_AXIS] * RADDEG) * position[RADIUS_AXIS];
+                target->y = sinf(position->values[POLAR_AXIS] * RADDEG) * position->values[RADIUS_AXIS];
                 break;
 
             default:
-                target[idx] = position[idx]; // unchanged
+                target->values[idx] = position->values[idx]; // unchanged
                 break;
         }
     } while(idx);
@@ -81,63 +81,63 @@ static float *transform_to_cartesian (float *target, float *position)
 }
 
 // Returns machine position in mm converted from system position steps.
-static float *polar_convert_array_steps_to_mpos (float *position, int32_t *steps)
+static coord_data_t *polar_convert_array_steps_to_mpos (coord_data_t *position, mpos_t *steps)
 {
     coord_data_t cpos;
 
     uint_fast8_t idx = N_AXIS;
     do {
         idx--;
-        cpos.values[idx] = steps[idx] / settings.axis[idx].steps_per_mm;
+        cpos.values[idx] = steps->values[idx] / settings.axis[idx].steps_per_mm;
     } while(idx);
 
-    return transform_to_cartesian(position, cpos.values);
+    return transform_to_cartesian(position, &cpos);
 }
 
 // Transform absolute position from cartesian coordinate system to polar coordinate system
-static float *transform_from_cartesian (float *target, float *position)
+static coord_data_t *transform_from_cartesian (coord_data_t *target, coord_data_t *position)
 {
     float delta_ang;  // the difference from the last and next angle
     uint_fast8_t idx = N_AXIS - 1;
 
     do {
-        target[idx] = position[idx];
+        target->values[idx] = position->values[idx];
     } while(--idx > Y_AXIS);
 
-    target[RADIUS_AXIS] = hypot_f(position[X_AXIS], position[Y_AXIS]);
-    if (target[RADIUS_AXIS] == 0.0f) {
-        target[POLAR_AXIS] = last_pos.values[POLAR_AXIS];  // don't care about angle at center
+    target->values[RADIUS_AXIS] = hypot_f(position->x, position->y);
+    if (target->values[RADIUS_AXIS] == 0.0f) {
+        target->values[POLAR_AXIS] = last_pos.values[POLAR_AXIS];  // don't care about angle at center
     } else {
-        target[POLAR_AXIS] = atan2f(position[Y_AXIS], position[X_AXIS]) * DEGRAD;
+        target->values[POLAR_AXIS] = atan2f(position->y, position->x) * DEGRAD;
         // no negative angles...we want the absolute angle not -90, use 270
-        target[POLAR_AXIS] = abs_angle(target[POLAR_AXIS]);
+        target->values[POLAR_AXIS] = abs_angle(target->values[POLAR_AXIS]);
     }
 
-    delta_ang = target[POLAR_AXIS] - abs_angle(last_pos.values[POLAR_AXIS]);
+    delta_ang = target->values[POLAR_AXIS] - abs_angle(last_pos.values[POLAR_AXIS]);
     // if the delta is above 180 degrees it means we are crossing the 0 degree line
     if (fabs(delta_ang) <= 180.0f)
-        target[POLAR_AXIS] = last_pos.values[POLAR_AXIS] + delta_ang;
+        target->values[POLAR_AXIS] = last_pos.values[POLAR_AXIS] + delta_ang;
     else
-        target[POLAR_AXIS] = last_pos.values[POLAR_AXIS] + (delta_ang > 0.0f ? - (360.0f - delta_ang) : delta_ang + 360.0f);
+        target->values[POLAR_AXIS] = last_pos.values[POLAR_AXIS] + (delta_ang > 0.0f ? - (360.0f - delta_ang) : delta_ang + 360.0f);
 
     return target;
 }
 
-static inline float get_distance (float *p0, float *p1)
+static inline float get_distance (coord_data_t *p0, coord_data_t *p1)
 {
     uint_fast8_t idx = N_AXIS;
     float distance = 0.0f;
 
     do {
         idx--;
-        distance += (p0[idx] - p1[idx]) * (p0[idx] - p1[idx]);
+        distance += (p0->values[idx] - p1->values[idx]) * (p0->values[idx] - p1->values[idx]);
     } while(idx);
 
     return sqrtf(distance);
 }
 
 // Polar is circular in motion, so long lines must be divided up
-static float *polar_segment_line (float *target, float *position, plan_line_data_t *pl_data, bool init)
+static coord_data_t *polar_segment_line (coord_data_t *target, coord_data_t *position, plan_line_data_t *pl_data, bool init)
 {
     static uint_fast16_t iterations;
     static bool segmented;
@@ -151,13 +151,13 @@ static float *polar_segment_line (float *target, float *position, plan_line_data
         jog_cancel = false;
         r_offset = gc_get_offset(RADIUS_AXIS, false) * 2.0f; //??
 
-        memcpy(final_target.values, target, sizeof(final_target));
+        memcpy(&final_target, target, sizeof(coord_data_t));
 
-        transform_to_cartesian(segment_target.values, position);
+        transform_to_cartesian(&segment_target, position);
 
-        delta.x = target[X_AXIS] - segment_target.x;
-        delta.y = target[Y_AXIS] - segment_target.y;
-        delta.z = target[Z_AXIS] - segment_target.z;
+        delta.x = target->x - segment_target.x;
+        delta.y = target->y - segment_target.y;
+        delta.z = target->z - segment_target.z;
 
         distance = sqrtf(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z);
 
@@ -193,11 +193,11 @@ static float *polar_segment_line (float *target, float *position, plan_line_data
             memcpy(&segment_target, &final_target, sizeof(coord_data_t));
 
         segment_target.values[RADIUS_AXIS] -= r_offset;
-        transform_from_cartesian(cpos.values, segment_target.values);
+        transform_from_cartesian(&cpos, &segment_target);
         segment_target.values[RADIUS_AXIS] += r_offset;
 
         if(!pl_data->condition.rapid_motion && segmented) {
-            float rate_multiplier = get_distance(last_pos.values, cpos.values) / distance;
+            float rate_multiplier = get_distance(&last_pos, &cpos) / distance;
             rate_multiplier = rate_multiplier == 0.0f ? 1.0 : (rate_multiplier < 0.5f ? 0.5f : rate_multiplier);
             pl_data->feed_rate *= rate_multiplier;
             pl_data->rate_multiplier = 1.0f / rate_multiplier;
@@ -206,7 +206,7 @@ static float *polar_segment_line (float *target, float *position, plan_line_data
         memcpy(&last_pos, &cpos, sizeof(coord_data_t));
     }
 
-    return iterations == 0 || jog_cancel ? NULL : cpos.values;
+    return iterations == 0 || jog_cancel ? NULL : &cpos;
 }
 
 static uint_fast8_t polar_limits_get_axis_mask (uint_fast8_t idx)
@@ -258,7 +258,7 @@ static void onProgramCompleted (program_flow_t program_flow, bool check_mode)
     coord_data_t cpos;
 
     memset(last_pos.values, 0, sizeof(coord_data_t));
-    transform_from_cartesian(cpos.values, gc_state.position);
+    transform_from_cartesian(&cpos, (coord_data_t *)gc_state.position);
     memcpy(&last_pos, &cpos, sizeof(coord_data_t));
 
     sys.position[POLAR_AXIS] = lroundf(last_pos.values[POLAR_AXIS] * settings.axis[POLAR_AXIS].steps_per_mm);

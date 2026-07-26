@@ -121,7 +121,8 @@ typedef enum {
     Status_AuxiliaryPortUnusable = 86,
     Status_ToolInSPindle = 87,
     Status_NoToolInSPindle = 88,
-    Status_StatusMax = Status_NoToolInSPindle,
+    Status_FileDeleteFailed = 89,
+    Status_StatusMax = Status_FileDeleteFailed,
     Status_UserException = 253,
     Status_Handled,   // For internal use only
     Status_Unhandled  // For internal use only

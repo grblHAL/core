@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2019-2024 Terje Io
+  Copyright (c) 2019-2026 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
 
   grblHAL is free software: you can redistribute it and/or modify
@@ -29,7 +29,7 @@
 #include "../hal.h"
 #include "../settings.h"
 #include "../planner.h"
-#include "../kinematics.h"
+#include "interface.h"
 
 // CoreXY motor assignments. DO NOT ALTER.
 // NOTE: If the A and B motor axis bindings are changed, this effects the CoreXY equations.
@@ -40,54 +40,54 @@ static on_report_options_ptr on_report_options;
 static travel_limits_ptr check_travel_limits;
 
 // Returns x or y-axis "steps" based on CoreXY motor steps.
-inline static int32_t corexy_convert_to_a_motor_steps (int32_t *steps)
+inline static int32_t corexy_convert_to_a_motor_steps (mpos_t *steps)
 {
-    return (steps[A_MOTOR] + steps[B_MOTOR]) >> 1;
+    return (steps->values[A_MOTOR] + steps->values[B_MOTOR]) >> 1;
 }
 
-inline static int32_t corexy_convert_to_b_motor_steps (int32_t *steps)
+inline static int32_t corexy_convert_to_b_motor_steps (mpos_t *steps)
 {
-    return (steps[A_MOTOR] - steps[B_MOTOR]) >> 1;
+    return (steps->values[A_MOTOR] - steps->values[B_MOTOR]) >> 1;
 }
 
 // Returns machine position of axis 'idx'. Must be sent a 'step' array.
-static float *corexy_convert_array_steps_to_mpos (float *position, int32_t *steps)
+static coord_data_t *corexy_convert_array_steps_to_mpos (coord_data_t *position, mpos_t *steps)
 {
     uint_fast8_t idx;
 
-    position[X_AXIS] = corexy_convert_to_a_motor_steps(steps) / settings.axis[X_AXIS].steps_per_mm;
-    position[Y_AXIS] = corexy_convert_to_b_motor_steps(steps) / settings.axis[Y_AXIS].steps_per_mm;
+    position->x = corexy_convert_to_a_motor_steps(steps) / settings.axis[X_AXIS].steps_per_mm;
+    position->y = corexy_convert_to_b_motor_steps(steps) / settings.axis[Y_AXIS].steps_per_mm;
 
     for(idx = Z_AXIS; idx < N_AXIS; idx++)
-        position[idx] = steps[idx] / settings.axis[idx].steps_per_mm;
+        position->values[idx] = steps->values[idx] / settings.axis[idx].steps_per_mm;
 
     return position;
 }
 
 // Transform position from cartesian coordinate system to corexy coordinate system
-static inline float *transform_from_cartesian (float *target, float *position)
+static inline coord_data_t *transform_from_cartesian (coord_data_t *target, coord_data_t *position)
 {
     uint_fast8_t idx;
 
-    target[X_AXIS] = position[X_AXIS] + position[Y_AXIS];
-    target[Y_AXIS] = position[X_AXIS] - position[Y_AXIS];
+    target->x = position->x + position->y;
+    target->y = position->x - position->y;
 
     for(idx = Z_AXIS; idx < N_AXIS; idx++)
-        target[idx] = position[idx];
+        target->values[idx] = position->values[idx];
 
     return target;
 }
 
 // Transform position from motor (corexy) coordinate system to cartesian coordinate system
-static inline float *transform_to_cartesian (float *target, float *position)
+static inline coord_data_t *transform_to_cartesian (coord_data_t *target, coord_data_t *position)
 {
     uint_fast8_t idx;
 
-    target[X_AXIS] = (position[X_AXIS] + position[Y_AXIS]) * 0.5f;
-    target[Y_AXIS] = (position[X_AXIS] - position[Y_AXIS]) * 0.5f;
+    target->x = (position->x + position->y) * 0.5f;
+    target->y = (position->x - position->y) * 0.5f;
 
     for(idx = Z_AXIS; idx < N_AXIS; idx++)
-        target[idx] = position[idx];
+        target->values[idx] = position->values[idx];
 
     return target;
 }
@@ -103,12 +103,12 @@ static void corexy_limits_set_target_pos (uint_fast8_t idx) // fn name?
 
     switch(idx) {
         case X_AXIS:
-            axis_position = corexy_convert_to_b_motor_steps(sys.position);
+            axis_position = corexy_convert_to_b_motor_steps((mpos_t *)sys.position);
             sys.position[A_MOTOR] = axis_position;
             sys.position[B_MOTOR] = -axis_position;
             break;
         case Y_AXIS:
-            sys.position[A_MOTOR] = sys.position[B_MOTOR] = corexy_convert_to_a_motor_steps(sys.position);
+            sys.position[A_MOTOR] = sys.position[B_MOTOR] = corexy_convert_to_a_motor_steps((mpos_t *)sys.position);
             break;
         default:
             sys.position[idx] = 0;
@@ -123,11 +123,11 @@ static bool corexy_check_travel_limits (float *target, axes_signals_t axes, bool
     if(is_cartesian)
         return check_travel_limits(target, axes, true, envelope);
 
-    float cartesian_coords[N_AXIS];
+    coord_data_t cartesian_coords;
 
-    transform_to_cartesian(cartesian_coords, target);
+    transform_to_cartesian(&cartesian_coords, (coord_data_t *)target);
 
-    return check_travel_limits(cartesian_coords, axes, true, envelope);
+    return check_travel_limits(cartesian_coords.values, axes, true, envelope);
 }
 
 // Set machine positions for homed limit switches. Don't update non-homed axes.
@@ -140,11 +140,11 @@ static void corexy_limits_set_machine_positions (axes_signals_t cycle)
         do {
             if(cycle.mask & bit(--idx)) switch(idx) {
                 case X_AXIS:
-                    sys.position[A_MOTOR] = corexy_convert_to_b_motor_steps(sys.position);
+                    sys.position[A_MOTOR] = corexy_convert_to_b_motor_steps((mpos_t *)sys.position);
                     sys.position[B_MOTOR] = - sys.position[A_MOTOR];
                     break;
                 case Y_AXIS:
-                    sys.position[A_MOTOR] = corexy_convert_to_a_motor_steps(sys.position);
+                    sys.position[A_MOTOR] = corexy_convert_to_a_motor_steps((mpos_t *)sys.position);
                     sys.position[B_MOTOR] = sys.position[A_MOTOR];
                     break;
                 default:
@@ -163,12 +163,12 @@ static void corexy_limits_set_machine_positions (axes_signals_t cycle)
                                           : lroundf(-pulloff->values[idx] * settings.axis[idx].steps_per_mm);
              switch(idx) {
                  case X_AXIS:
-                     off_axis_position = corexy_convert_to_b_motor_steps(sys.position);
+                     off_axis_position = corexy_convert_to_b_motor_steps((mpos_t *)sys.position);
                      sys.position[A_MOTOR] = set_axis_position + off_axis_position;
                      sys.position[B_MOTOR] = set_axis_position - off_axis_position;
                      break;
                  case Y_AXIS:
-                     off_axis_position = corexy_convert_to_a_motor_steps(sys.position);
+                     off_axis_position = corexy_convert_to_a_motor_steps((mpos_t *)sys.position);
                      sys.position[A_MOTOR] = off_axis_position + set_axis_position;
                      sys.position[B_MOTOR] = off_axis_position - set_axis_position;
                      break;
@@ -180,46 +180,46 @@ static void corexy_limits_set_machine_positions (axes_signals_t cycle)
     } while(idx);
 }
 
-static inline float get_distance (float *p0, float *p1)
+static inline float get_distance (coord_data_t *p0, coord_data_t *p1)
 {
     uint_fast8_t idx = N_AXIS;
     float distance = 0.0f;
 
     do {
         idx--;
-        distance += (p0[idx] - p1[idx]) * (p0[idx] - p1[idx]);
+        distance += (p0->values[idx] - p1->values[idx]) * (p0->values[idx] - p1->values[idx]);
     } while(idx);
 
     return sqrtf(distance);
 }
 
 // called from mc_line() to segment lines if not overridden, default implementation for pass-through
-static float *kinematics_segment_line (float *target, float *position, plan_line_data_t *pl_data, bool init)
+static coord_data_t *kinematics_segment_line (coord_data_t *target, coord_data_t *position, plan_line_data_t *pl_data, bool init)
 {
     static uint_fast8_t iterations;
-    static float trsf[N_AXIS];
+    static coord_data_t trsf;
 
     if(init) {
 
         iterations = 2;
 
-        transform_from_cartesian(trsf, target);
+        transform_from_cartesian(&trsf, target);
 
         if(!pl_data->condition.rapid_motion) {
 
             uint_fast8_t idx;
-            float cpos[N_AXIS];
+            coord_data_t cpos;
 
-            cpos[X_AXIS] = (position[X_AXIS] + position[Y_AXIS]) * .5f;
-            cpos[Y_AXIS] = (position[X_AXIS] - position[Y_AXIS]) * .5f;
+            cpos.x = (position->x + position->y) * .5f;
+            cpos.y = (position->x - position->y) * .5f;
             for(idx = Z_AXIS; idx < N_AXIS; idx++)
-                cpos[idx] = position[idx];
+                cpos.values[idx] = position->values[idx];
 
-            pl_data->feed_rate *= get_distance(trsf, position) / get_distance(target, cpos);
+            pl_data->feed_rate *= get_distance(&trsf, position) / get_distance(target, &cpos);
         }
     }
 
-    return iterations-- == 0 ? NULL : trsf;
+    return iterations-- == 0 ? NULL : &trsf;
 }
 
 static bool homing_cycle_validate (axes_signals_t cycle)
