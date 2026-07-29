@@ -1,5 +1,23 @@
 ## grblHAL changelog
 
+<a name="20260729">20260729
+
+Drivers:
+
+* STM32F4xx: added support for more PWM channels and 32 bit timers for RGB LED strip. Added support for RGB LED strip and two PWM aux outputs \(mutually exclusive\) to the BTT Octopus Pro map.
+
+* STM32F1xx, STM32F3xx and STM32F7xx: updated to handle rare skip of interrupts if fired at the same time. Based on STM32F4xx PR [#302](https://github.com/grblHAL/STM32F4xx/pull/302).
+
+* ESP32, iMXRT1062, RP2040, STM32F4xx and STM32F7xx: moved `$I` network reporting to networking plugin.
+
+Plugins:
+
+* Networking: moved $I network reporting from drivers here. Added `HOSTNAME` element to `$I` output when MDNS is enabled, ref. PR [#22](https://github.com/grblHAL/Plugin_networking/pull/22).
+
+* Misc: FluidNC expander, M280 servo: "hardened" code.
+
+---
+
 <a name="20260726">Build 20260726
 
 Core:
