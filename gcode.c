@@ -753,7 +753,8 @@ static void onSettingsChanged (settings_t *settings, settings_changed_flags_t ch
     if(changed.spindle || changed.restore_defaults)
         gc_spindle_off();
 
-    settings_changed(settings, changed);
+    if(settings_changed)
+        settings_changed(settings, changed);
 }
 
 FLASHMEM void gc_init (bool stop)
