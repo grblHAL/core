@@ -37,7 +37,7 @@
 #include "motion_control.h"
 #include "tool_change.h"
 #ifdef KINEMATICS_API
-#include "kinematics.h"
+#include "kinematics/interface.h"
 #endif
 
 #if ENABLE_BACKLASH_COMPENSATION
@@ -84,7 +84,7 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
 #ifdef KINEMATICS_API
     float feed_rate = pl_data->feed_rate;
     pl_data->rate_multiplier = 1.0f;
-    target = kinematics.segment_line(target, plan_get_position(), pl_data, true);
+    target = kinematics.segment_line((coord_data_t *)target, (coord_data_t *)plan_get_position(), pl_data, true)->values;
 #endif
 
     // If enabled, check for soft limit violations. Placed here all line motions are picked up
@@ -110,7 +110,7 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
         // parser and planner are separate from the system machine positions, this is doable.
 
 #ifdef KINEMATICS_API
-      while(kinematics.segment_line(target, NULL, pl_data, false)) {
+      while(kinematics.segment_line((coord_data_t *)target, NULL, pl_data, false)) {
 #endif
 
 #if ENABLE_BACKLASH_COMPENSATION

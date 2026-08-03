@@ -845,9 +845,10 @@ FLASHMEM bool spindle_restore (spindle_ptrs_t *spindle, spindle_state_t state, f
 {
     bool ok;
 
-    if(spindle->cap.laser) // When in laser mode, ignore spindle spin-up delay. Set to turn on laser when cycle starts.
-        ok = (sys.step_control.update_spindle_rpm = _spindle_set_state(spindle, state, 0.0f, 0));
-    else if(!(ok = spindle_check_state(spindle, state) && spindle->param->rpm == rpm))
+    if(spindle->cap.laser) { // When in laser mode, ignore spindle spin-up delay. Set to turn on laser when cycle starts.
+        if(!(ok = !settings.flags.disable_laser_during_hold))
+            ok = (sys.step_control.update_spindle_rpm = _spindle_set_state(spindle, state, 0.0f, 0));
+    } else if(!(ok = spindle_check_state(spindle, state) && spindle->param->rpm == rpm))
         ok = spindle_set_state_wait(spindle, state, rpm, delay_ms);
 
     return ok;

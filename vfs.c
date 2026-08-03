@@ -23,6 +23,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include "hal.h"
 #include "vfs.h"
@@ -30,6 +31,8 @@
 #ifdef ARDUINO_SAM_DUE
 #undef feof
 #endif
+
+typedef void (*vfs_ptr)(void);
 
 static vfs_mount_t *get_rootfs (void);
 
@@ -318,6 +321,24 @@ static const char *get_filename (vfs_mount_t *mount, const char *filename)
         return filename;
 }
 
+static vfs_mount_t *mount_modifiable (const char *path, size_t op_fn)
+{
+    vfs_mount_t *mount = get_mount((path = parse_path(path)));
+
+    if(mount == NULL || mount->mode.hidden)
+        vfs_errno = EFAULT;
+    else if(mount->mode.read_only)
+        vfs_errno = EROFS;
+    else if(*((vfs_ptr *)((uint8_t *)mount->vfs + op_fn)) == NULL)
+        vfs_errno = EPERM;
+    else if(!strncmp(mount->path, path, strlen(path)))
+        vfs_errno = EISDIR;
+    else
+        vfs_errno = 0;
+
+    return vfs_errno ? NULL : mount;
+}
+
 vfs_file_t *vfs_open (const char *filename, const char *mode)
 {
     vfs_file_t *file = NULL;
@@ -381,6 +402,13 @@ int vfs_seek (vfs_file_t *file, size_t offset)
     return ((vfs_t *)(file->fs))->fseek(file, offset);
 }
 
+int vfs_truncate (vfs_file_t *file, size_t offset)
+{
+    vfs_errno = ((vfs_t *)(file->fs))->ftruncate ? 0 : EPERM;
+
+    return vfs_errno ? -1 : ((vfs_t *)(file->fs))->ftruncate(file, offset);
+}
+
 bool vfs_eof (vfs_file_t *file)
 {
     vfs_errno = 0;
@@ -406,36 +434,44 @@ int vfs_rename (const char *from, const char *to)
 
 int vfs_unlink (const char *filename)
 {
-    int ret;
+    int ret = -1;
+    vfs_mount_t *mount; // TODO: test for dir?
 
-    vfs_mount_t *mount = get_mount(filename); // TODO: test for dir?
-
-    if((ret = mount ? mount->vfs->funlink(get_filename(mount, filename)) : -1) != -1 && vfs.on_fs_changed && !mount->mode.hidden)
-        vfs.on_fs_changed(mount->vfs);
+    if((mount = mount_modifiable(filename, offsetof(vfs_t, funlink)))) {
+        if((ret = mount->vfs->funlink(get_filename(mount, filename))) != -1 && vfs.on_fs_changed)
+            vfs.on_fs_changed(mount->vfs);
+    }
 
     return ret;
 }
 
 int vfs_mkdir (const char *path)
 {
-    int ret;
+    int ret = -1;
+    vfs_mount_t *mount;
 
-    vfs_mount_t *mount = get_mount(path);
-
-    if((ret = mount ? mount->vfs->fmkdir(get_filename(mount, path)) : -1) != -1 && vfs.on_fs_changed && !mount->mode.hidden)
-        vfs.on_fs_changed(mount->vfs);
+    if((mount = mount_modifiable(path, offsetof(vfs_t, fmkdir)))) {
+        if((ret = mount->vfs->fmkdir(get_filename(mount, path))) != -1 && vfs.on_fs_changed)
+            vfs.on_fs_changed(mount->vfs);
+    }
 
     return ret;
 }
 
 int vfs_rmdir (const char *path)
 {
-    int ret;
+    int ret = -1;
+    vfs_mount_t *mount;
 
-    vfs_mount_t *mount = get_mount(path);
+    if((mount = mount_modifiable(path, offsetof(vfs_t, frmdir)))) {
 
-    if((ret = mount ? mount->vfs->frmdir(get_filename(mount, path)) : -1) != -1 && vfs.on_fs_changed && !mount->mode.hidden)
-        vfs.on_fs_changed(mount->vfs);
+        vfs_stat_t st;
+
+        if(vfs_stat(path, &st) == 0 && !st.st_mode.directory)
+            vfs_errno = ENOTDIR;
+        else if((ret = mount->vfs->frmdir(get_filename(mount, path))) != -1 && vfs.on_fs_changed)
+            vfs.on_fs_changed(mount->vfs);
+    }
 
     return ret;
 }

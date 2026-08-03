@@ -242,12 +242,14 @@ typedef struct {
     uint8_t n_ports;
     uint8_t n_start;
     uint8_t idx_last;
+    uint8_t pin_base;
 #ifdef IOPORTS_KEEP_DEPRECATED
     uint8_t *map;               //!< Deprecated - do not reference in new code!
 #endif
 } io_ports_detail_t;
 
 typedef struct io_ports_data {
+    bool external;
     union {
         io_ports_detail_t cfg[2];
         struct {

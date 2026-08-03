@@ -857,6 +857,19 @@ FLASHMEM static io_ports_list_t *insert_ports (void)
     return io_ports;
 }
 
+FLASHMEM static uint8_t get_pin_base (io_port_type_t type, io_port_direction_t dir)
+{
+    uint8_t pin_base = 0;
+    io_ports_list_t *io_ports;
+
+    if((io_ports = ports)) do {
+        if(io_ports->type == type && io_ports->ports_id && io_ports->ports_id->external)
+            pin_base += io_ports->ports_id->cfg[dir].n_ports;
+    } while((io_ports = io_ports->next));
+
+    return pin_base;
+}
+
 FLASHMEM static bool claim_hal (void)
 {
     io_port_t empty = {};
@@ -1062,13 +1075,17 @@ FLASHMEM bool ioports_add_analog (io_analog_t *analog)
         if((ports = insert_ports())) {
 
             ports->type = Port_Analog;
-            ports->ports_id = analog->ports;
             ports->hal.set_pin_description = analog->set_pin_description;
             ports->hal.get_pin_info = analog->get_pin_info;
-            if(analog->ports->out.n_ports)
+            if(analog->ports->out.n_ports) {
                 ports->hal.analog_out = analog->analog_out;
-            if(analog->ports->in.n_ports)
+                analog->ports->out.pin_base = get_pin_base(Port_Analog, Port_Output);
+            }
+            if(analog->ports->in.n_ports) {
                 ports->hal.wait_on_input = analog->wait_on_input;
+                analog->ports->out.pin_base = get_pin_base(Port_Analog, Port_Input);
+            }
+            ports->ports_id = analog->ports;
         }
     }
 
@@ -1091,15 +1108,18 @@ FLASHMEM bool ioports_add_digital (io_digital_t *digital)
         if((io_ports = insert_ports())) {
 
             io_ports->type = Port_Digital;
-            io_ports->ports_id = digital->ports;
             io_ports->hal.set_pin_description = digital->set_pin_description;
             io_ports->hal.get_pin_info = digital->get_pin_info;
-            if(digital->ports->out.n_ports)
+            if(digital->ports->out.n_ports) {
                 io_ports->hal.digital_out = digital->digital_out;
+                digital->ports->out.pin_base = get_pin_base(Port_Digital, Port_Output);
+            }
             if(digital->ports->in.n_ports) {
                 io_ports->hal.wait_on_input = digital->wait_on_input;
                 io_ports->hal.register_interrupt_handler = digital->register_interrupt_handler;
+                digital->ports->in.pin_base = get_pin_base(Port_Digital, Port_Input);
             }
+            io_ports->ports_id = digital->ports;
         }
 
         ioports_add_settings(NULL, NULL);

@@ -42,7 +42,7 @@
 #include "motion_control.h"
 #endif
 #ifdef KINEMATICS_API
-#include "kinematics.h"
+#include "kinematics/interface.h"
 #endif
 
 static void task_execute (sys_state_t state);
@@ -481,6 +481,7 @@ FLASHMEM int grbl_enter (void)
             sys.override.control.parking_disable = settings.parking.flags.deactivate_upon_init;
 
         flush_override_buffers();
+        report_add_realtime(Report_Overrides);
 
         // Reset primary systems.
         hal.stream.reset_read_buffer();                 // Clear input stream buffer

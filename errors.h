@@ -125,7 +125,8 @@ typedef enum {
     Status_GcodeCutterCompActive = 89,
     Status_CutterCompConflict = 90,
     Status_CutterCompInvalid = 91,
-    Status_StatusMax = Status_CutterCompInvalid,
+    Status_FileDeleteFailed = 92,
+    Status_StatusMax = Status_FileDeleteFailed,
 
 
     Status_UserException = 253,

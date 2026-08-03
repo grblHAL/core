@@ -326,7 +326,7 @@ typedef struct {
 } coord_system_data_t;
 
 typedef union {
-    int32_t value[N_AXIS];
+    int32_t values[N_AXIS];
     struct {
         int32_t x;
         int32_t y;

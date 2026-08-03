@@ -573,7 +573,7 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
             st_go_idle();
 
             // Ensure pwm is set properly upon completion of rate-controlled motion.
-            if(st.exec_block->dynamic_rpm && st.exec_block->spindle->cap.laser) {
+            if(st.exec_block && st.exec_block->dynamic_rpm && st.exec_block->spindle->cap.laser) {
                 prep.current_spindle_rpm = 0.0f;
                 st.exec_block->spindle->update_pwm(st.exec_block->spindle, st.exec_block->spindle->pwm_off_value);
             }
