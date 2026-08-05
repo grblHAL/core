@@ -21,9 +21,8 @@
   along with grblHAL. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "grbl/hal.h"
-#include "grbl/platform.h"
-#include "grbl/vfs.h"
+#include "hal.h"
+#include "vfs.h"
 
 #include <errno.h>
 #include <stdlib.h>
