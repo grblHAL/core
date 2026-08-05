@@ -139,6 +139,7 @@ typedef sys_commands_t *(*on_get_commands_ptr)(void);
 typedef status_code_t (*on_macro_execute_ptr)(macro_id_t macro, line_number_t line_number, parameter_words_t args, uint32_t repeats); // macro implementations _must_ claim hal.stream.read to stream macros!
 typedef void (*on_macro_return_ptr)(void);
 typedef void (*on_file_demarcate_ptr)(bool start);
+typedef status_code_t (*on_pre_gcode_execute_ptr)(modal_groups_t *commands, parser_state_t *gc_state, parser_block_t *gc_block, spindle_t *spindle);
 
 typedef tool_table_entry_t *(*get_tool_ptr)(tool_id_t tool_id);
 typedef tool_table_entry_t *(*get_tool_by_idx_ptr)(uint32_t idx);
@@ -272,6 +273,9 @@ typedef struct {
     on_tool_changed_ptr on_tool_changed;                        //!< Called after executing M6 or M61.
     on_toolchange_ack_ptr on_toolchange_ack;                    //!< Called from interrupt context.
     on_jog_cancel_ptr on_jog_cancel;                            //!< Called from interrupt context.
+#if LATHE_UVW_OPTION && NGC_EXPRESSIONS_ENABLE
+    on_pre_gcode_execute_ptr on_pre_gcode_execute;              //!< Called before executing parsed gcode block.
+#endif
     on_laser_ppi_enable_ptr on_laser_ppi_enable;
     on_spindle_select_ptr on_spindle_select;                    //!< Called before spindle is selected, hook in HAL overrides here
     on_spindle_selected_ptr on_spindle_selected;                //!< Called when spindle is selected, do not change HAL pointers here!

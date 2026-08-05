@@ -794,6 +794,15 @@ FLASHMEM void mc_thread (plan_line_data_t *pl_data, float *position, gc_thread_d
     }
 }
 
+#if LATHE_UVW_OPTION && NGC_EXPRESSIONS_ENABLE
+
+FLASHMEM status_code_t lathe_cycle (plan_line_data_t *pl_data, coord_data_t *position, uint32_t o_label, lathe_cycle_arguments_t *args)
+{
+    return Status_GcodeUnsupportedCommand; // TBC
+}
+
+#endif
+
 // Sets up valid jog motion received from g-code parser, checks for soft-limits, and executes the jog.
 FLASHMEM status_code_t mc_jog_execute (plan_line_data_t *pl_data, parser_block_t *gc_block, float *position)
 {

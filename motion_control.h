@@ -51,6 +51,10 @@ bool mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_
 // Execute canned cycle (threading)
 void mc_thread (plan_line_data_t *pl_data, float *position, gc_thread_data *thread, bool feed_hold_disabled);
 
+#if LATHE_UVW_OPTION && NGC_EXPRESSIONS_ENABLE
+status_code_t lathe_cycle (plan_line_data_t *pl_data, coord_data_t *position, uint32_t o_label, lathe_cycle_arguments_t *args);
+#endif
+
 // Sets up valid jog motion received from g-code parser, checks for soft-limits, and executes the jog.
 status_code_t mc_jog_execute(plan_line_data_t *pl_data, parser_block_t *gc_block, float *position);
 

@@ -54,41 +54,6 @@
 #define J_VALUE Y_AXIS
 #define K_VALUE Z_AXIS
 
-// Define modal groups internal bitfield for checking multiple command violations and tracking the
-// type of command that is called in the block. A modal group is a group of g-code commands that are
-// mutually exclusive, or cannot exist on the same line, because they each toggle a state or execute
-// a unique motion. These are defined in the NIST RS274-NGC v3 g-code standard, available online,
-// and are similar/identical to other g-code interpreters by manufacturers (Haas,Fanuc,Mazak,etc).
-typedef union {
-    uint32_t mask;
-    struct {
-        uint32_t G0 :1, //!< [G4,G10,G28,G28.1,G30,G30.1,G53,G92,G92.1,G92.2,G92.3] Non-modal
-                 G1 :1, //!< [G0,G1,G2,G3,G33,G33.1,G38.2,G38.3,G38.4,G38.5,G76,G80,G81,G82,G83,G84,G85,G86,G89] Motion
-                 G2 :1, //!< [G17,G18,G19] Plane selection
-                 G3 :1, //!< [G90,G91] Distance mode
-                 G4 :1, //!< [G91.1] Arc IJK distance mode
-                 G5 :1, //!< [G93,G94,G95] Feed rate mode
-                 G6 :1, //!< [G20,G21] Units
-                 G7 :1, //!< [G40,G41,G41.1,G42,G42.1] Cutter radius compensation mode. ONLY G40 SUPPORTED.
-                 G8 :1, //!< [G43,G43.1,G49] Tool length offset
-                G10 :1, //!< [G98,G99] Return mode in canned cycles
-                G11 :1, //!< [G50,G51] Scaling
-                G12 :1, //!< [G54,G55,G56,G57,G58,G59,G59.1,G59.2,G59.3] Coordinate system selection (14)
-                G13 :1, //!< [G61] Control mode (15)
-                G14 :1, //!< [G96,G97] Spindle Speed Mode (13)
-                G15 :1, //!< [G7,G8] Lathe Diameter Mode
-                G16 :1, //!< [G65,G66,G67,M98] Macro call (12)
-
-                 M4 :1, //!< [M0,M1,M2,M30,M99] Stopping
-                 M5 :1, //!< [M62,M63,M64,M65,M66,M67,M68] Aux I/O
-                 M6 :1, //!< [M6] Tool change
-                 M7 :1, //!< [M3,M4,M5] Spindle turning
-                 M8 :1, //!< [M7,M8,M9] Coolant control
-                 M9 :1, //!< [M49,M50,M51,M53,M56] Override control
-                M10 :1; //!< User defined M commands
-    };
-} modal_groups_t;
-
 typedef struct {
     modal_groups_t command;
     bool update_spindle[N_SYS_SPINDLE];
@@ -1572,6 +1537,24 @@ status_code_t gc_execute_block (char *block)
                             gc_block.modal.motion = (motion_mode_t)int_value;
                         gc_block.modal.canned_cycle_active = false;
                         break;
+
+#if LATHE_UVW_OPTION && NGC_EXPRESSIONS_ENABLE
+                    case 70: case 71: case 72:
+                        if(axis_command)
+                            RETURN(Status_GcodeAxisCommandConflict); // [Axis word/command conflict]
+                        axis_command = AxisCommand_MotionMode;
+                        word_bit.modal_group.G1 = On;
+                        gc_block.modal.motion = (motion_mode_t)int_value;
+                        if(mantissa != 0) {
+                            if(mantissa == 10 || mantissa == 20) {
+                                gc_block.modal.motion = gc_block.modal.motion * 10 + mantissa / 10;
+                                mantissa = 0; // Set to zero to indicate valid non-integer G command.
+                            } else
+                                RETURN(Status_GcodeUnsupportedCommand);
+                        } else
+                            gc_block.modal.canned_cycle_active = false;
+                        break;
+#endif
 
                     case 73: case 81: case 82: case 83: case 84: case 85: case 86: case 89:
                         if (axis_command)
@@ -3734,6 +3717,41 @@ status_code_t gc_execute_block (char *block)
                     }
                     break;
 
+#if LATHE_UVW_OPTION && NGC_EXPRESSIONS_ENABLE
+
+                case MotionMode_LatheFinishing:
+                    if(gc_state.modal.plane_select != PlaneSelect_ZX)
+                        RETURN(Status_GcodeIllegalPlane);
+                    if(!gc_block.words.q)
+                        RETURN(Status_GcodeValueWordMissing); // [No subroutine]
+                    if(!gc_block.words.d)
+                        gc_block.values.d = 0.0f;
+                    if(!gc_block.words.e)
+                        gc_block.values.e = 0.0f;
+                    if(!gc_block.words.p)
+                        gc_block.values.p = 1.0f;
+                    gc_block.words.d = gc_block.words.e = gc_block.words.p = gc_block.words.q = Off;
+                    break;
+
+                case MotionMode_LatheRoughingZ:
+                case MotionMode_LatheRoughingZ1:
+                case MotionMode_LatheRoughingZ2:
+                case MotionMode_LatheRoughingX:
+                case MotionMode_LatheRoughingX1:
+                case MotionMode_LatheRoughingX2:
+                    if(gc_state.modal.plane_select != PlaneSelect_ZX)
+                        RETURN(Status_GcodeIllegalPlane);
+                    if(!gc_block.words.q)
+                        RETURN(Status_GcodeValueWordMissing); // [No subroutine]
+                    if(!gc_block.words.d)
+                        gc_block.values.d = 0.0f;
+                    if(!gc_block.words.i)
+                        gc_block.values.ijk[0] = 1.0f;
+                    if(!gc_block.words.r)
+                        gc_block.values.r = 0.5f;
+                     gc_block.words.d = gc_block.words.i = gc_block.words.q = gc_block.words.r = Off;
+                    break;
+#endif
                 default:
                     break;
 
@@ -3745,15 +3763,24 @@ status_code_t gc_execute_block (char *block)
 
     // [0. Non-specific error-checks]: Complete unused value words check, i.e. IJK used when in arc
     // radius mode, or axis words that aren't used in the block.
-    if (gc_parser_flags.jog_motion) // Jogging only uses the F feed rate and XYZ value words. N is valid, but S and T are invalid.
+    if(gc_parser_flags.jog_motion) // Jogging only uses the F feed rate and XYZ value words. N is valid, but S and T are invalid.
         gc_block.words.n = gc_block.words.f = Off;
     else
         gc_block.words.n = gc_block.words.f = gc_block.words.s = gc_block.words.t = Off;
 
-    if (axis_command)
+#if LATHE_UVW_OPTION && NGC_EXPRESSIONS_ENABLE
+    if(grbl.on_pre_gcode_execute) {
+        status_code_t status;
+        command_words.G1 |= gc_block.modal.motion != MotionMode_None && axis_command == AxisCommand_MotionMode; // TODO: always set?
+        if((status = grbl.on_pre_gcode_execute(&command_words, &gc_state, &gc_block, sspindle)) != Status_Unhandled)
+            return status;
+    }
+#endif
+
+    if(axis_command)
         gc_block.words.mask &= ~axis_words_mask.mask; // Remove axis words.
 
-    if (gc_block.words.mask)
+    if(gc_block.words.mask)
         RETURN(Status_GcodeUnusedWords); // [Unused words]
 
     /* -------------------------------------------------------------------------------------
@@ -4526,6 +4553,42 @@ status_code_t gc_execute_block (char *block)
                     mc_override_ctrl_update(overrides); // Wait until synchronized move is finished, then restore previous override disable status.
                 }
                 break;
+
+#if LATHE_UVW_OPTION && NGC_EXPRESSIONS_ENABLE
+
+            case MotionMode_LatheFinishing:
+                {
+                    lathe_cycle_arguments_t args = {
+                       .motion = gc_block.modal.motion,
+                       .x = gc_block.values.xyz[X_AXIS],
+                       .z = gc_block.values.xyz[Z_AXIS],
+                       .start_distance = gc_block.values.d,
+                       .remaining_distance = gc_block.values.e,
+                       .passes = gc_block.values.p
+                    };
+                    RETURN(lathe_cycle(&plan_data, (coord_data_t *)gc_state.position, (uint32_t)gc_block.values.q, &args));
+                }
+                break;
+
+            case MotionMode_LatheRoughingZ:
+            case MotionMode_LatheRoughingZ1:
+            case MotionMode_LatheRoughingZ2:
+            case MotionMode_LatheRoughingX:
+            case MotionMode_LatheRoughingX1:
+            case MotionMode_LatheRoughingX2:
+                {
+                    lathe_cycle_arguments_t args = {
+                       .motion = gc_block.modal.motion,
+                       .x = gc_block.values.xyz[X_AXIS],
+                       .z = gc_block.values.xyz[Z_AXIS],
+                       .increment = gc_block.values.ijk[0],
+                       .retract_distance = gc_block.values.r,
+                       .remaining_distance = gc_block.values.d
+                    };
+                    RETURN(lathe_cycle(&plan_data, (coord_data_t *)gc_state.position, (uint32_t)gc_block.values.q, &args));
+                }
+                break;
+#endif
 
             case MotionMode_DrillChipBreak:
             case MotionMode_CannedCycle81:

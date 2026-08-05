@@ -103,6 +103,13 @@ typedef enum {
     MotionMode_QuadraticSpline = 51,        //!< 51 - G5.1
     MotionMode_SpindleSynchronized = 33,    //!< 33 - G33
     MotionMode_RigidTapping = 331,          //!< 331 - G33.1
+    MotionMode_LatheFinishing = 70,         //!< 70 - G70
+    MotionMode_LatheRoughingZ = 710,        //!< 71 - G71
+    MotionMode_LatheRoughingZ1 = 711,       //!< 711 - G71.1
+    MotionMode_LatheRoughingZ2 = 712,       //!< 712 - G71.2
+    MotionMode_LatheRoughingX = 720,        //!< 72 - G72
+    MotionMode_LatheRoughingX1 = 721,       //!< 721 - G72.1
+    MotionMode_LatheRoughingX2 = 722,       //!< 722 - G72.2
     MotionMode_DrillChipBreak = 73,         //!< 73 - G73
     MotionMode_Threading = 76,              //!< 76 - G76
     MotionMode_CannedCycle81 = 81,          //!< 81 - G81, drill
@@ -618,7 +625,28 @@ typedef struct g66_arguments
     struct g66_arguments *prev;
 } g66_arguments_t;
 
-#endif
+#if LATHE_UVW_OPTION
+
+typedef struct {
+    motion_mode_t motion;
+    float x;
+    float z;
+    union {
+        struct { // G70
+            float start_distance;
+            float end_distance;
+            float passes;
+        };
+        struct { // G71.x & G72.x
+            float retract_distance;
+            float remaining_distance;
+            float increment;
+        };
+    };
+} lathe_cycle_arguments_t;
+
+#endif // LATHE_UVW_OPTION
+#endif // NGC_PARAMETERS_ENABLE
 
 /*! \brief Parser state
 
@@ -692,6 +720,40 @@ typedef struct {
 #endif
 } parser_block_t;
 
+// Define modal groups internal bitfield for checking multiple command violations and tracking the
+// type of command that is called in the block. A modal group is a group of g-code commands that are
+// mutually exclusive, or cannot exist on the same line, because they each toggle a state or execute
+// a unique motion. These are defined in the NIST RS274-NGC v3 g-code standard, available online,
+// and are similar/identical to other g-code interpreters by manufacturers (Haas,Fanuc,Mazak,etc).
+typedef union {
+    uint32_t mask;
+    struct {
+        uint32_t G0 :1, //!< [G4,G10,G28,G28.1,G30,G30.1,G53,G92,G92.1,G92.2,G92.3] Non-modal
+                 G1 :1, //!< [G0,G1,G2,G3,G33,G33.1,G38.2,G38.3,G38.4,G38.5,G76,G80,G81,G82,G83,G84,G85,G86,G89] Motion
+                 G2 :1, //!< [G17,G18,G19] Plane selection
+                 G3 :1, //!< [G90,G91] Distance mode
+                 G4 :1, //!< [G91.1] Arc IJK distance mode
+                 G5 :1, //!< [G93,G94,G95] Feed rate mode
+                 G6 :1, //!< [G20,G21] Units
+                 G7 :1, //!< [G40,G41,G41.1,G42,G42.1] Cutter radius compensation mode. ONLY G40 SUPPORTED.
+                 G8 :1, //!< [G43,G43.1,G49] Tool length offset
+                G10 :1, //!< [G98,G99] Return mode in canned cycles
+                G11 :1, //!< [G50,G51] Scaling
+                G12 :1, //!< [G54,G55,G56,G57,G58,G59,G59.1,G59.2,G59.3] Coordinate system selection (14)
+                G13 :1, //!< [G61] Control mode (15)
+                G14 :1, //!< [G96,G97] Spindle Speed Mode (13)
+                G15 :1, //!< [G7,G8] Lathe Diameter Mode
+                G16 :1, //!< [G65,G66,G67,M98] Macro call (12)
+
+                 M4 :1, //!< [M0,M1,M2,M30,M99] Stopping
+                 M5 :1, //!< [M62,M63,M64,M65,M66,M67,M68] Aux I/O
+                 M6 :1, //!< [M6] Tool change
+                 M7 :1, //!< [M3,M4,M5] Spindle turning
+                 M8 :1, //!< [M7,M8,M9] Coolant control
+                 M9 :1, //!< [M49,M50,M51,M53,M56] Override control
+                M10 :1; //!< User defined M commands
+    };
+} modal_groups_t;
 
 static inline axes_signals_t gc_paramwords_to_axes (parameter_words_t p_words)
 {

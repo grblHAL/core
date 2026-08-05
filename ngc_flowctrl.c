@@ -32,6 +32,7 @@
 #include "errors.h"
 #include "ngc_expr.h"
 #include "ngc_params.h"
+#include "ngc_flowctrl.h"
 #include "stream_file.h"
 //#include "string_registers.h"
 
@@ -65,6 +66,7 @@ typedef struct ngc_sub {
     vfs_file_t *file;
     size_t file_pos;
     line_number_t line_number;
+    on_endsub_ptr callback;
     struct ngc_sub *next;
 } ngc_sub_t;
 
@@ -225,12 +227,11 @@ FLASHMEM static ngc_sub_t *add_sub (uint32_t o_label, line_number_t line_number,
 {
     ngc_sub_t *sub;
 
-    if((sub = malloc(sizeof(ngc_sub_t))) != NULL) {
+    if((sub = calloc(1, sizeof(ngc_sub_t))) != NULL) {
         sub->o_label = o_label;
         sub->file = file;
         sub->line_number = line_number;
         sub->file_pos = vfs_tell(file);
-        sub->next = NULL;
         if(subs == NULL)
             subs = sub;
         else {
@@ -253,6 +254,8 @@ FLASHMEM static void clear_subs (vfs_file_t *file)
     while(current) {
         next = current->next;
         if(file == NULL || file == current->file) {
+            if(current->callback)
+                current->callback(current->o_label, false);
             free(current);
             if(prev)
                 prev->next = next;
@@ -295,7 +298,7 @@ FLASHMEM static bool stack_pull (void)
     return ok;
 }
 
-FLASHMEM static void stack_unwind_sub (uint32_t o_label)
+FLASHMEM static void stack_unwind_sub (uint32_t o_label, bool success)
 {
     while(stack_idx >= 0 && stack[stack_idx].o_label != o_label)
         stack_pull();
@@ -310,13 +313,32 @@ FLASHMEM static void stack_unwind_sub (uint32_t o_label)
         } else
             stream_reposition(stack[stack_idx].file, stack[stack_idx].file_pos, stack[stack_idx].line_number);
 
+        on_endsub_ptr callback = stack[stack_idx].sub->callback;
+
         stack_pull();
+
+        if(callback)
+            callback(o_label, success);
     }
 
     exec_sub = stack_idx >= 0 ? stack[stack_idx].sub : NULL;
 }
 
 // Public functions
+
+bool ngc_flowctrl_on_endsub_callback (uint32_t o_label, on_endsub_ptr callback)
+{
+    ngc_sub_t *sub = subs;
+
+    if((sub = subs)) do {
+        if(sub->o_label == o_label) {
+            sub->callback = callback;
+            break;
+        }
+    } while((sub = sub->next));
+
+    return sub && sub->callback == callback;
+}
 
 FLASHMEM void ngc_flowctrl_unwind_stack (vfs_file_t *file)
 {
@@ -389,7 +411,7 @@ FLASHMEM static status_code_t onNamedSubError (status_code_t status)
                 }
             }
 
-            stack_unwind_sub(o_label);
+            stack_unwind_sub(o_label, false);
             status = grbl.report.status_message(status);
         }
 
@@ -647,7 +669,7 @@ FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number
         case NGCFlowCtrl_EndSub:
             if(hal.stream.file) {
                 if(!skip_sub) {
-                    stack_unwind_sub(o_label);
+                    stack_unwind_sub(o_label, true);
                     if(ngc_eval_expression(line, pos, &value) == Status_OK) {
                         ngc_named_param_set("_value", value);
                         ngc_named_param_set("_value_returned", 1.0f);
@@ -750,7 +772,7 @@ FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number
                     bool g65_return = false;
 
                     if(exec_sub)
-                        stack_unwind_sub(o_label);
+                        stack_unwind_sub(o_label, true);
                     else if((g65_return = !!grbl.on_macro_return))
                         ngc_flowctrl_unwind_stack(stack[stack_idx].file);
 

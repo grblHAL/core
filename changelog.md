@@ -1,5 +1,38 @@
 ## grblHAL changelog
 
+<a name="20260729">Build 20260803
+
+Core:
+
+* Moved RAM filing system from networking plugin here, added support for more operations.
+
+* Added hooks for future G70-G72 lathe cycles implementation.
+
+* Some general improvements.
+
+Drivers:
+
+* iMXRT1062: fix for SD card early mount messing with spindle pins. Ref. issue [#111](https://github.com/grblHAL/iMXRT1062/issues/111).
+
+* Simulator: updated Web Builder cmake file, ref [#23](https://github.com/grblHAL/Simulator/issues/23).
+
+Plugins:
+
+* Networking: moved RAM filing system to core. Removed no longer used stream redirect filing system.
+
+* WebUI: updated for changes to RAM filing system.
+
+---
+
+<a name="20260729">Build 20260729
+
+Drivers:
+
+* STM32F4xx, MKS Robin Nano: no longer assign pins to SWD pins to feed hold and cycle start for debug builds, sets PA14 (SW_CLK) low on startup to enable USB.
+Ref. issue [#295](https://github.com/grblHAL/STM32F4xx/issues/295).
+
+---
+
 <a name="20260729">20260729
 
 Drivers:

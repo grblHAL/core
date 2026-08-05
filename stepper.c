@@ -64,7 +64,11 @@ DCRAM static st_block_t st_block_buffer[SEGMENT_BUFFER_SIZE - 1];
 // algorithm to execute, which are "checked-out" incrementally from the first block in the
 // planner buffer. Once "checked-out", the steps in the segments buffer cannot be modified by
 // the planner, where the remaining planner block steps still can.
-DCRAM static segment_t segment_buffer[SEGMENT_BUFFER_SIZE];
+DCRAM static struct {
+    volatile segment_t *head;
+    volatile segment_t *tail;
+    segment_t segments[SEGMENT_BUFFER_SIZE];
+} segment_buffer;
 
 // Stepper ISR data struct. Contains the running data for the main stepper ISR.
 static stepper_t st = {};
@@ -85,9 +89,6 @@ static volatile bool exec_fast_hold = false;
 
 // Stepper timer ticks per minute
 static float cycles_per_min;
-
-// Step segment ring buffer pointers
-static volatile segment_t *segment_buffer_tail, *segment_buffer_head;
 
 // Pointers for the step segment being prepped from the planner buffer. Accessed only by the
 // main program. Pointers may be planning segments or planner blocks ahead of what being executed.
@@ -476,10 +477,10 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
     // If there is no step segment, attempt to pop one from the stepper buffer
     if(st.exec_segment == NULL) {
         // Anything in the buffer? If so, load and initialize next step segment.
-        if(segment_buffer_tail != segment_buffer_head) {
+        if(segment_buffer.tail != segment_buffer.head) {
 
             // Initialize new step segment.
-            st.exec_segment = (segment_t *)segment_buffer_tail;
+            st.exec_segment = (segment_t *)segment_buffer.tail;
 
             // Initialize step segment timing per step.
             if(st.exec_segment->cycles_per_tick != cycles_per_tick)
@@ -715,7 +716,7 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
 
     if(st.step_count == 0 || --st.step_count == 0) {
         // Segment is complete. Advance segment tail pointer.
-        segment_buffer_tail = segment_buffer_tail->next;
+        segment_buffer.tail = segment_buffer.tail->next;
     }
 }
 
@@ -746,16 +747,16 @@ FLASHMEM void st_reset (void)
     // Set up segments ringbuffer as circular linked list, add id and clear AMASS level
     idx_max = (sizeof(segment_buffer) / sizeof(segment_t)) - 1;
     for(idx = 0 ; idx <= idx_max ; idx++) {
-        segment_buffer[idx].next = &segment_buffer[idx == idx_max ? 0 : idx + 1];
-        segment_buffer[idx].id = idx + 1;
-        segment_buffer[idx].amass_level = 0;
+        segment_buffer.segments[idx].next = &segment_buffer.segments[idx == idx_max ? 0 : idx + 1];
+        segment_buffer.segments[idx].id = idx + 1;
+        segment_buffer.segments[idx].amass_level = 0;
     }
 
-    st_prep_block = &st_block_buffer[0];
+    st_prep_block = st_block_buffer;
 
     // Initialize stepper algorithm variables.
     pl_block = NULL;  // Planner block pointer used by segment buffer
-    segment_buffer_tail = segment_buffer_head = &segment_buffer[0]; // empty = tail
+    segment_buffer.tail = segment_buffer.head = segment_buffer.segments; // empty = tail
 
     memset(&prep, 0, sizeof(prep));
     memset(&st, 0, sizeof(stepper_t));
@@ -807,16 +808,16 @@ void st_update_plan_block_parameters (bool fast_hold)
 
         hal.irq_disable();
 
-        segment_t *head = (segment_t *)segment_buffer_head;
+        segment_t *head = (segment_t *)segment_buffer.head;
 
-        if((exec_fast_hold = segment_buffer_head->next == segment_buffer_tail)) {
-            segment_buffer_head = segment_buffer_tail->next;
+        if((exec_fast_hold = segment_buffer.head->next == segment_buffer.tail)) {
+            segment_buffer.head = segment_buffer.tail->next;
             if(st.step_count < 3 || st.step_count < (st.exec_segment->n_step >> 3))
-                segment_buffer_head = segment_buffer_head->next;
-            while(segment_buffer_head->next != head && segment_buffer_head->ramp_type == Ramp_Decel)
-                segment_buffer_head = segment_buffer_head->next;
-            prep.current_speed = segment_buffer_head->current_rate;
-            segment_buffer_head = segment_buffer_head->next;
+                segment_buffer.head = segment_buffer.head->next;
+            while(segment_buffer.head->next != head && segment_buffer.head->ramp_type == Ramp_Decel)
+                segment_buffer.head = segment_buffer.head->next;
+            prep.current_speed = segment_buffer.head->current_rate;
+            segment_buffer.head = segment_buffer.head->next;
         }
 
         hal.irq_enable();
@@ -885,7 +886,7 @@ void st_prep_buffer (void)
     if (sys.step_control.end_motion)
         return;
 
-    while (segment_buffer_head->next != segment_buffer_tail) { // Check if we need to fill the buffer.
+    while (segment_buffer.head->next != segment_buffer.tail) { // Check if we need to fill the buffer.
 
         // Determine if we need to load a new planner block or if the block needs to be recomputed.
         if (pl_block == NULL) {
@@ -1088,7 +1089,7 @@ void st_prep_buffer (void)
             return;
 
         // Initialize new segment
-        segment_t *prep_segment = (segment_t *)segment_buffer_head;
+        segment_t *prep_segment = (segment_t *)segment_buffer.head;
 
         // Set new segment to point to the current segment data block.
         prep_segment->exec_block = st_prep_block;
@@ -1411,7 +1412,7 @@ if(jlog.idx < sizeof(jlog.data) - 1 && prep.ramp_type != Ramp_Cruise) {
         prep_segment->ramp_type = prep.ramp_type;
 
         // Segment complete! Increment segment pointer, so stepper ISR can immediately execute it.
-        segment_buffer_head = segment_buffer_head->next;
+        segment_buffer.head = segment_buffer.head->next;
 
         // Update the appropriate planner and segment data.
         pl_block->millimeters = mm_remaining;
