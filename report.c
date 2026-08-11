@@ -1001,6 +1001,11 @@ FLASHMEM void report_build_info (char *line, bool extended)
                 strcat(buf, "PC,");
         }
 
+#if N_AXIS > 3
+        if(settings.flags.rotary_fix_enable)
+            strcat(buf, "RF,");
+#endif
+
         if(hal.signals_cap.stop_disable)
             strcat(buf, "OS,");
 
@@ -1026,9 +1031,9 @@ FLASHMEM void report_build_info (char *line, bool extended)
         if(hal.reboot)
             strcat(buf, "REBOOT,");
 
-    #if NGC_EXPRESSIONS_ENABLE
+#if NGC_EXPRESSIONS_ENABLE
         strcat(buf, "EXPR,");
-    #endif
+#endif
 
         if(atc != ATC_None || (settings.tool_change.mode != ToolChange_Ignore && !!hal.stream.suspend_read))
             strcat(buf, atc == ATC_None ? "TC," : (atc == ATC_Online ? "ATC=1," : "ATC=0,")); // Tool change supported (M6)
@@ -1044,9 +1049,9 @@ FLASHMEM void report_build_info (char *line, bool extended)
         if(canbus_enabled())
             strcat(buf, "CAN,");
 
-    #ifdef PID_LOG
+#ifdef PID_LOG
         strcat(buf, "PID,");
-    #endif
+#endif
 
         append = &buf[strlen(buf) - 1];
         if(*append == ',')

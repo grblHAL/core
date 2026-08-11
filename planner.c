@@ -31,10 +31,6 @@
 #include "planner.h"
 #include "protocol.h"
 
-#ifndef ROTARY_FIX
-#define ROTARY_FIX 0
-#endif
-
 #if ENABLE_BACKLASH_COMPENSATION
 void mc_sync_backlash_position (void);
 #endif
@@ -409,7 +405,7 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
     int32_t target_steps[N_AXIS], position_steps[N_AXIS], delta_steps;
     uint_fast8_t idx;
     float unit_vec[N_AXIS];
-#if N_AXIS > 3 && ROTARY_FIX
+#if N_AXIS > 3
     axes_signals_t motion = {0};
 #endif
 
@@ -450,7 +446,7 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
                 direction.bits |= bit(idx);
             else
                 direction.bits &= ~bit(idx);
-#if N_AXIS > 3  && ROTARY_FIX
+#if N_AXIS > 3
             motion.mask |= bit(idx);
 #endif
         } else {
@@ -489,41 +485,47 @@ bool plan_buffer_line (float *target, plan_line_data_t *pl_data)
         pl_data->output_commands = NULL; // Indicate commands are already queued for execution
     }
 
-#if N_AXIS > 3  && ROTARY_FIX
+#if N_AXIS > 3
 
     // NIST RS274 (2.1.2.5 A & 2.1.2.6) states that G94 linear motion with simultaneous angular motion
     // has the feedrate assigned to the linear axes. To accomplish this we'll change the planner block to
     // behave as if its doing a G93 inverse time mode move.
 
-    if(!block->condition.inverse_time &&
-        !block->condition.rapid_motion &&
-         (motion.mask & settings.steppers.is_rotary.mask) &&
-          (motion.mask & ~settings.steppers.is_rotary.mask)) {
+    if(settings.flags.rotary_fix_enable &&
+        !block->condition.inverse_time &&
+         !block->condition.rapid_motion &&
+          (motion.mask & settings.steppers.is_rotary.mask)) {
 
-        float linear_magnitude = 0.0f;
+        if(motion.mask & ~settings.steppers.is_rotary.mask) {
 
-        idx = 0;
-        motion.mask &= ~settings.steppers.is_rotary.mask;
+            float linear_magnitude = 0.0f;
 
-        while(motion.mask) {
-            if(motion.mask & 0x01)
-                linear_magnitude += unit_vec[idx] * unit_vec[idx];
-            motion.mask >>= 1;
-            idx++;
-        }
+            idx = 0;
+            motion.mask &= ~settings.steppers.is_rotary.mask;
 
-        pl_data->feed_rate = 1.0f / (sqrtf(linear_magnitude) / pl_data->feed_rate);
+            while(motion.mask) {
+                if(motion.mask & 0x01)
+                    linear_magnitude += unit_vec[idx] * unit_vec[idx];
+                motion.mask >>= 1;
+                idx++;
+            }
 
-        block->condition.inverse_time = On;
+            pl_data->feed_rate = 1.0f / (sqrtf(linear_magnitude) / pl_data->feed_rate);
+
+            block->condition.inverse_time = On;
+
+        } else if(gc_state.modal.units_imperial && settings.flags.revert_metric_conversion)
+            pl_data->feed_rate /= 25.4f;// Revert in/min to mm/min conversion for angular motion
     }
 
 #endif
 
     // Calculate the unit vector of the line move and the block maximum feed rate and acceleration scaled
     // down such that no individual axes maximum values are exceeded with respect to the line direction.
-#if N_AXIS > 3  && ROTARY_FIX
-    // NOTE: This calculation assumes all block motion axes are orthogonal (Cartesian), and if also rotational, then
-    // motion mode must be inverse time mode. Operates on the absolute value of the unit vector.
+#if N_AXIS > 3
+    // NOTE: This calculation assumes all block motion axes are orthogonal (Cartesian), and if also rotational
+    // and settings.flags.rotary_fix_enable, then motion mode must be inverse time mode.
+    // Operates on the absolute value of the unit vector.
 #else
     // NOTE: This calculation assumes all axes are orthogonal (Cartesian) and works with ABC-axes,
     // if they are also orthogonal/independent. Operates on the absolute value of the unit vector.

@@ -465,6 +465,7 @@ typedef enum {
     // 683 - 689 - reserved for Sienci
 
     Setting_SubroutineOptions = 700,
+    Setting_RotaryOptions = 701,
 
     Setting_SpindlePWMOptions1 = 709,
 
@@ -608,7 +609,9 @@ typedef union {
                  keep_rapids_override_on_reset   :1,
                  keep_feed_override_on_reset     :1,
                  m98_prescan_enable              :1,
-                 unassigned                      :8;
+                 rotary_fix_enable               :1,
+                 revert_metric_conversion        :1, // For rotary axes inch/min -> mm/min
+                 unassigned                      :7;
     };
 } settingflags_t;
 

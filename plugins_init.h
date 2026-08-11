@@ -268,6 +268,11 @@
     spindle_interlock_init();
 #endif
 
+#if VIRTUAL_INPUTS_ENABLE
+    extern void virtual_inputs_init (void);
+    virtual_inputs_init();
+#endif
+
 // End third party plugin definitions.
 
 #if ODOMETER_ENABLE

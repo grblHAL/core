@@ -589,11 +589,34 @@ typedef struct {
     gc_taper_type end_taper_type;
 } gc_thread_data;
 
+#if LATHE_UVW_OPTION
+
+//! Lathe tool orientation.
+    typedef enum {
+        ToolPos_Undefined = 0,
+        ToolPos1_135,
+        ToolPos2_45,
+        ToolPos3_315,
+        ToolPos4_225,
+        ToolPos5_180,
+        ToolPos6_90,
+        ToolPos7_0,
+        ToolPos8_270,
+        ToolPos9_Down,
+    } tool_orientation_t;
+
+#endif
+
 //! Tool data.
 typedef struct {
     coord_data_t offset;    //!< Tool offset
     float radius;           //!< Radius of tool (currently unsupported)
     tool_id_t tool_id;      //!< Tool number
+#if LATHE_UVW_OPTION
+    float front_angle;
+    float back_angle;
+    tool_orientation_t orientation;
+#endif
 } tool_data_t;
 
 //! Tool table entry.
@@ -636,12 +659,12 @@ typedef struct {
             float start_distance;
             float end_distance;
             float passes;
-        };
+        } finish;
         struct { // G71.x & G72.x
             float retract_distance;
             float remaining_distance;
             float increment;
-        };
+        } rough;
     };
 } lathe_cycle_arguments_t;
 

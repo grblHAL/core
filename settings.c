@@ -96,6 +96,11 @@ PROGMEM static const settings_t defaults = {
     .flags.keep_rapids_override_on_reset = DEFAULT_KEEP_RAPIDS_OVR_ON_RESET,
     .flags.keep_feed_override_on_reset = DEFAULT_KEEP_FEED_OVR_ON_RESET,
     .flags.tool_persistent = DEFAULT_PERSIST_TOOL,
+#if defined(ROTARY_FIX) // for backwards compatibility
+    .flags.rotary_fix_enable = On,
+#else
+    .flags.rotary_fix_enable = DEFAULT_ROTARY_FIX_ENABLE,
+#endif
 
     .probe.disable_probe_pullup = DEFAULT_PROBE_SIGNAL_DISABLE_PULLUP,
     .probe.allow_feed_override = DEFAULT_ALLOW_FEED_OVERRIDE_DURING_PROBE_CYCLES,
@@ -1198,6 +1203,18 @@ static status_code_t set_homing_enable (setting_id_t id, uint_fast16_t int_value
     return Status_OK;
 }
 
+#if N_AXIS > 3
+static status_code_t set_rotary_options (setting_id_t id, uint_fast16_t int_value)
+{
+    if((settings.flags.rotary_fix_enable = int_value != 0))
+        settings.flags.revert_metric_conversion = !!(int_value & 0b10);
+    else
+        settings.flags.revert_metric_conversion = Off;
+
+    return Status_OK;
+}
+#endif
+
 static status_code_t set_sleep_enable (setting_id_t id, uint_fast16_t int_value)
 {
     settings.flags.sleep_enable = int_value != 0;
@@ -1829,6 +1846,11 @@ FLASHMEM static uint32_t get_int (setting_id_t id)
             value = settings.flags.m98_prescan_enable;
             break;
 
+#if N_AXIS > 3
+        case Setting_RotaryOptions:
+            value = settings.flags.rotary_fix_enable | (settings.flags.revert_metric_conversion << 1);
+            break;
+#endif
         default:
             break;
     }
@@ -2449,7 +2471,10 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_MotorFaultsInvert, Group_Stepper, "Invert motor fault inputs", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_axis_mask, get_axis_mask, is_setting_available },
      { Setting_ResetActions, Group_General, "Reset actions", NULL, Format_Bitfield, "Clear homed status if position was lost,Clear offsets (except G92),Clear rapids override,Clear feed override", NULL, NULL, Setting_IsExtendedFn, set_reset_actions, get_int, NULL },
      { Setting_StepperEnableDelay, Group_Stepper, "Stepper enable delay", "ms", Format_Int16, "##0", NULL, "500", Setting_IsExtended, &settings.stepper_enable_delay, NULL, NULL },
-     { Setting_SubroutineOptions, Group_General, "Subroutine options", NULL, Format_Bitfield, "Prescan for internal M98 subroutines", NULL, NULL, Setting_IsExtendedFn, set_suboptions, get_int, is_setting_available }
+     { Setting_SubroutineOptions, Group_General, "Subroutine options", NULL, Format_Bitfield, "Prescan for internal M98 subroutines", NULL, NULL, Setting_IsExtendedFn, set_suboptions, get_int, is_setting_available },
+#if N_AXIS > 3
+     { Setting_RotaryOptions, Group_General, "Rotary options", NULL, Format_XBitfield, "Fix feedrate,Revert metric conversion", NULL, NULL, Setting_IsExpandedFn, set_rotary_options, get_int, NULL },
+#endif
 };
 
 PROGMEM static const setting_descr_t setting_descr[] = {
@@ -2658,6 +2683,11 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_CoolantOnDelay, "Delay to allow coolant to start. 0 or 0.5 - 20s." },
     { Setting_ResetActions, "Controls actions taken on a soft reset." },
     { Setting_StepperEnableDelay, "Delay from stepper enable to first step output. The driver typically adds ~2ms to this." },
+#if N_AXIS > 3
+     { Setting_RotaryOptions, "`Fix feedrate` changes feedrate to inverse time mode for combined angular and linear moves.\\n"
+                              "'Revert metric conversion' reverts feedrate conversion from imperial to metric for angular moves."},
+#endif
+
 //    { Setting_SubroutineOptions, "Enable prescan for internal M98 subroutines." }
 /*
     { Setting_MotorWarningsEnable, "Motor warning enable" },

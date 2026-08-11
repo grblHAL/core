@@ -2071,6 +2071,15 @@ For the controller the distance is unitless and and can be in degrees, radians, 
 #endif
 ///@}
 
+/*! @name $701 - Setting_RotaryOptions
+When enabled feed rate for combined rotary and linear motion is converted to inverse time mode..
+*/
+///@{
+#if !defined DEFAULT_ROTARY_FIX_ENABLE || defined __DOXYGEN__
+#define DEFAULT_ROTARY_FIX_ENABLE Off
+#endif
+///@}
+
 /*! @name $680 - Setting_StepperEnableDelay
 Allowed range 0 - 250 milliseconds. Driver adds ~2 milliseconds.
 */

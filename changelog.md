@@ -1,6 +1,25 @@
 ## grblHAL changelog
 
-<a name="20260729">Build 20260803
+<a name="20260811">Build 20260811
+
+Core:
+
+* Moved compile time option `ROTARY_FIX` to setting `$701` with option for reverting imperial to metric conversion for angular moves.
+Ref. PR[#979](https://github.com/grblHAL/core/pull/979) and discussion [#241](https://github.com/grblHAL/core/discussions/241).
+
+* Added hooks for future G33.1 rigid tapping cycle implementation.
+
+* Added lathe tool parameters front angle, back angle and orientation to tool data when lathe UVW option is enabled. Currently unused.
+> [!NOTE]
+> If updating from a version where lathe UVW option is enabled settings and NVS \(flash or EEPROM\) based tooltable will be reset. Backup and restore.
+
+Plugins:
+
+* Misc, tooltable: updated to handle lathe tool parameters when enabled. "Hardened" code.
+
+---
+
+<a name="20260703">Build 20260803
 
 Core:
 
@@ -14,7 +33,7 @@ Drivers:
 
 * iMXRT1062: fix for SD card early mount messing with spindle pins. Ref. issue [#111](https://github.com/grblHAL/iMXRT1062/issues/111).
 
-* Simulator: updated Web Builder cmake file, ref [#23](https://github.com/grblHAL/Simulator/issues/23).
+* Simulator: updated Web Builder cmake file, ref. [#23](https://github.com/grblHAL/Simulator/issues/23).
 
 Plugins:
 

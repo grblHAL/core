@@ -1497,15 +1497,15 @@ status_code_t gc_execute_block (char *block)
                         break;
 
                     case 33: case 76:
-                        if(mantissa != 0)
-                            RETURN(Status_GcodeUnsupportedCommand); // [G33.1 not yet supported]
-                        if (axis_command)
+                        if(axis_command)
                             RETURN(Status_GcodeAxisCommandConflict); // [Axis word/command conflict]
                         axis_command = AxisCommand_MotionMode;
                         word_bit.modal_group.G1 = On;
                         gc_block.modal.motion = (motion_mode_t)int_value;
-//                        if(mantissa == 10)
-//                            gc_block.modal.motion = MotionMode_RigidTapping;
+                        if(mantissa == 10) {
+                            mantissa = 0;
+                            gc_block.modal.motion = MotionMode_RigidTapping;
+                        }
                         gc_block.modal.canned_cycle_active = false;
                         break;
 
@@ -2376,6 +2376,12 @@ status_code_t gc_execute_block (char *block)
             gc_block.words.k = Off;
             gc_block.values.k = gc_block.modal.units_imperial ? gc_block.values.ijk[K_VALUE] *= MM_PER_INCH : gc_block.values.ijk[K_VALUE];
         }
+        if(gc_block.modal.motion == MotionMode_RigidTapping) {
+            if(!gc_block.words.i)
+                gc_block.values.ijk[I_VALUE] = 1.0f; // RPM multiplier
+            else
+                gc_block.words.i = Off;
+        }
     }
 
     // bit_false(gc_block.words,bit(Word_F)); // NOTE: Single-meaning value word. Set at end of error-checking.
@@ -2968,18 +2974,31 @@ status_code_t gc_execute_block (char *block)
 
                         if((tool_data = grbl.tool_table.get_tool((tool_id_t)p_value)->data) == NULL)
                             RETURN(Status_GcodeIllegalToolTableEntry); // [Greater than max allowed tool number or not in tool table]
-
+#if LATHE_UVW_OPTION
+                        if(gc_block.words.q) {
+                            if(!isintf(gc_block.values.q) || gc_block.values.q < 0.0f || gc_block.values.q > 9.0f)
+                                RETURN(Status_GcodeValueOutOfRange); // [Illegal orientation]
+                            tool_data->orientation = (tool_orientation_t)gc_block.values.q;
+                            gc_block.words.q = Off;
+                        }
+                        if(gc_block.words.i) {
+                            tool_data->front_angle = gc_block.values.ijk[I_VALUE];
+                            gc_block.words.i = Off;
+                        }
+                        if(gc_block.words.j) {
+                            tool_data->back_angle = gc_block.values.ijk[J_VALUE];
+                            gc_block.words.j = Off;
+                        }
+#endif
                         if(gc_block.words.r) {
                             tool_data->radius = gc_block.values.r;
                             gc_block.words.r = Off;
                         }
-
 #if COMPATIBILITY_LEVEL <= 1
                         coord_system_data_t g59_3_offset;
                         if(gc_block.values.l == 11 && !settings_read_coord_data(CoordinateSystem_G59_3, &g59_3_offset))
                             RETURN(Status_SettingReadFail);
 #endif
-
                         idx = N_AXIS;
                         do {
                             if(bit_istrue(axis_words.mask, bit(--idx))) {
@@ -3190,7 +3209,7 @@ status_code_t gc_execute_block (char *block)
                  RETURN(Status_GcodeSpindleNotRunning);
 
             // Check if feed rate is defined for the motion modes that require it.
-            if(gc_block.modal.motion == MotionMode_SpindleSynchronized) {
+            if(gc_block.modal.motion == MotionMode_SpindleSynchronized || gc_block.modal.motion == MotionMode_RigidTapping) {
 
                 if(!sspindle->hal->get_data)
                     RETURN(Status_GcodeUnsupportedCommand); // [G33, G33.1]
@@ -4538,6 +4557,35 @@ status_code_t gc_execute_block (char *block)
                 }
                 break;
 
+            case MotionMode_RigidTapping:
+                {
+                    status_code_t status;
+                    gc_override_flags_t overrides = sys.override.control; // Save current override disable status.
+
+                    protocol_buffer_synchronize(); // Wait until any previous moves are finished.
+
+                    if((status = init_sync_motion(&plan_data, gc_block.values.k)) == Status_OK)
+                        status = mc_rigid_tapping(&plan_data, (coord_data_t *)gc_block.values.xyz, (coord_data_t *)gc_state.position, gc_block.values.k, gc_block.values.ijk[I_VALUE]);
+
+                  //  if(status != Status_GcodeUnsupportedCommand)
+                        mc_override_ctrl_update(overrides);  // Wait until synchronized move is finished, then restore previous override disable status.
+#if NGC_PARAMETERS_ENABLE
+                    if(status != Status_GcodeUnsupportedCommand) {
+
+                        if(!ngc_call_push(&gc_state + ngc_call_level()))
+                            RETURN(Status_FlowControlStackOverflow); // [Call level too deep]
+#ifdef A_AXIS
+                        parameter_words_t g33_1_words = (parameter_words_t){ .i = On, .k = On, .x = axis_words.x, .y = axis_words.y, .z = axis_words.z, .a = axis_words.a };
+#else
+                        parameter_words_t g33_1_words = (parameter_words_t){ .i = On, .k = On, .x = axis_words.x, .y = axis_words.y, .z = axis_words.z };
+#endif
+                        g33_1_words.mask = macro_arguments_push(&gc_block.values, g33_1_words, NULL).mask;
+                        RETURN(macro_call(331, (line_number_t)gc_block.values.n, g33_1_words, 1));
+                    }
+#endif
+                }
+                break;
+
             case MotionMode_Threading:
                 {
                     protocol_buffer_synchronize(); // Wait until any previous moves are finished.
@@ -4562,9 +4610,11 @@ status_code_t gc_execute_block (char *block)
                        .motion = gc_block.modal.motion,
                        .x = gc_block.values.xyz[X_AXIS],
                        .z = gc_block.values.xyz[Z_AXIS],
-                       .start_distance = gc_block.values.d,
-                       .remaining_distance = gc_block.values.e,
-                       .passes = gc_block.values.p
+                       .finish = {
+                           .start_distance = gc_block.values.d,
+                           .end_distance = gc_block.values.e,
+                           .passes = gc_block.values.p
+                       }
                     };
                     RETURN(lathe_cycle(&plan_data, (coord_data_t *)gc_state.position, (uint32_t)gc_block.values.q, &args));
                 }
@@ -4581,9 +4631,11 @@ status_code_t gc_execute_block (char *block)
                        .motion = gc_block.modal.motion,
                        .x = gc_block.values.xyz[X_AXIS],
                        .z = gc_block.values.xyz[Z_AXIS],
-                       .increment = gc_block.values.ijk[0],
-                       .retract_distance = gc_block.values.r,
-                       .remaining_distance = gc_block.values.d
+                       .rough = {
+                           .increment = gc_block.values.ijk[0],
+                           .retract_distance = gc_block.values.r,
+                           .remaining_distance = gc_block.values.d
+                       }
                     };
                     RETURN(lathe_cycle(&plan_data, (coord_data_t *)gc_state.position, (uint32_t)gc_block.values.q, &args));
                 }
