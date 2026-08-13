@@ -370,12 +370,12 @@ void state_set (sys_state_t new_state)
 // Suspend manager. Controls spindle overrides in hold states.
 FLASHMEM void state_suspend_manager (void)
 {
-    if(stateHandler != state_await_resume || !gc_spindle_get(0)->state.on)
+    spindle_t *spindle = &restore_condition.spindle[restore_condition.spindle_num];
+
+    if(stateHandler != state_await_resume || !gc_spindle_get(0)->state.on || (spindle->hal && spindle->hal->param->option.restore_rpm))
         return;
 
     if(sys.override.spindle_stop.value) {
-
-        spindle_t *spindle = &restore_condition.spindle[restore_condition.spindle_num];
 
         // Handles beginning of spindle stop
         if(sys.override.spindle_stop.initiate) {
@@ -399,9 +399,9 @@ FLASHMEM void state_suspend_manager (void)
                 grbl.on_override_changed(OverrideChanged_SpindleState);
         }
 
-    } else if(sys.step_control.update_spindle_rpm && restore_condition.spindle[0].hal->get_state(restore_condition.spindle[0].hal).on) {
+    } else if(sys.step_control.update_spindle_rpm && spindle->hal && spindle->hal->get_state(spindle->hal).on) {
         // Handles spindle state during hold. NOTE: Spindle speed overrides may be altered during hold state.
-        state_spindle_restore(&restore_condition.spindle[restore_condition.spindle_num], settings.spindle.on_delay);
+        state_spindle_restore(spindle, settings.spindle.on_delay);
         sys.step_control.update_spindle_rpm = Off;
     }
 }
@@ -595,6 +595,18 @@ FLASHMEM static void state_await_hold (uint_fast16_t rt_exec)
                 sys.flags.is_parking = false;
                 break;
 
+            case STATE_HOLD:
+                {
+                    spindle_t *spindle;
+                    if((spindle = &restore_condition.spindle[restore_condition.spindle_num])->hal && settings.flags.set_rpm_0_during_hold) {
+                        if(spindle->state.on && !(spindle->hal->cap.laser && spindle->state.ccw)) {
+                            spindle->hal->param->option.restore_rpm = settings.flags.restore_after_feed_hold;
+                            spindle->hal->set_state(spindle->hal, spindle->state, spindle->hal->rpm_min);
+                        }
+                    }
+                }
+                break;
+
             default:
                 break;
         }
@@ -674,18 +686,19 @@ FLASHMEM static void state_await_resume (uint_fast16_t rt_exec)
                 break;
 
             default:
-                if (!settings.flags.restore_after_feed_hold) {
+                if(!settings.flags.restore_after_feed_hold) {
                     if (!restore_condition.spindle[restore_condition.spindle_num].hal->get_state(restore_condition.spindle[restore_condition.spindle_num].hal).on)
                         gc_spindle_off();
                     sys.override.spindle_stop.value = 0; // Clear spindle stop override states
                 } else {
 
-                    if (restore_condition.spindle[restore_condition.spindle_num].state.on != restore_condition.spindle[restore_condition.spindle_num].hal->get_state(restore_condition.spindle[restore_condition.spindle_num].hal).on) {
+                    spindle_t *spindle;
+                    if((spindle = &restore_condition.spindle[restore_condition.spindle_num])->hal && (spindle->hal->param->option.restore_rpm || spindle->state.on != spindle->hal->get_state(spindle->hal).on)) {
                         grbl.report.feedback_message(Message_SpindleRestore);
-                        state_spindle_restore(&restore_condition.spindle[restore_condition.spindle_num], settings.spindle.on_delay);
+                        state_spindle_restore(spindle, settings.spindle.on_delay);
                     }
 
-                    if (restore_condition.coolant.value != hal.coolant.get_state().value) {
+                    if(restore_condition.coolant.value != hal.coolant.get_state().value) {
                         // NOTE: Laser mode will honor this delay. An exhaust system is often controlled by coolant signals.
                         coolant_restore(restore_condition.coolant, settings.coolant.on_delay);
                         gc_coolant(restore_condition.coolant);

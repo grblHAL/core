@@ -611,7 +611,8 @@ typedef union {
                  m98_prescan_enable              :1,
                  rotary_fix_enable               :1,
                  revert_metric_conversion        :1, // For rotary axes inch/min -> mm/min
-                 unassigned                      :6;
+                 set_rpm_0_during_hold       :1,
+                 unassigned                      :5;
     };
 } settingflags_t;
 

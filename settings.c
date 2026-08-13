@@ -1226,6 +1226,7 @@ static status_code_t set_hold_actions (setting_id_t id, uint_fast16_t int_value)
 {
     settings.flags.disable_laser_during_hold = bit_istrue(int_value, bit(0));
     settings.flags.restore_after_feed_hold = bit_istrue(int_value, bit(1));
+    settings.flags.set_rpm_0_during_hold = bit_istrue(int_value, bit(2));
 
     return Status_OK;
 }
@@ -1762,7 +1763,7 @@ FLASHMEM static uint32_t get_int (setting_id_t id)
             break;
 
         case Setting_HoldActions:
-            value = settings.flags.disable_laser_during_hold | (settings.flags.restore_after_feed_hold << 1);
+            value = settings.flags.disable_laser_during_hold | (settings.flags.restore_after_feed_hold << 1) | (settings.flags.set_rpm_0_during_hold << 2);
             break;
 
         case Setting_ForceInitAlarm:
@@ -2392,7 +2393,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_DoorOptions, Group_SafetyDoor, "Safety door options", NULL, Format_Bitfield, door_options, NULL, NULL, Setting_IsExtended, &settings.safety_door.flags.value, NULL, is_setting_available },
 #endif
      { Setting_SleepEnable, Group_General, "Sleep enable", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_sleep_enable, get_int, is_setting_available },
-     { Setting_HoldActions, Group_General, "Feed hold actions", NULL, Format_Bitfield, "Disable laser during hold,Restore spindle and coolant state on resume", NULL, NULL, Setting_IsExtendedFn, set_hold_actions, get_int, NULL },
+     { Setting_HoldActions, Group_General, "Feed hold actions", NULL, Format_Bitfield, "Disable laser during hold,Restore spindle and coolant state on resume,Set RPM to minimum (except for laser M4)", NULL, NULL, Setting_IsExtendedFn, set_hold_actions, get_int, NULL },
      { Setting_ForceInitAlarm, Group_General, "Force init alarm", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_force_initialization_alarm, get_int, NULL },
      { Setting_ProbingFlags, Group_Probing, "Probing options", NULL, Format_Bitfield, probing_options, NULL, NULL, Setting_IsExtendedFn, set_probe_flags, get_int, is_setting_available },
 #if ENABLE_SPINDLE_LINEARIZATION

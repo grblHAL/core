@@ -179,10 +179,12 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
         // Plan and queue motion into planner buffer.
         // While in M3 laser mode also set spindle state and force a buffer sync
         // if there is a coincident position passed.
-        if(!plan_buffer_line(target, pl_data) && pl_data->spindle.hal->cap.laser && pl_data->spindle.state.on && !pl_data->spindle.state.ccw) {
-            protocol_buffer_synchronize();
+        if(!plan_buffer_line(target, pl_data) &&
+            pl_data->spindle.hal->cap.laser &&
+             pl_data->spindle.state.on &&
+              !pl_data->spindle.state.ccw &&
+                protocol_buffer_synchronize())
             pl_data->spindle.hal->set_state(pl_data->spindle.hal, pl_data->spindle.state, pl_data->spindle.rpm);
-        }
 
 #ifdef KINEMATICS_API
         if(pl_data->condition.jog_motion) {

@@ -1,5 +1,29 @@
 ## grblHAL changelog
 
+<a name="20260813">Build 20260813
+
+Core:
+
+* Added option to setting `$63` - _Feed hold actions_ to set spindle RPM to minimum \(typically 0\) on feed hold.
+Ref. issue [#991](https://github.com/grblHAL/core/issues/991).
+> [!NOTE]
+> This is ignored for laser enabled spindles when M4 is active.
+
+* Fixed reset \(abort\) not turning off laser in some circumstances.
+
+Drivers:
+
+* ESP32: fixed pin conflict with Modbus port for BTT Rodent board. Ref. [#211](https://github.com/grblHAL/ESP32/issues/211).
+Fixed issues with second PWM spindle.
+
+Plugins:
+
+* Laser, LigthBurn clusters: Added fix for for modal state RPM left incorrect after processing line.
+"Hardened" code to mostly ignore malformed/malign input, may raise alarm if really off the charts.
+Ref. PR[#4](/https://github.com/grblHAL/Plugins_laser/pull/4).
+
+---
+
 <a name="20260811">Build 20260811
 
 Core:

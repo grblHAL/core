@@ -845,11 +845,13 @@ FLASHMEM bool spindle_restore (spindle_ptrs_t *spindle, spindle_state_t state, f
 {
     bool ok;
 
-    if(spindle->cap.laser) { // When in laser mode, ignore spindle spin-up delay. Set to turn on laser when cycle starts.
+    if(!spindle->param->option.restore_rpm && spindle->cap.laser) { // When in laser mode, ignore spindle spin-up delay. Set to turn on laser when cycle starts.
         if(!(ok = !settings.flags.disable_laser_during_hold))
             ok = (sys.step_control.update_spindle_rpm = _spindle_set_state(spindle, state, 0.0f, 0));
-    } else if(!(ok = spindle_check_state(spindle, state) && spindle->param->rpm == rpm))
+    } else if(!(ok = !spindle->param->option.restore_rpm && spindle_check_state(spindle, state) && spindle->param->rpm == rpm)) {
         ok = spindle_set_state_wait(spindle, state, rpm, delay_ms);
+        spindle->param->option.restore_rpm = Off;
+    }
 
     return ok;
 }
@@ -889,6 +891,7 @@ FLASHMEM void spindle_all_off (bool reset)
 
             spindle->param->rpm = spindle->param->rpm_overridden = 0.0f;
             spindle->param->state.value = 0;
+            spindle->param->option.restore_rpm = Off;
 #ifdef GRBL_ESP32
             spindle->esp32_off(spindle);
 #else
