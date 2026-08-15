@@ -88,6 +88,7 @@ typedef bool (*home_machine_ptr)(axes_signals_t cycle, axes_signals_t auto_squar
 typedef void (*on_parser_init_ptr)(parser_state_t *gc_state);
 typedef void (*on_state_change_ptr)(sys_state_t state);
 typedef void (*on_override_changed_ptr)(override_changed_t override);
+typedef void (*on_planner_changed_ptr)(void);
 typedef void (*on_spindle_programmed_ptr)(spindle_ptrs_t *spindle, spindle_state_t state, float rpm, spindle_rpm_mode_t mode);
 typedef void (*on_spindle_at_speed_ptr)(spindle_ptrs_t *spindle, spindle_state_t state);
 typedef void (*on_port_out_ptr)(uint8_t port, io_port_type_t type, float value);
@@ -229,6 +230,7 @@ typedef struct {
     on_parser_init_ptr on_parser_init;
     on_state_change_ptr on_state_change;
     on_override_changed_ptr on_override_changed;
+    on_planner_changed_ptr on_planner_changed;                  //!< Called when the planner buffer contents or the computed velocity profile change. May be called from the stepper prep context, keep the handler short.
     on_report_handlers_init_ptr on_report_handlers_init;
     on_spindle_programmed_ptr on_spindle_programmed;
     on_spindle_at_speed_ptr on_spindle_at_speed;
