@@ -204,6 +204,7 @@ bool protocol_main_loop (void)
     keep_rt_commands = false;
 
     while(true) {
+
         // Process one line of incoming stream data, as the data becomes available. Performs an
         // initial filtering by removing leading spaces and control characters.
         while((c = hal.stream.read()) != SERIAL_NO_DATA) {

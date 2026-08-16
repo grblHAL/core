@@ -220,6 +220,30 @@ FLASHMEM static float tool_offset (ngc_param_id_t id)
     return axis <= 9 ? gc_state.modal.tool_length_offset[axis] : 0.0f;
 }
 
+FLASHMEM static float tool_diameter (ngc_param_id_t id)
+{
+    return gc_state.tool->radius * 2.0f;
+}
+
+#if LATHE_UVW_OPTION
+
+FLASHMEM static float tool_front_angle (ngc_param_id_t id)
+{
+    return gc_state.tool->front_angle;
+}
+
+FLASHMEM static float tool_back_angle (ngc_param_id_t id)
+{
+    return gc_state.tool->back_angle;
+}
+
+FLASHMEM static float tool_orientation (ngc_param_id_t id)
+{
+    return (float)gc_state.tool->orientation;
+}
+
+#endif
+
 FLASHMEM static float g28_home (ngc_param_id_t id)
 {
     float value = 0.0f;
@@ -318,6 +342,12 @@ PROGMEM static const ngc_ro_param_t ngc_ro_params[] = {
     { .id_min = 5399, .id_max = 5399, .get = m66_result },          // LinuxCNC
     { .id_min = 5400, .id_max = 5400, .get = tool_number },         // LinuxCNC
     { .id_min = 5401, .id_max = 5409, .get = tool_offset },         // LinuxCNC
+    { .id_min = 5410, .id_max = 5410, .get = tool_diameter },       // LinuxCNC
+#if LATHE_UVW_OPTION
+    { .id_min = 5411, .id_max = 5411, .get = tool_front_angle },    // LinuxCNC
+    { .id_min = 5412, .id_max = 5412, .get = tool_back_angle },     // LinuxCNC
+    { .id_min = 5413, .id_max = 5413, .get = tool_orientation },    // LinuxCNC
+#endif
     { .id_min = 5420, .id_max = 5428, .get = work_position },       // LinuxCNC
     { .id_min = 5599, .id_max = 5599, .get = debug_output }         // LinuxCNC
 };
@@ -489,18 +519,14 @@ FLASHMEM float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             value = (float)(170 + gc_state.modal.plane_select * 10);
             break;
 
-          case NGCParam_ccomp:
-#if CUTTER_COMP_ENABLE          
-            if(gc_state.modal.cutter_comp.side == CComp_Off)
-                value = 400.0f;
-            else if(gc_state.modal.cutter_comp.side == CComp_Left)
-                value = gc_state.modal.cutter_comp.dynamic ? 411.0f : 410.0f;
-            else
-                value = gc_state.modal.cutter_comp.dynamic ? 421.0f : 420.0f;
-            break;
+        case NGCParam_ccomp:
+#if CUTTER_COMP_ENABLE
+            value = 400.0f + (float)(gc_state.modal.cutter_comp.side * 10 + gc_state.modal.cutter_comp.dynamic);
 #else
             value = 400.0f;
-#endif  
+#endif
+            break;
+
         case NGCParam_metric:
             value = gc_state.modal.units_imperial ? 0.0f : 1.0f;
             break;

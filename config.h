@@ -150,6 +150,15 @@ Experimental - testing required and homing needs to be worked out.
 #define POLAR_ROBOT Off
 #endif
 
+/*! \def RTCP_AC
+\brief Enable RTCP AC kinematics.
+Experimental - verification required. Needs XYZAC axes configured.
+*/
+#if !defined RTCP_AC || defined __DOXYGEN__
+#define RTCP_AC Off
+#endif
+
+
 /*! \def COREXY
 \brief Enable CoreXY kinematics. Use ONLY with CoreXY machines.
 <br>__IMPORTANT:__ If homing is enabled, you must reconfigure the homing cycle \#defines above to
@@ -210,6 +219,10 @@ or EMI triggering the related interrupt falsely or too many times.
 
 #if !defined ENABLE_JERK_ACCELERATION || defined __DOXYGEN__
 #define ENABLE_JERK_ACCELERATION Off // Enable to use 3rd order acceleration calculations. May need more processing power, a FPU will help.
+#endif
+
+#if !defined CUTTER_COMP_ENABLE || defined __DOXYGEN__
+#define CUTTER_COMP_ENABLE On
 #endif
 
 // -
@@ -301,16 +314,6 @@ should not be much greater than zero or to the minimum value necessary for the m
 #if !defined MINIMUM_JUNCTION_SPEED || defined __DOXYGEN__
 #define MINIMUM_JUNCTION_SPEED 0.0f // (mm/min)
 #endif
-
-
-/*! \def CUTTER_COMP_ENABLE
-\brief Enables cutter compensation feature.
-see cutter_comp_grblhal.h for more details and configuration options related to this feature.
-*/
-#if !defined CUTTER_COMP_ENABLE || defined __DOXYGEN__
-#define CUTTER_COMP_ENABLE 2  // 0 disabled. Set to \ref On or 1 to enable. Set to 2 to enable switchable lookahead.
-#endif
-
 
 /*! \def MINIMUM_FEED_RATE
 \brief
@@ -531,7 +534,7 @@ by a driver or a plugin.
 #endif
 
 #if !defined ENABLE_BACKLASH_COMPENSATION || defined __DOXYGEN__
-#define ENABLE_BACKLASH_COMPENSATION On
+#define ENABLE_BACKLASH_COMPENSATION Off
 #endif
 
 #if COMPATIBILITY_LEVEL == 0 || defined __DOXYGEN__
@@ -540,7 +543,7 @@ by a driver or a plugin.
 Number of tools in tool table, edit to enable (max. 32 allowed)
 */
 #if !defined N_TOOLS || defined __DOXYGEN__
-#define N_TOOLS 8
+#define N_TOOLS 0
 #endif
 #endif
 
@@ -561,7 +564,7 @@ Set to \ref On or 1 to enable experimental support for expressions.
 Some LinuxCNC extensions are supported, conditionals and subroutines are not.
 */
 #if !defined NGC_EXPRESSIONS_ENABLE || defined __DOXYGEN__
-#define NGC_EXPRESSIONS_ENABLE On
+#define NGC_EXPRESSIONS_ENABLE Off
 #endif
 
 /*! \def NGC_PARAMETERS_ENABLE
@@ -755,7 +758,7 @@ If set to \ref Off or 0 the `|DTG:` distance-to-go element is not included in th
 \internal Bit 13 in settings.status_report.
 */
 #if !defined DEFAULT_REPORT_DISTANCE_TO_GO || defined __DOXYGEN__
-#define DEFAULT_REPORT_DISTANCE_TO_GO On // Default off. Set to \ref On or 1 to enable.
+#define DEFAULT_REPORT_DISTANCE_TO_GO Off // Default off. Set to \ref On or 1 to enable.
 #endif
 
 ///@}
@@ -784,7 +787,7 @@ with 4 digits of precision.
 */
 ///@{
 #if !defined DEFAULT_REPORT_INCHES || defined __DOXYGEN__
-#define DEFAULT_REPORT_INCHES On
+#define DEFAULT_REPORT_INCHES Off
 #endif
 ///@}
 
@@ -2078,6 +2081,15 @@ For the controller the distance is unitless and and can be in degrees, radians, 
 #define RA7 0
 #endif
 #define DEFAULT_AXIS_ROTATIONAL_MASK (RA3|RA4|RA5|RA6|RA7)
+#endif
+///@}
+
+/*! @name $701 - Setting_RotaryOptions
+When enabled feed rate for combined rotary and linear motion is converted to inverse time mode..
+*/
+///@{
+#if !defined DEFAULT_ROTARY_FIX_ENABLE || defined __DOXYGEN__
+#define DEFAULT_ROTARY_FIX_ENABLE Off
 #endif
 ///@}
 

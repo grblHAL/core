@@ -79,7 +79,7 @@ void mc_sync_backlash_position (void)
 // segments, must pass through this routine before being passed to the planner. The separation of
 // mc_line and plan_buffer_line is done primarily to place non-planner-type functions from being
 // in the planner and to let backlash compensation or canned cycle integration simple and direct.
-bool mc_line (float *target, plan_line_data_t *pl_data)
+status_code_t mc_line (float *target, plan_line_data_t *pl_data)
 {
 #ifdef KINEMATICS_API
     float feed_rate = pl_data->feed_rate;
@@ -154,7 +154,7 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
                 while(plan_check_full_buffer()) {
                     protocol_auto_cycle_start();     // Auto-cycle start when buffer is full.
                     if(!protocol_execute_realtime()) // Check for any run-time commands
-                        return false;                // Bail, if system abort.
+                        return Status_Aborted;       // Bail, if system abort.
                 }
 
                 plan_buffer_line(target_prev.values, &pl_backlash);
@@ -169,7 +169,7 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
         // Remain in this loop until there is room in the buffer.
          do {
             if(!protocol_execute_realtime())    // Check for any run-time commands
-                return false;                   // Bail, if system abort.
+                return Status_Aborted;          // Bail, if system abort.
             if(plan_check_full_buffer())
                 protocol_auto_cycle_start();    // Auto-cycle start when buffer is full.
             else
@@ -179,10 +179,12 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
         // Plan and queue motion into planner buffer.
         // While in M3 laser mode also set spindle state and force a buffer sync
         // if there is a coincident position passed.
-        if(!plan_buffer_line(target, pl_data) && pl_data->spindle.hal->cap.laser && pl_data->spindle.state.on && !pl_data->spindle.state.ccw) {
-            protocol_buffer_synchronize();
+        if(!plan_buffer_line(target, pl_data) &&
+            pl_data->spindle.hal->cap.laser &&
+             pl_data->spindle.state.on &&
+              !pl_data->spindle.state.ccw &&
+                protocol_buffer_synchronize())
             pl_data->spindle.hal->set_state(pl_data->spindle.hal, pl_data->spindle.state, pl_data->spindle.rpm);
-        }
 
 #ifdef KINEMATICS_API
         if(pl_data->condition.jog_motion) {
@@ -201,7 +203,7 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
 #endif
     }
 
-    return !ABORTED;
+    return ABORTED ? Status_Aborted : Status_Handled;
 }
 
 // Execute an arc in offset mode format. position == current xyz, target == target xyz,
@@ -211,7 +213,7 @@ bool mc_line (float *target, plan_line_data_t *pl_data)
 // The arc is approximated by generating a huge number of tiny, linear segments. The chordal tolerance
 // of each segment is configured in settings.arc_tolerance, which is defined to be the maximum normal
 // distance from segment to the circle when the end points both lie on the circle.
-void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *offset, float radius, plane_t plane, int32_t turns)
+status_code_t mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *offset, float radius, plane_t plane, int32_t turns)
 {
     typedef union {
         double values[2];
@@ -356,6 +358,7 @@ void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *o
         float cos_Ti;
         float r_axisi;
         uint_fast16_t i, count = 0;
+        status_code_t status;
 
         for (i = 1; i < segments; i++) { // Increment (segments-1).
 
@@ -390,13 +393,13 @@ void mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *o
 #endif
 
             // Bail mid-circle on system abort. Runtime command check already performed by mc_line.
-            if(!mc_line(position, pl_data))
-                return;
+            if((status = mc_line(position, pl_data)) != Status_Handled)
+                return status;
         }
     }
 
     // Ensure last segment arrives at target location.
-    mc_line(target, pl_data);
+    return mc_line(target, pl_data);
 }
 
 // Bezier splines, from a pull request for Marlin
@@ -792,6 +795,20 @@ FLASHMEM void mc_thread (plan_line_data_t *pl_data, float *position, gc_thread_d
                 return;
         }
     }
+}
+
+#if LATHE_UVW_OPTION && NGC_EXPRESSIONS_ENABLE
+
+FLASHMEM __attribute__((weak)) status_code_t mc_lathe_cycle (plan_line_data_t *pl_data, coord_data_t *position, uint32_t o_label, lathe_cycle_arguments_t *args)
+{
+    return Status_GcodeUnsupportedCommand; // TBC
+}
+
+#endif
+
+FLASHMEM __attribute__((weak))  status_code_t mc_rigid_tapping (plan_line_data_t *pl_data, coord_data_t *target, coord_data_t *position, float pitch, float rpm_multiplier)
+{
+    return Status_GcodeUnsupportedCommand; // TBC
 }
 
 // Sets up valid jog motion received from g-code parser, checks for soft-limits, and executes the jog.

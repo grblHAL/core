@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2025 Terje Io
+  Copyright (c) 2017-2026 Terje Io
   Copyright (c) 2011-2016 Sungeun K. Jeon for Gnea Research LLC
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -49,7 +49,8 @@ typedef enum {
     Alarm_ModbusException = 19,                 //!< 19
     Alarm_ExpanderException = 20,               //!< 20
     Alarm_NVS_Failed = 21,                      //!< 21
-    Alarm_AlarmMax = Alarm_NVS_Failed
+    Alarm_BufferOverflow = 22,                  //!< 22
+    Alarm_AlarmMax = Alarm_BufferOverflow
 } __attribute__ ((__packed__)) alarm_code_t;
 
 typedef struct {

@@ -35,9 +35,6 @@
 #include "tool_change.h"
 #include "state_machine.h"
 #include "strutils.h"
-#if CUTTER_COMP_ENABLE
-#include "cutter_comp.h"
-#endif
 #if ENABLE_BACKLASH_COMPENSATION
 #include "motion_control.h"
 #endif
@@ -99,7 +96,11 @@ PROGMEM static const settings_t defaults = {
     .flags.keep_rapids_override_on_reset = DEFAULT_KEEP_RAPIDS_OVR_ON_RESET,
     .flags.keep_feed_override_on_reset = DEFAULT_KEEP_FEED_OVR_ON_RESET,
     .flags.tool_persistent = DEFAULT_PERSIST_TOOL,
-    .cutter_comp_flags = {0},
+#if defined(ROTARY_FIX) // for backwards compatibility
+    .flags.rotary_fix_enable = On,
+#else
+    .flags.rotary_fix_enable = DEFAULT_ROTARY_FIX_ENABLE,
+#endif
 
     .probe.disable_probe_pullup = DEFAULT_PROBE_SIGNAL_DISABLE_PULLUP,
     .probe.allow_feed_override = DEFAULT_ALLOW_FEED_OVERRIDE_DURING_PROBE_CYCLES,
@@ -1075,30 +1076,6 @@ static status_code_t set_suboptions (setting_id_t id, uint_fast16_t int_value)
     return Status_OK;
 }
 
-#if CUTTER_COMP_ENABLE
-static status_code_t set_cutter_comp_options (setting_id_t id, uint_fast16_t int_value)
-{
-    bool enabled = int_value != 0;
-
-    switch(id) {
-        case Setting_CutterCompFacetCorner:
-            settings.cutter_comp_flags.chamfer_corner_treatment = enabled;
-            cc_api_set_corner_treatment_mode(enabled ? CC_CTM_CHAMFER : CC_CTM_ROLL);
-            break;
-
-        case Setting_CutterCompAllowLookahead:
-            settings.cutter_comp_flags.allow_lookahead = enabled;
-            cc_api_set_lookahead_enabled(enabled);
-            break;
-
-        default:
-            return Status_InvalidStatement;
-    }
-
-    return Status_OK;
-}
-#endif
-
 #if !LATHE_UVW_OPTION
 
 static status_code_t set_mode (setting_id_t id, uint_fast16_t int_value)
@@ -1226,6 +1203,18 @@ static status_code_t set_homing_enable (setting_id_t id, uint_fast16_t int_value
     return Status_OK;
 }
 
+#if N_AXIS > 3
+static status_code_t set_rotary_options (setting_id_t id, uint_fast16_t int_value)
+{
+    if((settings.flags.rotary_fix_enable = int_value != 0))
+        settings.flags.revert_metric_conversion = !!(int_value & 0b10);
+    else
+        settings.flags.revert_metric_conversion = Off;
+
+    return Status_OK;
+}
+#endif
+
 static status_code_t set_sleep_enable (setting_id_t id, uint_fast16_t int_value)
 {
     settings.flags.sleep_enable = int_value != 0;
@@ -1237,6 +1226,7 @@ static status_code_t set_hold_actions (setting_id_t id, uint_fast16_t int_value)
 {
     settings.flags.disable_laser_during_hold = bit_istrue(int_value, bit(0));
     settings.flags.restore_after_feed_hold = bit_istrue(int_value, bit(1));
+    settings.flags.set_rpm_0_during_hold = bit_istrue(int_value, bit(2));
 
     return Status_OK;
 }
@@ -1773,7 +1763,7 @@ FLASHMEM static uint32_t get_int (setting_id_t id)
             break;
 
         case Setting_HoldActions:
-            value = settings.flags.disable_laser_during_hold | (settings.flags.restore_after_feed_hold << 1);
+            value = settings.flags.disable_laser_during_hold | (settings.flags.restore_after_feed_hold << 1) | (settings.flags.set_rpm_0_during_hold << 2);
             break;
 
         case Setting_ForceInitAlarm:
@@ -1857,16 +1847,11 @@ FLASHMEM static uint32_t get_int (setting_id_t id)
             value = settings.flags.m98_prescan_enable;
             break;
 
-#if CUTTER_COMP_ENABLE
-        case Setting_CutterCompFacetCorner:
-            value = settings.cutter_comp_flags.chamfer_corner_treatment;
-            break;
-
-        case Setting_CutterCompAllowLookahead:
-            value = settings.cutter_comp_flags.allow_lookahead;
+#if N_AXIS > 3
+        case Setting_RotaryOptions:
+            value = settings.flags.rotary_fix_enable | (settings.flags.revert_metric_conversion << 1);
             break;
 #endif
-
         default:
             break;
     }
@@ -2147,17 +2132,6 @@ FLASHMEM static bool is_setting_available (const setting_detail_t *setting, uint
         case Setting_AxisHomingSeekRate:
             available = settings.homing.flags.per_axis_feedrates;
             break;
-#if CUTTER_COMP_ENABLE
-        case Setting_CutterCompFacetCorner:
-            available = true;
-            break;
-        case Setting_CutterCompAllowLookahead:
-            available = false;
-            #if CUTTER_COMP_ENABLE == 2
-                available = true;
-            #endif    
-            break;    
-#endif            
 
 #ifndef NO_SAFETY_DOOR_SUPPORT
 
@@ -2419,7 +2393,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_DoorOptions, Group_SafetyDoor, "Safety door options", NULL, Format_Bitfield, door_options, NULL, NULL, Setting_IsExtended, &settings.safety_door.flags.value, NULL, is_setting_available },
 #endif
      { Setting_SleepEnable, Group_General, "Sleep enable", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_sleep_enable, get_int, is_setting_available },
-     { Setting_HoldActions, Group_General, "Feed hold actions", NULL, Format_Bitfield, "Disable laser during hold,Restore spindle and coolant state on resume", NULL, NULL, Setting_IsExtendedFn, set_hold_actions, get_int, NULL },
+     { Setting_HoldActions, Group_General, "Feed hold actions", NULL, Format_Bitfield, "Disable laser during hold,Restore spindle and coolant state on resume,Set RPM to minimum (except for laser M4)", NULL, NULL, Setting_IsExtendedFn, set_hold_actions, get_int, NULL },
      { Setting_ForceInitAlarm, Group_General, "Force init alarm", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsExtendedFn, set_force_initialization_alarm, get_int, NULL },
      { Setting_ProbingFlags, Group_Probing, "Probing options", NULL, Format_Bitfield, probing_options, NULL, NULL, Setting_IsExtendedFn, set_probe_flags, get_int, is_setting_available },
 #if ENABLE_SPINDLE_LINEARIZATION
@@ -2498,11 +2472,9 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_MotorFaultsInvert, Group_Stepper, "Invert motor fault inputs", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_IsExtendedFn, set_axis_mask, get_axis_mask, is_setting_available },
      { Setting_ResetActions, Group_General, "Reset actions", NULL, Format_Bitfield, "Clear homed status if position was lost,Clear offsets (except G92),Clear rapids override,Clear feed override", NULL, NULL, Setting_IsExtendedFn, set_reset_actions, get_int, NULL },
      { Setting_StepperEnableDelay, Group_Stepper, "Stepper enable delay", "ms", Format_Int16, "##0", NULL, "500", Setting_IsExtended, &settings.stepper_enable_delay, NULL, NULL },
-    { Setting_SubroutineOptions, Group_General, "Subroutine options", NULL, Format_Bitfield, "Prescan for internal M98 subroutines", NULL, NULL, Setting_IsExtendedFn, set_suboptions, get_int, is_setting_available }
-#if CUTTER_COMP_ENABLE
-    ,{ Setting_CutterCompFacetCorner, Group_General, "Cutter comp chamfer corner", NULL, Format_Bool, "Cutter comp chamfer corner", NULL, NULL, Setting_IsExtendedFn, set_cutter_comp_options, get_int, is_setting_available }
-    ,{ Setting_CutterCompAllowLookahead, Group_General, "Cutter comp lookahead", NULL, Format_Bool, "Cutter comp allow lookahead", NULL, NULL, Setting_IsExtendedFn, set_cutter_comp_options, get_int, is_setting_available }
-
+     { Setting_SubroutineOptions, Group_General, "Subroutine options", NULL, Format_Bitfield, "Prescan for internal M98 subroutines", NULL, NULL, Setting_IsExtendedFn, set_suboptions, get_int, is_setting_available },
+#if N_AXIS > 3
+     { Setting_RotaryOptions, Group_General, "Rotary options", NULL, Format_XBitfield, "Fix feedrate,Revert metric conversion", NULL, NULL, Setting_IsExpandedFn, set_rotary_options, get_int, NULL },
 #endif
 };
 
@@ -2712,17 +2684,12 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_CoolantOnDelay, "Delay to allow coolant to start. 0 or 0.5 - 20s." },
     { Setting_ResetActions, "Controls actions taken on a soft reset." },
     { Setting_StepperEnableDelay, "Delay from stepper enable to first step output. The driver typically adds ~2ms to this." },
-//    { Setting_SubroutineOptions, "Enable prescan for internal M98 subroutines." }
-#if CUTTER_COMP_ENABLE
-    { Setting_CutterCompFacetCorner, "Controls default corner treatment behavior.\\n"
-                                 "Enable the option for chamfer corner-treatment mode; leave it off to default to roll mode.\\n"
-                                 "A P1 word on the G41/G42 entry block overrides the default for that command."
-    },
-    { Setting_CutterCompAllowLookahead, "Allow lookahead data for gouge checking.\\n"
-                                 "When disabled, the system looks at the next move only.\\n"
-                                 "When enabled, the system utilizes lookahead data to avoid gouging."
-    }
+#if N_AXIS > 3
+     { Setting_RotaryOptions, "`Fix feedrate` changes feedrate to inverse time mode for combined angular and linear moves.\\n"
+                              "'Revert metric conversion' reverts feedrate conversion from imperial to metric for angular moves."},
 #endif
+
+//    { Setting_SubroutineOptions, "Enable prescan for internal M98 subroutines." }
 /*
     { Setting_MotorWarningsEnable, "Motor warning enable" },
     { Setting_MotorWarningsInvert, "Invert motor warning inputs" },

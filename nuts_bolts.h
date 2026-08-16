@@ -360,7 +360,20 @@ typedef union {
         float x;
         float y;
     };
+    struct {
+        float z;
+        float x;
+    } g18;
+/*    struct {
+        float y;
+        float z;
+    } g19; */
 } point_2d_t;
+
+typedef struct {
+    point_2d_t min;
+    point_2d_t max;
+} bbox_2d_t;
 
 typedef union {
     float values[3];
@@ -370,6 +383,11 @@ typedef union {
         float z;
     };
 } point_3d_t;
+
+typedef struct {
+    point_3d_t min;
+    point_3d_t max;
+} bbox_3d_t;
 
 //! Axis index to plane assignment.
 typedef union {
@@ -531,5 +549,6 @@ static int ffs (int i)
 }
 
 #endif // _WIN32
+
 
 #endif

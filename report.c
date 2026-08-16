@@ -725,11 +725,6 @@ FLASHMEM void report_gcode_modes (stream_write_ptr stream_write)
     stream_write(motionmode_to_str(buf, gc_state.modal.motion));
     stream_write(" ");
     stream_write(gc_coord_system_to_str(gc_state.modal.g5x_offset.id));
-#if CUTTER_COMP_ENABLE
-    if(gc_state.modal.cutter_comp.side != CComp_Off) {
-        stream_write(gc_state.modal.cutter_comp.side == CComp_Left ? " G41" : " G42");
-     }
-#endif        
 
 #if COMPATIBILITY_LEVEL < 10
 
@@ -758,6 +753,15 @@ FLASHMEM void report_gcode_modes (stream_write_ptr stream_write)
 
     if(settings.mode == Mode_Lathe && gc_spindle_get(0)->hal->cap.variable)
         stream_write(gc_spindle_get(0)->rpm_mode == SpindleSpeedMode_RPM ? " G97" : " G96");
+
+#if CUTTER_COMP_ENABLE
+    stream_write(" G");
+    stream_write(uitoa(40 + gc_state.modal.cutter_comp.side));
+    if(gc_state.modal.cutter_comp.side && gc_state.modal.cutter_comp.dynamic)
+        stream_write(".1");
+#else
+    stream_write(" G40");
+#endif
 
 #if COMPATIBILITY_LEVEL < 10
 
@@ -989,11 +993,11 @@ FLASHMEM void report_build_info (char *line, bool extended)
         hal.stream.write(strcat(buf, "]" ASCII_EOL));
 
         strcpy(buf, "[NEWOPT:ENUMS,RT");
-        #if CUTTER_COMP_ENABLE
-            strcat(buf, " CCMP,");
-        #endif
         strcat(buf, settings.flags.legacy_rt_commands ? "+," : "-,");
 
+#if CUTTER_COMP_ENABLE
+        strcat(buf, "CCMP,");
+#endif
         if(settings.homing.flags.enabled)
             strcat(buf, "HOME,");
 
@@ -1008,6 +1012,11 @@ FLASHMEM void report_build_info (char *line, bool extended)
             if(hal.signals_cap.probe_disconnected)
                 strcat(buf, "PC,");
         }
+
+#if N_AXIS > 3
+        if(settings.flags.rotary_fix_enable)
+            strcat(buf, "RF,");
+#endif
 
         if(hal.signals_cap.stop_disable)
             strcat(buf, "OS,");
@@ -1034,9 +1043,9 @@ FLASHMEM void report_build_info (char *line, bool extended)
         if(hal.reboot)
             strcat(buf, "REBOOT,");
 
-    #if NGC_EXPRESSIONS_ENABLE
+#if NGC_EXPRESSIONS_ENABLE
         strcat(buf, "EXPR,");
-    #endif
+#endif
 
         if(atc != ATC_None || (settings.tool_change.mode != ToolChange_Ignore && !!hal.stream.suspend_read))
             strcat(buf, atc == ATC_None ? "TC," : (atc == ATC_Online ? "ATC=1," : "ATC=0,")); // Tool change supported (M6)
@@ -1052,9 +1061,9 @@ FLASHMEM void report_build_info (char *line, bool extended)
         if(canbus_enabled())
             strcat(buf, "CAN,");
 
-    #ifdef PID_LOG
+#ifdef PID_LOG
         strcat(buf, "PID,");
-    #endif
+#endif
 
         append = &buf[strlen(buf) - 1];
         if(*append == ',')

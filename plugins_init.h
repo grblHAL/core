@@ -186,16 +186,6 @@
     encoder_init();
 #endif
 
-#if ADD_TO_RT_REPORT_ENABLE
-    extern void add_to_rt_report_init (void);
-    add_to_rt_report_init();
-#endif
-
-// #if RPM_FEEDBACK_ENABLE
-//     extern void rpm_feedback_init (void);
-//     rpm_feedback_init();
-// #endif
-
     extern void my_plugin_init (void);
     my_plugin_init();
 
@@ -276,6 +266,11 @@
 #if SPINDLE_INTERLOCK_ENABLE
     extern void spindle_interlock_init (void);
     spindle_interlock_init();
+#endif
+
+#if VIRTUAL_INPUTS_ENABLE
+    extern void virtual_inputs_init (void);
+    virtual_inputs_init();
 #endif
 
 // End third party plugin definitions.

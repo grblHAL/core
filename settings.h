@@ -465,6 +465,8 @@ typedef enum {
     // 683 - 689 - reserved for Sienci
 
     Setting_SubroutineOptions = 700,
+    Setting_RotaryOptions = 701,
+    Setting_CutterCompOptions = 702,
 
     Setting_SpindlePWMOptions1 = 709,
 
@@ -519,10 +521,7 @@ typedef enum {
 //
 // 773-779 - reserved for spindle offset settings
 //
-#if CUTTER_COMP_ENABLE
-    Setting_CutterCompFacetCorner = 780,
-    Setting_CutterCompAllowLookahead = 781,
- #endif
+
 // Reserving settings in the range 800 - 899 for axis settings.
     Setting_AxisSettingsBase1 = 800,    // Reserved for driver/plugin settings
     Setting_AxisSettingsMax1 = Setting_AxisSettingsBase1 + AXIS_SETTINGS_INCREMENT * 9 + N_AXIS,
@@ -531,6 +530,7 @@ typedef enum {
 //
 // 900-999 - reserved for automatic tool changers (ATC)
 //
+
 // ---
     Setting_SettingsMax,
     Setting_SettingsAll = Setting_SettingsMax,
@@ -610,7 +610,12 @@ typedef union {
                  keep_rapids_override_on_reset   :1,
                  keep_feed_override_on_reset     :1,
                  m98_prescan_enable              :1,
-                 unassigned                      :8;
+                 rotary_fix_enable               :1,
+                 revert_metric_conversion        :1, // For rotary axes inch/min -> mm/min
+                 set_rpm_0_during_hold           :1,
+                 cc_lookahead_enable             :1, // For cutter compensation
+                 cc_chamfer_corner               :1, // For cutter compensation
+                 unassigned                      :3;
     };
 } settingflags_t;
 
@@ -865,15 +870,6 @@ typedef union {
     };
 } macro_atc_flags_t;
 
-typedef union {
-    uint8_t value;
-    struct {
-        uint8_t chamfer_corner_treatment :1,
-                allow_lookahead          :1,
-                unassigned               :6;
-    };
-} cutter_comp_flags_t;
-
 typedef struct {
     uint8_t baud_rate;
     uint8_t stream_format;
@@ -931,8 +927,7 @@ typedef struct {
     uint16_t stepper_enable_delay; // Move to stepper_settings_t
     tool_id_t tool_id;
     serial_format_t modbus_stream_format; // TODO: remove in next version
-    cutter_comp_flags_t cutter_comp_flags;
-    char reserved[8];             // Reserved For future expansion
+    char reserved[9];             // Reserved For future expansion
 } settings_t;
 
 typedef enum {

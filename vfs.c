@@ -828,7 +828,7 @@ int vfs_drive_format (vfs_drive_t *drive)
 
     if(mount && fs->format) {
 
-        int errno;
+        int ferrno;
 
         if(mount == cwdmount)
             strcpy(cwd.name, "/");
@@ -836,14 +836,14 @@ int vfs_drive_format (vfs_drive_t *drive)
         if(vfs.on_unmount)
             vfs.on_unmount(drive->path);
 
-        if((errno = fs->format()) == 0) {
+        if((ferrno = fs->format()) == 0) {
             if(fs->device_mount && !fs->device_mount(mount->device, true))
-                errno = -1;
-            if(errno == 0 && vfs.on_mount)
+                ferrno = -1;
+            if(ferrno == 0 && vfs.on_mount)
                 vfs.on_mount(drive->path, drive->fs, drive->mode);
         }
 
-        if((vfs_errno = errno) && fs->device_mount)
+        if((vfs_errno = ferrno) && fs->device_mount)
             fs->device_mount(mount->device, false); // dismount drive on error
     } else
         vfs_errno = -1;
