@@ -520,7 +520,11 @@ FLASHMEM float ngc_named_param_get_by_id (ncg_name_param_id_t id)
             break;
 
         case NGCParam_ccomp:
+#if CUTTER_COMP_ENABLE
+            value = 400.0f + (float)(gc_state.modal.cutter_comp.side * 10 + gc_state.modal.cutter_comp.dynamic);
+#else
             value = 400.0f;
+#endif
             break;
 
         case NGCParam_metric:
@@ -980,6 +984,8 @@ FLASHMEM bool ngc_modal_state_save (gc_modal_t *state, gc_override_values_t *ove
         *saved_state = malloc(sizeof(gc_modal_snapshot_t));
 
     if(*saved_state) {
+        if(grbl.on_modal_state_action)
+            grbl.on_modal_state_action(ModalState_Save, (modal_groups_t){0}, *saved_state);
         memcpy(&(*saved_state)->modal, state, sizeof(gc_modal_t));
         memcpy(&(*saved_state)->override, overrides, sizeof(gc_override_values_t));
         (*saved_state)->modal.feed_rate = feed_rate;
@@ -994,6 +1000,8 @@ FLASHMEM void ngc_modal_state_invalidate (void)
     gc_modal_snapshot_t **saved_state = call_level == -1 ? &modal_state : &call_levels[call_level].modal_state;
 
     if(*saved_state) {
+        if(grbl.on_modal_state_action)
+            grbl.on_modal_state_action(ModalState_Invalidate, (modal_groups_t){0}, *saved_state);
         free(*saved_state);
         *saved_state = NULL;
     }

@@ -122,10 +122,14 @@ typedef enum {
     Status_ToolInSPindle = 87,
     Status_NoToolInSPindle = 88,
     Status_FileDeleteFailed = 89,
-    Status_StatusMax = Status_FileDeleteFailed,
+    Status_GcodeCutterCompActive = 90,
+    Status_CutterCompConflict = 91,
+    Status_CutterCompInvalid = 92,
+    Status_StatusMax = Status_CutterCompInvalid,
     Status_UserException = 253,
-    Status_Handled,   // For internal use only
-    Status_Unhandled  // For internal use only
+    Status_Handled,    // For internal use only
+    Status_Unhandled,  // For internal use only
+    Status_Aborted = 0 // For internal use only
 } __attribute__ ((__packed__)) status_code_t;
 
 typedef struct {

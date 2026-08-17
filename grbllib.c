@@ -343,6 +343,11 @@ FLASHMEM int grbl_enter (void)
     polar_init();
 #endif
 
+#if RTCP_AC
+    extern void rtcp_ac_init (void);
+    rtcp_ac_init();
+#endif
+
 #if defined(ASYMMETRIC_GANGING) || defined(ASYMMETRIC_AUTO_SQUARE)
     extern void asymmetric_ganging_init (void);
     asymmetric_ganging_init();

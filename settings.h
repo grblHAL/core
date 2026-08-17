@@ -466,6 +466,7 @@ typedef enum {
 
     Setting_SubroutineOptions = 700,
     Setting_RotaryOptions = 701,
+    Setting_CutterCompOptions = 702,
 
     Setting_SpindlePWMOptions1 = 709,
 
@@ -611,8 +612,10 @@ typedef union {
                  m98_prescan_enable              :1,
                  rotary_fix_enable               :1,
                  revert_metric_conversion        :1, // For rotary axes inch/min -> mm/min
-                 set_rpm_0_during_hold       :1,
-                 unassigned                      :5;
+                 set_rpm_0_during_hold           :1,
+                 cc_lookahead_enable             :1, // For cutter compensation
+                 cc_chamfer_corner               :1, // For cutter compensation
+                 unassigned                      :3;
     };
 } settingflags_t;
 
