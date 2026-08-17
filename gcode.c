@@ -718,7 +718,7 @@ static void onSettingsChanged (settings_t *settings, settings_changed_flags_t ch
     if(changed.spindle || changed.restore_defaults)
         gc_spindle_off();
 
-    if(settings_changed)
+    if(settings_changed && settings_changed != onSettingsChanged)
         settings_changed(settings, changed);
 }
 
