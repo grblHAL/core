@@ -150,6 +150,15 @@ Experimental - testing required and homing needs to be worked out.
 #define POLAR_ROBOT Off
 #endif
 
+/*! \def RTCP_AC
+\brief Enable RTCP AC kinematics.
+Experimental - verification required. Needs XYZAC axes configured.
+*/
+#if !defined RTCP_AC || defined __DOXYGEN__
+#define RTCP_AC Off
+#endif
+
+
 /*! \def COREXY
 \brief Enable CoreXY kinematics. Use ONLY with CoreXY machines.
 <br>__IMPORTANT:__ If homing is enabled, you must reconfigure the homing cycle \#defines above to
@@ -210,6 +219,10 @@ or EMI triggering the related interrupt falsely or too many times.
 
 #if !defined ENABLE_JERK_ACCELERATION || defined __DOXYGEN__
 #define ENABLE_JERK_ACCELERATION Off // Enable to use 3rd order acceleration calculations. May need more processing power, a FPU will help.
+#endif
+
+#if !defined CUTTER_COMP_ENABLE || defined __DOXYGEN__
+#define CUTTER_COMP_ENABLE Off
 #endif
 
 // -

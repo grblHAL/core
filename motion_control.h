@@ -36,14 +36,13 @@
 // Execute linear motion in absolute millimeter coordinates. Feed rate given in millimeters/second
 // unless invert_feed_rate is true. Then the feed_rate means that the motion should be completed in
 // (1 minute)/feed_rate time.
-bool mc_line(float *target, plan_line_data_t *pl_data);
+status_code_t mc_line(float *target, plan_line_data_t *pl_data);
 
 // Execute an arc in offset mode format. position == current xyz, target == target xyz,
 // offset == offset from current xyz, axis_XXX defines circle plane in tool space, axis_linear is
 // the direction of helical travel, radius == circle radius, is_clockwise_arc boolean. Used
 // for vector transformation direction.
-void mc_arc(float *target, plan_line_data_t *pl_data, float *position, float *offset, float radius,
-  plane_t plane, int32_t turns);
+status_code_t mc_arc(float *target, plan_line_data_t *pl_data, float *position, float *offset, float radius, plane_t plane, int32_t turns);
 
 // Execute canned cycle (drill)
 bool mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_data, float *position, plane_t plane, uint32_t repeats, gc_canned_t *canned);
@@ -52,7 +51,7 @@ bool mc_canned_drill (motion_mode_t motion, float *target, plan_line_data_t *pl_
 void mc_thread (plan_line_data_t *pl_data, float *position, gc_thread_data *thread, bool feed_hold_disabled);
 
 #if LATHE_UVW_OPTION && NGC_EXPRESSIONS_ENABLE
-status_code_t lathe_cycle (plan_line_data_t *pl_data, coord_data_t *position, uint32_t o_label, lathe_cycle_arguments_t *args);
+status_code_t mc_lathe_cycle (plan_line_data_t *pl_data, coord_data_t *position, uint32_t o_label, lathe_cycle_arguments_t *args);
 #endif
 
 status_code_t mc_rigid_tapping (plan_line_data_t *pl_data, coord_data_t *target, coord_data_t *position, float pitch, float rpm_multiplier);

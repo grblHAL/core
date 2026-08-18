@@ -346,10 +346,32 @@ typedef enum {
   #endif
 } gc_probe_t;
 
+#if LATHE_UVW_OPTION
+
+//! Lathe tool orientation.
+    typedef enum {
+        ToolPos_Undefined = 0,
+        ToolPos1_135,
+        ToolPos2_45,
+        ToolPos3_315,
+        ToolPos4_225,
+        ToolPos5_180,
+        ToolPos6_90,
+        ToolPos7_0,
+        ToolPos8_270,
+        ToolPos9_Down,
+    } tool_orientation_t;
+
+#endif
+
 typedef struct {
     ccomp_mode_t side;
     bool first_move;
+    bool dynamic;
     float radius;
+#if LATHE_UVW_OPTION
+    tool_orientation_t orientation;
+#endif
 } gc_ccomp_t;
 
 //! Parser flags for special cases.
@@ -506,6 +528,21 @@ typedef struct {
     spindle_rpm_mode_t rpm_mode;    //!< {G96,G97}
 } spindle_modal_t;
 
+typedef union {
+    uint8_t value;
+    struct {
+        uint8_t units_imperial       :1, //!< {G20,G21}
+                distance_incremental :1, //!< {G90,G91}
+                diameter_mode        :1, //!< {G7,G8} Lathe diameter mode.
+                scaling_active       :1, //!< {G50,G51}
+                canned_cycle_active  :1,
+#if NGC_PARAMETERS_ENABLE
+                auto_restore         :1, //!< {M73} NOTE: set in snapshot when saving modal state
+#endif
+                unassigned           :2;
+    };
+} gc_modal_flags_t;
+
 // NOTE: When this struct is zeroed, the above defines set the defaults for the system.
 typedef struct {
     motion_mode_t motion;                //!< {G0,G1,G2,G3,G38.2,G80}
@@ -515,7 +552,9 @@ typedef struct {
     bool diameter_mode;                  //!< {G7,G8} Lathe diameter mode.
     //< uint8_t distance_arc;            //!< {G91.1} NOTE: Don't track. Only default supported.
     plane_select_t plane_select;         //!< {G17,G18,G19}
-    //< gc_ccomp_t cutter_comp;          //!< {G40,G41,G41.1,G42,G42.1} NOTE: Don't track. Only default (G40) supported.
+#if CUTTER_COMP_ENABLE
+    gc_ccomp_t cutter_comp;              //!< {G40,G41,G41.1,G42,G42.1}
+#endif
     tool_offset_mode_t tool_offset_mode; //!< {G43,G43.1,G49}
     coord_system_t g5x_offset;           //!< {G54,G55,G56,G57,G58,G59,G59.1,G59.2,G59.3}
 #if ENABLE_PATH_BLENDING
@@ -588,24 +627,6 @@ typedef struct {
     uint_fast16_t spring_passes;
     gc_taper_type end_taper_type;
 } gc_thread_data;
-
-#if LATHE_UVW_OPTION
-
-//! Lathe tool orientation.
-    typedef enum {
-        ToolPos_Undefined = 0,
-        ToolPos1_135,
-        ToolPos2_45,
-        ToolPos3_315,
-        ToolPos4_225,
-        ToolPos5_180,
-        ToolPos6_90,
-        ToolPos7_0,
-        ToolPos8_270,
-        ToolPos9_Down,
-    } tool_orientation_t;
-
-#endif
 
 //! Tool data.
 typedef struct {
@@ -694,6 +715,7 @@ typedef struct {
     bool is_rpm_rate_adjusted;
     bool tool_change;
     bool skip_blocks;               //!< true if skipping conditional blocks
+    bool ccomp_off;                 //!< true when cutter compensation has been turned off
     status_code_t last_error;       //!< last return value from parser
     offset_id_t offset_id;          //!< id(x) of last G92 coordinate offset (into circular buffer)
     coord_data_t offset_queue[MAX_OFFSET_ENTRIES];

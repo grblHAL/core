@@ -51,4 +51,5 @@ target_sources(grbl INTERFACE
  ${CMAKE_CURRENT_LIST_DIR}/kinematics/wall_plotter.c
  ${CMAKE_CURRENT_LIST_DIR}/kinematics/delta.c
  ${CMAKE_CURRENT_LIST_DIR}/kinematics/polar.c
+ ${CMAKE_CURRENT_LIST_DIR}/kinematics/rtcp_ac.c
 )

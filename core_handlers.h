@@ -94,6 +94,7 @@ typedef void (*on_port_out_ptr)(uint8_t port, io_port_type_t type, float value);
 typedef void (*on_gcode_mode_changed_ptr)(void);
 typedef void (*on_wco_changed_ptr)(void);
 typedef void (*on_wco_saved_ptr)(coord_system_id_t id, coord_system_data_t *data);
+typedef status_code_t (*on_program_paused_ptr)(program_flow_t program_flow, bool check_mode);
 typedef void (*on_program_completed_ptr)(program_flow_t program_flow, bool check_mode);
 typedef void (*on_execute_realtime_ptr)(sys_state_t state);
 typedef void (*on_unknown_accessory_override_ptr)(uint8_t cmd);
@@ -112,6 +113,7 @@ typedef void (*on_stream_changed_ptr)(stream_type_t type);
 typedef void (*on_mpg_registered_ptr)(io_stream_t *stream, bool tx_capable);
 typedef bool (*on_laser_ppi_enable_ptr)(uint_fast16_t ppi, uint_fast16_t pulse_length);
 typedef void (*on_homing_rate_set_ptr)(axes_signals_t axes, coord_data_t *feedrate, homing_mode_t mode);
+typedef void (*on_modal_state_action_ptr)(modal_state_action_t action, modal_groups_t commands, void *context);
 
 // NOTE: cycle contains the axis flags of the executed homing cycle, success will be true when all the configured cycles are completed.
 typedef void (*on_homing_completed_ptr)(axes_signals_t cycle, bool success);
@@ -140,6 +142,9 @@ typedef status_code_t (*on_macro_execute_ptr)(macro_id_t macro, line_number_t li
 typedef void (*on_macro_return_ptr)(void);
 typedef void (*on_file_demarcate_ptr)(bool start);
 typedef status_code_t (*on_pre_gcode_execute_ptr)(modal_groups_t *commands, parser_state_t *gc_state, parser_block_t *gc_block, spindle_t *spindle);
+
+typedef status_code_t (*mc_line_ptr)(float *target, plan_line_data_t *pl_data);
+typedef status_code_t (*mc_arc_ptr)(float *target, plan_line_data_t *pl_data, float *position, float *offset, float radius, plane_t plane, int32_t turns);
 
 typedef tool_table_entry_t *(*get_tool_ptr)(tool_id_t tool_id);
 typedef tool_table_entry_t *(*get_tool_by_idx_ptr)(uint32_t idx);
@@ -236,6 +241,7 @@ typedef struct {
     on_gcode_mode_changed_ptr on_gcode_mode_changed;            //!< Called if settings.status_report.parser_state is enabled.
     on_wco_changed_ptr on_wco_changed;
     on_wco_saved_ptr on_wco_saved;
+    on_program_paused_ptr on_program_paused;
     on_program_completed_ptr on_program_completed;
     on_execute_realtime_ptr on_execute_realtime;
     on_execute_realtime_ptr on_execute_delay;
@@ -260,6 +266,7 @@ typedef struct {
     on_stream_changed_ptr on_stream_changed;
     on_mpg_registered_ptr on_mpg_registered;
     on_homing_rate_set_ptr on_homing_rate_set;
+    on_modal_state_action_ptr on_modal_state_action;
     on_homing_completed_ptr on_homing_completed;
     on_probe_toolsetter_ptr on_probe_toolsetter;
     on_probe_start_ptr on_probe_start;
@@ -273,8 +280,12 @@ typedef struct {
     on_tool_changed_ptr on_tool_changed;                        //!< Called after executing M6 or M61.
     on_toolchange_ack_ptr on_toolchange_ack;                    //!< Called from interrupt context.
     on_jog_cancel_ptr on_jog_cancel;                            //!< Called from interrupt context.
-#if LATHE_UVW_OPTION && NGC_EXPRESSIONS_ENABLE
+#if CUTTER_COMP_ENABLE || (LATHE_UVW_OPTION && NGC_EXPRESSIONS_ENABLE)
     on_pre_gcode_execute_ptr on_pre_gcode_execute;              //!< Called before executing parsed gcode block.
+#endif
+#if CUTTER_COMP_ENABLE
+    mc_line_ptr mc_line;
+    mc_arc_ptr mc_arc;
 #endif
     on_laser_ppi_enable_ptr on_laser_ppi_enable;
     on_spindle_select_ptr on_spindle_select;                    //!< Called before spindle is selected, hook in HAL overrides here
