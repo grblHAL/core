@@ -490,6 +490,8 @@ FLASHMEM int grbl_enter (void)
 
         // Reset primary systems.
         hal.stream.reset_read_buffer();                 // Clear input stream buffer
+        if(hal.stream.reset_write_buffer)
+            hal.stream.reset_write_buffer();            // Clear output stream buffer
         gc_init(settings.flags.keep_offsets_on_reset);  // Set g-code parser to default state
         hal.limits.enable(settings.limits.flags.hard_enabled, (axes_signals_t){0});
         plan_reset();                                   // Clear block buffer and planner variables
