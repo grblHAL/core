@@ -507,7 +507,7 @@ FLASHMEM void report_grbl_settings (bool all, void *data)
         free(all_settings);
 
     } else do {
-        for(idx = 0; idx < n_settings; idx++)
+        for(idx = 0; idx < details->n_settings; idx++)
             settings_iterator(&details->settings[idx], print_setting, data);
     } while((details = details->next));
 }
