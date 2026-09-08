@@ -721,6 +721,36 @@ FLASHMEM static status_code_t settings_reset (sys_state_t state, char *args)
     return retval;
 }
 
+
+FLASHMEM static status_code_t output_to_stream (sys_command_ptr fn, sys_state_t state, char *args, stream_write_ptr write)
+{
+    stream_write_ptr out = hal.stream.write;
+    hal.stream.write = write;
+
+    status_code_t status = fn(state, args);
+
+    hal.stream.write = out;
+
+    return status;
+}
+
+FLASHMEM static status_code_t output_grbl_setting (setting_id_t id, void *data, stream_write_ptr write)
+{
+    stream_write_ptr out = NULL;
+
+    if(write != hal.stream.write) {
+        out = hal.stream.write;
+        hal.stream.write = write;
+    }
+
+    status_code_t status = report_grbl_setting(id, data);
+
+    if(out)
+        hal.stream.write = out;
+
+    return status;
+}
+
 FLASHMEM static status_code_t output_startup_lines (sys_state_t state, char *args)
 {
     if (!(state == STATE_IDLE || (state & (STATE_ALARM|STATE_ESTOP|STATE_CHECK_MODE))))
@@ -941,9 +971,9 @@ FLASHMEM const char *help_reboot (const char *cmd)
 /*! \brief Command dispatch table
  */
 PROGMEM static const sys_command_t sys_commands[] = {
-    { "G", output_parser_state, { .noargs = On, .allow_blocking = On }, { .str = "output parser state" } },
+    { "G", output_parser_state, { .noargs = On, .allow_blocking = On, .allow_redirect = On }, { .str = "output parser state" } },
     { "J", jog, {}, { .str = "$J=<gcode> - jog machine" } },
-    { "#", output_ngc_parameters, { .allow_blocking = On }, {
+    { "#", output_ngc_parameters, { .allow_blocking = On, .allow_redirect = On }, {
         .str = "output offsets, tool table, probing and home position"
 #if NGC_PARAMETERS_ENABLE
      ASCII_EOL "$#=<n> - output value for parameter <n>"
@@ -961,7 +991,7 @@ PROGMEM static const sys_command_t sys_commands[] = {
     { "S", toggle_single_block, { .noargs = On, .help_fn = On }, { .fn = help_switches } },
     { "O", toggle_optional_stop, { .noargs = On, .help_fn = On }, { .fn = help_switches } },
     { "C", check_mode, { .noargs = On }, { .str = "enable check mode, <Reset> to exit" } },
-    { "X", disable_lock, {}, { .str = "unlock machine" } },
+    { "X", disable_lock, { .allow_redirect = On }, { .str = "unlock machine" } },
     { "H", home, { .help_fn = On }, { .fn = help_homing } },
     { "HX", home_x },
     { "HY", home_y },
@@ -1110,7 +1140,7 @@ __NOTE:__ Code calling this function needs to provide the command in a writable 
 \param line pointer to the command string.
 \returns \a status_code_t enum value; #Status_OK if successfully handled, another relevant status code if not.
 */
-FLASHMEM status_code_t system_execute_line (char *line)
+FLASHMEM status_code_t system_execute_line (char *line, stream_write_ptr write)
 {
     if(line[1] == '\0') {
         grbl.report.help_message();
@@ -1120,6 +1150,7 @@ FLASHMEM status_code_t system_execute_line (char *line)
     status_code_t retval = Status_Unhandled;
 
     char c, *s1, *s2;
+    bool base_stream = write == hal.stream.write;
 
     s1 = s2 = ++line;
 
@@ -1151,8 +1182,11 @@ FLASHMEM status_code_t system_execute_line (char *line)
                 if(sys.blocking_event && !cmd->commands[idx].flags.allow_blocking) {
                     retval = Status_NotAllowedCriticalEvent;
                     break;
+                } else if(!base_stream && !cmd->commands[idx].flags.allow_redirect) {
+                    retval = Status_AccessDenied;
+                    break;
                 } else if(!cmd->commands[idx].flags.noargs || args == NULL) {
-                    if((retval = cmd->commands[idx].execute(state_get(), args)) != Status_Unhandled)
+                    if((retval = base_stream ? cmd->commands[idx].execute(state_get(), args) : output_to_stream(cmd->commands[idx].execute, state_get(), args, write)) != Status_Unhandled)
                         break;
                 }
             }
@@ -1161,7 +1195,7 @@ FLASHMEM status_code_t system_execute_line (char *line)
     } while(cmd);
 
     // Let user code have a peek at system commands before check for global setting
-    if(retval == Status_Unhandled && grbl.on_unknown_sys_command) {
+    if(retval == Status_Unhandled && base_stream && grbl.on_unknown_sys_command) {
         if(args)
             *(--args) = '=';
 
@@ -1173,12 +1207,12 @@ FLASHMEM status_code_t system_execute_line (char *line)
 
     if(retval == Status_Unhandled) {
         // Check for global setting, store or report if so
-        if(state_get() == STATE_IDLE || (state_get() & (STATE_ALARM|STATE_ESTOP|STATE_CHECK_MODE))) {
+        if(!base_stream || state_get() == STATE_IDLE || (state_get() & (STATE_ALARM|STATE_ESTOP|STATE_CHECK_MODE))) {
             uint_fast8_t counter = 0;
             float parameter;
             if(read_float(line, &counter, &parameter) && parameter >= 0.0f && isintf(parameter))
-                retval = args ? settings_store_setting((setting_id_t)parameter, args)
-                              :  report_grbl_setting((setting_id_t)parameter, NULL);
+                retval = args ? (base_stream ? settings_store_setting((setting_id_t)parameter, args) : Status_AccessDenied)
+                              : output_grbl_setting((setting_id_t)parameter, NULL, write);
             else
                 retval = Status_InvalidStatement;
         } else

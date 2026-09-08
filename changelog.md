@@ -1,5 +1,25 @@
 ## grblHAL changelog
 
+<a name="20260908">Build 20260908
+
+Core:
+
+* Added realtime command `0x9F` (`159` - _soft e-stop_) that execute a soft reset, raises the e-stop alarm (10) and enters the controllers e-stop state.
+> [!NOTE]
+> This does _not_ cut power to steppers and spindles (or other relevant devices) like a properly implemented physical e-stop should do.
+
+* For programmers: changed signature of `system_execute_line()`, added pointer to stream write function to receive command output. 
+
+* For pendant developers: added support for some $-commands when MPG stream is not in full control: `$G`, `$#`, `$X` and `$<n>` where `<n>` is a settings number.
+> [!NOTE]
+> Other commands will return `error:78` (Access denied) or `error:3` (Unsupported command). If the input is empty (end of line only) `ok` will be returned. Not available if the keypad plugin shares the MPG stream.
+
+Plugins:
+
+* Keypad, WebUI, HPGL: updated for core signature change.
+
+---
+
 <a name="20260905">Build 20260905
 
 Core:

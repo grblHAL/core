@@ -1210,7 +1210,7 @@ ISR_CODE void ISR_FUNC(mc_reset)(void)
 
         control_signals_t signals = hal.control.get_state();
 
-        if(signals.e_stop)
+        if(signals.e_stop || sys.flags.soft_estop)
             system_set_exec_alarm(Alarm_EStop);
         else if(signals.motor_fault)
             system_set_exec_alarm(Alarm_MotorFault);

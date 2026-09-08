@@ -402,6 +402,8 @@ PROGMEM static const settings_t defaults = {
     .modbus_stream_format.stopbits = DEFAULT_MODBUS_STREAM_STOP_BITS,
     .modbus_stream_format.parity = DEFAULT_MODBUS_STREAM_PARITY,
 
+    .mpg_baud_rate = DEFAULT_MPG_BAUD,
+
     .rgb_strip.length0 = DEFAULT_RGB_STRIP0_LENGTH,
     .rgb_strip.length1 = DEFAULT_RGB_STRIP1_LENGTH
 };

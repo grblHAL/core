@@ -42,7 +42,7 @@
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_BUILD 20260905
+#define GRBL_BUILD 20260908
 
 #define GRBL_URL "https://github.com/grblHAL"
 
@@ -140,6 +140,7 @@
 #define CMD_OVERRIDE_SPINDLE_FINE_PLUS      0x9C // (156)
 #define CMD_OVERRIDE_SPINDLE_FINE_MINUS     0x9D // (157)
 #define CMD_OVERRIDE_SPINDLE_STOP           0x9E // (158)
+#define CMD_SOFT_ESTOP                      0x9F //!< (159) Executes a soft reset, raises estop alarm and enters STATE_ESTOP
 #define CMD_OVERRIDE_COOLANT_FLOOD_TOGGLE   0xA0 // (160)
 #define CMD_OVERRIDE_COOLANT_MIST_TOGGLE    0xA1 // (161)
 #define CMD_PID_REPORT                      0xA2 // (162)
