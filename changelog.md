@@ -1,5 +1,15 @@
 ## grblHAL changelog
 
+<a name="20260909">20260909
+
+Plugins:
+
+* Laser, Ligthburn cluster: fix for issue [#5](https://github.com/grblHAL/Plugins_laser/issues/5) - compilation failure.
+
+* Keypad: added support for e-stop realtime command.
+
+---
+
 <a name="20260908">Build 20260908
 
 Core:

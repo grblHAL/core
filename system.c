@@ -1138,6 +1138,7 @@ __NOTE:__ Code calling this function needs to provide the command in a writable 
  spaces removed.
 
 \param line pointer to the command string.
+\param write \a stream_write_ptr pointer to the function to receive output, typically hal.stream.write.
 \returns \a status_code_t enum value; #Status_OK if successfully handled, another relevant status code if not.
 */
 FLASHMEM status_code_t system_execute_line (char *line, stream_write_ptr write)
