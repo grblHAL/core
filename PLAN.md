@@ -21,21 +21,11 @@ microcontroller** — i.e. a **Pico or Pico 2 board**, not a Raspberry Pi SBC. g
 bare-metal firmware with a hard real-time stepper ISR; it does not run as a Linux process
 on a Pi.
 
-So if the Raspberry Pi you have is a Pi 4/5/Zero, **you still need to buy a target board**.
-Any of these work:
-
 * **Raspberry Pi Pico 2** (~$5) — best default. Get the non-W version unless you want WiFi.
 * **Pico 2 W** if you want networking.
 * A ready-made RP2040/RP2350 CNC board, which saves you wiring level shifters and drivers:
   PicoBOB, PicoCNC, BTT SKR Pico, PicoHAL. These have board maps already in the driver
   (see `my_machine.h`, §1.3).
-
-**Your Raspberry Pi is still useful** — it makes a perfectly good *build host*, and the
-driver README explicitly recommends that path. The verified build below was done on the
-Windows 11 machine instead; either works.
-
-> If you already have a Pico and were calling it "a Raspberry Pi", ignore all of the above
-> and carry on — you're set.
 
 ## 1.1 Status: working as of 2026-09-10
 
