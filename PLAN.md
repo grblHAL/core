@@ -28,217 +28,190 @@ Any of these work:
 * **Pico 2 W** if you want networking.
 * A ready-made RP2040/RP2350 CNC board, which saves you wiring level shifters and drivers:
   PicoBOB, PicoCNC, BTT SKR Pico, PicoHAL. These have board maps already in the driver
-  (see `my_machine.h`, §1.6).
+  (see `my_machine.h`, §1.3).
 
 **Your Raspberry Pi is still useful** — it makes a perfectly good *build host*, and the
-driver README explicitly recommends that path. But you can equally build on the Windows 11
-machine you're on now. Pick one host in §1.1.
+driver README explicitly recommends that path. The verified build below was done on the
+Windows 11 machine instead; either works.
 
 > If you already have a Pico and were calling it "a Raspberry Pi", ignore all of the above
 > and carry on — you're set.
 
-## 1.1 Choose a build host
+## 1.1 Status: working as of 2026-09-10
 
-You are cross-compiling either way: an `x86_64` or `aarch64` host producing `thumbv6m` /
-`thumbv8m` firmware.
+The toolchain is installed and a full clean build has been verified on this
+machine, producing `play/RP2040/build/grblHAL.uf2` (447 KB, family
+`0xE48BFF59` = `rp2350-arm-s`, correct for a Pico 2).
 
-| Host | Verdict |
-|---|---|
-| **Windows 11** (your current machine) | Fine. Use the VS Code extension (§1.2). Fewest moving parts. |
-| **Raspberry Pi OS** | Fine, and what the driver README assumes. Slower to compile but self-contained. Use §1.2 or §1.3. |
-| **WSL2 on Windows** | Works, but USB passthrough for flashing is a nuisance. Only if you already live in WSL. |
-
-Recommendation: build on Windows with the VS Code extension, since that's where this repo
-already is.
-
-## 1.2 Option A — VS Code extension (recommended, both hosts)
-
-The official extension downloads and pins its own toolchain, SDK, CMake and Ninja. You do
-not install `arm-none-eabi-gcc` yourself, and it will not collide with anything else.
-
-1. Install [VS Code](https://code.visualstudio.com/).
-2. Install the **Raspberry Pi Pico** extension (publisher: Raspberry Pi) from the
-   Extensions marketplace.
-3. Open its sidebar and let it install the SDK. **Choose SDK 2.1.1** — that is the version
-   the grblHAL RP2040 driver is written against.
-4. Get the source (§1.5), then *File → Open Folder* on the `RP2040` directory.
-5. Set the board in the status bar, lower right. Pick per your hardware:
-   `pico`, `pico_w`, `pico2`, `pico2_w`, or `pimoroni_pga2350` for the RP2350B_5X board.
-6. Configure `my_machine.h` (§1.6), then hit **Compile**.
-
-On a Raspberry Pi, follow Raspberry Pi's *Getting started with Pico* guide for the same
-extension; it is the documented path in the driver README.
-
-## 1.3 Option B — command line toolchain on Raspberry Pi OS / Debian / Ubuntu
+**To build, from Git Bash:**
 
 ```bash
-sudo apt update
-sudo apt install -y git cmake ninja-build build-essential python3 \
-                    gcc-arm-none-eabi libnewlib-arm-none-eabi \
-                    libstdc++-arm-none-eabi-newlib
+cd "/c/Users/David Lyman Dawes/play"
+./build.sh            # incremental
+./build.sh clean      # wipe build dir first
 ```
 
-Then the SDK:
+Everything below documents how that was set up and, more importantly, the three
+things that went wrong so they can be recognised again.
 
-```bash
-mkdir -p ~/pico && cd ~/pico
-git clone -b 2.1.1 https://github.com/raspberrypi/pico-sdk.git --recursive
-echo 'export PICO_SDK_PATH=$HOME/pico/pico-sdk' >> ~/.bashrc
-source ~/.bashrc
-```
+## 1.2 What is installed and where
 
-Verify the cross-compiler is real before going further:
+Everything is self-contained under `play/toolchain/`. Nothing was installed
+machine-wide and nothing was added to the system PATH — deleting that one
+directory removes the lot. `play/toolchain/env.sh` sets the environment;
+`play/build.sh` sources it and builds.
 
-```bash
-arm-none-eabi-gcc --version     # expect GCC 10.3 or newer; 12.x on Bookworm
-```
+| Component | Version | Location | How obtained |
+|---|---|---|---|
+| Arm GNU Toolchain (target) | 14.2.Rel1 | `toolchain/arm-gnu-14.2/` | portable zip from developer.arm.com |
+| mingw-w64 GCC (host tools) | 13.1.0 UCRT | `toolchain/mingw-13.1/` | portable zip from WinLibs |
+| CMake | 3.31.8 | `toolchain/cmake-3.31.8-windows-x86_64/` | portable zip from Kitware |
+| Ninja | 1.13.2 | `toolchain/ninja.exe` | `winget install Ninja-build.Ninja` |
+| Pico SDK | 2.1.1 | `toolchain/pico-sdk/` | `git clone -b 2.1.1 --recursive` |
+| grblHAL RP2040 driver | master | `play/RP2040/` | `git clone --recursive` |
 
-> **RP2350 / Pico 2 note:** the Cortex-M33 target needs a reasonably modern GCC.
-> Raspberry Pi OS Bookworm's 12.2 is fine. On an older Bullseye image the packaged
-> toolchain may be too old — either upgrade the OS or use the extension in §1.2, which
-> brings its own.
+Portable zips were used over installers deliberately: no elevation, no UAC
+prompts, exact version pinning, and trivial removal.
 
-## 1.4 Option C — command line toolchain on Windows
+The VS Code **Raspberry Pi Pico** extension (`raspberry-pi.raspberry-pi-pico`)
+is also installed and is a perfectly good alternative front end — it manages its
+own copy of all of the above under `~/.pico-sdk`. It was not used for the
+verified build.
 
-Only if you want to avoid VS Code. Install, in order:
+### Version pinning — why these numbers
 
-1. [Arm GNU Toolchain](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads),
-   `arm-none-eabi` variant — tick *Add to PATH* in the installer.
-2. [CMake](https://cmake.org/download/) — add to PATH.
-3. [Ninja](https://github.com/ninja-build/ninja/releases) — put `ninja.exe` on PATH.
-4. [Python 3](https://www.python.org/downloads/) — add to PATH.
-5. Git (already present).
+* **CMake 3.31.8, not 4.x.** Pico SDK 2.1.1 is tested against the 3.31 line
+  (the VS Code extension ships 3.31.5). CMake 4 dropped compatibility with
+  `cmake_minimum_required` below 3.5, and there is no reason to find out the
+  hard way which SDK dependency trips over it.
+* **SDK 2.1.1**, because that is what the grblHAL RP2040 driver README pins.
+* **Host GCC 13.1**, see §1.5 — this one is not optional.
 
-Then clone the SDK and set `PICO_SDK_PATH` as a user environment variable pointing at it.
-Build from a shell where all five are on `PATH`.
-
-## 1.5 Get the source
-
-The core repo you have cannot build alone (§1.7). You need the driver, which pulls core in
-as a git submodule at `grbl/`:
-
-```bash
-cd /c/Users/David\ Lyman\ Dawes/play
-git clone --recursive https://github.com/grblHAL/RP2040.git
-```
-
-`--recursive` matters — it fetches ~15 submodules (core plus the plugin repos). If you
-forget it:
-
-```bash
-cd RP2040
-git submodule update --init --recursive
-```
-
-You now have `play/RP2040/grbl/`, which is a **full clone of this same core repo**.
-
-### Using your existing `play/core` clone instead
-
-`play/core` is currently an unmodified clone of upstream, so the simplest thing is to work
-directly in `play/RP2040/grbl/` and treat `play/core` as scratch.
-
-If you'd rather keep editing `play/core` and have the build pick it up, replace the
-submodule directory with a link. On Windows, in an **elevated** prompt:
-
-```cmd
-rmdir /s /q "C:\Users\David Lyman Dawes\play\RP2040\grbl"
-mklink /J "C:\Users\David Lyman Dawes\play\RP2040\grbl" "C:\Users\David Lyman Dawes\play\core"
-```
-
-On Linux/macOS:
-
-```bash
-rm -rf RP2040/grbl && ln -s ../core RP2040/grbl
-```
-
-Either way, git will report the submodule as modified. That's expected and harmless as
-long as you don't commit it in the driver repo.
-
-## 1.6 Configure the machine
+## 1.3 Configuration for a Pico 2
 
 Two files decide what gets built:
 
-**`RP2040/my_machine.h`** — uncomment exactly one `BOARD_*` line, or leave all commented
-to get `generic_map.h` pin assignments. Available boards include:
+* **`RP2040/CMakeLists.txt` line 29** — `set(PICO_BOARD pico2 CACHE STRING ...)`.
+  Changed from the default `pico`. This selects the MCU family, so getting it
+  wrong produces link errors rather than a subtly wrong binary. Other valid
+  values: `pico`, `pico_w`, `pico2_w`, `pimoroni_pga2350` (RP2350B_5X board).
+* **`RP2040/my_machine.h`** — every `BOARD_*` left commented out, so pin
+  assignments come from `boards/generic_map.h`. `USB_SERIAL_CDC` is on by
+  default. This is the right state for proving the toolchain; pick a real board
+  map (`BOARD_PICO_CNC`, `BOARD_PICOBOB`, `BOARD_BTT_SKR_PICO_10`, …) once
+  hardware is decided.
 
-```
-BOARD_PICO_CNC        BOARD_PICOBOB          BOARD_PICOBOB_DLX
-BOARD_PICOHAL         BOARD_BTT_SKR_PICO_10  BOARD_RP23U5XBB
-BOARD_SLB_LITE        BOARD_GENERIC_4AXIS    BOARD_GENERIC_8AXIS
-BOARD_CNC_BOOSTERPACK BOARD_BOLANGSK         BOARD_MY_MACHINE
-```
+## 1.4 Flashing and first contact
 
-The same file switches features on: `USB_SERIAL_CDC`, `SDCARD_ENABLE`, `WIFI_ENABLE`,
-`N_AXIS`, spindle and plugin options.
+1. Hold **BOOTSEL** on the Pico 2 while plugging in USB.
+2. It mounts as a mass-storage volume (`RP2350`).
+3. Copy `play/RP2040/build/grblHAL.uf2` onto it. The board reboots into grblHAL.
 
-**`RP2040/CMakeLists.txt`** — `PICO_BOARD` defaults to `pico`. Change it to `pico2`,
-`pico_w`, `pico2_w` or `pimoroni_pga2350` to match your hardware. This selects the MCU
-family, so getting it wrong produces link errors rather than a subtly wrong binary.
-
-> Getting a first build working with **no** `BOARD_*` defined and `PICO_BOARD=pico2` on a
-> bare Pico 2 is the fastest way to prove the toolchain. Wire up a real board map after
-> that succeeds.
-
-## 1.7 Build
-
-VS Code: press **Compile**.
-
-Command line:
-
-```bash
-cd RP2040
-mkdir build && cd build
-cmake -G Ninja ..
-ninja
-```
-
-Output is **`build/grblHAL.uf2`** plus `.elf` and `.bin`.
-
-If `cmake` can't find the SDK, `PICO_SDK_PATH` isn't set or isn't exported into that shell.
-
-## 1.8 Flash
-
-1. Hold **BOOTSEL** on the Pico while plugging in USB.
-2. It mounts as a mass-storage volume named `RPI-RP2` (or `RP2350`).
-3. Copy `grblHAL.uf2` onto it. The board reboots into grblHAL.
-
-Or, with picotool installed: `picotool load grblHAL.uf2 -fx`
-
-## 1.9 Verify
-
-Open a serial terminal on the Pico's USB CDC port at any baud (native USB ignores it).
-You should see:
+Then open a serial terminal on the Pico's USB CDC port — baud rate is ignored on
+native USB. Expect:
 
 ```
 GrblHAL 1.1f ['$' or '$HELP' for help]
 ```
 
 Useful first commands: `$I` (build info and enabled options), `$$` (settings),
-`$HELP`. A `[MSG:...]` alarm on startup is normal — see the NC-switches note in the
-README.
+`$HELP`. An alarm on startup is normal and expected — grblHAL defaults to
+normally-closed switches, so with nothing wired it starts in alarm. See the note
+at the top of README.md.
 
-## 1.10 What "compiling the core" actually means
+## 1.5 The three things that went wrong
 
-There is no way to compile this repository on its own, and no test target — that is the
-single biggest practical constraint on working here:
+All three are upstream problems in the Pico SDK and picotool. **None of them are
+grblHAL bugs** — grblHAL itself compiled clean on the first attempt, 250/250
+targets, no warnings surfaced in the tail.
 
-* `CMakeLists.txt` in core declares an `INTERFACE` library named `grbl` that only *lists*
-  source files. The driver does `include(grbl/CMakeLists.txt)` and compiles them into its
-  own `grblHAL` executable.
-* Nothing in core has a `main()`. `grbl_enter()` is the entry point and the driver's
-  `main()` calls it.
-* Every file is heavily conditionally compiled. A change that builds for `N_AXIS=3`,
-  `COMPATIBILITY_LEVEL=0`, no kinematics can easily break another combination.
+### (a) Host GCC 16.1.0 silently produces a broken picotool — the important one
 
-**Practical consequence:** the edit/verify loop is *edit core → rebuild the driver*. An
-incremental `ninja` after touching one core file takes seconds, so this is less painful
-than it sounds. But it does mean any claim that a core change "compiles" is only true for
-the one option set you built.
+CMake picks the host C++ compiler off `PATH`. This machine has scoop's mingw
+GCC **16.1.0**, which got selected. picotool then *builds successfully* and
+`picotool version` *runs fine* — but `picotool uf2 convert` and
+`picotool coprodis` both segfault (`0xC0000005` / exit 139).
 
-**If you add a new `.c` file to core, add it to core's `CMakeLists.txt`** or CMake-based
-drivers will silently not link it.
+Because uf2 conversion is the final post-link step, the symptom is a build that
+compiles all 250 targets, links `grblHAL.elf`, emits `.bin` and `.hex`, and then
+dies with an access violation and no useful message.
 
-See §2.3 for why standing up a host-side build would be worth the effort.
+**Fix:** put a mainstream host compiler first on `PATH`. `toolchain/env.sh`
+prepends `mingw-13.1/bin` for exactly this reason. Rebuilding picotool under
+GCC 13.1 fixed uf2 conversion.
+
+This is worth remembering generally: a bleeding-edge host compiler can produce
+host *tools* that build and run but are subtly wrong, and the failure surfaces
+far from the cause.
+
+### (b) Pico SDK 2.1.1 `pioasm` misses `#include <cstdint>`
+
+GCC 13 and newer no longer pull `<cstdint>` in transitively, so building the
+host-side `pioasm` tool fails with `'uint8_t' does not name a type`, followed by
+a cascade of `'struct program' has no member named 'used_gpio_ranges'` (that
+member's declaration is the line that failed to parse).
+
+**Fix applied:** added `#include <cstdint>` to
+`toolchain/pico-sdk/tools/pioasm/pio_enums.h` — the common base header, so one
+line fixes every consumer. (`output_format.h` also got one; harmless.)
+
+**This patch lives in the SDK, not in a repo we control.** Re-cloning or
+updating the SDK will lose it and the error will come back.
+
+### (c) picotool 2.3.2 `coprodis` segfaults
+
+The SDK fetches picotool from its `develop` branch (2.3.1-3-g6b8b68a) rather
+than the 2.1.1 tag, and that build's `coprodis` subcommand crashes. It still
+crashes when built with GCC 13.1, so unlike (a) this is a genuine picotool bug,
+not a compiler artifact. Pinning picotool back to the 2.1.1 tag is not an option
+either — 2.1.1's `cli.h` does not compile with any GCC 13+.
+
+**Fix applied:** `-DPICO_NO_COPRO_DIS=1`, a documented SDK option
+(`src/cmake/on_device.cmake:31`). `coprodis` only annotates RP2350 coprocessor
+instructions in the human-readable `.dis` listing — **it has no effect on the
+firmware image**. `build.sh` passes this flag.
+
+## 1.6 What "compiling the core" actually means
+
+There is no way to compile the `core` repository on its own, and no test target —
+that is the single biggest practical constraint on working here:
+
+* Core's `CMakeLists.txt` declares an `INTERFACE` library named `grbl` that only
+  *lists* source files. The driver does `include(grbl/CMakeLists.txt)` and
+  compiles them into its own `grblHAL` executable.
+* Nothing in core has a `main()`. `grbl_enter()` is the entry point and the
+  driver's `main()` calls it.
+* Every file is heavily conditionally compiled. A change that builds for
+  `N_AXIS=3`, `COMPATIBILITY_LEVEL=0`, no kinematics can easily break another
+  combination.
+
+**Practical consequence:** the edit/verify loop is *edit core → run
+`./build.sh`*. Incremental rebuilds after touching one core file take seconds.
+But any claim that a core change "compiles" is only true for the one option set
+that was built — here, Pico 2 / generic map / 3 axes.
+
+**If you add a new `.c` file to core, add it to core's `CMakeLists.txt`** or
+CMake-based drivers will silently not link it.
+
+### Using this clone of core in the build
+
+`play/RP2040/grbl/` is a git submodule pointing at `grblHAL/core`, and it
+checked out `516e5ad` — the exact commit `play/core` is on. The verified build
+used the submodule copy, not `play/core`.
+
+To build against `play/core` instead, replace the submodule directory with a
+junction, from an **elevated** prompt:
+
+```cmd
+rmdir /s /q "C:\Users\David Lyman Dawes\play\RP2040\grbl"
+mklink /J "C:\Users\David Lyman Dawes\play\RP2040\grbl" "C:\Users\David Lyman Dawes\play\core"
+```
+
+Git will then report the submodule as modified in the driver repo. That is
+expected; just don't commit it there.
+
+See §2.4 for why standing up a host-side build would still be worth the effort —
+none of the above lets the core be tested without hardware in the loop.
 
 ---
 
