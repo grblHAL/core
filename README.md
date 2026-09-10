@@ -35,7 +35,7 @@ HAL = Hardware Abstraction Layer
 The controller is written in highly optimized C utilizing features of the supported processors to achieve precise timing and asynchronous operation.
 It is able to maintain up to 300kHz<sup>3</sup> of stable, jitter free control pulses.
 
-It accepts standards-compliant g-code and has been tested with the output of several CAM tools with no problems. Arcs, circles and helical motion are fully supported, as well as, all other primary g-code commands. Macro functions, variables, and some canned cycles are not supported, but we think GUIs can do a much better job at translating them into straight g-code anyhow.
+It accepts standards-compliant g-code and has been tested with the output of several CAM tools with no problems. Arcs, circles and helical motion are fully supported, as well as all other primary g-code commands. Canned cycles, macros \(subroutines\), expressions and `#` parameters are supported as compile time options, see the g-code list below and the [wiki](https://github.com/grblHAL/core/wiki/Additional-G--and-M-codes) for details.
 
 grblHAL includes full acceleration management with look ahead. That means the controller will look up motions into the future and plan its velocities ahead to deliver smooth acceleration and jerk-free cornering.
 
@@ -45,6 +45,100 @@ This is a port/rewrite of [grbl 1.1f](https://github.com/gnea/grbl) and should b
 <sup>2</sup> I do not usually recommend doing this, and I will not accept pull requests for any. However I may add a link to the github repository for any that might be made.  
 <sup>3</sup> Driver/processor dependent.  
 <sup>4</sup> Not enabled by default if building from source, but may be enabled in prebuilt firmware.
+
+***
+
+### This repository ###
+
+This repository holds the **core** only: the processor independent part of grblHAL.
+It is not buildable on its own and produces no firmware image by itself — it is
+consumed as a source library by a driver.
+
+A complete firmware image is assembled from three parts:
+
+| Part | Repository | Role |
+|---|---|---|
+| **Core** | this repository | G-code parser, planner, stepper/segment generator, settings, reporting, protocol |
+| **Driver** | [grblHAL/drivers](https://github.com/grblHAL/drivers) | MCU specific half of the HAL: timers, GPIO, serial/USB, NVS |
+| **Plugins** | [grblHAL/plugins](https://github.com/grblHAL/plugins) | Optional features: SD card, networking, Trinamic drivers, keypad, spindles, ... |
+
+Related repositories: [Templates](https://github.com/grblHAL/Templates) \(driver and plugin skeletons\), [Wiki](https://github.com/grblHAL/core/wiki) \(user and developer documentation\).
+
+### Building ###
+
+Do not build this repository directly. Clone or fork the [driver](https://github.com/grblHAL/drivers) for your target processor and follow its build instructions; the driver pulls this repository in as a subdirectory \(usually `grbl/`, often as a git submodule\).
+
+For CMake based drivers, `CMakeLists.txt` here declares an `INTERFACE` library named `grbl` that lists the core sources. Other drivers \(STM32Cube, ESP-IDF, Arduino\) reference the source directory directly through their own project files.
+
+If you add a new `.c` file to the core, add it to `CMakeLists.txt` as well or CMake based drivers will not link it.
+
+Prebuilt firmware and a web based build service for several drivers are available at the [grblHAL build app](http://svn.io-engineering.com:8080/).
+
+### Configuration ###
+
+Compile time configuration is layered:
+
+* `config.h` — every core compile time option and every `DEFAULT_*` setting value. Almost all are `#ifndef` guarded so a driver, a board map or a `-D` compiler flag can override them without editing this file.
+* `driver_opts.h` / `driver_opts2.h` — included by drivers to normalize and sanity check the resulting option set.
+* `grbl.h` — derived symbols: version, real time command codes, AMASS levels, override limits.
+
+Notable options: `N_AXIS` \(3 – 8\), `COMPATIBILITY_LEVEL` \(0 enables all extensions, higher values progressively restore grbl 1.1 behaviour for senders that need it\), `NGC_EXPRESSIONS_ENABLE`, `N_TOOLS`, `N_SPINDLE` and the kinematics selectors.
+
+Run time configuration uses the familiar `$` settings, persisted to non-volatile storage. See the [wiki](https://github.com/grblHAL/core/wiki) for the full list.
+
+### Repository layout ###
+
+```
+grbllib.c          Entry point grbl_enter(), global state, deferred task queue
+protocol.c         Main loop, line assembly, real time command dispatch
+gcode.c            G-code parser and modal state
+motion_control.c   Arcs, canned cycles, probing, homing, backlash
+planner.c          Motion block ring buffer and look ahead planner
+stepper.c          Segment buffer, AMASS, Bresenham, stepper ISR
+stepper2.c         Independent/auxiliary motor control
+hal.h              Hardware abstraction layer contract (driver implements)
+core_handlers.h    Event handler contract (plugins subscribe)
+settings.c         Settings definitions, validation, persistence
+report.c           Status reports and $-command output
+system.c           System commands and system state
+state_machine.c    Controller state machine
+stream*.c          Stream multiplexing, MPG, redirection, JSON
+ioports.c          Auxiliary I/O ports (M62 - M68)
+ngc_*.c            Macros, expressions and # parameters
+modbus*.c canbus.c Fieldbus support
+vfs.c fs_*.c       Virtual filesystem
+kinematics/        CoreXY, wall plotter, delta, polar, RTCP, ganging
+config.h           Compile time configuration
+changelog.md       Release notes, newest first
+```
+
+### Architecture ###
+
+Two contracts hold the system together.
+
+**`hal.h`** points *downward* at the hardware. The driver fills in a `grbl_hal_t` struct of function pointers \(steppers, limits, control signals, spindle, coolant, probe, streams, timers, NVS\) plus capability flags describing what the hardware can actually do. Drivers must check `hal.version` against `HAL_VERSION` in `driver_init()` and fail on a mismatch.
+
+**`core_handlers.h`** points *outward* at extensions. It declares roughly 70 `on_*` event pointers in a `grbl_t` struct. A plugin saves the current pointer, installs its own, and calls the saved one — so any number of plugins can chain onto the same event.
+
+The data path is:
+
+```
+stream in -> protocol.c -> gcode.c -> motion_control.c -> [kinematics] -> planner.c -> stepper.c -> hal.stepper.pulse_start()
+```
+
+`stepper.c` and `planner.c` are hard real time. Work that cannot run in interrupt context is handed to the foreground loop through the fixed size task queue in `grbllib.c` \(`task_add_immediate()`, `task_add_delayed()`, `task_add_systick()`\).
+
+### Extending grblHAL ###
+
+| To add | Use |
+|---|---|
+| An M-code or G-code | `grbl.user_mcode` handlers |
+| A `$` command | `system_register_commands()` |
+| Settings | `settings_register()` with a `setting_details_t` |
+| Kinematics | A file in `kinematics/`, see `kinematics/interface.h` |
+| Private user code | The weak `my_plugin_init()` in `my_plugin.c` |
+
+Start from the [Templates](https://github.com/grblHAL/Templates) repository and see the [wiki](https://github.com/grblHAL/core/wiki) for the plugin and driver guides.
 
 ***
 
@@ -87,6 +181,12 @@ This is a port/rewrite of [grbl 1.1f](https://github.com/gnea/grbl) and should b
 G/M-codes not supported by [legacy Grbl](https://github.com/gnea/grbl/wiki) are documented [here](https://github.com/grblHAL/core/wiki/Additional-G--and-M-codes).
 
 Some [plugins](https://github.com/grblHAL/plugins) implements additional M-codes.
+
+***
+
+#### License
+
+grblHAL is free software, released under the GNU General Public License v3. See [COPYING](COPYING) for the full text.
 
 ---
 20260908
