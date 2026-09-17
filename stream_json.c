@@ -235,3 +235,50 @@ bool json_add_int (json_out_t *json, const char *tag, int32_t value)
 
     return ok;
 }
+
+bool json_add_real (json_out_t *json, const char *tag, real_t value, uint8_t decimal_places)
+{
+    bool ok;
+
+    if((ok = add_tag(json, tag)))
+        vfs_puts(trim_float(ftoa(value, decimal_places)), json->file);
+
+    return ok;
+}
+
+// a **very** basic json parser, to be improved...
+bool json_parse_string (char *json, json_callback_ptr callback, void *data)
+{
+    bool is_string, done = false;
+    char c, *s, *e, *tag, *value;
+
+    if(*(s = json) == '{' && *(++s) == '"') {
+        s++;
+        do {
+            if((e = strchr(s, '"'))) {
+                tag = s;
+                *e = '\0';
+                if(*(s = e + 1) == ':') {
+                    if((is_string = *(++s) == '"')) {
+                        if((e = strchr(++s, '"'))) {
+                            value = s;
+                            *e = '\0';
+                            s = e + 1;
+                        }
+                    } else if((e = strchr(s, ',')) || (e = strchr(s, '}'))) {
+                        value = s;
+                        c = *e;
+                        *e = '\0';
+                        s = e + 1;
+                    }
+                    if(e) {
+                        done = callback(tag, value, is_string, data);
+                    } else
+                        break;
+                }
+            }
+        } while(e && !done);
+    }
+
+    return done;
+}

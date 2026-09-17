@@ -693,21 +693,20 @@ FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number
 
                         char *subname;
                         if((subname = ngc_string_param_get((ngc_string_id_t)o_label))) {
-                            char _name[60];
-                            vfs_file_t *file;
+                            char _name[50];
+                            size_t len;
                             vfs_path_t macro = { .name = _name, .len = sizeof(_name) - 1 };
-                            size_t len = strlen(subname) + 20;
 
-                            if(len > macro.len && (macro.name = malloc(len + 1)) == NULL)
+                            if((len = strlen(subname) + 8) > macro.len && (macro.name = malloc(len + 1)) == NULL)
                                 status = Status_FlowControlOutOfMemory;
 
                             if(status == Status_OK) {
 
-                                sprintf(macro.name, "/littlefs/%s.macro", subname);
-                                if((file = stream_redirect_read(macro.name, onNamedSubError, onNamedSubEOF)) == NULL) {
-                                    sprintf(macro.name, "/%s.macro", subname);
-                                    file = stream_redirect_read(macro.name, onNamedSubError, onNamedSubEOF);
-                                }
+                                const char *path;
+                                vfs_file_t *file = NULL;
+
+                                if((path = vfs_locate_file(strcat(strcpy(macro.name, subname), ".macro"))))
+                                    file = stream_redirect_read(path, onNamedSubError, onNamedSubEOF);
 
                                 if(macro.name != _name)
                                     free(macro.name);

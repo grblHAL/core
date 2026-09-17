@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "hal.h"
+#include "modbus.h"
 #include "protocol.h"
 #include "task.h"
 #include "state_machine.h"
@@ -136,7 +137,7 @@ bool stream_tx_blocking (void)
 {
     static volatile bool lock = false;
 
-    if(!lock) {
+    if(!lock && !modbus_isbusy()) {
         lock = true;
         grbl.on_execute_realtime(state_get());
         lock = false;

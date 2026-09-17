@@ -28,6 +28,7 @@ Helper functions for saving away and restoring a stream input buffer. _Not refer
 #ifndef _STREAM_H_
 #define _STREAM_H_
 
+#define ASCII_NUL  0x00
 #define ASCII_SOH  0x01
 #define ASCII_STX  0x02
 #define ASCII_ETX  0x03

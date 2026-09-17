@@ -3231,7 +3231,8 @@ FLASHMEM const char *setting_get_description (setting_id_t id)
                                 strcat(buf, v);
                                 strcat(buf, s + 1);
                                 description = buf;
-                            }
+                            } else
+                                buflen = 0;
                         }
                     }
                 } while(idx && description == NULL);
@@ -3630,7 +3631,7 @@ FLASHMEM status_code_t settings_store_setting (setting_id_t id, char *svalue)
         if(set->save)
             set->save();
 
-        if(set == &global_settings && set->on_changed == NULL)
+        if(set == &global_settings)
             set->on_changed = grbl.on_settings_changed;
 
         if(set->on_changed) {

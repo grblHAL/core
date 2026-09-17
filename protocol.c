@@ -67,7 +67,8 @@ FLASHMEM bool protocol_enqueue_gcode (char *gcode)
 {
     bool ok = *xcommand == '\0' &&
                (state_get() == STATE_IDLE || (state_get() & (STATE_ALARM|STATE_JOG|STATE_TOOL_CHANGE))) &&
-                 !((sys.rt_exec_state & (EXEC_MOTION_CANCEL|EXEC_MOTION_CANCEL_FAST)));
+                 !((sys.rt_exec_state & (EXEC_MOTION_CANCEL|EXEC_MOTION_CANCEL_FAST))) &&
+                  strlen(gcode) < sizeof(xcommand);
 
     if(ok && gc_state.file_run)
         ok = gc_state.modal.program_flow != ProgramFlow_Running || strncmp((char *)gcode, "$J=", 3);

@@ -721,11 +721,12 @@
 #endif
 #endif
 
-#define FS_FATFS    0b00001
-#define FS_SDCARD   0b00010
-#define FS_LFS      0b00100
-#define FS_LFS_ROOT 0b01000
-#define FS_YMODEM   0b10000
+#define FS_FATFS    0b000001
+#define FS_SDCARD   0b000010
+#define FS_LFS      0b000100
+#define FS_LFS_ROOT 0b001000
+#define FS_YMODEM   0b010000
+#define FS_POSIX    0b100000 // For simulator
 
 #if SDCARD_ENABLE && LITTLEFS_ENABLE
 #if SDCARD_ENABLE == 2

@@ -52,8 +52,6 @@ typedef struct ram_file {
     struct ram_file *next;
 } ram_file_t;
 
-#define ram_fp(p) (*((ram_file_t **)(&p)))
-
 static ram_file_t *files = NULL;
 static driver_reset_ptr driver_reset = NULL;
 
@@ -125,7 +123,7 @@ FLASHMEM static vfs_file_t *fs_open (const char *filename, const char *mode)
             rfile->pos = rfile->data;
             file->size = rfile->remaining = rfile->len;
             file->status.is_temporary = On;
-            memcpy(&file->handle, &rfile, sizeof(ram_file_t *));
+            file->handle = rfile;
         } else {
             free(file);
             file = NULL;
@@ -163,7 +161,7 @@ FLASHMEM static bool unlink (ram_file_t *file)
 
 FLASHMEM static void fs_close (vfs_file_t *file)
 {
-    ram_file_t *rfile = ram_fp(file->handle);
+    ram_file_t *rfile = (ram_file_t *)file->handle;
 
     if(rfile->mode.write) {
         if(rfile->txbuf.length)
@@ -179,7 +177,7 @@ FLASHMEM static void fs_close (vfs_file_t *file)
 FLASHMEM static size_t fs_read (void *buffer, size_t size, size_t count, vfs_file_t *file)
 {
     size_t rcount = 0;
-    ram_file_t *rfile = ram_fp(file->handle);
+    ram_file_t *rfile = (ram_file_t *)file->handle;
 
     if(rfile->pos) {
         rcount = size * count > rfile->remaining ? rfile->remaining : size * count;
@@ -199,7 +197,7 @@ static size_t fs_write (const void *buffer, size_t size, size_t count, vfs_file_
     size_t length = size * count;
     ram_file_t *rfile;
 
-    if(length == 0 || (rfile = ram_fp(file->handle)) == NULL)
+    if(length == 0 || (rfile = (ram_file_t *)file->handle) == NULL)
         return 0;
 
     if(rfile->txbuf.length && (rfile->txbuf.length + length) > rfile->txbuf.max_length) {
@@ -219,7 +217,7 @@ static size_t fs_write (const void *buffer, size_t size, size_t count, vfs_file_
 
 FLASHMEM static size_t fs_tell (vfs_file_t *file)
 {
-   return ram_fp(file->handle)->len - ram_fp(file->handle)->remaining;
+   return ((ram_file_t *)(file->handle))->len - ((ram_file_t *)(file->handle))->remaining;
 }
 
 FLASHMEM static int fs_seek (vfs_file_t *file, size_t offset)
@@ -228,7 +226,7 @@ FLASHMEM static int fs_seek (vfs_file_t *file, size_t offset)
 
     vfs_errno = ENOENT;
 
-    if((rfile = ram_fp(file->handle)) && (vfs_errno = offset <= rfile->len ? 0 : EINVAL) == 0) {
+    if((rfile = (ram_file_t *)file->handle) && (vfs_errno = offset <= rfile->len ? 0 : EINVAL) == 0) {
         rfile->pos = rfile->data + offset;
         rfile->remaining = rfile->len - offset;
     }
@@ -240,7 +238,7 @@ FLASHMEM static int fs_truncate (vfs_file_t *file, size_t length)
 {
     ram_file_t *rfile = NULL;
 
-    if(length == 0 && (rfile = ram_fp(file->handle))) {
+    if(length == 0 && (rfile = (ram_file_t *)file->handle)) {
         if(rfile->data) {
             free((void *)rfile->data);
             rfile->data = rfile->pos = NULL;
@@ -253,7 +251,7 @@ FLASHMEM static int fs_truncate (vfs_file_t *file, size_t length)
 
 FLASHMEM static bool fs_eof (vfs_file_t *file)
 {
-    return ram_fp(file->handle)->remaining == 0;
+    return ((ram_file_t *)(file->handle))->remaining == 0;
 }
 
 FLASHMEM static int fs_rename (const char *from, const char *to)
@@ -287,8 +285,8 @@ FLASHMEM static vfs_dir_t *fs_opendir (const char *path)
 {
     vfs_dir_t *dir;
 
-    if((dir = files ? calloc(1, sizeof(vfs_dir_t) + sizeof(ram_file_t *) - 1) : NULL))
-        memcpy(&dir->handle, &files, sizeof(ram_file_t *));
+    if((dir = files ? calloc(1, sizeof(vfs_dir_t) - VFS_HANDLE_SIZE + sizeof(ram_file_t *)) : NULL))
+        dir->handle = files;
 
     return dir;
 }
@@ -299,12 +297,12 @@ FLASHMEM static char *fs_readdir (vfs_dir_t *dir, vfs_dirent_t *dirent)
 
     *dirent->name = '\0';
 
-    if((f = ram_fp(dir->handle))) {
+    if((f = (ram_file_t *)dir->handle)) {
         vfs_errno = 0;
         dirent->size = f->len;
         dirent->st_mode.mode = 0;
         strcpy(dirent->name, f->name);
-        memcpy(&dir->handle, &f->next, sizeof(ram_file_t *));
+        dir->handle = f->next;
     }
 
     return *dirent->name ? dirent->name : NULL;
@@ -350,7 +348,7 @@ FLASHMEM static bool fs_getfree (vfs_free_t *free)
         free->used += file->len;
     } while ((file = file->next));
 
-    free->size = free->used; // available memory?
+    free->size = hal.get_free_mem ? hal.get_free_mem() : free->used;
 
     return true;
 }

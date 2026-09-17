@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2025 Terje Io
+  Copyright (c) 2025-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -22,8 +22,11 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+#include "real.h"
+
 struct json_out; // members defined in stream_json.c
 typedef struct json_out json_out_t;
+typedef bool (*json_callback_ptr)(char *tag, char *value, bool is_string, void *data);
 
 json_out_t *json_start (vfs_file_t *file, uint32_t max_levels);
 bool json_end (json_out_t *json);
@@ -34,3 +37,7 @@ bool json_start_array (json_out_t *json, const char *tag);
 bool json_end_array (json_out_t *json);
 bool json_add_string (json_out_t *json, const char *tag, const char *s);
 bool json_add_int (json_out_t *json, const char *tag, int32_t value);
+bool json_add_real (json_out_t *json, const char *tag, real_t value, uint8_t decimal_places);
+
+// a **very** basic json parser, to be improved...
+bool json_parse_string (char *json, json_callback_ptr callback, void *data);

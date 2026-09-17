@@ -96,7 +96,7 @@ typedef struct {
     const void *fs;
     size_t size;
     vfs_file_status_t status;
-    uint8_t handle __attribute__ ((aligned (4))); // first byte of file handle structure
+    void *handle __attribute__ ((aligned (sizeof(void *)))); // first byte of file handle structure
 } vfs_file_t;
 
 struct vfs_dir;
@@ -220,8 +220,10 @@ typedef struct {
 struct vfs_dir {
     const void *fs;
     vfs_mount_ll_entry_t *mounts;
-    uint8_t handle __attribute__ ((aligned (4))); // must be last!
+    void *handle __attribute__ ((aligned (sizeof(void *)))); // must be last!
 };
+
+#define VFS_HANDLE_SIZE sizeof(((vfs_file_t *)0)->handle)
 
 extern volatile int vfs_errno;
 extern vfs_events_t vfs;
@@ -259,5 +261,7 @@ void vfs_drives_close (vfs_drives_t *handle);
 vfs_free_t *vfs_drive_getfree (vfs_drive_t *drive);
 int vfs_drive_format (vfs_drive_t *drive);
 vfs_drive_t *vfs_get_drive (const char *path);
+bool vfs_mount_set_mode (const char *path, vfs_st_mode_t mode);
+const char *vfs_locate_file (const char *filename);
 
 #endif // INCLUDE_VFS_H

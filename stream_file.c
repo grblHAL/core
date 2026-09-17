@@ -137,7 +137,7 @@ FLASHMEM static void onReportHandlersInit (void)
     grbl.report.status_message = trap_status_messages;
 }
 
-FLASHMEM vfs_file_t *stream_redirect_read (char *filename, status_message_ptr status_handler, on_file_end_ptr eof_handler)
+FLASHMEM vfs_file_t *stream_redirect_read (const char *filename, status_message_ptr status_handler, on_file_end_ptr eof_handler)
 {
     static bool error_handler_ok = false;
 

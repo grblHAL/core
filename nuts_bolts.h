@@ -25,6 +25,7 @@
 #define _NUTS_BOLTS_H_
 
 #include "grbl.h"
+#include "real.h"
 #include "errors.h"
 
 #ifndef true
@@ -355,18 +356,18 @@ typedef union {
 } mpos_t;
 
 typedef union {
-    float values[2];
+    real_t values[2];
     struct {
-        float x;
-        float y;
+        real_t x;
+        real_t y;
     };
     struct {
-        float z;
-        float x;
+        real_t z;
+        real_t x;
     } g18;
 /*    struct {
-        float y;
-        float z;
+        real_t y;
+        real_t z;
     } g19; */
 } point_2d_t;
 
@@ -376,11 +377,11 @@ typedef struct {
 } bbox_2d_t;
 
 typedef union {
-    float values[3];
+    real_t values[3];
     struct {
-        float x;
-        float y;
-        float z;
+        real_t x;
+        real_t y;
+        real_t z;
     };
 } point_3d_t;
 
@@ -548,11 +549,7 @@ static inline int ffs (int i)
     return idx;
 }
 
-#endif // _WIN32
-
-#if defined(_WIN32) || defined(__MSP432P401R__) || defined(PART_TM4C123GH6PM)
-
-static inline size_t strlcpy (char *dst, const char *src, size_t len)
+static size_t strlcpy (char *dst, const char *src, size_t len)
 {
     const char *s = src;
     size_t dlen = len;
@@ -571,6 +568,6 @@ static inline size_t strlcpy (char *dst, const char *src, size_t len)
     return s - src - 1;
 }
 
-#endif // _WIN32 || __MSP432P401R__ || PART_TM4C123GH6PM
+#endif // _WIN32
 
 #endif

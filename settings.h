@@ -302,6 +302,8 @@ typedef enum {
     Setting_VFD_19 = 471,
     Setting_VFD_20 = 472,
     Setting_VFD_21 = 473,
+    Setting_VFD_22 = 474,
+    Setting_VFD_23 = 475,
 
     Setting_VFD_ModbusAddress0 = 476,
     Setting_VFD_ModbusAddress1 = 477,

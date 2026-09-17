@@ -1,5 +1,49 @@
 ## grblHAL changelog
 
+<a name="20260916">202609016
+
+Core:
+
+* For programmers: added embedded VFS file system that allow plugins to add flash based read-only files in the `\embedded` directory.
+A [simple example](https://github.com/grblHAL/Templates/tree/master/my_plugin/Embedded_files) can be found in the template repo.  
+Added initial support for real data type (configurable as float or double).
+
+* Hardened some code and centralized some to ensure consistent behaviour.
+
+* Changed search for _.macro_ files to scan the root directory (_/_) then _/littlefs_ and finally _/embedded_ before giving up.
+> [!NOTE]
+> Tool change related macros will still be scanned for at file system mount and will be bound to the file system where first found.
+
+Drivers:
+
+* ESP32: updated to coexist with core embedded file system.
+
+* STM32F1xx: updated/deleted some CubeIDE build files.
+
+* Simulator: added basic VFS file system for mounting a host directory as root.  
+To mount add the command line option `-p <directory>` to the `grblHAL_sim` command, `<directory>` is the path to the directory to mount.
+> [!NOTE]
+> Not yet 100% complete and ond only lightly tested on Linux. At least running gcode and macros should work.
+
+Plugins:
+
+* Networking: removed cJSON library, decorated many functions with `FLASHMEM` to save RAM for the iMXRT1062 driver;
+
+* SD Card, YModem: added `$YUP=<filename>` command for uploading files to the host. Transfer is started by the host by sending a `C` character.  
+Updated for core changes.
+
+* WebUI: changed to register read-only files with the core VFS embedded file system. Removed dependence on cJSON library
+and decorated many functions with `FLASHMEM` to save RAM for the iMXRT1062 driver.
+> [!NOTE]
+> For now the ESP32 driver uses its own, incompatible, embedded filing system.
+
+Templates (for programmers):
+
+* Added [example](https://github.com/grblHAL/Templates/blob/master/my_plugin/Embedded_files/my_plugin.c) for how to add embedded files/macros.  
+I have a simple Windows program that can generate the C structure for a file if anyone is interested.
+
+---
+
 <a name="20260909">20260909
 
 Plugins:
