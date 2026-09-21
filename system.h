@@ -330,7 +330,9 @@ status_code_t system_execute_line (char *line, stream_write_ptr write);
 void system_execute_startup (void *data);
 void system_flag_wco_change (void);
 void system_convert_array_steps_to_mpos (float *position, int32_t *steps);
-bool system_xy_at_fixture (coord_system_id_t id, float tolerance);
+bool system_pos_at_fixture (point_2d_t pos, uint8_t skip_axis, coord_system_id_t id, float tolerance);
+bool system_at_fixture (uint8_t skip_axis, coord_system_id_t id, float tolerance);
+bool system_xy_at_fixture (coord_system_id_t id, float tolerance); // deprecated?
 void system_raise_alarm (alarm_code_t alarm);
 void system_init_switches (void);
 void system_command_help (void);

@@ -115,7 +115,7 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
         } else {
 #ifndef NO_SAFETY_DOOR_SUPPORT
             if(signals.safety_door_ajar && hal.signals_cap.safety_door_ajar && !gc_state.tool_change) {
-            	sys.flags.is_parking = false;
+                sys.flags.is_parking = false;
                 if(settings.safety_door.flags.ignore_when_idle) {
                     // Only stop the spindle (laser off) when idle or jogging,
                     // this to allow positioning the controlled point (spindle) when door is open.
@@ -583,22 +583,18 @@ FLASHMEM static status_code_t enter_sleep (sys_state_t state, char *args)
 
 FLASHMEM static status_code_t set_tool_reference (sys_state_t state, char *args)
 {
+    if(sys.flags.probe_succeeded) {
 #if TOOL_LENGTH_OFFSET_AXIS >= 0
-    if(sys.flags.probe_succeeded) {
         sys.tlo_reference_set.mask = bit(TOOL_LENGTH_OFFSET_AXIS);
-        sys.tlo_reference[TOOL_LENGTH_OFFSET_AXIS] = sys.probe_position[TOOL_LENGTH_OFFSET_AXIS]; // - gc_state.tool_length_offset[Z_AXIS]));
-    } else
-        sys.tlo_reference_set.mask = 0;
 #else
-    plane_t plane;
-    gc_get_plane_data(&plane, gc_state.modal.plane_select);
-    if(sys.flags.probe_succeeded) {
+        plane_t plane;
+        gc_get_plane_data(&plane, gc_state.modal.plane_select);
         sys.tlo_reference_set.mask |= bit(plane.axis_linear);
-        sys.tlo_reference[plane.axis_linear] = sys.probe_position[plane.axis_linear];
-//                    - lroundf(gc_state.tool_length_offset[plane.axis_linear] * settings.axis[plane.axis_linear].steps_per_mm);
+#endif
+        memcpy(sys.tlo_reference, sys.probe_position, sizeof(sys.probe_position[0]) * N_AXIS);
     } else
         sys.tlo_reference_set.mask = 0;
-#endif
+
     report_add_realtime(Report_TLOReference);
 
     return Status_OK;
@@ -1285,24 +1281,67 @@ void system_convert_array_steps_to_mpos (float *position, int32_t *steps)
 #endif
 }
 
-/*! \brief Checks if XY position is within coordinate system XY with given tolerance.
+/*! \brief Checks if position is within the coordinate system position with given tolerance.
+\param pos a \a point_2d_t, the position to check.
+\param skip_axis the axis index of the axis to exclude from the check, typically the linear (tool) axis.
+\param id a \a coord_system_id_t, typically #CoordinateSystem_G59_3.
+\param tolerance as the allowed radius the current position has to be within.
+\returns \a false if tolerance is 0 or position is outside the allowed radius, otherwise \a true.
+*/
+FLASHMEM bool system_pos_at_fixture (point_2d_t pos, uint8_t skip_axis, coord_system_id_t id, float tolerance)
+{
+    bool ok = false;
+    coord_system_data_t target;
+
+    if(skip_axis <= Z_AXIS && tolerance > 0.0f && settings_read_coord_data(id, &target)) {
+
+        uint_fast8_t idx = 0, n = 0;
+        do {
+            if(idx != skip_axis)
+                pos.values[n++] -= target.coord.values[idx];
+            idx++;
+        } while(n < 2);
+
+        ok = hypot_f(pos.values[0], pos.values[1]) <= tolerance;
+    }
+
+    return ok;
+}
+
+/*! \brief Checks if the current 2D position is within coordinate system with given tolerance.
+\param skip_axis the axis index of the axis to exclude from the check, typically the linear (tool) axis.
+\param id a \a coord_system_id_t, typically #CoordinateSystem_G59_3.
+\param tolerance as the allowed radius the current position has to be within.
+\returns \a false if tolerance is 0 or position is outside the allowed radius, otherwise \a true.
+*/
+FLASHMEM bool system_at_fixture (uint8_t skip_axis, coord_system_id_t id, float tolerance)
+{
+    point_2d_t pos;
+    coord_data_t mpos;
+    uint_fast8_t idx = 0, n = 0;
+
+    system_convert_array_steps_to_mpos(mpos.values, sys.position);
+
+    do {
+        if(idx != skip_axis)
+            pos.values[n++] = mpos.values[idx];
+        idx++;
+    } while(n < 2);
+
+    return system_pos_at_fixture(pos, skip_axis, id, tolerance);
+}
+
+/*! \brief Checks if the current XY position is within coordinate system XY with given tolerance.
 \param id a \a coord_system_id_t, typically #CoordinateSystem_G59_3.
 \param tolerance as the allowed radius the current position has to be within.
 \returns \a false if tolerance is 0 or position is outside the allowed radius, otherwise \a true.
 */
 FLASHMEM bool system_xy_at_fixture (coord_system_id_t id, float tolerance)
 {
-    bool ok = false;
-
     coord_data_t position;
-    coord_system_data_t target;
+    system_convert_array_steps_to_mpos(position.values, sys.position);
 
-    if(tolerance > 0.0f && settings_read_coord_data(id, &target)) {
-        system_convert_array_steps_to_mpos(position.values, sys.position);
-        ok = hypot_f(position.x - target.coord.x, position.y - target.coord.y) <= tolerance;
-    }
-
-    return ok;
+    return system_pos_at_fixture((point_2d_t){ .x = position.x, .y = position.y }, Z_AXIS, id, tolerance);
 }
 
 /*! \brief Raise and report a system alarm.

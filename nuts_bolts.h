@@ -549,25 +549,6 @@ static inline int ffs (int i)
     return idx;
 }
 
-static size_t strlcpy (char *dst, const char *src, size_t len)
-{
-    const char *s = src;
-    size_t dlen = len;
-
-    if(dlen) while(--dlen) {
-        if(!(*dst++ = *s++))
-            break;
-    }
-
-    if(dlen == 0) {
-        if(len)
-            *dst = '\0';
-        while(*s++);
-    }
-
-    return s - src - 1;
-}
-
 #endif // _WIN32
 
 #endif

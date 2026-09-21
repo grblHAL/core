@@ -476,10 +476,10 @@ FLASHMEM static status_code_t tool_change (parser_state_t *parser_state)
     hal.coolant.set_state((coolant_state_t){0});
 
     execute_posted = false;
-    probe_toolsetter = grbl.on_probe_toolsetter != NULL &&
-                       (settings.tool_change.mode == ToolChange_Manual ||
-                         settings.tool_change.mode == ToolChange_Manual_G59_3 ||
-                          settings.tool_change.mode == ToolChange_SemiAutomatic);
+    probe_toolsetter = !!grbl.on_probe_toolsetter &&
+                        (settings.tool_change.mode == ToolChange_Manual ||
+                          settings.tool_change.mode == ToolChange_Manual_G59_3 ||
+                           settings.tool_change.mode == ToolChange_SemiAutomatic);
 
     // Save current position.
     system_convert_array_steps_to_mpos(previous.values, sys.position);
@@ -608,7 +608,7 @@ FLASHMEM status_code_t tc_probe_workpiece (void)
 
 #if COMPATIBILITY_LEVEL <= 1
     if(probe_toolsetter)
-        plan_data.condition.probing_toolsetter = grbl.on_probe_toolsetter(next_tool, NULL, system_xy_at_fixture(CoordinateSystem_G59_3, TOOLSETTER_RADIUS), true);
+        plan_data.condition.probing_toolsetter = grbl.on_probe_toolsetter(next_tool, NULL, system_at_fixture(settings.mode == Mode_Lathe ? X_AXIS : Z_AXIS, CoordinateSystem_G59_3, TOOLSETTER_RADIUS), true);
 #endif
 
     // Get current position.

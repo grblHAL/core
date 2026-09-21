@@ -1,5 +1,24 @@
 ## grblHAL changelog
 
+<a name="20260921">202609021
+
+Core:
+
+* Added `TLR@` element to `$#` report when the `$TLR` tool reference is set.
+[It contains](https://github.com/grblHAL/core/wiki/Report-extensions#ngc-parameters-report-extensions) the 2D position of the probed position \(ex. the tool axis\), tool axis id and if probed at the `G59.3` coordinate.
+
+* Improved/hardened toolsetter probing. Should now work correctly in lathe mode where the X-axis is the tool axis. Needs testing and may need further changes.
+
+Drivers:
+
+* STM32F4xx: Fixed some minor board inconsistencies.
+
+3rd party plugins:
+
+* [Cutter compensation](https://github.com/JasonTitcomb/grblHALCutterComp#readme) by @JasonTitcomb now available in the Web Builder. The source code has to be added manually for local builds.
+
+---
+
 <a name="20260916">202609016
 
 Core:
@@ -23,7 +42,7 @@ Drivers:
 * Simulator: added basic VFS file system for mounting a host directory as root.  
 To mount add the command line option `-p <directory>` to the `grblHAL_sim` command, `<directory>` is the path to the directory to mount.
 > [!NOTE]
-> Not yet 100% complete and ond only lightly tested on Linux. At least running gcode and macros should work.
+> Not yet 100% complete and and only lightly tested on Linux. At least running gcode and macros should work.
 
 Plugins:
 

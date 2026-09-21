@@ -119,7 +119,7 @@ static scale_factor_t scale_factor = {
 #endif
 };
 
-#if CUTTER_COMP_ENABLE
+#if CUTTER_COMP_ENABLE && !(defined(PLATFORMIO) && defined(ARDUINO))
 
 FLASHMEM __attribute__((weak)) void cc_init (void)
 {

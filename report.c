@@ -697,11 +697,25 @@ FLASHMEM void report_ngc_parameters (void)
 
     report_tool_offsets();              // Print tool length offset value.
     report_probe_parameters();          // Print probe parameters. Not persistent in memory.
-    if(sys.tlo_reference_set.mask) {    // Print tool length reference offset. Not persistent in memory.
-        plane_t plane;
-        gc_get_plane_data(&plane, gc_state.modal.plane_select);
+    if(sys.tlo_reference_set.mask) {    // Print tool length reference offset and position. Not persistent in memory.
+
+        point_2d_t refpos;
+        uint_fast8_t n, tlr_axis = ffs(sys.tlo_reference_set.mask) - 1;
+
         hal.stream.write("[TLR:");
-        hal.stream.write(get_axis_value(sys.tlo_reference[plane.axis_linear] / settings.axis[plane.axis_linear].steps_per_mm));
+        hal.stream.write(get_axis_value(sys.tlo_reference[tlr_axis] / settings.axis[tlr_axis].steps_per_mm));
+        hal.stream.write("]" ASCII_EOL);
+
+        hal.stream.write("[TLR@:");
+        for(idx = 0, n = 0; idx <= Z_AXIS; idx++) {
+            if(idx != tlr_axis) {
+                if(n)
+                    hal.stream.write(",");
+                hal.stream.write(get_axis_value((refpos.values[n++] = (sys.tlo_reference[idx] / settings.axis[idx].steps_per_mm))));
+            }
+        }
+        hal.stream.write(appendbuf(2, ":", uitoa(tlr_axis)));
+        hal.stream.write(appendbuf(2, ":", uitoa(system_pos_at_fixture(refpos, tlr_axis, CoordinateSystem_G59_3, TOOLSETTER_RADIUS))));
         hal.stream.write("]" ASCII_EOL);
     }
 

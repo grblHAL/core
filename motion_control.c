@@ -803,7 +803,7 @@ FLASHMEM void mc_thread (plan_line_data_t *pl_data, float *position, gc_thread_d
     }
 }
 
-#if LATHE_UVW_OPTION && NGC_EXPRESSIONS_ENABLE
+#if LATHE_UVW_OPTION && NGC_EXPRESSIONS_ENABLE && !(defined(PLATFORMIO) && defined(ARDUINO))
 
 FLASHMEM __attribute__((weak)) status_code_t mc_lathe_cycle (plan_line_data_t *pl_data, coord_data_t *position, uint32_t o_label, lathe_cycle_arguments_t *args)
 {
@@ -1016,48 +1016,43 @@ FLASHMEM status_code_t mc_homing_cycle (axes_signals_t cycle)
 FLASHMEM gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc_parser_flags_t parser_flags)
 {
     uint_fast8_t idx = N_AXIS;
+    uint8_t tool_axis = settings.mode == Mode_Lathe ? X_AXIS : Z_AXIS; // use plane.linear_axis instead?
+    axes_signals_t axes = {0};
 
     // TODO: Need to update this cycle so it obeys a non-auto cycle start.
-    if (state_get() == STATE_CHECK_MODE)
+    if(state_get() == STATE_CHECK_MODE)
         return GCProbe_CheckMode;
+
+    // Finish all queued commands and empty planner buffer before starting probe cycle.
+    if(!protocol_buffer_synchronize())
+        return GCProbe_Abort; // Return if system reset has been issued.
 
     if(settings.probe.soft_limited)
         grbl.apply_travel_limits(target, NULL, &sys.work_envelope);
 
     do {
         idx--;
-        sys.probe_position[idx] = lroundf(target[idx] * settings.axis[idx].steps_per_mm);
+        if((sys.probe_position[idx] = lroundf(target[idx] * settings.axis[idx].steps_per_mm)) != sys.position[idx])
+            bit_true(axes.mask, bit(idx));
     } while(idx);
 
     sys.probe_coordsys_id = gc_state.modal.g5x_offset.id;
 
-    // Finish all queued commands and empty planner buffer before starting probe cycle.
-    if (!protocol_buffer_synchronize())
-        return GCProbe_Abort; // Return if system reset has been issued.
-
 #if COMPATIBILITY_LEVEL <= 1
-    bool at_g59_3 = false, probe_toolsetter = grbl.on_probe_toolsetter != NULL && state_get() != STATE_TOOL_CHANGE && (sys.homed.mask & (X_AXIS_BIT|Y_AXIS_BIT));
+    bool at_g59_3 = false, probe_toolsetter = false;
+
+//    if(axes.mask && (axes.mask & bit(ffs(axes.mask) - 1)) == bit(tool_axis)) ??
+    if(axes.mask & bit(tool_axis))
+        probe_toolsetter = !!grbl.on_probe_toolsetter &&
+                            state_get() != STATE_TOOL_CHANGE &&
+                             (sys.homed.mask & (tool_axis == X_AXIS ? (X_AXIS_BIT|Y_AXIS_BIT) : (X_AXIS_BIT|Z_AXIS_BIT)));
 
     if(probe_toolsetter)
-        pl_data->condition.probing_toolsetter = grbl.on_probe_toolsetter(NULL, NULL, at_g59_3 = system_xy_at_fixture(CoordinateSystem_G59_3, TOOLSETTER_RADIUS), true);
+        pl_data->condition.probing_toolsetter = grbl.on_probe_toolsetter(NULL, NULL, (at_g59_3 = system_at_fixture(tool_axis, CoordinateSystem_G59_3, TOOLSETTER_RADIUS)), true);
 #endif
 
-    if(grbl.on_probe_start) {
-
-        uint_fast8_t idx = N_AXIS;
-        axes_signals_t axes = {0};
-        coord_data_t position;
-
-        system_convert_array_steps_to_mpos(position.values, sys.position);
-
-        do {
-            idx--;
-            if(fabsf(target[idx] - position.values[idx]) > TOLERANCE_EQUAL)
-                bit_true(axes.mask, bit(idx));
-        } while(idx);
-
+    if(grbl.on_probe_start)
         grbl.on_probe_start(axes, target, pl_data);
-    }
 
     // Initialize probing control variables
     sys.flags.probe_succeeded = Off; // Re-initialize probe history before beginning cycle.
@@ -1066,7 +1061,7 @@ FLASHMEM gc_probe_t mc_probe_cycle (float *target, plan_line_data_t *pl_data, gc
     // After syncing, check if probe is already triggered or not connected. If so, halt and issue alarm.
     // NOTE: This probe initialization error applies to all probing cycles.
     probe_state_t probe = hal.probe.get_state();
-    if (probe.triggered || !probe.connected) { // Check probe state.
+    if(probe.triggered || !probe.connected) { // Check probe state.
 
         system_set_exec_alarm(Alarm_ProbeFailInitial);
         protocol_execute_realtime();
