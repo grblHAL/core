@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+<a name="20260923">202609023
+
+Core:
+
+* Fix for `G51` scaled radius mode arcs not executed correctly. Ref. issue [#1018](https://github.com/grblHAL/core/issues/1018).  
+Added check for scaling factors, unequal factors cannot be used to generate ellipses. "Hardened" radius check, should now handle float rounding errors.
+
+* Fix for `G51` scaling factors beeing multiplied with imperial factor (`25.4`) when `G20` is active.
+
+* Removed `ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING` symbol used to enable AMASS \(default on\), `#define MAX_AMASS_LEVEL 1` instead to disable AMASS.
+Changed handling of `MAX_AMASS_LEVEL` to allow values > 3. Ref issue [#136](https://github.com/grblHAL/core/issues/136).
+
+---
+
 <a name="20260921">202609021
 
 Core:
@@ -11,7 +25,7 @@ Core:
 
 Drivers:
 
-* STM32F4xx: Fixed some minor board inconsistencies.
+* STM32F4xx: fixed some minor board inconsistencies.
 
 3rd party plugins:
 

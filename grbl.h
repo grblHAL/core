@@ -42,7 +42,7 @@
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_BUILD 20260921
+#define GRBL_BUILD 20260923
 
 #define GRBL_URL "https://github.com/grblHAL"
 
@@ -134,7 +134,7 @@
 #define CMD_OVERRIDE_RAPID_MEDIUM           0x96 // (150)
 #define CMD_OVERRIDE_RAPID_LOW              0x97 // (151)
 #define CMD_OVERRIDE_RAPID_EXTRA_LOW        0x98 // (152)
-#define CMD_OVERRIDE_SPINDLE_RESET 			0x99 // (153) Restores spindle override value to 100%.
+#define CMD_OVERRIDE_SPINDLE_RESET          0x99 // (153) Restores spindle override value to 100%.
 #define CMD_OVERRIDE_SPINDLE_COARSE_PLUS    0x9A // (154)
 #define CMD_OVERRIDE_SPINDLE_COARSE_MINUS   0x9B // (155)
 #define CMD_OVERRIDE_SPINDLE_FINE_PLUS      0x9C // (156)
@@ -147,14 +147,14 @@
 #define CMD_TOOL_ACK                        0xA3 // (163)
 #define CMD_PROBE_CONNECTED_TOGGLE          0xA4 // (164)
 // The following character codes are reserved for plugin use
-#define CMD_MACRO_0 						0xB0 // (176)
-#define CMD_MACRO_1 						0xB1 // (177)
-#define CMD_MACRO_2 						0xB2 // (178)
-#define CMD_MACRO_3 						0xB3 // (179)
-#define CMD_MACRO_4 						0xB4 // (180)
-#define CMD_MACRO_5 						0xB5 // (181)
-#define CMD_MACRO_6 						0xB6 // (182)
-#define CMD_MACRO_7 						0xB7 // (183)
+#define CMD_MACRO_0                         0xB0 // (176)
+#define CMD_MACRO_1                         0xB1 // (177)
+#define CMD_MACRO_2                         0xB2 // (178)
+#define CMD_MACRO_3                         0xB3 // (179)
+#define CMD_MACRO_4                         0xB4 // (180)
+#define CMD_MACRO_5                         0xB5 // (181)
+#define CMD_MACRO_6                         0xB6 // (182)
+#define CMD_MACRO_7                         0xB7 // (183)
 
 // System motion line numbers must be zero.
 #define JOG_LINE_NUMBER 0
@@ -217,9 +217,6 @@
 // frequencies below 10kHz, where the aliasing between axes of multi-axis motions can cause audible
 // noise and shake your machine. At even lower step frequencies, AMASS adapts and provides even better
 // step smoothing. See stepper.c for more details on the AMASS system works.
-#ifndef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
-#define ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING 1 // Default enabled. Set to 0 to disable.
-#endif
 
 // Define Adaptive Multi-Axis Step-Smoothing(AMASS) levels and cutoff frequencies. The highest level
 // frequency bin starts at 0Hz and ends at its cutoff frequency. The next lower level frequency bin
@@ -230,13 +227,12 @@
 // NOTE: AMASS cutoff frequency multiplied by ISR overdrive factor must not exceed maximum step frequency.
 // NOTE: Current settings are set to overdrive the ISR to no more than 16kHz, balancing CPU overhead
 // and timer accuracy.  Do not alter these settings unless you know what you are doing.
-#if ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
-  #ifndef MAX_AMASS_LEVEL
-    #define MAX_AMASS_LEVEL 3
-  #endif
-  #if MAX_AMASS_LEVEL <= 0
-    error "AMASS must have 1 or more levels to operate correctly."
-  #endif
+
+#ifndef MAX_AMASS_LEVEL
+#define MAX_AMASS_LEVEL 3 // Set to 1 to disable AMASS, replaces #define ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING 0
+#endif
+#if MAX_AMASS_LEVEL <= 0
+error "AMASS must have 1 or more levels to operate correctly."
 #endif
 
 // Sets which axis the tool length offset is applied. Assumes the spindle is always parallel with

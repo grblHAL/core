@@ -240,7 +240,7 @@ FLASHMEM static void tool_changed (tool_data_t *tool)
 
 FLASHMEM static void dummy_on_settings_changed (settings_t *settings, settings_changed_flags_t changed)
 {
-	// NOOP
+    // NOOP
 }
 
 FLASHMEM static atc_status_t atc_get_state (void)
@@ -361,13 +361,6 @@ FLASHMEM int grbl_enter (void)
 
     stepper_enable = hal.stepper.enable;
     hal.stepper.enable = stepperEnable;
-
-#if ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
-    driver.amass = hal.driver_cap.amass_level >= MAX_AMASS_LEVEL;
-    hal.driver_cap.amass_level = MAX_AMASS_LEVEL;
-#else
-    hal.driver_cap.amass_level = 0;
-#endif
 
 #ifdef DEFAULT_STEP_PULSE_DELAY
     driver.pulse_delay = hal.driver_cap.step_pulse_delay;

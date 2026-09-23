@@ -2732,28 +2732,7 @@ status_code_t gc_execute_block (char *block)
 #endif
     gc_get_plane_data(&plane, gc_block.modal.plane_select);
 
-    // [12. Set length units ]: N/A
-    // Pre-convert XYZ coordinate values to millimeters, if applicable.
     uint_fast8_t idx = N_AXIS;
-    if (gc_block.modal.units_imperial) do { // Axes indices are consistent, so loop may be used.
-        idx--;
-#if N_AXIS > 3
-        if (bit_istrue(axis_words.mask, bit(idx)) && bit_isfalse(settings.steppers.is_rotary.mask, bit(idx))) {
-#else
-        if (bit_istrue(axis_words.mask, bit(idx))) {
-#endif
-            gc_block.values.xyz[idx] *= MM_PER_INCH;
-#if LATHE_UVW_OPTION
-  #if N_AXIS > 3
-            if(idx <= Z_AXIS)
-  #endif
-            gc_block.values.uvw[idx] *= MM_PER_INCH;
-#endif
-        }
-    } while(idx);
-
-    if(gc_block.modal.diameter_mode && bit_istrue(axis_words.mask, bit(X_AXIS)))
-        gc_block.values.xyz[X_AXIS] /= 2.0f;
 
     // Scale axis words if commanded
     if(axis_command == AxisCommand_Scaling) {
@@ -2848,6 +2827,29 @@ status_code_t gc_execute_block (char *block)
             }
         } while(idx);
     }
+
+    // [12. Set length units ]: N/A
+    // Pre-convert XYZ coordinate values to millimeters, if applicable.
+    idx = N_AXIS;
+    if(gc_block.modal.units_imperial) do { // Axes indices are consistent, so loop may be used.
+        idx--;
+#if N_AXIS > 3
+        if (bit_istrue(axis_words.mask, bit(idx)) && bit_isfalse(settings.steppers.is_rotary.mask, bit(idx))) {
+#else
+        if (bit_istrue(axis_words.mask, bit(idx))) {
+#endif
+            gc_block.values.xyz[idx] *= MM_PER_INCH;
+#if LATHE_UVW_OPTION
+  #if N_AXIS > 3
+            if(idx <= Z_AXIS)
+  #endif
+            gc_block.values.uvw[idx] *= MM_PER_INCH;
+#endif
+        }
+    } while(idx);
+
+    if(gc_block.modal.diameter_mode && bit_istrue(axis_words.mask, bit(X_AXIS)))
+        gc_block.values.xyz[X_AXIS] /= 2.0f;
 
     // [13. Cutter radius compensation ]: G41/42 NOT SUPPORTED. Error, if enabled while G53 is active.
     // [G40 Errors]: G2/3 arc is programmed after a G40. The linear move after disabling is less than tool diameter.
@@ -3630,24 +3632,29 @@ status_code_t gc_execute_block (char *block)
                     x = gc_block.values.xyz[plane.axis_0] - gc_state.position[plane.axis_0]; // Delta x between current position and target
                     y = gc_block.values.xyz[plane.axis_1] - gc_state.position[plane.axis_1]; // Delta y between current position and target
 
-                    if(gc_state.modal.scaling_active && scale_factor.ijk[plane.axis_0] * scale_factor.ijk[plane.axis_1] < 0.0f)
-                        gc_parser_flags.arc_is_clockwise = !gc_parser_flags.arc_is_clockwise;
+                    if(gc_state.modal.scaling_active) {
+                        if(fabsf(scale_factor.ijk[plane.axis_0]) != fabsf(scale_factor.ijk[plane.axis_1]))
+                            RETURN(Status_GcodeInvalidTarget); // [Invalid target, scaling cannot be used to create elliptical arcs]
+                        if(scale_factor.ijk[plane.axis_0] * scale_factor.ijk[plane.axis_1] < 0.0f)
+                            gc_parser_flags.arc_is_clockwise = !gc_parser_flags.arc_is_clockwise;
+                    }
 
                     if(gc_block.words.r) { // Arc Radius Mode
 
                         gc_block.words.r = Off;
 
-                        if (isequal_position_vector(gc_state.position, gc_block.values.xyz))
+                        if(isequal_position_vector(gc_state.position, gc_block.values.xyz))
                             RETURN(Status_GcodeInvalidTarget); // [Invalid target]
 
                         // Convert radius value to proper units.
-                        if (gc_block.modal.units_imperial)
+                        if(gc_block.modal.units_imperial)
                             gc_block.values.r *= MM_PER_INCH;
 
+                        // Scale radius value if called for.
                         if(gc_state.modal.scaling_active)
-                            gc_block.values.r *= (scale_factor.ijk[plane.axis_0] > scale_factor.ijk[plane.axis_1]
-                                                   ? scale_factor.ijk[plane.axis_0]
-                                                   : scale_factor.ijk[plane.axis_1]);
+                            gc_block.values.r *= (scale_factor.ijk[plane.axis_0] < 0.0f
+                                                   ? -scale_factor.ijk[plane.axis_0]
+                                                   : scale_factor.ijk[plane.axis_0]);
 
                         /*  We need to calculate the center of the circle that has the designated radius and passes
                              through both the current position and the target position. This method calculates the following
@@ -3701,14 +3708,17 @@ status_code_t gc_execute_block (char *block)
                         // than d. If so, the sqrt of a negative number is complex and error out.
                         float h_x2_div_d = 4.0f * gc_block.values.r * gc_block.values.r - x * x - y * y;
 
-                        if (h_x2_div_d < 0.0f)
-                            RETURN(Status_GcodeArcRadiusError); // [Arc radius error] TODO: this will fail due to limited float precision...
-
+                        if(h_x2_div_d < 0.0f) {
+                            if(h_x2_div_d < -TOLERANCE_EQUAL) {
+                                RETURN(Status_GcodeArcRadiusError); // [Arc radius error]
+                            } else
+                                h_x2_div_d = 0.0f;
+                        }
                         // Finish computing h_x2_div_d.
                         h_x2_div_d = -sqrtf(h_x2_div_d) / hypot_f(x, y); // == -(h * 2 / d)
 
                         // Invert the sign of h_x2_div_d if the circle is counter clockwise (see sketch below)
-                        if (gc_block.modal.motion == MotionMode_CcwArc)
+                        if(!gc_parser_flags.arc_is_clockwise)
                             h_x2_div_d = -h_x2_div_d;
 
                         /* The counter clockwise circle lies to the left of the target direction. When offset is positive,

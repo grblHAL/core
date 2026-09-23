@@ -53,7 +53,7 @@ typedef union {
                  limits_pull_up              :1, //!< Pullup resistors for limit inputs are are supported.
                  control_pull_up             :1, //!< Pullup resistors for control inputs are supported.
                  probe_pull_up               :1, //!< Pullup resistors for probe inputs are supported.
-                 amass_level                 :2, // 0...3 Deprecated?
+                 amass_level                 :2, //!< Deprecated, to be removed.
                  spindle_encoder             :1, //!< Spindle encoder is supported.
                  spindle_encoder_index_event :1, //!< Spindle encoder is supported.
                  spindle_sync                :1, //!< Spindle synced motion is supported.

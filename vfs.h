@@ -96,7 +96,7 @@ typedef struct {
     const void *fs;
     size_t size;
     vfs_file_status_t status;
-    void *handle __attribute__ ((aligned (sizeof(void *)))); // first byte of file handle structure
+    void *handle __attribute__ ((aligned (sizeof(void *)))); //!< Pointer to the underlying file system handle, can also be extended to hold actual handle data. Must be last!
 } vfs_file_t;
 
 struct vfs_dir;
@@ -220,7 +220,7 @@ typedef struct {
 struct vfs_dir {
     const void *fs;
     vfs_mount_ll_entry_t *mounts;
-    void *handle __attribute__ ((aligned (sizeof(void *)))); // must be last!
+    void *handle __attribute__ ((aligned (sizeof(void *)))); //!< Pointer to the underlying file system handle, can also be extended to hold actual handle data. Must be last!
 };
 
 #define VFS_HANDLE_SIZE sizeof(((vfs_file_t *)0)->handle)
