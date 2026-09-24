@@ -48,6 +48,7 @@ def generate(source):
         cases = cases.replace('motor->executor.', 'motor->').replace('motor.executor.', 'motor.')
     return ('#include "mock_hal.h"\n' + source[enum_start:struct_end] + '\n'
             + 'static st2_motor_t *motors;\n'
+            + ('static void (*on_reset)(void);\n' if 'if(on_reset)' in source else '')
             + '\n\n'.join(function(source, name) for name in names)
             + '\n' + cases + '\n')
 

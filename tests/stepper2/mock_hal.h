@@ -20,6 +20,10 @@ static float test_sqrtf (float value) { return (float)sqrt((double)value); }
 #define ISR_CODE
 #define ISR_FUNC(name) name
 #define ST2_DEBUG 0
+#if STEP_INJECT_STREAM
+#include "stepper_injection.h"
+static struct { bool position_lost; } sys;
+#endif
 
 typedef union { uint32_t bits; uint32_t mask; } axes_signals_t;
 typedef enum { Stepper2_Steps, Stepper2_InfiniteSteps, Stepper2_mm } position_t;
@@ -57,10 +61,16 @@ static bool task_add_delayed (foreground_task_ptr callback, void *context, uint3
 }
 
 static struct {
-    struct { void (*output_step)(axes_signals_t, axes_signals_t); } stepper;
+    struct {
+        void (*output_step)(axes_signals_t, axes_signals_t);
+#if STEP_INJECT_STREAM
+        const stepper_injection_t *injection;
+#endif
+    } stepper;
     struct { void (*start)(hal_timer_t, uint64_t); void (*stop)(hal_timer_t); } timer;
     uint64_t (*get_micros)(void);
 } hal = {{ output_step }, { timer_start, timer_stop }, get_micros};
 
 bool st2_motor_stop (st2_motor_t *motor);
+bool st2_motor_running (st2_motor_t *motor);
 #endif

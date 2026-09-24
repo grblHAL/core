@@ -72,17 +72,23 @@ typedef struct {
     bool polling;
     uint64_t next_step;
     hal_timer_t step_inject_timer;
+#if STEP_INJECT_STREAM
+    bool stream;
+    bool active;
+    bool stop_requested;
+    bool single_step;
+    bool completed_pending;
+    uint32_t id;
+    uint32_t generated;
+    uint32_t confirmed;
+#endif
 } st2_executor_t;
 
-/* ST2-RF-0.1.0 STREAM DESIGN NOTE - NOT IMPLEMENTED:
- * A future, capability-guarded stream executor owns one whole motion record:
- * ID, axis/direction, requested, reserved and EOF-confirmed counts/lifecycle.
- * Prepare a profile candidate, reserve output via HAL, then accept the candidate.
- * Do not mutate the accepted profile if reservation fails. The I2S driver owns
- * descriptor/generation checkpoints, not this module. Its worker reports
- * ID/count/result outside ISR/locks to a synchronized stepper2 receiver.
- * Keep running while draining; the final full-pulse EOF completes the motion.
- * No stream storage or fake HAL entry points are compiled in this phase. */
+/* The optional stream executor tracks one finite motion and its confirmed
+ * position. The transport owns descriptor/generation checkpoints and reports
+ * cumulative progress outside its ISR and locks. Profile generation may finish
+ * before physical output; the executor remains active until final confirmation.
+ * Application completion callbacks are deferred to the core foreground. */
 
 /*! \brief Internal structure for holding motor configuration and keeping track of its status.
 
@@ -110,6 +116,10 @@ static on_setting_get_description_ptr on_setting_get_description;
 static on_reset_ptr on_reset;
 
 static void motor_irq (void *context);
+#if STEP_INJECT_STREAM
+static bool st2_stream_move (st2_motor_t *motor, float move, float speed, position_t type);
+static void st2_stream_service (st2_motor_t *motor);
+#endif
 
 /*! \brief Calculate basic motor configuration.
 
@@ -133,10 +143,28 @@ FLASHMEM static void st2_reset (void)
     st2_motor_t *motor = motors;
 
     while(motor) {
+#if STEP_INJECT_STREAM
+        if(motor->executor.stream) {
+            hal.stepper.injection->lock();
+            motor->position_lost = motor->position_lost || motor->executor.active || sys.position_lost;
+            if(motor->executor.active)
+                hal.stepper.injection->cancel(motor->executor.id);
+            motor->executor.active = false;
+            motor->executor.completed_pending = false;
+            motor->executor.id++; // invalidate any callback already copied by the worker
+            motor->profile.state = State_Idle;
+            hal.stepper.injection->unlock();
+            motor = motor->next;
+            continue;
+        }
+#endif
         motor->position_lost = motor->profile.state != State_Idle;
         motor->profile.state = State_Idle;
         motor = motor->next;
     }
+
+    if(on_reset)
+        on_reset();
 }
 
 /*! \brief Update basic motor configuration on settings changes.
@@ -286,8 +314,19 @@ FLASHMEM st2_motor_t *st2_motor_init (uint_fast8_t axis_idx, bool is_spindle)
 {
     st2_motor_t *motor = NULL, *new = motors;
 
+#if STEP_INJECT_STREAM
+    if(hal.stepper.injection && (is_spindle || axis_idx >= N_AXIS ||
+       !hal.stepper.injection->supports(1u << axis_idx)))
+        return NULL; // no unsafe timer fallback to a stream-only output_step
+#endif
+
     if(hal.stepper.output_step && (motor = calloc(1, sizeof(st2_motor_t)))) {
 
+#if STEP_INJECT_STREAM
+        if(!is_spindle && hal.stepper.injection && hal.stepper.injection->supports(1u << axis_idx))
+            motor->executor.stream = true;
+        else
+#endif
         if(hal.timer.claim && (motor->executor.step_inject_timer = hal.timer.claim((timer_cap_t){ .periodic = Off }, 1000))) {
             timer_cfg_t step_inject_cfg = {
                 .single_shot = false,
@@ -336,6 +375,14 @@ FLASHMEM st2_motor_t *st2_motor_init (uint_fast8_t axis_idx, bool is_spindle)
 */
 FLASHMEM float st2_get_speed (st2_motor_t *motor)
 {
+#if STEP_INJECT_STREAM
+    if(motor->executor.stream) {
+        hal.stepper.injection->lock();
+        float speed = motor->executor.active ? motor->profile.speed * 60.0f / motor->profile.steps_per_mm : 0.0f;
+        hal.stepper.injection->unlock();
+        return speed;
+    }
+#endif
     return motor->profile.state == State_Idle ? 0.0f : 60.0f / ((float)motor->profile.delay * motor->profile.steps_per_mm / 1000000.0f);
 }
 
@@ -394,6 +441,21 @@ Motor will be accelerated or decelerated to the new speed.
 */
 FLASHMEM float st2_motor_set_speed (st2_motor_t *motor, float speed)
 {
+#if STEP_INJECT_STREAM
+    if(motor->executor.stream) {
+        hal.stepper.injection->lock();
+        if(speed == 0.0f)
+            motor->executor.stop_requested = motor->executor.active;
+        else if(!motor->executor.active && isfinite(speed) && speed > 0.0f) {
+            float limited = speed > settings.axis[motor->idx].max_rate ? settings.axis[motor->idx].max_rate : speed;
+            st2_profile_set_speed(&motor->profile, limited * (motor->profile.steps_per_mm / 60.0f));
+        }
+        // Finite stream speed override is deliberately not supported in v1.
+        float actual = motor->profile.speed;
+        hal.stepper.injection->unlock();
+        return actual;
+    }
+#endif
     if(speed == 0.0f) {
         st2_motor_stop(motor);
         return speed;
@@ -450,6 +512,10 @@ that calls st2_motor_run().
 */
 FLASHMEM bool st2_motor_move (st2_motor_t *motor, const float move, const float speed, position_t type)
 {
+#if STEP_INJECT_STREAM
+    if(motor->executor.stream)
+        return st2_stream_move(motor, move, speed, type);
+#endif
     if(speed == 0.0f)
         return false;
 
@@ -508,6 +574,14 @@ FLASHMEM bool st2_motor_move (st2_motor_t *motor, const float move, const float 
 */
 int64_t st2_get_position (st2_motor_t *motor)
 {
+#if STEP_INJECT_STREAM
+    if(motor->executor.stream) {
+        hal.stepper.injection->lock();
+        int64_t position = motor->position;
+        hal.stepper.injection->unlock();
+        return position;
+    }
+#endif
     return motor->position;
 }
 
@@ -520,6 +594,18 @@ __NOTE:__ position will _not_ be set if motor is moving.
 */
 FLASHMEM bool st2_set_position (st2_motor_t *motor, int64_t position)
 {
+#if STEP_INJECT_STREAM
+    if(motor->executor.stream) {
+        hal.stepper.injection->lock();
+        bool idle = !motor->executor.active;
+        if(idle) {
+            motor->position = position;
+            motor->position_lost = false;
+        }
+        hal.stepper.injection->unlock();
+        return idle;
+    }
+#endif
     if(motor->profile.state == State_Idle) {
         motor->position = position;
         motor->position_lost = false;
@@ -638,6 +724,12 @@ when step output is not driven by interrupts (polling mode).
 */
 FLASHMEM bool st2_motor_run (st2_motor_t *motor)
 {
+#if STEP_INJECT_STREAM
+    if(motor->executor.stream) {
+        st2_stream_service(motor);
+        return st2_motor_running(motor);
+    }
+#endif
     if(motor->executor.polling && motor->profile.state != State_Idle) {
 
         uint64_t t = hal.get_micros();
@@ -686,6 +778,15 @@ This will initiate deceleration to stop the motor if it is running.
 */
 FLASHMEM bool st2_motor_stop (st2_motor_t *motor)
 {
+#if STEP_INJECT_STREAM
+    if(motor->executor.stream) {
+        hal.stepper.injection->lock();
+        bool active = motor->executor.active;
+        motor->executor.stop_requested = active;
+        hal.stepper.injection->unlock();
+        return active;
+    }
+#endif
     return st2_profile_request_stop(&motor->profile);
 }
 
@@ -695,6 +796,10 @@ FLASHMEM bool st2_motor_stop (st2_motor_t *motor)
 */
 bool st2_motor_poll (st2_motor_t *motor)
 {
+#if STEP_INJECT_STREAM
+    if(motor->executor.stream)
+        return true; // foreground completion service, not wall-clock step generation
+#endif
     return motor->executor.polling;
 }
 
@@ -704,6 +809,14 @@ bool st2_motor_poll (st2_motor_t *motor)
 */
 bool st2_motor_running (st2_motor_t *motor)
 {
+#if STEP_INJECT_STREAM
+    if(motor->executor.stream) {
+        hal.stepper.injection->lock();
+        bool active = motor->executor.active;
+        hal.stepper.injection->unlock();
+        return active;
+    }
+#endif
     return motor->profile.state != State_Idle;
 }
 
@@ -713,5 +826,110 @@ bool st2_motor_running (st2_motor_t *motor)
 */
 bool st2_motor_cruising (st2_motor_t *motor)
 {
+#if STEP_INJECT_STREAM
+    if(motor->executor.stream) {
+        hal.stepper.injection->lock();
+        bool cruising = motor->executor.active && motor->profile.state == State_Run;
+        hal.stepper.injection->unlock();
+        return cruising;
+    }
+#endif
     return motor->profile.state == State_Run || motor->profile.state == State_RunInfinite;
 }
+
+#if STEP_INJECT_STREAM
+/* The I2S worker owns the profile while active. Foreground stop requests are
+ * consumed here under the transport lock, at the next unreserved event. */
+static injection_event_t st2_stream_next (void *context)
+{
+    st2_motor_t *motor = context;
+    if(motor->executor.single_step) {
+        motor->executor.generated = 1;
+        return (injection_event_t){0, true, true};
+    }
+    if(motor->executor.stop_requested) {
+        st2_profile_request_stop(&motor->profile);
+        motor->executor.stop_requested = false;
+    }
+    uint32_t delay_us = (uint32_t)motor->profile.delay;
+    bool step = st2_profile_advance(&motor->profile);
+    if(step)
+        motor->executor.generated++;
+    return (injection_event_t){delay_us, step, !step};
+}
+
+static void st2_stream_progress (void *context, const injection_progress_t *progress)
+{
+    st2_motor_t *motor = context;
+    hal.stepper.injection->lock();
+    if(motor->executor.active && motor->executor.id == progress->id) {
+        if(progress->completed_steps >= motor->executor.confirmed &&
+           progress->completed_steps <= motor->executor.generated) {
+            int64_t delta = progress->completed_steps - motor->executor.confirmed;
+            motor->position += motor->dir.bits ? -delta : delta;
+            motor->executor.confirmed = progress->completed_steps;
+        } else
+            motor->position_lost = true;
+        if(progress->result != Injection_Progress) {
+            motor->executor.active = false;
+            motor->profile.state = State_Idle;
+            motor->profile.prev_speed = 0.0f;
+            if(progress->result == Injection_Completed)
+                motor->executor.completed_pending = true;
+            else
+                motor->position_lost = true;
+        }
+    }
+    hal.stepper.injection->unlock();
+}
+
+static void st2_stream_service (st2_motor_t *motor)
+{
+    hal.stepper.injection->lock();
+    bool completed = motor->executor.completed_pending;
+    motor->executor.completed_pending = false;
+    hal.stepper.injection->unlock();
+    // Keep client callbacks in the core foreground, never the I2S worker.
+    if(completed && motor->on_stopped)
+        task_add_delayed(motor->on_stopped, motor, 2);
+}
+
+static bool st2_stream_move (st2_motor_t *motor, float move, float speed, position_t type)
+{
+    if(!isfinite(move) || !isfinite(speed) || speed <= 0.0f || type == Stepper2_InfiniteSteps)
+        return false;
+    st2_stream_service(motor);
+    hal.stepper.injection->lock();
+    if(motor->executor.active || motor->position_lost) {
+        hal.stepper.injection->unlock();
+        return false;
+    }
+    float count = fabsf(type == Stepper2_mm ? move * motor->profile.steps_per_mm : move);
+    if(count < 0.5f || count >= 2147483647.0f) {
+        hal.stepper.injection->unlock();
+        return false;
+    }
+    motor->profile.move = type == Stepper2_mm ? (uint32_t)lroundf(count) : (uint32_t)count;
+    motor->profile.ptype = type;
+    motor->dir.bits = move < 0.0f ? motor->axis.bits : 0;
+    float limited = speed > settings.axis[motor->idx].max_rate ? settings.axis[motor->idx].max_rate : speed;
+    st2_profile_set_speed(&motor->profile, limited * (motor->profile.steps_per_mm / 60.0f));
+    st2_profile_start(&motor->profile);
+    motor->executor.single_step = type == Stepper2_Steps && motor->profile.move == 1;
+    motor->executor.generated = motor->executor.confirmed = 0;
+    motor->executor.stop_requested = false;
+    if(++motor->executor.id == 0)
+        motor->executor.id = 1;
+    injection_motion_t motion = {
+        .id = motor->executor.id, .axis_mask = motor->axis.bits,
+        .direction_mask = motor->dir.bits, .requested_steps = motor->profile.move,
+        .context = motor, .next = st2_stream_next, .notify = st2_stream_progress
+    };
+    motor->executor.active = hal.stepper.injection->submit(&motion);
+    bool accepted = motor->executor.active;
+    if(!accepted)
+        motor->profile.state = State_Idle;
+    hal.stepper.injection->unlock();
+    return accepted;
+}
+#endif
