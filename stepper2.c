@@ -505,7 +505,8 @@ __attribute__((always_inline)) static inline bool _motor_run (st2_motor_t *motor
                 if (motor->delay < motor->min_delay) {          // go to constant speed?
               //      motor->denom -= 6; // causes issues with speed override for infinite moves
                     motor->state = motor->ptype == Stepper2_InfiniteSteps ? State_RunInfinite : State_Run;
-                    motor->step_down = motor->move - motor->step_no;
+                    // step_no excludes the step being prepared by this call.
+                    motor->step_down = motor->move - (motor->step_no + 1);
                     motor->delay = motor->min_delay;
                 }
             } else {
@@ -513,12 +514,16 @@ __attribute__((always_inline)) static inline bool _motor_run (st2_motor_t *motor
                 if(motor->state != State_Decel)
                     motor->delay = motor->min_delay;
             }
-            break;
+            if(motor->state != State_Decel)
+                break;
+            // Continue into deceleration without emitting a transition-only step.
+            // fall through
 
         case State_Run:
-            if(motor->step_no == motor->step_down)
-                motor->state = State_Decel;
-            break;
+            if(motor->step_no != motor->step_down)
+                break;
+            motor->state = State_Decel;
+            // fall through
 
         case State_Decel:
             if(motor->denom < 2) { // done?
@@ -550,15 +555,16 @@ __attribute__((always_inline)) static inline bool _motor_run (st2_motor_t *motor
             break;
     }
 
-    // output step;
-    hal.stepper.output_step(motor->axis, motor->dir);
+    if(motor->state != State_Idle) {
+        hal.stepper.output_step(motor->axis, motor->dir);
 
-    if(motor->dir.bits)
-        motor->position--;
-    else
-        motor->position++;
+        if(motor->dir.bits)
+            motor->position--;
+        else
+            motor->position++;
 
-    motor->step_no++;
+        motor->step_no++;
+    }
 
     if(motor->state == State_Idle && prev_state != State_Idle && motor->on_stopped)
         task_add_delayed(motor->on_stopped, motor, 2);
