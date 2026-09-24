@@ -28,17 +28,28 @@ def function(source, name):
 
 def generate(source):
     enum_start = source.index('typedef enum {')
-    enum_end = source.index('} st2_state_t;', enum_start) + len('} st2_state_t;')
     struct_start = source.index('struct st2_motor {')
     struct_end = source.index('\n};', struct_start) + len('\n};')
-    names = ['st2_motor_config', 'st2_get_speed', 'st2_motor_set_speed',
+    names = ['st2_motor_config', 'st2_reset', 'st2_get_speed', 'st2_motor_set_speed',
              'st2_motor_move', 'st2_get_position', 'st2_set_position',
              '_motor_run', 'motor_irq', 'st2_motor_run', 'st2_motor_stop',
              'st2_motor_running']
-    return ('#include "mock_hal.h"\n' + source[enum_start:enum_end] + '\n'
-            + source[struct_start:struct_end] + '\n'
+    refactored = 'st2_profile_t' in source
+    if refactored:
+        names = ['st2_motor_config', 'st2_reset', 'st2_get_speed', 'st2_profile_set_speed',
+                 'st2_motor_set_speed', 'st2_profile_start', 'st2_executor_start',
+                 'st2_motor_move', 'st2_get_position', 'st2_set_position',
+                 'st2_profile_advance', 'st2_executor_run', 'motor_irq',
+                 'st2_motor_run', 'st2_profile_request_stop', 'st2_motor_stop',
+                 'st2_motor_running']
+    cases = (HERE/'cases.h').read_text()
+    if not refactored:
+        cases = cases.replace('motor->profile.', 'motor->').replace('motor.profile.', 'motor.')
+        cases = cases.replace('motor->executor.', 'motor->').replace('motor.executor.', 'motor.')
+    return ('#include "mock_hal.h"\n' + source[enum_start:struct_end] + '\n'
+            + 'static st2_motor_t *motors;\n'
             + '\n\n'.join(function(source, name) for name in names)
-            + '\n#include "cases.h"\n')
+            + '\n' + cases + '\n')
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)

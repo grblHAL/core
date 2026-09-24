@@ -12,8 +12,8 @@ static void configure (st2_motor_t *motor, float spm, float acceleration, bool p
     memset(motor, 0, sizeof(*motor));
     settings.axis[0] = (axis_settings_t){spm, acceleration * 3600.0f, 6000.0f};
     motor->axis.bits = 4;
-    motor->polling = polling;
-    motor->step_inject_timer = polling ? NULL : (hal_timer_t)1;
+    motor->executor.polling = polling;
+    motor->executor.step_inject_timer = polling ? NULL : (hal_timer_t)1;
     motor->on_stopped = stopped;
     st2_motor_config(motor, &settings.axis[0]);
     output_calls = callback_calls = timer_stops = 0;
@@ -21,13 +21,34 @@ static void configure (st2_motor_t *motor, float spm, float acceleration, bool p
     clock_us = 0;
 }
 
+// Fingerprint the entire serviced trace, including the terminal no-output
+// transition, for comparison with a fixed pre-refactoring source via --source.
+static uint64_t trace_hash = 14695981039346656037ULL;
+
+static void trace_value (uint64_t value)
+{
+    trace_hash = (trace_hash ^ value) * 1099511628211ULL;
+}
+
 static void tick (st2_motor_t *motor)
 {
-    clock_us += motor->delay;
-    if(motor->polling)
+    clock_us += motor->profile.delay;
+    if(motor->executor.polling)
         st2_motor_run(motor);
     else
         motor_irq(motor);
+
+    trace_value(clock_us);
+    trace_value(motor->profile.state);
+    trace_value(motor->profile.delay);
+    trace_value(motor->profile.c64);
+    trace_value(motor->profile.denom);
+    trace_value(motor->profile.step_no);
+    trace_value(motor->profile.step_down);
+    trace_value(output_calls);
+    trace_value(st2_get_position(motor));
+    trace_value(callback_calls);
+    trace_value(timer_stops);
 }
 
 static void finish (st2_motor_t *motor)
@@ -48,7 +69,7 @@ static void finite (unsigned count, float spm, float acceleration, float rate, i
     bool decelerating = false;
     unsigned limit = 100000;
     while(st2_motor_running(&motor) && --limit) {
-        uint64_t interval = motor.delay;
+        uint64_t interval = motor.profile.delay;
         unsigned before = output_calls;
         tick(&motor);
         if(output_calls != before) {
@@ -99,6 +120,34 @@ static void stop_and_speed (bool infinite, unsigned stop_after, bool polling)
     tests++;
 }
 
+static void polling_and_reset (void)
+{
+    st2_motor_t motor;
+    configure(&motor, 400, 150, true);
+    check(st2_motor_move(&motor, 100, 200, Stepper2_Steps), "polling move accepted");
+    clock_us = motor.profile.delay - 1;
+    st2_motor_run(&motor);
+    check(output_calls == 0, "polling does not emit early");
+    clock_us += 100000;
+    st2_motor_run(&motor);
+    check(output_calls == 1, "late poll emits only one step");
+    st2_motor_run(&motor);
+    check(output_calls == 1, "polling rebases on serviced time");
+    tests++;
+
+    motors = &motor;
+    st2_reset();
+    check(motor.position_lost && !st2_motor_running(&motor), "active reset loses position and stops");
+    motor_irq(&motor);
+    check(output_calls == 1 && callback_calls == 0, "reset cannot complete or emit stale motion");
+    tests++;
+    check(st2_set_position(&motor, 123), "restore idle position");
+    st2_reset();
+    check(!motor.position_lost && st2_get_position(&motor) == 123, "idle reset retains known position");
+    motors = NULL;
+    tests++;
+}
+
 int main (void)
 {
     const float spm[] = {100, 400, 800};
@@ -137,6 +186,8 @@ int main (void)
     }
     check(callback_calls == 100, "one completion per repeated correction");
     tests++;
+    polling_and_reset();
     printf("%u scenarios, %u failures\n", tests, failures);
+    printf("Serviced trace: %016llx\n", (unsigned long long)trace_hash);
     return failures ? EXIT_FAILURE : EXIT_SUCCESS;
 }

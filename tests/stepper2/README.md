@@ -39,3 +39,11 @@ coverage. Arbitrary speed overrides during an already running finite move have
 separate pre-existing endpoint/state issues and are not fixed by this change.
 This test does not claim complete ramp-acceleration accuracy, real interrupt
 latency, pulse widths, motor travel or I²S support.
+# Refactoring trace comparison
+
+The runner also accepts a fixed pre-refactoring `stepper2.c` via `--source`.
+It adapts private layout access while executing the actual C functions from
+that source. Compare the `Serviced trace` fingerprints in addition to scenario
+results: they include service time, ramp state/interval, cursor, output count,
+position and completion scheduling. Polling cadence and active/idle reset have
+explicit checks. This does not measure hardware timing or full firmware behavior.

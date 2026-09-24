@@ -44,6 +44,46 @@ typedef enum {
     State_Decel         //!< 5
 } st2_state_t;
 
+/* Ramp state is private to the generator, independent of HAL and DMA.
+ * step_no is a recurrence cursor; controlled stop may rewrite it. It must
+ * never be used as an EOF-confirmed physical step counter. */
+typedef struct {
+    position_t ptype;           // finite steps, distance or infinite motion
+    st2_state_t state;          // state machine state
+    uint32_t move;              // total steps to move
+    uint32_t step_no;           // ramp cursor, may be changed by controlled stop
+    uint32_t step_run;          // end of acceleration or speed transition
+    uint32_t step_down;         // start of down-ramp
+    uint64_t c64;               // 24.16 fixed point delay count
+    uint64_t delay;             // microseconds until the next service
+    uint32_t first_delay;       // integer delay count
+    uint16_t min_delay;         // integer delay count
+    int32_t denom;              // 4.n+1 in ramp algo
+    uint32_t n;                 // accel/decel steps
+    float speed;                // speed steps/s
+    float prev_speed;           // speed steps/s
+    float steps_per_mm;         // unit conversion, steps/mm
+    float acceleration;         // acceleration steps/s^2
+} st2_profile_t;
+
+/* One direct executor: prefer a claimed timer, otherwise poll the clock.
+ * Timer availability is runtime-dependent; both branches share the profile. */
+typedef struct {
+    bool polling;
+    uint64_t next_step;
+    hal_timer_t step_inject_timer;
+} st2_executor_t;
+
+/* ST2-RF-0.1.0 STREAM DESIGN NOTE - NOT IMPLEMENTED:
+ * A future, capability-guarded stream executor owns one whole motion record:
+ * ID, axis/direction, requested, reserved and EOF-confirmed counts/lifecycle.
+ * Prepare a profile candidate, reserve output via HAL, then accept the candidate.
+ * Do not mutate the accepted profile if reservation fails. The I2S driver owns
+ * descriptor/generation checkpoints, not this module. Its worker reports
+ * ID/count/result outside ISR/locks to a synchronized stepper2 receiver.
+ * Keep running while draining; the final full-pulse EOF completes the motion.
+ * No stream storage or fake HAL entry points are compiled in this phase. */
+
 /*! \brief Internal structure for holding motor configuration and keeping track of its status.
 
 __NOTE:__ The contents of this structure should _not_ be accessed directly by user code.
@@ -53,28 +93,11 @@ struct st2_motor {
     axes_signals_t axis;
     bool is_spindle;
     bool is_bound;
-    bool polling;
     bool position_lost;
     volatile int64_t position;  // absolute step number
-    position_t ptype;           //
-    st2_state_t state;          // state machine state
-    uint32_t move;              // total steps to move
-    uint32_t step_no;           // progress of move
-    uint32_t step_run;          //
-    uint32_t step_down;         // start of down-ramp
-    uint64_t c64;               // 24.16 fixed point delay count
-    uint64_t delay;             // integer delay count
-    uint32_t first_delay;       // integer delay count
-    uint16_t min_delay;         // integer delay count
-    int32_t denom;              // 4.n+1 in ramp algo
-    uint32_t n;                 // accel/decel steps
-    float speed;                // speed steps/s
-    float prev_speed;           // speed steps/s
-    float steps_per_mm;         // acceleration steps/s^2
-    float acceleration;         // acceleration steps/s^2
+    st2_profile_t profile;
+    st2_executor_t executor;
     axes_signals_t dir;         // current direction
-    uint64_t next_step;
-    hal_timer_t step_inject_timer;
     foreground_task_ptr on_stopped;
     st2_motor_t *next;
 };
@@ -94,9 +117,9 @@ static void motor_irq (void *context);
 */
 FLASHMEM static void st2_motor_config (st2_motor_t *motor, axis_settings_t *cfg)
 {
-    motor->steps_per_mm = cfg->steps_per_mm;
-    motor->acceleration = cfg->acceleration * cfg->steps_per_mm / 3600.0f;
-    motor->first_delay = (uint32_t)(0.676f * sqrtf(2.0f / motor->acceleration) * 1000000.0f);
+    motor->profile.steps_per_mm = cfg->steps_per_mm;
+    motor->profile.acceleration = cfg->acceleration * cfg->steps_per_mm / 3600.0f;
+    motor->profile.first_delay = (uint32_t)(0.676f * sqrtf(2.0f / motor->profile.acceleration) * 1000000.0f);
 }
 
 /*! \brief Stop all motors.
@@ -110,8 +133,8 @@ FLASHMEM static void st2_reset (void)
     st2_motor_t *motor = motors;
 
     while(motor) {
-        motor->position_lost = motor->state != State_Idle;
-        motor->state = State_Idle;
+        motor->position_lost = motor->profile.state != State_Idle;
+        motor->profile.state = State_Idle;
         motor = motor->next;
     }
 }
@@ -265,15 +288,15 @@ FLASHMEM st2_motor_t *st2_motor_init (uint_fast8_t axis_idx, bool is_spindle)
 
     if(hal.stepper.output_step && (motor = calloc(1, sizeof(st2_motor_t)))) {
 
-        if(hal.timer.claim && (motor->step_inject_timer = hal.timer.claim((timer_cap_t){ .periodic = Off }, 1000))) {
+        if(hal.timer.claim && (motor->executor.step_inject_timer = hal.timer.claim((timer_cap_t){ .periodic = Off }, 1000))) {
             timer_cfg_t step_inject_cfg = {
                 .single_shot = false,
                 .timeout_callback = motor_irq
             };
             step_inject_cfg.context = motor;
-            hal.timer.configure(motor->step_inject_timer, &step_inject_cfg);
+            hal.timer.configure(motor->executor.step_inject_timer, &step_inject_cfg);
         } else if(hal.get_micros)
-            motor->polling = true;
+            motor->executor.polling = true;
         else {
             free(motor);
             return NULL;
@@ -313,7 +336,52 @@ FLASHMEM st2_motor_t *st2_motor_init (uint_fast8_t axis_idx, bool is_spindle)
 */
 FLASHMEM float st2_get_speed (st2_motor_t *motor)
 {
-    return motor->state == State_Idle ? 0.0f : 60.0f / ((float)motor->delay * motor->steps_per_mm / 1000000.0f);
+    return motor->profile.state == State_Idle ? 0.0f : 60.0f / ((float)motor->profile.delay * motor->profile.steps_per_mm / 1000000.0f);
+}
+
+static float st2_profile_set_speed (st2_profile_t *profile, float steps_per_second)
+{
+    profile->speed = steps_per_second;
+
+    if(profile->speed == profile->prev_speed)
+       return profile->speed;
+
+    profile->min_delay = (uint32_t)(1000000.0f / profile->speed);
+    profile->n         = (uint32_t)((profile->speed * profile->speed) / (2.0f * profile->acceleration));
+
+    if(profile->n == 0)
+        profile->n = 1;
+
+    if(profile->state != State_Idle) {
+
+        int32_t pn = profile->n - ((profile->denom - 1) >> 2);
+
+        if(pn == 0)
+            return profile->speed;
+
+        if(profile->speed > profile->prev_speed) {
+            if(profile->state == State_Accel)
+                profile->step_run += pn;
+            else {
+                profile->step_run = profile->step_no + pn;
+                profile->state = State_Accel;
+            }
+        } else {
+            if(profile->speed == 0.0f)
+                profile->state = State_Decel;
+            if(profile->state != State_Decel) {
+                profile->step_run = profile->step_no - pn;
+                profile->state = State_DecelTo;
+            }
+        }
+    }
+
+    profile->prev_speed = profile->speed;
+
+    if(profile->first_delay < profile->min_delay)
+        profile->first_delay = profile->min_delay;
+
+    return profile->prev_speed;
 }
 
 /*! \brief Set speed.
@@ -331,57 +399,46 @@ FLASHMEM float st2_motor_set_speed (st2_motor_t *motor, float speed)
         return speed;
     }
 
-    motor->speed = speed > settings.axis[motor->idx].max_rate ? settings.axis[motor->idx].max_rate : speed;
-    motor->speed *= motor->steps_per_mm / 60.0f;
+    float limited_speed = speed > settings.axis[motor->idx].max_rate
+                        ? settings.axis[motor->idx].max_rate : speed;
 
-    if(motor->speed == motor->prev_speed)
-       return motor->speed;
+    return st2_profile_set_speed(&motor->profile, limited_speed * (motor->profile.steps_per_mm / 60.0f));
+}
 
-    motor->min_delay = (uint32_t)(1000000.0f / motor->speed);
-    motor->n         = (uint32_t)((motor->speed * motor->speed) / (2.0f * motor->acceleration));
+/* Initialize a complete finite/infinite ramp after unit conversion. */
+static bool st2_profile_start (st2_profile_t *profile)
+{
+    if(profile->ptype == Stepper2_InfiniteSteps) {
+        profile->step_run  = profile->n;
+        profile->step_down = profile->n + 1;
+    } else if(profile->move != 0) {
+        profile->step_run  = (profile->move - ((profile->move & 0x0001) ? 1 : 0)) >> 1;
+        if(profile->step_run > profile->n)
+            profile->step_run = profile->n;
+        profile->step_down = profile->move - profile->step_run;
+    } else
+        return false;
 
-    if(motor->n == 0)
-        motor->n = 1;
+    profile->state     = State_Accel;
+    profile->delay     = profile->first_delay;
+    profile->c64       = profile->delay << 16;  // keep delay in 24.16 fixed-point format for ramp calcs
+    profile->denom     = 1;                   // 4.n + 1, n = 0
+    profile->step_no   = 0;                   // ramp cursor
 
-    if(motor->state != State_Idle) {
+    return true;
+}
 
-        int32_t pn = motor->n - ((motor->denom - 1) >> 2);
+static void st2_executor_start (st2_motor_t *motor)
+{
+    motor->executor.next_step = hal.get_micros();
 
-        if(pn == 0)
-            return motor->speed;
-
-#if ST2_DEBUG
-        debug_printf("!!: %d %.2f %.3f %d %d %d %d", motor->state, motor->prev_speed, motor->speed, motor->denom - 1, motor->n, pn, motor->denom);
-#endif
-
-        if(motor->speed > motor->prev_speed) {
-            if(motor->state == State_Accel)
-                motor->step_run += pn;
-            else {
-                motor->step_run = motor->step_no + pn;
-                motor->state = State_Accel;
-            }
-        } else {
-            if(motor->speed == 0.0f)
-                motor->state = State_Decel;
-            if(motor->state != State_Decel) {
-                motor->step_run = motor->step_no - pn;
-                motor->state = State_DecelTo;
-            }
-        }
-    }
-
-    motor->prev_speed = motor->speed;
-
-    if(motor->first_delay < motor->min_delay)
-        motor->first_delay = motor->min_delay;
-
-    return motor->prev_speed;
+    if(motor->executor.step_inject_timer)
+        hal.timer.start(motor->executor.step_inject_timer, motor->profile.delay);
 }
 
 /*! \brief Command a motor to move.
 
-__NOTE:__ For all motions except single steps st2_motor_run() has to be called from
+__NOTE:__ When no timer was claimed, st2_motor_run() has to be called from
 the foreground process at a high frequency in order for steps to be generated.
 Typically this is done by registering a function with the hal.on_execute_realtime event
 that calls st2_motor_run().
@@ -396,25 +453,25 @@ FLASHMEM bool st2_motor_move (st2_motor_t *motor, const float move, const float 
     if(speed == 0.0f)
         return false;
 
-    motor->ptype = type;
+    motor->profile.ptype = type;
     motor->dir.bits = (move < 0.0f ? motor->axis.bits : 0);
 
     switch(type) {
 
         case Stepper2_Steps:
         case Stepper2_InfiniteSteps:
-            motor->move = (uint32_t)fabsf(move);
+            motor->profile.move = (uint32_t)fabsf(move);
             break;
 
         case Stepper2_mm:
-            motor->move = (uint32_t)lroundf(fabsf(move * motor->steps_per_mm));
+            motor->profile.move = (uint32_t)lroundf(fabsf(move * motor->profile.steps_per_mm));
             break;
     }
 
     st2_motor_set_speed(motor, speed);
 
-    if(motor->move == 1 && type == Stepper2_Steps) {
-        if(motor->state == State_Idle) {
+    if(motor->profile.move == 1 && type == Stepper2_Steps) {
+        if(motor->profile.state == State_Idle) {
 
             if(motor->dir.bits)
                 motor->position--;
@@ -424,38 +481,22 @@ FLASHMEM bool st2_motor_move (st2_motor_t *motor, const float move, const float 
             hal.stepper.output_step(motor->axis, motor->dir);
         }
 
-        return motor->state == State_Idle;
+        return motor->profile.state == State_Idle;
     }
 
-    if(type == Stepper2_InfiniteSteps) {
-        motor->step_run  = motor->n;
-        motor->step_down = motor->n + 1;
-    } else if(motor->move != 0) {
-        motor->step_run  = (motor->move - ((motor->move & 0x0001) ? 1 : 0)) >> 1;
-        if(motor->step_run > motor->n)
-            motor->step_run = motor->n;
-        motor->step_down = motor->move - motor->step_run;
-    } else
+    if(!st2_profile_start(&motor->profile))
         return false;
 
-    motor->state     = State_Accel;
-    motor->delay     = motor->first_delay;
-    motor->c64       = motor->delay << 16;  // keep delay in 24.16 fixed-point format for ramp calcs
-    motor->denom     = 1;                   // 4.n + 1, n = 0
-    motor->step_no   = 0;                   // step counter
-    motor->next_step = hal.get_micros();
-
-    if(motor->step_inject_timer)
-        hal.timer.start(motor->step_inject_timer, motor->delay);
+    st2_executor_start(motor);
 
 #if ST2_DEBUG
-    uint32_t nn = motor->n;
-    float cn = motor->first_delay;
+    uint32_t nn = motor->profile.n;
+    float cn = motor->profile.first_delay;
     do {
         cn -= (2.0f * cn) / (4.0f * nn + 1);
     } while(--nn);
 
-    debug_printf("mv: %.2f %.3f %d %d %d %.2f %.2f", speed, motor->steps_per_mm, motor->n, move, motor->delay, cn, motor->speed);
+    debug_printf("mv: %.2f %.3f %d %d %d %.2f %.2f", speed, motor->profile.steps_per_mm, motor->profile.n, move, motor->profile.delay, cn, motor->profile.speed);
 #endif
 
     return true;
@@ -479,75 +520,69 @@ __NOTE:__ position will _not_ be set if motor is moving.
 */
 FLASHMEM bool st2_set_position (st2_motor_t *motor, int64_t position)
 {
-    if(motor->state == State_Idle) {
+    if(motor->profile.state == State_Idle) {
         motor->position = position;
         motor->position_lost = false;
     }
 
-    return motor->state == State_Idle;
+    return motor->profile.state == State_Idle;
 }
 
-/*! \brief Execute a move commanded by st2_motor_move().
-\param motor pointer to a \a st2_motor structure.
-\returns \a true if motor is moving (steps are output), \a false if not (motion is completed).
-*/
-__attribute__((always_inline)) static inline bool _motor_run (st2_motor_t *motor)
+/* Service one due profile event. Entry delay belongs to this event;
+ * the updated delay belongs to the next event. The terminal service changes
+ * state to Idle without producing an output. No HAL or callback side effects. */
+__attribute__((always_inline)) static inline bool st2_profile_advance (st2_profile_t *profile)
 {
-    st2_state_t prev_state = motor->state;
-
-    switch(motor->state) {
+    switch(profile->state) {
 
         case State_Accel:
-            if(motor->step_no != motor->step_run) {
-                motor->denom += 4;
-                motor->c64 -= (motor->c64 << 1) / motor->denom; // ramp algorithm
-                motor->delay = (motor->c64 + 32768) >> 16;      // round 24.16 format -> int16
-                if (motor->delay < motor->min_delay) {          // go to constant speed?
-              //      motor->denom -= 6; // causes issues with speed override for infinite moves
-                    motor->state = motor->ptype == Stepper2_InfiniteSteps ? State_RunInfinite : State_Run;
+            if(profile->step_no != profile->step_run) {
+                profile->denom += 4;
+                profile->c64 -= (profile->c64 << 1) / profile->denom; // ramp algorithm
+                profile->delay = (profile->c64 + 32768) >> 16;      // round 24.16 format -> int16
+                if(profile->delay < profile->min_delay) { // go to constant speed?
+                    // Retain denom: adjusting it breaks infinite-move speed overrides.
+                    profile->state = profile->ptype == Stepper2_InfiniteSteps ? State_RunInfinite : State_Run;
                     // step_no excludes the step being prepared by this call.
-                    motor->step_down = motor->move - (motor->step_no + 1);
-                    motor->delay = motor->min_delay;
+                    profile->step_down = profile->move - (profile->step_no + 1);
+                    profile->delay = profile->min_delay;
                 }
             } else {
-                motor->state = motor->step_run == motor->step_down ? State_Decel : (motor->ptype == Stepper2_InfiniteSteps ? State_RunInfinite : State_Run);
-                if(motor->state != State_Decel)
-                    motor->delay = motor->min_delay;
+                profile->state = profile->step_run == profile->step_down ? State_Decel : (profile->ptype == Stepper2_InfiniteSteps ? State_RunInfinite : State_Run);
+                if(profile->state != State_Decel)
+                    profile->delay = profile->min_delay;
             }
-            if(motor->state != State_Decel)
+            if(profile->state != State_Decel)
                 break;
             // Continue into deceleration without emitting a transition-only step.
             // fall through
 
         case State_Run:
-            if(motor->step_no != motor->step_down)
+            if(profile->step_no != profile->step_down)
                 break;
-            motor->state = State_Decel;
+            profile->state = State_Decel;
             // fall through
 
         case State_Decel:
-            if(motor->denom < 2) { // done?
-                motor->state = State_Idle;
-                motor->prev_speed = 0.0f;
-                motor->n = 0;
-#if ST2_DEBUG
-                debug_writeln(uitoa(motor->position));
-#endif
+            if(profile->denom < 2) { // done?
+                profile->state = State_Idle;
+                profile->prev_speed = 0.0f;
+                profile->n = 0;
             } else {
-                motor->c64 += (motor->c64 << 1) / motor->denom; // ramp algorithm
-                motor->delay = (motor->c64 - 32768) >> 16;      // round 24.16 format -> int16
-                motor->denom -= 4;
+                profile->c64 += (profile->c64 << 1) / profile->denom; // ramp algorithm
+                profile->delay = (profile->c64 - 32768) >> 16;      // round 24.16 format -> int16
+                profile->denom -= 4;
             }
             break;
 
         case State_DecelTo:
-            if(motor->step_no != motor->step_run) {
-                motor->denom -= 4;
-                motor->c64 += (motor->c64 << 1) / motor->denom; // ramp algorithm
-                motor->delay = (motor->c64 + 32768) >> 16;      // round 24.16 format -> int16
+            if(profile->step_no != profile->step_run) {
+                profile->denom -= 4;
+                profile->c64 += (profile->c64 << 1) / profile->denom; // ramp algorithm
+                profile->delay = (profile->c64 + 32768) >> 16;      // round 24.16 format -> int16
             } else {
-                motor->delay = motor->min_delay;
-                motor->state = motor->ptype == Stepper2_InfiniteSteps ? State_RunInfinite : State_Run;
+                profile->delay = profile->min_delay;
+                profile->state = profile->ptype == Stepper2_InfiniteSteps ? State_RunInfinite : State_Run;
             }
             break;
 
@@ -555,29 +590,43 @@ __attribute__((always_inline)) static inline bool _motor_run (st2_motor_t *motor
             break;
     }
 
-    if(motor->state != State_Idle) {
+    if(profile->state != State_Idle)
+        profile->step_no++;
+
+    return profile->state != State_Idle;
+}
+
+/* Direct executor accounting follows output acceptance (output_step is void).
+ * Stream execution will account only from confirmed DMA checkpoints instead. */
+__attribute__((always_inline)) static inline bool st2_executor_run (st2_motor_t *motor)
+{
+    st2_state_t prev_state = motor->profile.state;
+
+    st2_profile_advance(&motor->profile);
+
+    if(motor->profile.state != State_Idle) {
         hal.stepper.output_step(motor->axis, motor->dir);
 
         if(motor->dir.bits)
             motor->position--;
         else
             motor->position++;
-
-        motor->step_no++;
     }
 
-    if(motor->state == State_Idle && prev_state != State_Idle && motor->on_stopped)
+    if(motor->profile.state == State_Idle && prev_state != State_Idle && motor->on_stopped)
         task_add_delayed(motor->on_stopped, motor, 2);
 
-    return motor->state != State_Idle;
+    return motor->profile.state != State_Idle;
 }
 
 ISR_CODE static void ISR_FUNC(motor_irq)(void *context)
 {
-    if(_motor_run((st2_motor_t *)context))
-        hal.timer.start(((st2_motor_t *)context)->step_inject_timer, ((st2_motor_t *)context)->delay);
+    st2_motor_t *motor = (st2_motor_t *)context;
+
+    if(st2_executor_run(motor))
+        hal.timer.start(motor->executor.step_inject_timer, motor->profile.delay);
     else
-        hal.timer.stop(((st2_motor_t *)context)->step_inject_timer);
+        hal.timer.stop(motor->executor.step_inject_timer);
 }
 
 /*! \brief Execute a move commanded by st2_motor_move().
@@ -589,19 +638,45 @@ when step output is not driven by interrupts (polling mode).
 */
 FLASHMEM bool st2_motor_run (st2_motor_t *motor)
 {
-    if(motor->polling && motor->state != State_Idle) {
+    if(motor->executor.polling && motor->profile.state != State_Idle) {
 
         uint64_t t = hal.get_micros();
 
-        if(t - motor->next_step >= motor->delay) {
+        if(t - motor->executor.next_step >= motor->profile.delay) {
 
-            _motor_run(motor);
+            st2_executor_run(motor);
 
-            motor->next_step = t;
+            motor->executor.next_step = t;
         }
     }
 
-    return motor->state != State_Idle;
+    return motor->profile.state != State_Idle;
+}
+
+/* Request braking without assigning a new finite endpoint. */
+static bool st2_profile_request_stop (st2_profile_t *profile)
+{
+    switch(profile->state) {
+
+        case State_Accel:
+            profile->step_no = profile->step_down - 1;
+            profile->step_run = profile->step_down;
+            break;
+
+        case State_Run:
+            profile->step_no = profile->step_down - 1;
+            break;
+
+        case State_RunInfinite:
+        case State_DecelTo:
+            profile->state = State_Decel;
+            break;
+
+        default:
+            break;
+    }
+
+    return profile->state != State_Idle;
 }
 
 /*! \brief Stop a move.
@@ -611,27 +686,7 @@ This will initiate deceleration to stop the motor if it is running.
 */
 FLASHMEM bool st2_motor_stop (st2_motor_t *motor)
 {
-    switch(motor->state) {
-
-        case State_Accel:
-            motor->step_no = motor->step_down - 1;
-            motor->step_run = motor->step_down;
-            break;
-
-        case State_Run:
-            motor->step_no = motor->step_down - 1;
-            break;
-
-        case State_RunInfinite:
-        case State_DecelTo:
-            motor->state = State_Decel;
-            break;
-
-        default:
-            break;
-    }
-
-    return motor->state != State_Idle;
+    return st2_profile_request_stop(&motor->profile);
 }
 
 /*! \brief Check if motor is run by polling.
@@ -640,7 +695,7 @@ FLASHMEM bool st2_motor_stop (st2_motor_t *motor)
 */
 bool st2_motor_poll (st2_motor_t *motor)
 {
-    return motor->polling;
+    return motor->executor.polling;
 }
 
 /*! \brief Check if motor is running.
@@ -649,7 +704,7 @@ bool st2_motor_poll (st2_motor_t *motor)
 */
 bool st2_motor_running (st2_motor_t *motor)
 {
-    return motor->state != State_Idle;
+    return motor->profile.state != State_Idle;
 }
 
 /*! \brief Check if motor is running in cruising phase.
@@ -658,5 +713,5 @@ bool st2_motor_running (st2_motor_t *motor)
 */
 bool st2_motor_cruising (st2_motor_t *motor)
 {
-    return motor->state == State_Run || motor->state == State_RunInfinite;
+    return motor->profile.state == State_Run || motor->profile.state == State_RunInfinite;
 }
