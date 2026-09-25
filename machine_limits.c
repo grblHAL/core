@@ -733,7 +733,7 @@ static bool check_arc_travel_limits (coord_data_t *target, coord_data_t *positio
         end.y = position->values[plane.axis_1] - center.y;
     }
 
-    if(labs(turns > 1))
+    if(labs(turns) > 1)
         x.value = 0b1111;                   // Crosses all
     else if(start.y >= 0.0f) {
         if(start.x > 0.0f) {                // Starts in Q1
