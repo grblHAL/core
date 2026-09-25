@@ -1010,10 +1010,12 @@ FLASHMEM char *ngc_substitute_parameters (char *line)
     // Calculate length of substituted string
     while((c = line[char_counter++])) {
         if(parse_format) {
+            int8_t prev_format = parse_format;
             if((parse_format = get_format(c, parse_format, &decimals)) < 0) {
                 len -= parse_format;
                 parse_format = 0;
-            }
+            } else if(parse_format == 0)
+                len += prev_format + 1;
         } else if(c == '%')
             parse_format = 1;
         else if(c == '#') {
@@ -1033,6 +1035,8 @@ FLASHMEM char *ngc_substitute_parameters (char *line)
 
         *s = '\0';
         char_counter = 0;
+        parse_format = 0;
+        decimals = ngc_float_decimals();
 
         while((c = line[char_counter++])) {
             if(parse_format) {
@@ -1047,6 +1051,7 @@ FLASHMEM char *ngc_substitute_parameters (char *line)
             } else if(c == '%') {
                 parse_format = 1;
                 fmt[0] = c;
+                fmt[1] = fmt[2] = fmt[3] = fmt[4] = '\0';
             } else if(c == '#') {
                 char_counter--;
                 if(ngc_read_parameter(line, &char_counter, &value, true) == Status_OK)
