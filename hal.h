@@ -40,6 +40,9 @@
 #include "ioports.h"
 #include "rgb.h"
 #include "plugins.h"
+#if STEP_INJECT_STREAM
+#include "stepper_injection.h"
+#endif
 
 #define HAL_VERSION 10
 
@@ -344,6 +347,9 @@ typedef struct {
     stepper_get_ganged_ptr get_ganged;                  //!< Optional handler getting which axes are configured for ganging or auto squaring.
     stepper_claim_motor_ptr claim_motor;                //!< Optional handler for claiming/releasing motor(s) from normal step/dir control.
     stepper_output_step_ptr output_step;                //!< Optional handler for outputting a single step pulse. _Experimental._ Called from interrupt context.
+#if STEP_INJECT_STREAM
+    const stepper_injection_t *injection;               //!< Optional finite motor stream transport; all modules must use the same build flag.
+#endif
     motor_iterator_ptr motor_iterator;                  //!< Optional handler iteration over motor vs. axis mappings. Required for the motors plugin (Trinamic drivers).
     stepper_status_ptr status;                          //!< Optional handler handler for querying steppper driver status or attempting to reset it.
 } stepper_ptrs_t;
