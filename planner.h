@@ -168,6 +168,30 @@ typedef struct {
   } override;
 } planner_t;
 
+// Read-only, driver facing view of a single planner block.
+// This is a stable abstraction of the internal plan_block_t: it exposes only the values a higher
+// level motion consumer (e.g. an external motion controller driver) needs, so the internal block
+// layout can change without breaking consumers. Populated by plan_export_first()/plan_export_next().
+typedef struct {
+    const void *identity;           // Stable identifier of the block (its buffer address) for as long as the block exists.
+    float target_mm[N_AXIS];        // Absolute target position of the move in mm.
+    float profile_velocity;         // Nominal (cruise) velocity for the block in mm/min, feed/rapid override adjusted.
+    float end_velocity;             // Exit (junction) velocity in mm/min, i.e. the entry velocity of the following block. Zero at the buffer end.
+    float acceleration;             // Effective acceleration used to plan the block in mm/min^2.
+    planner_cond_t condition;       // Copy of the block run conditions (motion type, overrides disabled, spindle sync etc.).
+    line_number_t line_number;      // G-code line number associated with the block, 0 if none.
+    bool stable;                    // True when the block lies within the optimally planned region and its velocities will not change with future planning.
+} plan_export_block_t;
+
+// Cursor used to iterate a snapshot of the planner buffer with plan_export_first()/plan_export_next().
+// The cursor is owned by the caller but must be treated as opaque; its fields are maintained by the
+// export functions and should not be modified directly.
+typedef struct {
+    plan_block_t *block;            // Internal iterator, points to the next block to export or NULL when the buffer end is reached.
+    uint32_t revision;              // Value of plan_get_revision() captured when the iteration was started, for detecting concurrent changes.
+    bool stable;                    // Running state of the "stable" flag, cleared once the optimally planned pointer is reached.
+} plan_export_cursor_t;
+
 // Initialize and reset the motion plan subsystem
 bool plan_reset (void); // Reset all
 
@@ -190,6 +214,19 @@ plan_block_t *plan_get_current_block (void);
 
 // Gets last added block. Returns NULL if buffer empty
 plan_block_t *plan_get_recent_block (void);
+
+// Returns a monotonically increasing counter that changes whenever the planner buffer contents or the
+// computed velocity profile change. A consumer can poll this to detect when a re-export is required.
+uint32_t plan_get_revision (void);
+
+// Starts a read-only iteration over the planner buffer, from the block currently being executed to the
+// most recently queued block, populating *block with the first entry. Returns false and leaves *block
+// untouched when the buffer is empty.
+bool plan_export_first (plan_export_cursor_t *cursor, plan_export_block_t *block);
+
+// Continues an iteration started by plan_export_first(), populating *block with the next entry.
+// Returns false when no more blocks are available.
+bool plan_export_next (plan_export_cursor_t *cursor, plan_export_block_t *block);
 
 // Called by step segment buffer when computing executing block velocity profile.
 float plan_get_exec_block_exit_speed_sqr (void);
