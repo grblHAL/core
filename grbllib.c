@@ -467,7 +467,9 @@ FLASHMEM int grbl_enter (void)
             if(spindle_is_enabled(--spindle_num))
                 spindle_get(spindle_num)->param->override_pct = DEFAULT_SPINDLE_RPM_OVERRIDE; // Set to 100%
         } while(spindle_num);
+
         sys.flags.auto_reporting = settings.report_interval != 0;
+        sys.flags.mpg_auto_reporting = settings.mpg_report_interval != 0;
 
         if(settings.parking.flags.enabled)
             sys.override.control.parking_disable = settings.parking.flags.deactivate_upon_init;

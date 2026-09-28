@@ -28,7 +28,6 @@ typedef struct rd_stream {
     size_t position;
     line_number_t line_number;
     stream_read_ptr read;
-    stream_type_t type;
     status_message_ptr status_handler;
     on_file_end_ptr eof_handler;
     struct rd_stream *next;
@@ -150,7 +149,6 @@ FLASHMEM vfs_file_t *stream_redirect_read (const char *filename, status_message_
                 rd_stream->position = vfs_tell(rd_stream->file);
             rd_stream->file_new = file;
             rd_stream->line_number = rd_streams ? line_number : 0;
-            rd_stream->type = hal.stream.type;
             rd_stream->read = hal.stream.read;
             rd_stream->eof_handler = eof_handler;
             rd_stream->status_handler = status_handler;
@@ -158,12 +156,10 @@ FLASHMEM vfs_file_t *stream_redirect_read (const char *filename, status_message_
             stream_set_file(file, stream_read_file);
             if(streams == NULL)
                 rd_streams = rd_stream;
-            else do {
-                if(streams->next == NULL) {
-                    streams->next = rd_stream;
-                    break;
-                }
-            } while((streams = streams->next));
+            else {
+                while(streams->next && (streams = streams->next));
+                streams->next = rd_stream;
+            }
             line_number = 0;
         } else {
             vfs_close(file);

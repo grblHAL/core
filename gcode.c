@@ -2382,10 +2382,6 @@ status_code_t gc_execute_block (char *block)
     // NOTE: For jogging, ignore prior feed rate mode. Enforce G94 and check for required F word.
     if(!gc_parser_flags.jog_motion) {
 
-        // Switching to G94 or G95 from G93, so don't push last state feed rate.
-        if(gc_block.modal.feed_mode != gc_state.modal.feed_mode)
-            gc_state.feed_rate = 0.0f;
-
         if(gc_block.modal.feed_mode == FeedMode_InverseTime) { // = G93
 
             // NOTE: G38 can also operate in inverse time, but is undefined as an error. Missing F word check added here.
@@ -2408,8 +2404,8 @@ status_code_t gc_execute_block (char *block)
             // out in the motion modes error-checking. However, if no F word is passed with NO motion command that requires
             // a feed rate, we simply move on and the state feed rate value gets updated to zero and remains undefined.
 
-        } else if(!gc_block.words.f)
-            gc_block.values.f = gc_state.feed_rate; // Push last state feed rate
+        } else if(!gc_block.words.f && gc_block.modal.feed_mode == gc_state.modal.feed_mode) // When not switching feed mode
+            gc_block.values.f = gc_state.feed_rate;                                          // push last state feed rate
 
     } else if(!gc_block.words.f)
         RETURN(Status_GcodeUndefinedFeedRate);

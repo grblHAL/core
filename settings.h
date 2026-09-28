@@ -469,6 +469,7 @@ typedef enum {
     Setting_SubroutineOptions = 700,
     Setting_RotaryOptions = 701,
     Setting_CutterCompOptions = 702,
+    Setting_MPGAutoReportInterval = 703,
 
     Setting_SpindlePWMOptions1 = 709,
 
@@ -943,7 +944,9 @@ typedef struct {
     serial_format_t modbus_stream_format; // TODO: remove in next version
     uint8_t mpg_baud_rate;
     uint8_t mpg_uart_instance;    // Currently unused by the core.
-    char reserved[7];             // Reserved For future expansion
+    uint8_t unused;
+    uint16_t mpg_report_interval;
+    char reserved[4];             // Reserved For future expansion
 } settings_t;
 
 typedef enum {

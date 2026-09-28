@@ -260,7 +260,8 @@ void state_set (sys_state_t new_state)
                     plan_block_t *block;
                     if((block = plan_get_current_block())) {
                         sys_state = new_state;
-                        sys.steppers_deenergize = false;    // Cancel stepper deenergize if pending.
+                        sys.steppers_deenergize = false;    // Cancel stepper deenergize if pending
+                        sys.step_control.end_motion = Off;  // and allow st_prep_buffer() to run.
                         st_prep_buffer();                   // Initialize step segment buffer before beginning cycle.
                         if(block->spindle.state.synchronized) {
 
@@ -511,7 +512,7 @@ FLASHMEM static void state_await_hold (uint_fast16_t rt_exec)
         bool handler_changed = false;
 
         plan_cycle_reinitialize();
-        sys.step_control.flags = 0;
+        sys.step_control.flags &= (step_control_t){ .end_motion = On }.flags;
 
         if(sys.alarm_pending)
             system_set_exec_alarm(sys.alarm_pending);
@@ -549,6 +550,7 @@ FLASHMEM static void state_await_hold (uint_fast16_t rt_exec)
                         bool await_motion;
 
                         handler_changed = true;
+                        sys.step_control.flags = 0;
                         stateHandler = state_await_waypoint_retract;
 
                         // Copy current location to park target and calculate retract waypoint if not restarting.

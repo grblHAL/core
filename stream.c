@@ -286,7 +286,7 @@ static void stream_write_all (const char *s)
     stream_connection_t *connection = connections;
 
     while(connection) {
-        if(connection->is_up())
+        if(connection->is_up() && !(sys.flags.mpg_auto_reporting && connection->stream == &mpg.stream))
             connection->stream->write(s);
         connection = connection->next;
     }
@@ -621,6 +621,15 @@ ISR_CODE static void mpg_rt_report_add (report_tracking_flags_t report)
         mpg.stream.report.flags.value |= report.value;
 }
 
+FLASHMEM static void mpg_auto_report (void *data)
+{
+    if(settings.mpg_report_interval) {
+        task_add_delayed(mpg_auto_report, NULL, settings.mpg_report_interval);
+
+    report_realtime_status(mpg.stream.write, &mpg.stream.report);
+    }
+}
+
 FLASHMEM static void mpg_gcode_mode_changed (void)
 {
     if(mpg.on_gcode_mode_changed)
@@ -765,6 +774,8 @@ FLASHMEM bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stre
 
         if(grbl.on_mpg_registered)
             grbl.on_mpg_registered(&mpg.stream, true);
+
+        task_add_delayed(mpg_auto_report, NULL, 2000);
     }
 
     return connection != NULL;

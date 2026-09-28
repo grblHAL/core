@@ -1,6 +1,32 @@
 ## grblHAL changelog
 
-<a name="20260923">202609023
+<a name="20260928">Build 202609028
+
+Core:
+
+* Fix for potential loss of position after a feed hold due to incorrect state of Bresenham counters. Ref. issue [#1023](https://github.com/grblHAL/core/issues/1023).
+
+* Fix for potential loss of position after a feed hold during end of move. Ref. issue [#1024](https://github.com/grblHAL/core/issues/1024).
+
+* Fix for non MCU platforms (Linux, Windows) handling _fast_ types differently. Ref. issue [#1026](https://github.com/grblHAL/core/issues/1026).
+
+* Fix for wrong error returned for invalid command following invalid feed rate change. Ref. issue [#1027](https://github.com/grblHAL/core/issues/1027).
+
+* Added setting `$703` for enabling auto real time reporting for MPG/pendant. Ref. issue [#864](https://github.com/grblHAL/core/issues/864).
+> [!NOTE]
+> Only lightly tested, may cause unintended side effects if enabled.
+
+* Enhanced null spindle to support direction.
+
+* Fix for invalid `O CALL` statements for named subprograms not cleaning up stream redirection.
+
+Drivers:
+
+* Simulator: fix for validator hang etc. Ref. issue [#27](https://github.com/grblHAL/Simulator/issues/27).
+
+---
+
+<a name="20260923">Build 202609023
 
 Core:
 
@@ -14,7 +40,7 @@ Changed handling of `MAX_AMASS_LEVEL` to allow values > 3. Ref issue [#136](http
 
 ---
 
-<a name="20260921">202609021
+<a name="20260921">Build 202609021
 
 Core:
 
@@ -33,7 +59,7 @@ Drivers:
 
 ---
 
-<a name="20260916">202609016
+<a name="20260916">Build 202609016
 
 Core:
 

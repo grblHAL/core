@@ -851,6 +851,14 @@ static status_code_t set_report_interval (setting_id_t setting, uint_fast16_t in
     return Status_OK;
 }
 
+static status_code_t set_mpg_report_interval (setting_id_t setting, uint_fast16_t int_value)
+{
+    if((settings.mpg_report_interval = int_value) == 0)
+        sys.flags.mpg_auto_reporting = Off;
+
+    return Status_OK;
+}
+
 static status_code_t set_report_mask (setting_id_t id, uint_fast16_t int_value)
 {
 #if COMPATIBILITY_LEVEL <= 1
@@ -1892,6 +1900,10 @@ FLASHMEM static uint32_t get_int (setting_id_t id)
             value = settings.flags.rotary_fix_enable | (settings.flags.revert_metric_conversion << 1);
             break;
 #endif
+        case Setting_MPGAutoReportInterval:
+            value = settings.mpg_report_interval;
+            break;
+
         case Settings_MPG_BaudRate:
             value = settings.mpg_baud_rate;
             break;
@@ -2237,6 +2249,10 @@ FLASHMEM static bool is_setting_available (const setting_detail_t *setting, uint
             available = hal.motor_fault_cap.a.mask != 0;
             break;
 
+        case Setting_MPGAutoReportInterval:
+            available = hal.get_elapsed_ticks != NULL && hal.driver_cap.mpg_mode;
+            break;
+
         case Settings_MPG_BaudRate:
             available = hal.driver_cap.mpg_mode;
             break;
@@ -2513,6 +2529,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
 #if N_AXIS > 3
      { Setting_RotaryOptions, Group_General, "Rotary options", NULL, Format_XBitfield, "Fix feedrate,Revert metric conversion", NULL, NULL, Setting_IsExpandedFn, set_rotary_options, get_int, NULL },
 #endif
+     { Setting_MPGAutoReportInterval, Group_MPG, "MPG autoreport interval", "ms", Format_Int16, "###0", "100", "1000", Setting_IsExtendedFn, set_mpg_report_interval, get_int, NULL, { .reboot_required = On, .allow_null = On } },
      { Settings_MPG_BaudRate, Group_MPG, "MPG baud rate", NULL, Format_RadioButtons, "38400,115200,230400,460800,576000,921600", NULL, NULL, Setting_NonCoreFn, mpg_set_baud, get_int, is_setting_available },
 };
 
@@ -2723,9 +2740,11 @@ PROGMEM static const setting_descr_t setting_descr[] = {
     { Setting_ResetActions, "Controls actions taken on a soft reset." },
     { Setting_StepperEnableDelay, "Delay from stepper enable to first step output. The driver typically adds ~2ms to this." },
 #if N_AXIS > 3
-     { Setting_RotaryOptions, "`Fix feedrate` changes feedrate to inverse time mode for combined angular and linear moves.\\n"
+    { Setting_RotaryOptions, "`Fix feedrate` changes feedrate to inverse time mode for combined angular and linear moves.\\n"
                               "'Revert metric conversion' reverts feedrate conversion from imperial to metric for angular moves."},
 #endif
+    { Setting_MPGAutoReportInterval, "Interval the real time report will be sent to MPG/pendant, set to 0 to disable." },
+    { Settings_MPG_BaudRate, "MPG/pendant baud rate." },
 
 //    { Setting_SubroutineOptions, "Enable prescan for internal M98 subroutines." }
 /*

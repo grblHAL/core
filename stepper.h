@@ -93,6 +93,7 @@ typedef struct stepper {
     steps_t counter;                //!< Counter variables for the Bresenham line tracer.
 //    uint_fast16_t spindle_pwm;
     st_block_t *exec_block;         //!< Pointer to the block data for the segment being executed.
+    st_block_t *resume_block;       //!< Block that was executing when the segment buffer last ran empty.
     segment_t *exec_segment;        //!< Pointer to the segment being executed.
 } stepper_t;
 

@@ -338,7 +338,7 @@ FLASHMEM void nvs_buffer_sync_physical (void)
         if(settings_dirty.build_info)
             settings_dirty.build_info = physical_nvs.memcpy_to_nvs(NVS_ADDR_BUILD_INFO, (uint8_t *)(nvsbuffer.addr + NVS_ADDR_BUILD_INFO), sizeof(stored_line_t) + NVS_CRC_BYTES, false) != NVS_TransferResult_OK;
 
-        uint_fast8_t idx = N_STARTUP_LINE, offset;
+        uint_fast16_t idx = N_STARTUP_LINE, offset;
         if(settings_dirty.startup_lines) do {
             idx--;
             if(bit_istrue(settings_dirty.startup_lines, bit(idx))) {

@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2016-2025 Terje Io
+  Copyright (c) 2016-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -480,16 +480,17 @@ typedef enum {
 } timer_resolution_t;
 
 typedef union {
-    uint8_t value; //!< All bitmap flags.
+    uint16_t value; //!< All bitmap flags.
     struct {
-        uint8_t periodic :1, //!<
-                up       :1, //!< Timer supports upcounting
-                comp1    :1, //!< Timer supports compare interrupt 0
-                comp2    :1, //!< Timer supports compare interrupt 1
-                comp3    :1, //!< Timer supports compare interrupt 2
-                ext_clk  :1, //!< External clock supported
-                encoder  :1, //!< Encoder mode supported
-                unused   :1;
+        uint16_t periodic   :1, //!<
+                 resolution :2, //!< timer_resolution_t
+                 up         :1, //!< Timer supports upcounting
+                 comp1      :1, //!< Timer supports compare interrupt 0
+                 comp2      :1, //!< Timer supports compare interrupt 1
+                 comp3      :1, //!< Timer supports compare interrupt 2
+                 ext_clk    :1, //!< External clock supported
+                 encoder    :1, //!< Encoder mode supported
+                 unused     :7;
     };
 } timer_cap_t;
 

@@ -1031,7 +1031,7 @@ FLASHMEM char *ngc_substitute_parameters (char *line)
     // Perform substitution
     if((s = message = malloc(len + 1))) {
 
-        char fmt[5] = {0};
+        char fmt[5];
 
         *s = '\0';
         char_counter = 0;
@@ -1050,8 +1050,8 @@ FLASHMEM char *ngc_substitute_parameters (char *line)
                 }
             } else if(c == '%') {
                 parse_format = 1;
+                memset(fmt, 0, sizeof(fmt));
                 fmt[0] = c;
-                fmt[1] = fmt[2] = fmt[3] = fmt[4] = '\0';
             } else if(c == '#') {
                 char_counter--;
                 if(ngc_read_parameter(line, &char_counter, &value, true) == Status_OK)

@@ -712,8 +712,10 @@ FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number
                                     free(macro.name);
 
                                 if(file) {
-                                    if((sub = add_sub(o_label, line_number, file)) == NULL)
+                                    if((sub = add_sub(o_label, line_number, file)) == NULL) {
                                         status = Status_FlowControlOutOfMemory;
+                                        stream_redirect_close(file);
+                                    }
                                 } else
                                     status = Status_FileOpenFailed;
                             }
@@ -757,6 +759,10 @@ FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number
                                 stream_reposition(sub->file, sub->file_pos, sub->line_number);
                             }
                         }
+
+                        if(status != Status_OK && o_label > NGC_MAX_PARAM_ID)
+                            stream_redirect_close(sub->file);
+
                     } else if(status == Status_OK)
                         status = Status_FlowControlSyntaxError;
                 }

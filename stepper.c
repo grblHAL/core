@@ -90,9 +90,9 @@ static float cycles_per_min;
 
 // Pointers for the step segment being prepped from the planner buffer. Accessed only by the
 // main program. Pointers may be planning segments or planner blocks ahead of what being executed.
-static plan_block_t *pl_block;     // Pointer to the planner block being prepped
-static st_block_t *st_prep_block;  // Pointer to the stepper block data being prepped
-static st_block_t st_hold_block;   // Copy of stepper block data for block put on hold during parking
+static plan_block_t *pl_block;      // Pointer to the planner block being prepped
+static st_block_t *st_prep_block;   // Pointer to the stepper block data being prepped
+static st_block_t st_hold_block;    // Copy of stepper block data for block put on hold during parking
 
 // Segment preparation data struct. Contains all the necessary information to compute new segments
 // based on the current executing planner block.
@@ -518,32 +518,34 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
 
                 // Enqueue any message to be printed (by foreground process)
                 if(st.exec_block->message) {
-                    if(!task_add_immediate((foreground_task_ptr)gc_output_message, st.exec_block->message))
-                        free(st.exec_block->message);
+                    task_add_immediate((foreground_task_ptr)gc_output_message, st.exec_block->message);
                     st.exec_block->message = NULL;
                 }
 
                 // Initialize Bresenham line and distance counters
-                st.counter.x = st.counter.y = st.counter.z
-                #ifdef A_AXIS
-                  = st.counter.a
-                #endif
-                #ifdef B_AXIS
-                  = st.counter.b
-                #endif
-                #ifdef C_AXIS
-                  = st.counter.c
-                #endif
-                #ifdef U_AXIS
-                  = st.counter.u
-                #endif
-                #ifdef V_AXIS
-                  = st.counter.v
-                #endif
-                #ifdef W_AXIS
-                  = st.counter.w
-                #endif
-                  = st.step_event_count >> 1;
+                if(st.exec_block != st.resume_block)
+                    st.counter.x = st.counter.y = st.counter.z
+                    #ifdef A_AXIS
+                      = st.counter.a
+                    #endif
+                    #ifdef B_AXIS
+                      = st.counter.b
+                    #endif
+                    #ifdef C_AXIS
+                      = st.counter.c
+                    #endif
+                    #ifdef U_AXIS
+                      = st.counter.u
+                    #endif
+                    #ifdef V_AXIS
+                      = st.counter.v
+                    #endif
+                    #ifdef W_AXIS
+                      = st.counter.w
+                    #endif
+                      = st.step_event_count >> 1;
+
+                st.resume_block = NULL;
             }
 
 #if MAX_AMASS_LEVEL > 1
@@ -573,6 +575,7 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
             }
 
             cycles_per_tick = 0;
+            st.resume_block = st.exec_block;
             st.exec_block = NULL;
             system_set_exec_state_flag(EXEC_CYCLE_COMPLETE); // Flag main program for cycle complete
 

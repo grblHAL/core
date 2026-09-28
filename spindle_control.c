@@ -464,18 +464,21 @@ FLASHMEM spindle_ptrs_t *spindle_get (spindle_num_t spindle_num)
 // Null (dummy) spindle, automatically installed if no spindles are registered.
 //
 
+static spindle_state_t null_state;
+
 FLASHMEM static void null_set_state (spindle_ptrs_t *spindle, spindle_state_t state, float rpm)
 {
     UNUSED(spindle);
-    UNUSED(state);
     UNUSED(rpm);
+	
+	null_state.mask = state.mask;
 }
 
 FLASHMEM static spindle_state_t null_get_state (spindle_ptrs_t *spindle)
 {
     UNUSED(spindle);
 
-    return (spindle_state_t){0};
+    return null_state;
 }
 
 // Sets spindle speed
@@ -516,7 +519,7 @@ FLASHMEM spindle_id_t spindle_add_null (void)
         .type = SpindleType_Null,
         .cap.variable = Off,
         .cap.at_speed = Off,
-        .cap.direction = Off,
+        .cap.direction = On,
         .set_state = null_set_state,
 #ifdef GRBL_ESP32
         .esp32_off = null_esp32_off,
