@@ -523,7 +523,7 @@ FLASHMEM void rtcp_init (void)
 
     if((nvs_address = nvs_alloc(sizeof(kinematics_settings_t)))) {
 
-        kinematics.transform_from_cartesian = (transform_from_cartesian_ptr)rtcp_forward_cartesian; // called from homing routine - RTCP should be turned off during homing?
+        kinematics.transform_from_cartesian = (transform_from_cartesian_ptr)rtcp_inverse_cartesian; // called from homing routine - RTCP should be turned off during homing?
         kinematics.transform_steps_to_cartesian = (transform_steps_to_cartesian_ptr)calc_pos_in_cartesian;
         kinematics.segment_line = (segment_line_ptr)kinematics_passthru;
 
