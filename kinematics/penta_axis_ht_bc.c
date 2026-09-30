@@ -87,12 +87,12 @@ static void rtcp_disable (void) //disables RTCP
 }
 
 // -----------------------------------------------------------------------------
-// Forward-transformation: RTCP-CSYS -> machinecoordinates(MCS)
+// Inverse kinematics transformation: RTCP-CSYS -> machine coordinates (MCS)
 // target: TCP displayed in RTCP-CSYS
 // B_deg, C_deg: axisangles in degree
 // -----------------------------------------------------------------------------
 
-static coord_data_t *rtcp_forward (coord_data_t *target, coord_data_t *position) //forward kinematics transform any target point in the g_code into the RTCP-csys
+static coord_data_t *rtcp_inverse (coord_data_t *target, coord_data_t *position) //inverse  kinematics transform any target point in the g_code into the RTCP-csys
 {
     const float B = deg2rad(position->b);
     const float C = deg2rad(position->c);
@@ -105,19 +105,16 @@ static coord_data_t *rtcp_forward (coord_data_t *target, coord_data_t *position)
     const float pivot_length = kinematics_settings.b_vector[Z_AXIS] + gc_state.modal.tool_length_offset[Z_AXIS];
   
     // B correction
-    const float zb = pivot_length * cosB;
+    const float zb = pivot_length * cosB - kinematics_settings.b_vector[Z_AXIS];
     const float xb = pivot_length * sinB;
 
     // C correction
-    const float xyr = hypot_f(position->x, position->y);
-    const float xytheta = atan2f(position->y, position->x) + C;
+    const float xyr = hypot_f(x_trans, y_trans);
+    const float xytheta = atan2f(y_trans, x_trans) - C;
 
-    target->x = xyr * cos(xytheta) - xb;
-
-    target->y = xyr * sin(xytheta);
-
-    target->z = position->z - zb + pivot_lengt;
-
+    target->x = xyr * cos(xytheta) + xb, x_trans + xb;
+    target->y = xyr * sin(xytheta), y_trans;
+    target->z = z_trans + zb;
     target->b = position->b;
     target->c = position->c;
 
@@ -125,10 +122,10 @@ static coord_data_t *rtcp_forward (coord_data_t *target, coord_data_t *position)
 }
 
 // -----------------------------------------------------------------------------
-// Inverse-transformation: machinecoordinates (MCS) -> RTCP-csys
+// forward kinematics transformation: machinecoordinates (MCS) -> RTCP-csys
 // -----------------------------------------------------------------------------
 
-static coord_data_t *rtcp_inverse (coord_data_t *target, coord_data_t *position) //calculates any machine position to RTCP-csys
+static coord_data_t *rtcp_forward (coord_data_t *target, coord_data_t *position) //calculates any machine position to RTCP-csys
 {
     const float x_trans = position->x + gc_state.modal.tool_length_offset[X_AXIS];
     const float y_trans = position->y + gc_state.modal.tool_length_offset[Y_AXIS];
@@ -145,22 +142,16 @@ static coord_data_t *rtcp_inverse (coord_data_t *target, coord_data_t *position)
     const float pivot_length = kinematics_settings.b_vector[Z_AXIS] + gc_state.modal.tool_length_offset[Z_AXIS];
 
     // B correction
-    const float zb = pivot_length * cosB - kinematics_settings.b_vector[Z_AXIS];
+    const float zb = pivot_length * cosB;
     const float xb = pivot_length * sinB;
 
     // C correction
-    const float xyr = hypot_f(x_trans, y_trans);
-    const float xytheta = atan2f(y_trans, x_trans) - C;
+    const float xyr = hypot_f(position->x, position->y);
+    const float xytheta = atan2f(position->y, position->x) + C;
 
-    target->x =
-        xyr * cos(xytheta) + xb, x_trans + xb;
-
-    target->y =
-        xyr * sin(xytheta), y_trans;
-
-    target->z =
-        z_trans + zb;
-
+    target->x = xyr * cos(xytheta) - xb;
+    target->y = xyr * sin(xytheta);
+    target->z = position->z - zb + pivot_lengt;
     target->b = position->b;
     target->c = position->c;
 
@@ -202,26 +193,19 @@ static void rtcp_measure(void)
     float y_trans = gc_state.modal.g5x_offset.data.coord.y;
     float z_trans = gc_state.modal.g5x_offset.data.coord.z;
 
-    // Old code: here, b vector "target" that was alway null was substracted 
-    // (a copied rest from rtcp_inverse without effect) - deleted.
     const float pivot_length = kinematics_settings.b_vector[Z_AXIS] + gc_state.modal.tool_length_offset[Z_AXIS];
 
     // B correction
-    const float zb = pivot_length * cosB - kinematics_settings.b_vector[Z_AXIS];
+    const float zb = pivot_length * cosB;
     const float xb = pivot_length * sinB;
 
     // C correction
-    const float xyr = hypot_f(x_trans, y_trans);
-    const float xytheta = atan2f(y_trans, x_trans) - C;
+    const float xyr = hypot_f(position->x, position->y);
+    const float xytheta = atan2f(position->y, position->x) + C;
 
-    c_to_active_csys.x =
-        xyr * cos(xytheta) + xb, x_trans + xb;
-
-    c_to_active_csys.y =
-        xyr * sin(xytheta), y_trans;
-
-    c_to_active_csys.z =
-        z_trans + zb;
+    c_to_active_csys.x = xyr * cos(xytheta) - xb;
+    c_to_active_csys.y = xyr * sin(xytheta);
+    c_to_active_csys.z = position->z - zb + pivot_lengt;
 
     char buf[128];
     snprintf(buf, sizeof(buf),
@@ -234,7 +218,7 @@ static void rtcp_measure(void)
 
 // Cartesian passthru
 
-static coord_data_t *rtcp_forward_cartesian (coord_data_t *target, coord_data_t *position)
+static coord_data_t *rtcp_inverse_cartesian (coord_data_t *target, coord_data_t *position)
 {
     return position;
 }
@@ -277,7 +261,7 @@ static uint_fast16_t rtcp_segments (coord_data_t *end_rtcp, coord_data_t *delta,
     coord_data_t position, mcs;
 
     // --- Pass 1: segment curve rough, MCS-radians sum --------------------
-    memcpy(&rtcp_mcs_tab[0], rtcp_forward(&mcs, &start_rtcp), sizeof(float) * 3);
+    memcpy(&rtcp_mcs_tab[0], rtcp_inverse(&mcs, &start_rtcp), sizeof(float) * 3);
     rtcp_s_tab[0] = rtcp_len_tab[0] = 0.0f;
 
     for (int i = 1; i <= RTCP_ARC_SAMPLES; i++) {
@@ -290,7 +274,7 @@ static uint_fast16_t rtcp_segments (coord_data_t *end_rtcp, coord_data_t *delta,
             position.values[idx]  = start_rtcp.values[idx] + s * delta->values[idx];
         } while(idx);
 
-        rtcp_forward(&mcs, &position);
+        rtcp_inverse(&mcs, &position);
 
         float dx = mcs.x - rtcp_mcs_tab[i - 1].x;
         float dy = mcs.y - rtcp_mcs_tab[i - 1].y;

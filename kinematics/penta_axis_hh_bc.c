@@ -93,13 +93,42 @@ static void rtcp_disable (void) //disables RTCP
 }
 
 // -----------------------------------------------------------------------------
-// Forward-transformation: RTCP-CSYS -> machinecoordinates(MCS)
+// Inverse kinematics transformation: RTCP-CSYS -> machine coordinates(MCS)
 // target: TCP displayed in RTCP-CSYS
 // B_deg, C_deg: axisangles in degree
 // -----------------------------------------------------------------------------
 
-static coord_data_t *rtcp_forward (coord_data_t *target, coord_data_t *position) //forward kinematics transform any target point in the g_code into the RTCP-csys
+static coord_data_t *rtcp_inverse (coord_data_t *target, coord_data_t *position) //inverse kinematics transform any target point in the g_code into the RTCP-csys
 {
+
+    const float B = deg2rad(position->b);
+    const float C = deg2rad(position->c);
+
+    const float cosB = cosf(B);
+    const float sinB = sinf(B);
+    const float cosC = cosf(C);
+    const float sinC = sinf(C);
+
+    const float pivot_length = kinematics_settings.b_vector[Z_AXIS] + gc_state.modal.tool_length_offset[Z_AXIS];
+
+    target->x = x_trans - sinC * kinematics_settings.c_vector[Y_AXIS] + cosC * sinB * pivot_length;
+    target->y = y_trans + (cosC - 1) * kinematics_settings.c_vector[Y_AXIS] + sinC * sinB * pivot_lengt;
+    target->z = z_trans + (cosB - 1) * pivot_length;
+    target->b = position->b;
+    target->c = position->c;
+
+    return target;
+}
+
+// -----------------------------------------------------------------------------
+// forward transformation: machine coordinates (MCS) -> RTCP-csys
+// -----------------------------------------------------------------------------
+
+static coord_data_t *rtcp_forward (coord_data_t *target, coord_data_t *position) //calculates any machine position to RTCP-csys
+{
+    const float x_trans = position->x - gc_state.modal.tool_length_offset[X_AXIS];
+    const float y_trans = position->y - gc_state.modal.tool_length_offset[Y_AXIS];
+    const float z_trans = position->z;
 
     const float B = deg2rad(position->b);
     const float C = deg2rad(position->c);
@@ -125,41 +154,6 @@ static coord_data_t *rtcp_forward (coord_data_t *target, coord_data_t *position)
 }
 
 // -----------------------------------------------------------------------------
-// Inverse-transformation: machinecoordinates (MCS) -> RTCP-csys
-// -----------------------------------------------------------------------------
-
-static coord_data_t *rtcp_inverse (coord_data_t *target, coord_data_t *position) //calculates any machine position to RTCP-csys
-{
-    const float x_trans = position->x - gc_state.modal.tool_length_offset[X_AXIS];
-    const float y_trans = position->y - gc_state.modal.tool_length_offset[Y_AXIS];
-    const float z_trans = position->z;
-
-    const float B = deg2rad(position->b);
-    const float C = deg2rad(position->c);
-
-    const float cosB = cosf(B);
-    const float sinB = sinf(B);
-    const float cosC = cosf(C);
-    const float sinC = sinf(C);
-
-    const float pivot_length = kinematics_settings.b_vector[Z_AXIS] + gc_state.modal.tool_length_offset[Z_AXIS];
-
-    target->x =
-        x_trans - sinC * kinematics_settings.c_vector[Y_AXIS] + cosC * sinB * pivot_length;
-
-    target->y =
-        y_trans + (cosC - 1) * kinematics_settings.c_vector[Y_AXIS] + sinC * sinB * pivot_lengt;
-
-    target->z =
-        z_trans + (cosB - 1) * pivot_length;
-
-    target->b = position->b;
-    target->c = position->c;
-
-    return target;
-}
-
-// -----------------------------------------------------------------------------
 // actual machine position displayed in RTCP-csys (starting point , is set via M851)
 // -----------------------------------------------------------------------------
 
@@ -173,7 +167,7 @@ coord_data_t *calc_pos_in_rtcp (coord_data_t *position, mpos_t *steps)
         cpos.values[idx] = (float)steps->values[idx] / settings.axis[idx].steps_per_mm;
     } while(idx);
 
-    return rtcp_inverse(position, &cpos);
+    return rtcp_forward(position, &cpos);
 }
 
 // -----------------------------------------------------------------------------
@@ -194,18 +188,19 @@ static void rtcp_measure(void)
     float y_trans = gc_state.modal.g5x_offset.data.coord.y;
     float z_trans = gc_state.modal.g5x_offset.data.coord.z;
 
-    // Old code: here, b vector "target" that was alway null was substracted 
-    // (a copied rest from rtcp_inverse without effect) - deleted.
     const float pivot_length = kinematics_settings.b_vector[Z_AXIS] + gc_state.modal.tool_length_offset[Z_AXIS];
 
-    c_to_active_csys.x =
-        x_trans - sinC * kinematics_settings.c_vector[Y_AXIS] + cosC * sinB * pivot_length;
+    const float rx = pivot_length * sinf(deg2rad(180.0f - position->b)) * cosC;
+    const float ry = pivot_length * sinf(deg2rad(180.0f - position->b)) * sinC;
+    const float rz = - pivot_length * cosf(deg2rad(180.0f - position->b));
 
-    c_to_active_csys.y =
-        y_trans + (cosC - 1) * kinematics_settings.c_vector[Y_AXIS] + sinC * sinB * pivot_lengt;
+    target->x = position->x + rx;
+    target->y = position->y + ry;
+    target->z = position->z + pivot_length + rz;
 
-    c_to_active_csys.z =
-        z_trans + (cosB - 1) * pivot_length;
+    c_to_active_csys.x = position->x + rx;
+    c_to_active_csys.y = position->y + ry;
+    c_to_active_csys.z = position->z + pivot_length + rz;
 
     char buf[128];
     snprintf(buf, sizeof(buf),
@@ -218,7 +213,7 @@ static void rtcp_measure(void)
 
 // Cartesian passthru
 
-static coord_data_t *rtcp_forward_cartesian (coord_data_t *target, coord_data_t *position)
+static coord_data_t *rtcp_inverse_cartesian (coord_data_t *target, coord_data_t *position)
 {
     return position;
 }
@@ -261,7 +256,7 @@ static uint_fast16_t rtcp_segments (coord_data_t *end_rtcp, coord_data_t *delta,
     coord_data_t position, mcs;
 
     // --- Pass 1: segment curve rough, MCS-radians sum --------------------
-    memcpy(&rtcp_mcs_tab[0], rtcp_forward(&mcs, &start_rtcp), sizeof(float) * 3);
+    memcpy(&rtcp_mcs_tab[0], rtcp_inverse(&mcs, &start_rtcp), sizeof(float) * 3);
     rtcp_s_tab[0] = rtcp_len_tab[0] = 0.0f;
 
     for (int i = 1; i <= RTCP_ARC_SAMPLES; i++) {
@@ -274,7 +269,7 @@ static uint_fast16_t rtcp_segments (coord_data_t *end_rtcp, coord_data_t *delta,
             position.values[idx]  = start_rtcp.values[idx] + s * delta->values[idx];
         } while(idx);
 
-        rtcp_forward(&mcs, &position);
+        rtcp_inverse(&mcs, &position);
 
         float dx = mcs.x - rtcp_mcs_tab[i - 1].x;
         float dy = mcs.y - rtcp_mcs_tab[i - 1].y;
@@ -322,7 +317,7 @@ static coord_data_t *kinematics_segment_line (coord_data_t *target, coord_data_t
 
         if(!(segment = fabsf(delta.b) >= eps || fabsf(delta.c) >= eps)) {
             iterations = 2;
-            rtcp_forward(&trsf, &end_rtcp);
+            rtcp_inverse(&trsf, &end_rtcp);
         } else {
             idx = 0;
             target_len = 0.0f;
@@ -362,7 +357,7 @@ static coord_data_t *kinematics_segment_line (coord_data_t *target, coord_data_t
             .c = start_rtcp.c + s_out * delta.c
         };
 
-        rtcp_forward(&trsf, &out);
+        rtcp_inverse(&trsf, &out);
     }
 
     return iterations-- == 0 ? NULL : &trsf;
@@ -523,7 +518,7 @@ FLASHMEM void rtcp_init (void)
 
     if((nvs_address = nvs_alloc(sizeof(kinematics_settings_t)))) {
 
-        kinematics.transform_from_cartesian = (transform_from_cartesian_ptr)rtcp_forward_cartesian; // called from homing routine - RTCP should be turned off during homing?
+        kinematics.transform_from_cartesian = (transform_from_cartesian_ptr)rtcp_inverse_cartesian; // called from homing routine - RTCP should be turned off during homing?
         kinematics.transform_steps_to_cartesian = (transform_steps_to_cartesian_ptr)calc_pos_in_cartesian;
         kinematics.segment_line = (segment_line_ptr)kinematics_passthru;
 
