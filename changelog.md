@@ -1,5 +1,27 @@
 ## grblHAL changelog
 
+<a name="202601004">Build 20261004
+
+Core:
+
+* Fixed inverse time mode (G93) arc execution, ref. issue [#1030](https://github.com/grblHAL/core/issues/1030).
+
+* Attempted fix for issue [#1031](https://github.com/grblHAL/core/issues/1031) - controller lockup, part of task handler changes.
+
+* For driver programmers: changed task handler code, driver `hal.delay_ms` implementation must now call `task_execute(true)` instead of `grbl.on_execute_delay(state_get())`.
+
+Drivers:
+
+* All, updated for changed task handler code.
+
+Plugins:
+
+* Networking, SD Card: updated for changed task handler code.
+
+* SD Card: changed auto mount startup sequencing, fix for issue [#16](https://github.com/grblHAL/Plugin_SD_card/issues/16).
+
+---
+
 <a name="20260928">Build 202609028
 
 Core:

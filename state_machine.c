@@ -28,6 +28,7 @@
 #include "hal.h"
 #include "motion_control.h"
 #include "state_machine.h"
+#include "task.h"
 #include "override.h"
 
 extern void gc_tool_changed (void);
@@ -276,7 +277,7 @@ void state_set (sys_state_t new_state)
 
                                 while(index != block->spindle.hal->get_data(SpindleData_Counters)->index_count) {
 
-                                    grbl.on_execute_realtime(sys_state);
+                                    task_execute(false);
 
                                     if(hal.get_elapsed_ticks() - ms > 5000) {
                                         system_raise_alarm(Alarm_Spindle);

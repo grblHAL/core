@@ -135,13 +135,7 @@ FLASHMEM bool stream_enumerate_streams (stream_enumerate_callback_ptr callback, 
 // TODO: Restructure st_prep_buffer() calls to be executed here during a long print.
 bool stream_tx_blocking (void)
 {
-    static volatile bool lock = false;
-
-    if(!lock && !modbus_isbusy()) {
-        lock = true;
-        grbl.on_execute_realtime(state_get());
-        lock = false;
-    }
+    task_execute(false);
 
     return !(sys.rt_exec_state & EXEC_RESET);
 }
@@ -225,7 +219,7 @@ FLASHMEM bool stream_await_tx_clear (const io_stream_t *stream)
 {
     if(stream->get_tx_buffer_count) {
         while(stream->get_tx_buffer_count())
-            grbl.on_execute_realtime(state_get());
+            task_execute(false);
     }
 
     return !!stream->get_tx_buffer_count;

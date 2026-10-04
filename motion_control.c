@@ -219,7 +219,7 @@ status_code_t mc_line (float *target, plan_line_data_t *pl_data)
 // NOTE: the status code returned on success is Status_Handled (254), on abort Status_Aborted (0)
 // is returned - which is the same value as Status_OK. This is per design and in order not to break existing
 // code that just test for success (!= 0)  or failure (0).
-status_code_t mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *offset, float radius, plane_t plane, int32_t turns)
+status_code_t mc_arc (float *target, plan_line_data_t *pl_data, float *position, float *offs, float radius, plane_t plane, int32_t turns)
 {
     typedef union {
         double values[2];
@@ -229,9 +229,14 @@ status_code_t mc_arc (float *target, plan_line_data_t *pl_data, float *position,
         };
     } point_2dd_t;
 
+    int32_t n_turns;
+    point_2d_t offset = {
+        .x = offs[plane.axis_0],
+        .y = offs[plane.axis_1]
+    };
     point_2dd_t rv = {  // Radius vector from center to current location
-        .x = -(double)offset[plane.axis_0],
-        .y = -(double)offset[plane.axis_1]
+        .x = -(double)offset.x,
+        .y = -(double)offset.y
     };
     point_2dd_t center = {
         .x = (double)position[plane.axis_0] - rv.x,
@@ -244,11 +249,14 @@ status_code_t mc_arc (float *target, plan_line_data_t *pl_data, float *position,
     // CCW angle between position and target from circle center. Only one atan2() trig computation required.
     float angular_travel = (float)atan2(rv.x * rt.y - rv.y * rt.x, rv.x * rt.x + rv.y * rt.y);
 
-    if (turns > 0) { // Correct atan2 output per direction
-        if (angular_travel <= ARC_ANGULAR_TRAVEL_EPSILON)
-            angular_travel += 2.0f * M_PI;
-    } else if (angular_travel >= -ARC_ANGULAR_TRAVEL_EPSILON)
-        angular_travel -= 2.0f * M_PI;
+    if((n_turns = turns) > 0) { // Correct atan2 output per direction
+        if(angular_travel > ARC_ANGULAR_TRAVEL_EPSILON)
+            n_turns--;
+    } else if(angular_travel < -ARC_ANGULAR_TRAVEL_EPSILON)
+        n_turns++;
+
+    if(n_turns)
+        angular_travel += (float)n_turns * 2.0f * M_PI;
 
     if(!pl_data->condition.target_validated && grbl.check_arc_travel_limits) {
         pl_data->condition.target_validated = On;
@@ -257,62 +265,22 @@ status_code_t mc_arc (float *target, plan_line_data_t *pl_data, float *position,
                                                                          radius, plane, turns, &sys.work_envelope);
     }
 
-    if(labs(turns) > 1) {
-
-        uint32_t n_turns = labs(turns) - 1;
-        float arc_travel = 2.0f * M_PI * (float)n_turns + (turns > 0 ? angular_travel : -angular_travel);
-        coord_data_t arc_target;
-#if N_AXIS > 3
-        uint_fast8_t idx = N_AXIS;
-        float linear_per_turn[N_AXIS];
-        do {
-            idx--;
-            if(!(idx == plane.axis_0 || idx == plane.axis_1))
-                linear_per_turn[idx] = (target[idx] - position[idx]) / arc_travel * 2.0f * M_PI;
-        } while(idx);
-#else
-        float linear_per_turn = (target[plane.axis_linear] - position[plane.axis_linear]) / arc_travel * 2.0f * M_PI;
-#endif
-
-        memcpy(&arc_target, target, sizeof(coord_data_t));
-
-        arc_target.values[plane.axis_0] = position[plane.axis_0];
-        arc_target.values[plane.axis_1] = position[plane.axis_1];
-        arc_target.values[plane.axis_linear] = position[plane.axis_linear];
-
-        while(n_turns--) {
-#if N_AXIS > 3
-            idx = N_AXIS;
-            do {
-                idx--;
-                if(!(idx == plane.axis_0 || idx == plane.axis_1))
-                    arc_target.values[idx] += linear_per_turn[idx];
-            } while(idx);
-#else
-            arc_target.values[plane.axis_linear] += linear_per_turn;
-#endif
-            mc_arc(arc_target.values, pl_data, position, offset, radius, plane, turns > 0 ? 1 : -1);
-            memcpy(position, arc_target.values, sizeof(coord_data_t));
-        }
-    }
-
     // NOTE: Segment end points are on the arc, which can lead to the arc diameter being smaller by up to
     // (2x) settings.arc_tolerance. For 99% of users, this is just fine. If a different arc segment fit
     // is desired, i.e. least-squares, midpoint on arc, just change the mm_per_arc_segment calculation.
     // For the intended uses of grblHAL, this value shouldn't exceed 2000 for the strictest of cases.
 
-    uint_fast16_t segments = 0;
+    uint32_t segments = 0;
 
     if(2.0f * radius > settings.arc_tolerance)
-        segments = (uint_fast16_t)floorf(fabsf(0.5f * angular_travel * radius) / sqrtf(settings.arc_tolerance * (2.0f * radius - settings.arc_tolerance)));
+        segments = (uint32_t)floorf(fabsf(0.5f * angular_travel * radius) / sqrtf(settings.arc_tolerance * (2.0f * radius - settings.arc_tolerance)));
 
     if(segments) {
 
-        // Multiply inverse feed_rate to compensate for the fact that this movement is approximated
-        // by a number of discrete segments. The inverse feed_rate should be correct for the sum of
-        // all segments.
-        if (pl_data->condition.inverse_time) {
-            pl_data->feed_rate *= segments;
+        // Multiply inverse feed_rate to compensate for the fact that
+        // this movement is approximated by a number of discrete segments.
+        if(pl_data->condition.inverse_time) {
+            pl_data->feed_rate *= hypotf(angular_travel * radius, target[plane.axis_linear] - position[plane.axis_linear]);
             pl_data->condition.inverse_time = Off; // Force as feed absolute mode over arc segments.
         }
 
@@ -358,13 +326,11 @@ status_code_t mc_arc (float *target, plan_line_data_t *pl_data, float *position,
         // Computes: cos_T = 1 - theta_per_segment^2/2, sin_T = theta_per_segment - theta_per_segment^3/6) in ~52usec
         float cos_T = 2.0f - theta_per_segment * theta_per_segment;
         float sin_T = theta_per_segment * 0.16666667f * (cos_T + 4.0f);
-        cos_T *= 0.5f;
-
-        float sin_Ti;
-        float cos_Ti;
-        float r_axisi;
-        uint_fast16_t i, count = 0;
+        float sin_Ti, cos_Ti, r_axisi;
+        uint32_t i, count = 0;
         status_code_t status;
+
+        cos_T *= 0.5f;
 
         for (i = 1; i < segments; i++) { // Increment (segments-1).
 
@@ -379,8 +345,8 @@ status_code_t mc_arc (float *target, plan_line_data_t *pl_data, float *position,
                 // Compute exact location by applying transformation matrix from initial radius vector(=-offset).
                 cos_Ti = cosf(i * theta_per_segment);
                 sin_Ti = sinf(i * theta_per_segment);
-                rv.x = -offset[plane.axis_0] * cos_Ti + offset[plane.axis_1] * sin_Ti;
-                rv.y = -offset[plane.axis_0] * sin_Ti - offset[plane.axis_1] * cos_Ti;
+                rv.x = -offset.x * cos_Ti + offset.y * sin_Ti;
+                rv.y = -offset.x * sin_Ti - offset.y * cos_Ti;
                 count = 0;
             }
 

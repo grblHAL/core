@@ -151,7 +151,7 @@ typedef enum {
     Input_AuxMax = Input_Aux31,
 #elif N_AUX_DIN > 16
     Input_AuxMax = Input_Aux23,
-#elif
+#else
     Input_AuxMax = Input_Aux15,
 #endif
     Input_Analog_Aux0,
@@ -279,7 +279,7 @@ typedef enum {
     Output_AuxMax = Output_Aux31,
 #elif N_AUX_DOUT > 16
     Output_AuxMax = Output_Aux23,
-#elif
+#else
     Output_AuxMax = Output_Aux15,
 #endif
     Output_Analog_Aux0,

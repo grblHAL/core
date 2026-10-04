@@ -247,7 +247,7 @@ FLASHMEM static bool limits_pull_off (axes_signals_t axis, coord_data_t *distanc
             }
         }
 
-        grbl.on_execute_realtime(STATE_HOMING);
+        task_execute(false);
     }
 
     st_reset(); // Immediately force kill steppers and reset step segment buffer.
@@ -477,7 +477,7 @@ FLASHMEM static bool homing_cycle (axes_signals_t cycle, axes_signals_t auto_squ
                 }
             }
 
-            grbl.on_execute_realtime(STATE_HOMING);
+            task_execute(STATE_HOMING);
 
         } while(axislock.mask & AXES_BITMASK);
 

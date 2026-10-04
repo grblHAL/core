@@ -85,6 +85,16 @@ bool modbus_isbusy (void)
     return busy;
 }
 
+FLASHMEM void modbus_reset (bool abort)
+{
+    uint_fast16_t idx = n_api;
+
+    if(idx) do {
+        if(modbus[--idx].reset)
+            modbus[idx].reset(abort);
+    } while(idx);
+}
+
 FLASHMEM bool modbus_enabled (void)
 {
     return n_api > 0;

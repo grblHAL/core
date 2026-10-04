@@ -33,6 +33,7 @@
 #include "sleep.h"
 #include "protocol.h"
 #include "machine_limits.h"
+#include "modbus.h"
 
 #ifndef RT_QUEUE_SIZE
 #define RT_QUEUE_SIZE 16 // must be a power of 2
@@ -447,11 +448,12 @@ bool protocol_exec_rt_system (void)
     rt_exec_t rt_exec;
     bool killed = false;
 
-    if (sys.rt_exec_alarm && (rt_exec = system_clear_exec_alarm())) { // Enter only if any bit flag is true
+    if(sys.rt_exec_alarm && (rt_exec = system_clear_exec_alarm())) { // Enter only if any bit flag is true
 
         if((sys.reset_pending = bit_istrue(sys.rt_exec_state, EXEC_RESET))) {
             // Kill spindle and coolant.
             killed = true;
+            modbus_reset(sys.abort);
             spindle_all_off(true);
             hal.coolant.set_state((coolant_state_t){0});
         }
@@ -506,7 +508,7 @@ bool protocol_exec_rt_system (void)
                 }
 
                 protocol_poll_cmd();
-                grbl.on_execute_realtime(STATE_ESTOP);
+                task_execute(false);
             }
 
             system_clear_exec_alarm(); // Clear alarm
@@ -515,27 +517,33 @@ bool protocol_exec_rt_system (void)
         }
     }
 
-    if (sys.rt_exec_state && (rt_exec = system_clear_exec_states())) { // Get and clear volatile sys.rt_exec_state atomically.
+    if(sys.rt_exec_state && (rt_exec = system_clear_exec_states())) { // Get and clear volatile sys.rt_exec_state atomically.
 
         // Execute system abort.
         if((sys.reset_pending = bit_istrue(rt_exec, EXEC_RESET))) {
 
+            alarm_code_t alarm;
+
+            // Only place sys.abort is set true, when E-stop is not asserted.
+            if(!(sys.abort = !hal.control.get_state().e_stop))
+                alarm = Alarm_EStop;
+            else if(hal.control.get_state().motor_fault) {
+                sys.abort = false;
+                alarm = Alarm_MotorFault;
+            } else
+                alarm = Alarm_None;
+
             if(!killed) {
                 // Kill spindle and coolant.
+                modbus_reset(sys.abort);
                 spindle_all_off(true);
                 hal.coolant.set_state((coolant_state_t){0});
             }
 
-            // Only place sys.abort is set true, when E-stop is not asserted.
-            if(!(sys.abort = !hal.control.get_state().e_stop)) {
+            if(alarm) {
                 hal.stream.reset_read_buffer();
-                system_raise_alarm(Alarm_EStop);
-                grbl.report.feedback_message(Message_EStop);
-            } else if(hal.control.get_state().motor_fault) {
-                sys.abort = false;
-                hal.stream.reset_read_buffer();
-                system_raise_alarm(Alarm_MotorFault);
-                grbl.report.feedback_message(Message_MotorFault);
+                system_raise_alarm(alarm);
+                grbl.report.feedback_message(alarm == Alarm_EStop ? Message_EStop : Alarm_MotorFault);
             }
 
             if(!killed) // Tell driver/plugins about reset.
@@ -557,6 +565,8 @@ bool protocol_exec_rt_system (void)
 
             gc_state.tool_change = false;
 
+            modbus_reset(sys.abort);
+
             // Tell driver/plugins about reset.
             hal.driver_reset();
 
@@ -576,7 +586,7 @@ bool protocol_exec_rt_system (void)
 
                 do {
                     st_prep_buffer(); // Check and prep segment buffer.
-                    grbl.on_execute_realtime(state_get());
+                    task_execute(false);
                 } while(st_is_stepping());
 
                 rt_exec |= system_clear_exec_states();
@@ -600,7 +610,7 @@ bool protocol_exec_rt_system (void)
         }
 
         // Execute and print status to output stream
-        if (rt_exec & EXEC_STATUS_REPORT)
+        if(rt_exec & EXEC_STATUS_REPORT)
             report_realtime_status(hal.stream.write_all, &hal.stream.report);
 
         if(rt_exec & EXEC_GCODE_REPORT)
@@ -623,7 +633,7 @@ bool protocol_exec_rt_system (void)
             state_update(rt_exec);
     }
 
-    grbl.on_execute_realtime(state_get());
+    task_execute(false);
 
     // Execute overrides.
 

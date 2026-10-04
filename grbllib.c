@@ -45,17 +45,17 @@
 #include "kinematics/interface.h"
 #endif
 
-static void task_execute (sys_state_t state);
+//static void task_execute (sys_state_t state);
 
 typedef union {
     uint8_t ok;
     struct {
-        uint8_t init          :1,
-                setup         :1,
-                spindle       :1,
-                amass         :1,
-                pulse_delay   :1,
-                unused        :3;
+        uint8_t init        :1,
+                setup       :1,
+                spindle     :1,
+                amass       :1,
+                pulse_delay :1,
+                unused      :3;
     };
 } driver_startup_t;
 
@@ -65,9 +65,10 @@ typedef union {
 
 typedef struct core_task {
     uint32_t time;
+    uint32_t lock;
     foreground_task_ptr fn;
     void *data;
-    struct core_task *next;
+    volatile struct core_task *next;
 } core_task_t;
 
 DCRAM system_t sys; //!< System global variable structure.
@@ -110,7 +111,7 @@ __attribute__((always_inline)) static inline core_task_t *task_run (core_task_t 
     foreground_task_ptr fn = task->fn;
     void *data = task->data;
 
-    task = task->next;
+    task = (core_task_t *)task->next;
     task_free(t);
 
     hal.irq_enable();
@@ -243,6 +244,11 @@ FLASHMEM static void dummy_on_settings_changed (settings_t *settings, settings_c
     // NOOP
 }
 
+static void on_execute_end (sys_state_t state)
+{
+    // NOOP
+}
+
 FLASHMEM static atc_status_t atc_get_state (void)
 {
     return hal.driver_cap.atc ? ATC_Online : ATC_None;
@@ -262,7 +268,7 @@ FLASHMEM int grbl_enter (void)
 
     // Clear all and set some core function pointers
     memset(&grbl, 0, sizeof(grbl_t));
-    grbl.on_execute_realtime = grbl.on_execute_delay = task_execute;
+    grbl.on_execute_realtime = grbl.on_execute_delay = on_execute_end;
     grbl.enqueue_gcode = protocol_enqueue_gcode;
     grbl.enqueue_realtime_command = stream_enqueue_realtime_command;
     grbl.on_report_options = dummy_bool_handler;
@@ -540,10 +546,9 @@ __attribute__((always_inline)) static inline core_task_t *task_alloc (void)
     return task;
 }
 
-static void task_execute (sys_state_t state)
+void task_execute (bool wait)
 {
     static uint32_t last_ms = 0;
-    static volatile bool lock = false;
 
     core_task_t *task;
 
@@ -558,18 +563,15 @@ static void task_execute (sys_state_t state)
         } while((task = task_run(task)));
     }
 
-    if(lock)
-        return;
-
-    lock = true;
-
     uint32_t now = hal.get_elapsed_ticks();
     if(!(now == last_ms || tasks.delayed == tasks.systick)) {
 
         last_ms = now;
 
         if((task = tasks.systick)) do {
-            task->fn(task->data);
+            if(!(task->lock++))
+                task->fn(task->data);
+            task->lock--;
         } while((task = task->next));
 
         while((task = tasks.delayed) && (int32_t)(task->time - now) <= 0) {
@@ -598,7 +600,10 @@ static void task_execute (sys_state_t state)
         }
     }
 
-    lock = false;
+    if(wait)
+        grbl.on_execute_delay(state_get());
+    else
+        grbl.on_execute_realtime(state_get());
 }
 
 ISR_CODE bool ISR_FUNC(task_add_delayed)(foreground_task_ptr fn, void *data, uint32_t delay_ms)
@@ -668,6 +673,7 @@ ISR_CODE bool ISR_FUNC(task_add_systick)(foreground_task_ptr fn, void *data)
 
         task->fn = fn;
         task->data = data;
+        task->lock = 0;
         task->next = NULL;
 
         if(tasks.systick == NULL)
@@ -685,14 +691,21 @@ ISR_CODE bool ISR_FUNC(task_add_systick)(foreground_task_ptr fn, void *data)
     return task != NULL;
 }
 
-FLASHMEM void task_delete_systick (foreground_task_ptr fn, void *data)
+/*! \brief Delete systick task.
+\param fn pointer to a \a foreground_task_ptr type of function.
+\param data pointer to data to be passed to the callee.
+\returns true if successful, false otherwise.
+NOTE: A systick task cannot delete itself.
+*/
+FLASHMEM bool task_delete_systick (foreground_task_ptr fn, void *data)
 {
+    bool ok = false;
     core_task_t *task, *prev = NULL;
 
     hal.irq_disable();
 
     if((task = tasks.systick)) do {
-        if(fn == task->fn && data == task->data) {
+        if((ok = fn == task->fn && data == task->data && !task->lock)) {
             if(prev)
                 prev->next = task->next;
             else
@@ -704,6 +717,8 @@ FLASHMEM void task_delete_systick (foreground_task_ptr fn, void *data)
     } while((task = task->next));
 
     hal.irq_enable();
+
+    return ok;
 }
 
 /*! \brief Enqueue a function to be called once by the foreground process.
@@ -852,7 +867,7 @@ FLASHMEM void task_execute_on_startup (void)
             hal.stream.on_linestate_changed = onPosFailure;
 
         while(true)
-            grbl.on_execute_realtime(state_get());
+            task_execute(false);
     }
 }
 

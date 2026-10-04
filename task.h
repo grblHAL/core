@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2024-2025 Terje Io
+  Copyright (c) 2024-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -30,7 +30,8 @@ bool task_run_on_reset (foreground_task_ptr fn, void *data);
 bool task_run_on_startup (foreground_task_ptr fn, void *data);
 void task_delete (foreground_task_ptr fn, void *data);
 bool task_add_systick (foreground_task_ptr fn, void *data);
-void task_delete_systick (foreground_task_ptr fn, void *data);
+bool task_delete_systick (foreground_task_ptr fn, void *data);
+void task_execute (bool wait);
 
 void task_raise_alarm (void *data);
 
