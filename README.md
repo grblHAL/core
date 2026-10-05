@@ -90,3 +90,7 @@ Some [plugins](https://github.com/grblHAL/plugins) implements additional M-codes
 
 ---
 20260908
+
+### Secondary-stepper stream injection
+
+See the [stream transport contract](doc/stream-injection.md) for ownership, execution contexts and confirmed position semantics.
