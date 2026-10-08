@@ -348,7 +348,7 @@ FLASHMEM static void modbus_rtu_reset (bool abort)
         }
 
         tail = head;
-        silence_until = hal.get_elapsed_ticks() + 500;
+        silence_until = hal.get_elapsed_ticks() + modbus.rx_timeout + silence_timeout;
         state = ModBus_Silent;
 
         stream.flush_tx_buffer();
@@ -356,7 +356,7 @@ FLASHMEM static void modbus_rtu_reset (bool abort)
     }
 
     if(state == ModBus_Retry) {
-        silence_until = hal.get_elapsed_ticks() + 500;
+        silence_until = hal.get_elapsed_ticks() + modbus.rx_timeout + silence_timeout;
         state = ModBus_Silent;
     }
 }
@@ -452,7 +452,7 @@ FLASHMEM static void onReportOptions (bool newopt)
     on_report_options(newopt);
 
     if(!newopt)
-        report_plugin("MODBUS", "0.24");
+        report_plugin("MODBUS", "0.25");
 }
 
 static bool modbus_rtu_isup (void)
@@ -512,7 +512,7 @@ FLASHMEM static bool claim_stream (io_stream_properties_t const *sstream, void *
             claimed->set_enqueue_rt_handler(stream_buffer_all);
 
             stream.set_baud_rate = claimed->set_baud_rate;
-            stream.set_format = claimed->set_format;                              //!< Optional handler for setting the stream format.
+            stream.set_format = claimed->set_format;
             stream.get_tx_buffer_count = claimed->get_tx_buffer_count;
             stream.get_rx_buffer_count = claimed->get_rx_buffer_count;
             stream.write = claimed->write_n;
@@ -577,7 +577,7 @@ FLASHMEM void modbus_rtu_init (int8_t instance, int8_t dir_aux)
     };
 
     PROGMEM static const sys_command_t command_list[] = {
-        {"MODBUSSTATS", report_stats, { .allow_blocking = On }, { .str = "output Modbus RTU statistics" } },
+        { "MODBUSSTATS", report_stats, { .allow_blocking = On }, { .str = "output Modbus RTU statistics" } },
     };
 
     static sys_commands_t commands = {

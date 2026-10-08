@@ -1,5 +1,39 @@
 ## grblHAL changelog
 
+<a name="202601008">Build 20261008
+
+Core, for programmers:
+
+* Added `hal.rtc.get_time(struct timeval *time)` - optional (pointer may be null), returns current time in the provided struct.
+
+* Added `ngc_virtual_ro_param_add(const char *name, ngc_named_param_get_ptr get)`, add a virtual read-only global parameter whose value is returned by the `get` function, returns `true` if successful. `name` must start with an underscore (`_`) character and be unique. This will allow plugins to add custom global parameters.
+ 
+* Added `ngc_virtual_rw_param_add(const char *name, ngc_named_param_get_ptr get, , ngc_named_param_get_ptr set)`, add a virtual global parameter whose value is returned by the `get` function and is set by the `set` function , returns `true` if successful. `name` must start with an underscore (`_`) character and be unique. This will allow plugins to add custom global parameters than can be used to control outputs, set internal values etc.
+ 
+* Added triggered status for all available probes to the full real-time report (`0x87`) `Pn:` element: `I` - primary probe, `J` - toolsetter, `K` - secondary probe.
+
+* Removed `hal.driver_cap.amass` property field.
+
+Core:
+
+* Adapted fixes from PR [#1022](https://github.com/grblHAL/core/pull/1022) for the second stepper driver. Refactored the code so low-level parts of it can be used for alternative implementations.
+
+Drivers:
+
+* All, updated for removal of `hal.driver_cap.amass` property, improved main IRQ disable/enable code.
+
+* RP2040: add support for the new optional `hal.rtc.get_time` call, ref. discussion [#208](https://github.com/grblHAL/RP2040/discussions/208).
+> [!NOTE]
+> Resolution for RP2040 is 1s, RP2350 is 1ms.
+
+Plugins:
+
+* Laser, coolant: now adds virtual named parameters `_laser_coolant_ok` and `_laser_coolant_temp` for accessing input state, mainly as an example.
+
+* Misc, MCP23017: - fix for not handling inversion of output signals dynamically.
+
+---
+
 <a name="202601004">Build 20261004
 
 Core:

@@ -45,7 +45,6 @@
 #endif
 
 typedef float (*ngc_param_get_ptr)(ngc_param_id_t id);
-typedef float (*ngc_named_param_get_ptr)(void);
 
 typedef struct {
     ngc_param_id_t id_min;
@@ -73,6 +72,13 @@ typedef struct ngc_named_rw_param {
     struct ngc_named_rw_param *next;
 } ngc_named_rw_param_t;
 
+typedef struct ngc_virtual_param {
+    const char *name;
+    ngc_named_param_get_ptr get;
+    ngc_named_param_set_ptr set;
+    struct ngc_virtual_param *next;
+} ngc_virtual_param_t;
+
 typedef struct ngc_string_param {
     struct ngc_string_param *next;
     ngc_string_id_t id;
@@ -94,6 +100,7 @@ static ngc_rw_param_t *rw_params = NULL;
 static ngc_named_rw_param_t *rw_global_params = NULL;
 static ngc_string_id_t ref_id = (uint32_t)-1;
 static ngc_string_param_t *ngc_string_params = NULL;
+static ngc_virtual_param_t *ngc_virtual_params = NULL;
 static on_macro_execute_ptr on_macro_execute;
 
 PROGMEM static const uint8_t axis_map[] = {
@@ -775,11 +782,21 @@ FLASHMEM bool ngc_named_param_get (char *name, float *value)
 
     *value = 0.0f;
 
-     if(*name == '_') do {
-        idx--;
-        if((found = !strcmp(name, ngc_named_ro_param[idx].name)))
-            *value = ngc_named_param_get_by_id(ngc_named_ro_param[idx].id);
-    } while(idx && !found);
+    if(*name == '_') {
+        do {
+            idx--;
+            if((found = !strcmp(name, ngc_named_ro_param[idx].name)))
+                *value = ngc_named_param_get_by_id(ngc_named_ro_param[idx].id);
+        } while(idx && !found);
+
+        if(!found && ngc_virtual_params) {
+            ngc_virtual_param_t *vp = ngc_virtual_params;
+            do {
+                if((found = !strcmp(name, vp->name)))
+                    *value = vp->get();
+            } while(!found && (vp = vp->next));
+        }
+    }
 
     if(!found) {
         void *context = *name == '_' ? NULL : call_context;
@@ -804,6 +821,8 @@ FLASHMEM bool ngc_named_param_exists (char *name)
 
 FLASHMEM float *ngc_named_param_set (char *name, float value)
 {
+    static float fv;
+
     bool ok = false;
     uint_fast8_t idx = sizeof(ngc_named_ro_param) / sizeof(ngc_named_ro_param_t);
 
@@ -816,10 +835,26 @@ FLASHMEM float *ngc_named_param_set (char *name, float value)
     ngc_named_rw_param_t *rw_param = NULL;
 
     // Check if it is a (read only) predefined parameter.
-    if(*name == '_') do {
-        idx--;
-        ok = !strcmp(name, ngc_named_ro_param[idx].name);
-    } while(idx && !ok);
+    if(*name == '_') {
+
+        do {
+            idx--;
+            ok = !strcmp(name, ngc_named_ro_param[idx].name);
+        } while(idx && !ok);
+
+        if(!ok && ngc_virtual_params) {
+            ngc_virtual_param_t *vp = ngc_virtual_params;
+            do {
+                if((ok = !strcmp(name, vp->name))) {
+                    if(vp->set) {
+                        vp->set(value);
+                        fv = vp->get();
+                        return &fv;
+                    }
+                }
+            } while(!ok && (vp = vp->next));
+        }
+    }
 
     // If not predefined attempt to set it.
     if(!ok && (ok = strlen(name) <= NGC_MAX_PARAM_LENGTH)) {
@@ -853,6 +888,37 @@ FLASHMEM float *ngc_named_param_set (char *name, float value)
     }
 
     return ok ? &rw_param->value : NULL;
+}
+
+FLASHMEM static bool _virtual_param_add (const char *name, ngc_named_param_get_ptr get_value, ngc_named_param_set_ptr set_value)
+{
+    ngc_virtual_param_t *vp = NULL, *add;
+
+    if(get_value && name && *name == '_' && !ngc_named_param_exists((char *)name) && (vp = malloc(sizeof(ngc_virtual_param_t)))) {
+
+        vp->name = name;
+        vp->get = get_value;
+        vp->set = set_value;
+        vp->next = NULL;
+
+        if((add = ngc_virtual_params)) {
+            while(add->next && (add = add->next));
+            add->next = vp;
+        } else
+            ngc_virtual_params = vp;
+    }
+
+    return !!vp;
+}
+
+FLASHMEM bool ngc_virtual_rw_param_add (const char *name, ngc_named_param_get_ptr get_value, ngc_named_param_set_ptr set_value)
+{
+    return !!set_value && _virtual_param_add(name, get_value, set_value);
+}
+
+FLASHMEM bool ngc_virtual_ro_param_add (const char *name, ngc_named_param_get_ptr get_value)
+{
+    return _virtual_param_add(name, get_value, NULL);
 }
 
 FLASHMEM static ngc_string_param_t *sp_get_by_name (char *name)

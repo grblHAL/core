@@ -35,14 +35,14 @@
 #define ST2_DEBUG 0
 #endif
 
-typedef enum {
-    State_Idle = 0,     //!< 0
-    State_Accel,        //!< 1
-    State_Run,          //!< 2
-    State_RunInfinite,  //!< 3
-    State_DecelTo,      //!< 4
-    State_Decel         //!< 5
-} st2_state_t;
+typedef struct {
+    uint8_t is_spindle    :1,
+            is_bound      :1,
+            polling       :1,
+            position_lost :1,
+            timer_32_bit  :1,
+            unused        :3;
+} st2_motor_flags_t;
 
 /*! \brief Internal structure for holding motor configuration and keeping track of its status.
 
@@ -51,27 +51,9 @@ __NOTE:__ The contents of this structure should _not_ be accessed directly by us
 struct st2_motor {
     uint_fast8_t idx;
     axes_signals_t axis;
-    bool is_spindle;
-    bool is_bound;
-    bool polling;
-    bool position_lost;
+    st2_motor_flags_t flags;
     volatile int64_t position;  // absolute step number
-    position_t ptype;           //
-    st2_state_t state;          // state machine state
-    uint32_t move;              // total steps to move
-    uint32_t step_no;           // progress of move
-    uint32_t step_run;          //
-    uint32_t step_down;         // start of down-ramp
-    uint64_t c64;               // 24.16 fixed point delay count
-    uint64_t delay;             // integer delay count
-    uint32_t first_delay;       // integer delay count
-    uint16_t min_delay;         // integer delay count
-    int32_t denom;              // 4.n+1 in ramp algo
-    uint32_t n;                 // accel/decel steps
-    float speed;                // speed steps/s
-    float prev_speed;           // speed steps/s
-    float steps_per_mm;         // acceleration steps/s^2
-    float acceleration;         // acceleration steps/s^2
+    st2_profile_t profile;
     axes_signals_t dir;         // current direction
     uint64_t next_step;
     hal_timer_t step_inject_timer;
@@ -94,9 +76,7 @@ static void motor_irq (void *context);
 */
 FLASHMEM static void st2_motor_config (st2_motor_t *motor, axis_settings_t *cfg)
 {
-    motor->steps_per_mm = cfg->steps_per_mm;
-    motor->acceleration = cfg->acceleration * cfg->steps_per_mm / 3600.0f;
-    motor->first_delay = (uint32_t)(0.676f * sqrtf(2.0f / motor->acceleration) * 1000000.0f);
+    _st2_config(&motor->profile, cfg);
 }
 
 /*! \brief Stop all motors.
@@ -110,10 +90,13 @@ FLASHMEM static void st2_reset (void)
     st2_motor_t *motor = motors;
 
     while(motor) {
-        motor->position_lost = motor->state != State_Idle;
-        motor->state = State_Idle;
+        motor->flags.position_lost = motor->profile.state != State_Idle;
+        motor->profile.state = State_Idle;
         motor = motor->next;
     }
+
+    if(on_reset)
+        on_reset();
 }
 
 /*! \brief Update basic motor configuration on settings changes.
@@ -128,7 +111,7 @@ FLASHMEM static void onSettingsChanged (settings_t *settings, settings_changed_f
     on_settings_changed(settings, changed);
 
     while(motor) {
-        if(motor->is_bound)
+        if(motor->flags.is_bound)
             st2_motor_config(motor, &settings->axis[motor->idx]);
         motor = motor->next;
     }
@@ -230,7 +213,7 @@ FLASHMEM bool st2_motor_bind_spindle (uint_fast8_t axis_idx, axis_settings_t *cf
 
         motors->idx = axis_idx;
         motors->axis.mask = 1 << axis_idx;
-        motors->is_bound = motors->is_spindle = true;
+        motors->flags.is_bound = motors->flags.is_spindle = true;
 
         spindle_motors |= motors->axis.mask;
 
@@ -249,6 +232,16 @@ FLASHMEM bool st2_motor_bind_spindle (uint_fast8_t axis_idx, axis_settings_t *cf
     return motors && axis_idx > Z_AXIS;
 }
 
+static hal_timer_t *claim_timer (st2_motor_t *motor)
+{
+    hal_timer_t t;
+
+    if(!(motor->flags.timer_32_bit = !!(t = hal.timer.claim((timer_cap_t){ .periodic = Off, .resolution = Timer_32bit }, 1000))))
+        t = hal.timer.claim((timer_cap_t){ .periodic = Off, .resolution = Timer_16bit }, 1000);
+
+    return t;
+}
+
 /*! \brief Bind and initialize a motor.
 
 Allocates and initializes motor configuration/data structure.
@@ -265,7 +258,7 @@ FLASHMEM st2_motor_t *st2_motor_init (uint_fast8_t axis_idx, bool is_spindle)
 
     if(hal.stepper.output_step && (motor = calloc(1, sizeof(st2_motor_t)))) {
 
-        if(hal.timer.claim && (motor->step_inject_timer = hal.timer.claim((timer_cap_t){ .periodic = Off }, 1000))) {
+        if(hal.timer.claim && (motor->step_inject_timer = claim_timer(motor))) {
             timer_cfg_t step_inject_cfg = {
                 .single_shot = false,
                 .timeout_callback = motor_irq
@@ -273,7 +266,7 @@ FLASHMEM st2_motor_t *st2_motor_init (uint_fast8_t axis_idx, bool is_spindle)
             step_inject_cfg.context = motor;
             hal.timer.configure(motor->step_inject_timer, &step_inject_cfg);
         } else if(hal.get_micros)
-            motor->polling = true;
+            motor->flags.polling = true;
         else {
             free(motor);
             return NULL;
@@ -283,7 +276,7 @@ FLASHMEM st2_motor_t *st2_motor_init (uint_fast8_t axis_idx, bool is_spindle)
 
             motor->idx = axis_idx;
             motor->axis.mask = 1 << axis_idx;
-            motor->is_bound = true;
+            motor->flags.is_bound = true;
 
             st2_motor_config(motor, &settings.axis[motor->idx]);
         }
@@ -313,7 +306,7 @@ FLASHMEM st2_motor_t *st2_motor_init (uint_fast8_t axis_idx, bool is_spindle)
 */
 FLASHMEM float st2_get_speed (st2_motor_t *motor)
 {
-    return motor->state == State_Idle ? 0.0f : 60.0f / ((float)motor->delay * motor->steps_per_mm / 1000000.0f);
+    return _st2_get_speed(&motor->profile);
 }
 
 /*! \brief Set speed.
@@ -331,57 +324,15 @@ FLASHMEM float st2_motor_set_speed (st2_motor_t *motor, float speed)
         return speed;
     }
 
-    motor->speed = speed > settings.axis[motor->idx].max_rate ? settings.axis[motor->idx].max_rate : speed;
-    motor->speed *= motor->steps_per_mm / 60.0f;
+    if(speed > settings.axis[motor->idx].max_rate)
+        speed = settings.axis[motor->idx].max_rate;
 
-    if(motor->speed == motor->prev_speed)
-       return motor->speed;
-
-    motor->min_delay = (uint32_t)(1000000.0f / motor->speed);
-    motor->n         = (uint32_t)((motor->speed * motor->speed) / (2.0f * motor->acceleration));
-
-    if(motor->n == 0)
-        motor->n = 1;
-
-    if(motor->state != State_Idle) {
-
-        int32_t pn = motor->n - ((motor->denom - 1) >> 2);
-
-        if(pn == 0)
-            return motor->speed;
-
-#if ST2_DEBUG
-        debug_printf("!!: %d %.2f %.3f %d %d %d %d", motor->state, motor->prev_speed, motor->speed, motor->denom - 1, motor->n, pn, motor->denom);
-#endif
-
-        if(motor->speed > motor->prev_speed) {
-            if(motor->state == State_Accel)
-                motor->step_run += pn;
-            else {
-                motor->step_run = motor->step_no + pn;
-                motor->state = State_Accel;
-            }
-        } else {
-            if(motor->speed == 0.0f)
-                motor->state = State_Decel;
-            if(motor->state != State_Decel) {
-                motor->step_run = motor->step_no - pn;
-                motor->state = State_DecelTo;
-            }
-        }
-    }
-
-    motor->prev_speed = motor->speed;
-
-    if(motor->first_delay < motor->min_delay)
-        motor->first_delay = motor->min_delay;
-
-    return motor->prev_speed;
+    return _st2_set_speed(&motor->profile, speed * (motor->profile.steps_per_mm / 60.0f));
 }
 
 /*! \brief Command a motor to move.
 
-__NOTE:__ For all motions except single steps st2_motor_run() has to be called from
+__NOTE:__ When not driven by timer interrupt st2_motor_run() has to be called from
 the foreground process at a high frequency in order for steps to be generated.
 Typically this is done by registering a function with the hal.on_execute_realtime event
 that calls st2_motor_run().
@@ -396,25 +347,12 @@ FLASHMEM bool st2_motor_move (st2_motor_t *motor, const float move, const float 
     if(speed == 0.0f)
         return false;
 
-    motor->ptype = type;
     motor->dir.bits = (move < 0.0f ? motor->axis.bits : 0);
-
-    switch(type) {
-
-        case Stepper2_Steps:
-        case Stepper2_InfiniteSteps:
-            motor->move = (uint32_t)fabsf(move);
-            break;
-
-        case Stepper2_mm:
-            motor->move = (uint32_t)lroundf(fabsf(move * motor->steps_per_mm));
-            break;
-    }
 
     st2_motor_set_speed(motor, speed);
 
-    if(motor->move == 1 && type == Stepper2_Steps) {
-        if(motor->state == State_Idle) {
+    if(_st2_calc_steps(&motor->profile, move, type) == 1 && type == Stepper2_Steps) {
+        if(motor->profile.state == State_Idle) {
 
             if(motor->dir.bits)
                 motor->position--;
@@ -424,38 +362,23 @@ FLASHMEM bool st2_motor_move (st2_motor_t *motor, const float move, const float 
             hal.stepper.output_step(motor->axis, motor->dir);
         }
 
-        return motor->state == State_Idle;
+        return motor->profile.state == State_Idle;
     }
 
-    if(type == Stepper2_InfiniteSteps) {
-        motor->step_run  = motor->n;
-        motor->step_down = motor->n + 1;
-    } else if(motor->move != 0) {
-        motor->step_run  = (motor->move - ((motor->move & 0x0001) ? 1 : 0)) >> 1;
-        if(motor->step_run > motor->n)
-            motor->step_run = motor->n;
-        motor->step_down = motor->move - motor->step_run;
-    } else
+    if(!_st2_start(&motor->profile))
         return false;
 
-    motor->state     = State_Accel;
-    motor->delay     = motor->first_delay;
-    motor->c64       = motor->delay << 16;  // keep delay in 24.16 fixed-point format for ramp calcs
-    motor->denom     = 1;                   // 4.n + 1, n = 0
-    motor->step_no   = 0;                   // step counter
-    motor->next_step = hal.get_micros();
-
     if(motor->step_inject_timer)
-        hal.timer.start(motor->step_inject_timer, motor->delay);
+        hal.timer.start(motor->step_inject_timer, motor->profile.delay);
 
 #if ST2_DEBUG
-    uint32_t nn = motor->n;
-    float cn = motor->first_delay;
+    uint32_t nn = motor->profile.n;
+    float cn = motor->profile.first_delay;
     do {
         cn -= (2.0f * cn) / (4.0f * nn + 1);
     } while(--nn);
 
-    debug_printf("mv: %.2f %.3f %d %d %d %.2f %.2f", speed, motor->steps_per_mm, motor->n, move, motor->delay, cn, motor->speed);
+    debug_printf("mv: %.2f %.3f %d %d %d %.2f %.2f", speed, motor->profile.steps_per_mm, motor->profile.n, move, motor->profile.delay, cn, motor->profile.speed);
 #endif
 
     return true;
@@ -479,97 +402,40 @@ __NOTE:__ position will _not_ be set if motor is moving.
 */
 FLASHMEM bool st2_set_position (st2_motor_t *motor, int64_t position)
 {
-    if(motor->state == State_Idle) {
+    if(motor->profile.state == State_Idle) {
         motor->position = position;
-        motor->position_lost = false;
+        motor->flags.position_lost = false;
     }
 
-    return motor->state == State_Idle;
+    return motor->profile.state == State_Idle;
 }
 
 /*! \brief Execute a move commanded by st2_motor_move().
-\param motor pointer to a \a st2_motor structure.
+\param motor pointer to a \a st2_profile_t structure.
 \returns \a true if motor is moving (steps are output), \a false if not (motion is completed).
 */
 __attribute__((always_inline)) static inline bool _motor_run (st2_motor_t *motor)
 {
-    st2_state_t prev_state = motor->state;
+    st2_state_t prev_state = motor->profile.state;
 
-    switch(motor->state) {
+    if(_st2_run(&motor->profile)) {
 
-        case State_Accel:
-            if(motor->step_no != motor->step_run) {
-                motor->denom += 4;
-                motor->c64 -= (motor->c64 << 1) / motor->denom; // ramp algorithm
-                motor->delay = (motor->c64 + 32768) >> 16;      // round 24.16 format -> int16
-                if (motor->delay < motor->min_delay) {          // go to constant speed?
-              //      motor->denom -= 6; // causes issues with speed override for infinite moves
-                    motor->state = motor->ptype == Stepper2_InfiniteSteps ? State_RunInfinite : State_Run;
-                    motor->step_down = motor->move - motor->step_no;
-                    motor->delay = motor->min_delay;
-                }
-            } else {
-                motor->state = motor->step_run == motor->step_down ? State_Decel : (motor->ptype == Stepper2_InfiniteSteps ? State_RunInfinite : State_Run);
-                if(motor->state != State_Decel)
-                    motor->delay = motor->min_delay;
-            }
-            break;
+        hal.stepper.output_step(motor->axis, motor->dir);
 
-        case State_Run:
-            if(motor->step_no == motor->step_down)
-                motor->state = State_Decel;
-            break;
-
-        case State_Decel:
-            if(motor->denom < 2) { // done?
-                motor->state = State_Idle;
-                motor->prev_speed = 0.0f;
-                motor->n = 0;
-#if ST2_DEBUG
-                debug_writeln(uitoa(motor->position));
-#endif
-            } else {
-                motor->c64 += (motor->c64 << 1) / motor->denom; // ramp algorithm
-                motor->delay = (motor->c64 - 32768) >> 16;      // round 24.16 format -> int16
-                motor->denom -= 4;
-            }
-            break;
-
-        case State_DecelTo:
-            if(motor->step_no != motor->step_run) {
-                motor->denom -= 4;
-                motor->c64 += (motor->c64 << 1) / motor->denom; // ramp algorithm
-                motor->delay = (motor->c64 + 32768) >> 16;      // round 24.16 format -> int16
-            } else {
-                motor->delay = motor->min_delay;
-                motor->state = motor->ptype == Stepper2_InfiniteSteps ? State_RunInfinite : State_Run;
-            }
-            break;
-
-        default:
-            break;
-    }
-
-    // output step;
-    hal.stepper.output_step(motor->axis, motor->dir);
-
-    if(motor->dir.bits)
-        motor->position--;
-    else
-        motor->position++;
-
-    motor->step_no++;
-
-    if(motor->state == State_Idle && prev_state != State_Idle && motor->on_stopped)
+        if(motor->dir.bits)
+            motor->position--;
+        else
+            motor->position++;
+    } else if(prev_state != State_Idle && motor->on_stopped)
         task_add_delayed(motor->on_stopped, motor, 2);
 
-    return motor->state != State_Idle;
+    return motor->profile.state != State_Idle;
 }
 
 ISR_CODE static void ISR_FUNC(motor_irq)(void *context)
 {
     if(_motor_run((st2_motor_t *)context))
-        hal.timer.start(((st2_motor_t *)context)->step_inject_timer, ((st2_motor_t *)context)->delay);
+        hal.timer.start(((st2_motor_t *)context)->step_inject_timer, ((st2_motor_t *)context)->profile.delay);
     else
         hal.timer.stop(((st2_motor_t *)context)->step_inject_timer);
 }
@@ -583,11 +449,11 @@ when step output is not driven by interrupts (polling mode).
 */
 FLASHMEM bool st2_motor_run (st2_motor_t *motor)
 {
-    if(motor->polling && motor->state != State_Idle) {
+    if(motor->flags.polling && motor->profile.state != State_Idle) {
 
         uint64_t t = hal.get_micros();
 
-        if(t - motor->next_step >= motor->delay) {
+        if(t - motor->next_step >= motor->profile.delay) {
 
             _motor_run(motor);
 
@@ -595,7 +461,7 @@ FLASHMEM bool st2_motor_run (st2_motor_t *motor)
         }
     }
 
-    return motor->state != State_Idle;
+    return motor->profile.state != State_Idle;
 }
 
 /*! \brief Stop a move.
@@ -605,27 +471,7 @@ This will initiate deceleration to stop the motor if it is running.
 */
 FLASHMEM bool st2_motor_stop (st2_motor_t *motor)
 {
-    switch(motor->state) {
-
-        case State_Accel:
-            motor->step_no = motor->step_down - 1;
-            motor->step_run = motor->step_down;
-            break;
-
-        case State_Run:
-            motor->step_no = motor->step_down - 1;
-            break;
-
-        case State_RunInfinite:
-        case State_DecelTo:
-            motor->state = State_Decel;
-            break;
-
-        default:
-            break;
-    }
-
-    return motor->state != State_Idle;
+    return _st2_stop(&motor->profile);
 }
 
 /*! \brief Check if motor is run by polling.
@@ -634,7 +480,7 @@ FLASHMEM bool st2_motor_stop (st2_motor_t *motor)
 */
 bool st2_motor_poll (st2_motor_t *motor)
 {
-    return motor->polling;
+    return motor->flags.polling;
 }
 
 /*! \brief Check if motor is running.
@@ -643,7 +489,7 @@ bool st2_motor_poll (st2_motor_t *motor)
 */
 bool st2_motor_running (st2_motor_t *motor)
 {
-    return motor->state != State_Idle;
+    return _st2_running(&motor->profile);
 }
 
 /*! \brief Check if motor is running in cruising phase.
@@ -652,5 +498,5 @@ bool st2_motor_running (st2_motor_t *motor)
 */
 bool st2_motor_cruising (st2_motor_t *motor)
 {
-    return motor->state == State_Run || motor->state == State_RunInfinite;
+    return _st2_cruising(&motor->profile);
 }

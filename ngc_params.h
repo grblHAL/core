@@ -122,6 +122,9 @@ typedef enum {
     G65Macro_LastInbuilt         = G65Macro_ModbusMessage
 } g65_inbuilt_t;
 
+typedef float (*ngc_named_param_get_ptr)(void);
+typedef void (*ngc_named_param_set_ptr)(float value);
+
 void ngc_params_init (void);
 uint8_t ngc_float_decimals (void);
 bool ngc_param_get (ngc_param_id_t id, float *value);
@@ -132,6 +135,8 @@ bool ngc_named_param_get (char *name, float *value);
 float ngc_named_param_get_by_id (ncg_name_param_id_t id);
 float *ngc_named_param_set (char *name, float value);
 bool ngc_named_param_exists (char *name);
+bool ngc_virtual_ro_param_add (const char *name, ngc_named_param_get_ptr get);
+bool ngc_virtual_rw_param_add (const char *name, ngc_named_param_get_ptr get, ngc_named_param_set_ptr set);
 
 bool ngc_string_param_set (ngc_param_id_t id, char *value);
 ngc_string_id_t ngc_string_param_set_name (char *name);

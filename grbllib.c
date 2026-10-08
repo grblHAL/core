@@ -53,9 +53,8 @@ typedef union {
         uint8_t init        :1,
                 setup       :1,
                 spindle     :1,
-                amass       :1,
                 pulse_delay :1,
-                unused      :3;
+                unused      :4;
     };
 } driver_startup_t;
 
@@ -65,7 +64,7 @@ typedef union {
 
 typedef struct core_task {
     uint32_t time;
-    uint32_t lock;
+    volatile uint32_t lock;
     foreground_task_ptr fn;
     void *data;
     volatile struct core_task *next;
@@ -549,6 +548,7 @@ __attribute__((always_inline)) static inline core_task_t *task_alloc (void)
 void task_execute (bool wait)
 {
     static uint32_t last_ms = 0;
+    static volatile bool lock = false;
 
     core_task_t *task;
 
@@ -600,10 +600,17 @@ void task_execute (bool wait)
         }
     }
 
-    if(wait)
-        grbl.on_execute_delay(state_get());
-    else
-        grbl.on_execute_realtime(state_get());
+    if(!lock) {
+
+        lock = true;
+
+        if(wait)
+            grbl.on_execute_delay(state_get());
+        else
+            grbl.on_execute_realtime(state_get());
+
+        lock = false;
+    }
 }
 
 ISR_CODE bool ISR_FUNC(task_add_delayed)(foreground_task_ptr fn, void *data, uint32_t delay_ms)

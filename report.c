@@ -1438,6 +1438,15 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
             if(ctrl_pin_state.value)
                 append = control_signals_tostring(append, ctrl_pin_state);
 
+            if(report->flags.all && hal.probe.is_triggered) {
+                if(hal.driver_cap.probe && hal.probe.is_triggered(Probe_Default))
+                    *append++ = 'I';
+                if(hal.driver_cap.toolsetter && hal.probe.is_triggered(Probe_Toolsetter))
+                    *append++ = 'J';
+                if(hal.driver_cap.probe2 && hal.probe.is_triggered(Probe_2))
+                    *append++ = 'K';
+            }
+
             *append = '\0';
             stream_write(buf);
         }

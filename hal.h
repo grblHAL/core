@@ -53,7 +53,6 @@ typedef union {
                  limits_pull_up              :1, //!< Pullup resistors for limit inputs are are supported.
                  control_pull_up             :1, //!< Pullup resistors for control inputs are supported.
                  probe_pull_up               :1, //!< Pullup resistors for probe inputs are supported.
-                 amass_level                 :2, //!< Deprecated, to be removed.
                  spindle_encoder             :1, //!< Spindle encoder is supported.
                  spindle_encoder_index_event :1, //!< Spindle encoder is supported.
                  spindle_sync                :1, //!< Spindle synced motion is supported.
@@ -77,7 +76,7 @@ typedef union {
                  rtc_set                     :1,
                  bltouch_probe               :1,
                  modbus_rtu                  :1, // Modbus RTU stream is enabled.
-                 unassigned                  :3;
+                 unassigned                  :5;
     };
 } driver_cap_t;
 
@@ -548,6 +547,11 @@ typedef struct {
  *  RTC (Real Time Clock  *
  **************************/
 
+/*! \brief Pointer to function for getting the current time.
+\param datetime pointer to a \a timeval struct.
+\\returns \a true if successful.
+*/typedef bool (*rtc_get_time_ptr)(struct timeval *time);
+
 /*! \brief Pointer to function for setting the current datetime.
 \param datetime pointer to a \a tm struct.
 \\returns \a true if successful.
@@ -561,6 +565,7 @@ typedef bool (*rtc_get_datetime_ptr)(struct tm *datetime);
 typedef bool (*rtc_set_datetime_ptr)(struct tm *datetime);
 
 typedef struct {
+    rtc_get_time_ptr get_time;          //!< Optional handler getting the current time.
     rtc_get_datetime_ptr get_datetime;  //!< Optional handler getting the current datetime.
     rtc_set_datetime_ptr set_datetime;  //!< Optional handler setting the current datetime.
 } rtc_ptrs_t;
