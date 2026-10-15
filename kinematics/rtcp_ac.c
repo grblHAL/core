@@ -315,7 +315,7 @@ static coord_data_t *kinematics_segment_line (coord_data_t *target, coord_data_t
     static bool segment;
     static uint_fast16_t iterations, idx;
     static float total_len, step_len, target_len;
-    static coord_data_t trsf, delta;
+    static coord_data_t trsf, delta, segment_start;
 
     if(init) {
 
@@ -345,6 +345,7 @@ static coord_data_t *kinematics_segment_line (coord_data_t *target, coord_data_t
             step_len = total_len / (float)iterations;
             iterations++;
         }
+        memcpy(&segment_start, &start_rtcp, sizeof(coord_data_t));
         memcpy(&start_rtcp, &end_rtcp, sizeof(coord_data_t));
 
     } else if(segment) {
@@ -370,11 +371,11 @@ static coord_data_t *kinematics_segment_line (coord_data_t *target, coord_data_t
         }
 
         coord_data_t out = {
-            .x = start_rtcp.x + s_out * delta.x,
-            .y = start_rtcp.y + s_out * delta.y,
-            .z = start_rtcp.z + s_out * delta.z,
-            .a = start_rtcp.a + s_out * delta.a,
-            .c = start_rtcp.c + s_out * delta.c
+            .x = segment_start.x + s_out * delta.x,
+            .y = segment_start.y + s_out * delta.y,
+            .z = segment_start.z + s_out * delta.z,
+            .a = segment_start.a + s_out * delta.a,
+            .c = segment_start.c + s_out * delta.c
         };
 
         rtcp_forward(&trsf, &out);

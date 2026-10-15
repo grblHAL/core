@@ -303,28 +303,44 @@ static bool wp_homing_cycle (axes_signals_t cycle, axes_signals_t auto_square)
     return false;
 }
 
-
 static void onSettingsChanged (settings_t *settings, settings_changed_flags_t changed)
 {
     static bool init_ok = false;
+    static float steps_per_mm[2];
+    static float max_travel[2];
+
+    bool wps_changed;
 
     on_settings_changed(settings, changed);
 
-    machine.width_mm = -settings->axis[A_MOTOR].max_travel;
-    machine.width = (int32_t)(machine.width_mm * settings->axis[A_MOTOR].steps_per_mm);
-    machine.width_2 = machine.width >> 1;
-    machine.width_pow = machine.width_mm * machine.width_mm;
-    machine.height = (int32_t)((float)settings->axis[B_MOTOR].max_travel * settings->axis[B_MOTOR].steps_per_mm);
-    machine.height_2 = machine.height >> 1;
-    machine.spindlezero[A_MOTOR] = 0; // machine.width_2;
-    machine.spindlezero[B_MOTOR] = 0; // machine.height_2;
-    machine.spindlezero_mm[A_MOTOR] = (float)machine.spindlezero[A_MOTOR] / settings->axis[A_MOTOR].steps_per_mm;
-    machine.spindlezero_mm[B_MOTOR] = (float)machine.spindlezero[B_MOTOR] / settings->axis[B_MOTOR].steps_per_mm;
+    if(!(wps_changed = !init_ok))
+        wps_changed = max_travel[0] != settings->axis[A_MOTOR].max_travel ||
+                       max_travel[1] != settings->axis[B_MOTOR].max_travel ||
+                        steps_per_mm[0] != settings->axis[A_MOTOR].steps_per_mm ||
+                         steps_per_mm[1] != settings->axis[B_MOTOR].steps_per_mm;
 
-    if(!init_ok) {
-        sys.position[B_MOTOR] = machine.width;
-        init_ok = false;
-    } // else do what? recalculate or issue warning?
+    if(wps_changed) {
+        machine.width_mm = -settings->axis[A_MOTOR].max_travel;
+        machine.width = (int32_t)(machine.width_mm * settings->axis[A_MOTOR].steps_per_mm);
+        machine.width_2 = machine.width >> 1;
+        machine.width_pow = machine.width_mm * machine.width_mm;
+        machine.height = (int32_t)((float)settings->axis[B_MOTOR].max_travel * settings->axis[B_MOTOR].steps_per_mm);
+        machine.height_2 = machine.height >> 1;
+        machine.spindlezero[A_MOTOR] = 0; // machine.width_2;
+        machine.spindlezero[B_MOTOR] = 0; // machine.height_2;
+        machine.spindlezero_mm[A_MOTOR] = (float)machine.spindlezero[A_MOTOR] / settings->axis[A_MOTOR].steps_per_mm;
+        machine.spindlezero_mm[B_MOTOR] = (float)machine.spindlezero[B_MOTOR] / settings->axis[B_MOTOR].steps_per_mm;
+
+        max_travel[0] = settings->axis[A_MOTOR].max_travel;
+        max_travel[1] = settings->axis[B_MOTOR].max_travel;
+        steps_per_mm[0] = settings->axis[A_MOTOR].steps_per_mm;
+        steps_per_mm[1] = settings->axis[B_MOTOR].steps_per_mm;
+
+        if(!init_ok) {
+            init_ok = true;
+            sys.position[B_MOTOR] = machine.width;
+        } // else do what? recalculate or issue warning?
+    }
 }
 
 // Initialize API pointers for Wall Plotter kinematics

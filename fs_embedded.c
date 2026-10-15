@@ -115,12 +115,14 @@ FLASHMEM static size_t fs_tell (vfs_file_t *file)
 
 FLASHMEM static int fs_seek (vfs_file_t *file, size_t offset)
 {
-    embedded_filehandle_t *fileh = (embedded_filehandle_t *)&file->handle;
+    embedded_filehandle_t *fileh;
 
-    if(fileh->file->size <= offset)
+    vfs_errno = ENOENT;
+
+    if((fileh = (embedded_filehandle_t *)&file->handle) && (vfs_errno = offset <= fileh->file->size ? 0 : EINVAL) == 0)
         fileh->remaining = fileh->file->size - offset;
 
-    return fileh->file->size < offset ? fileh->remaining : -1;
+    return vfs_errno == 0 ? 0 : -1;
 }
 
 FLASHMEM static bool fs_eof (vfs_file_t *file)

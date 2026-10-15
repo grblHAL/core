@@ -842,7 +842,7 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(uint8_t c)
     // Characters with functions assigned are always acted upon even when the input stream
     // is redirected to a non-interactive stream such as from a SD card.
 
-    switch ((unsigned char)c) {
+    switch((unsigned char)c) {
 
         case '\n':
         case '\r':
@@ -882,8 +882,10 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(uint8_t c)
 
         case CMD_STATUS_REPORT:
         case 0x05:
-            if(!sys.flags.auto_reporting)
+            if(!sys.flags.auto_reporting) {
+                hal.stream.report.flags.extended = settings.status_report.extended;
                 system_set_exec_state_flag(EXEC_STATUS_REPORT);
+            }
             drop = true;
             break;
 
@@ -985,22 +987,27 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(uint8_t c)
             enqueue_coolant_override((uint8_t)c);
             break;
 
+        case ASCII_BS:
+        case ASCII_DEL:
+            drop = !!hal.stream.file; // Editing file streams is not allowed. TODO: Somehow add redirected streams.
+            break;
+
         case CMD_REBOOT:
             if(esc && hal.reboot)
                 hal.reboot(); // Force MCU reboot. This call should never return.
             break;
 
         default:
-            if(((unsigned char)c < ' ' && c != ASCII_BS) || ((unsigned char)c > ASCII_DEL && (unsigned char)c <= 0xBF))
+            if((unsigned char)c < ' ' || ((unsigned char)c > ASCII_DEL && (unsigned char)c <= 0xBF))
                 drop = grbl.on_unknown_realtime_cmd == NULL || grbl.on_unknown_realtime_cmd(c);
             break;
     }
 
     // 2. Process printable ASCII characters and top-bit set characters
     //    If legacy realtime commands are disabled they are returned to the input stream
-    //    when appearing in settings ($ commands) or comments
+    //    when appearing in settings ($ commands) or comments.
 
-    if(!drop) switch ((unsigned char)c) {
+    if(!drop) switch((unsigned char)c) {
 
         case CMD_STATUS_REPORT_LEGACY:
             if(!line.flags.keep_rt_commands || settings.flags.legacy_rt_commands) {
@@ -1021,7 +1028,7 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(uint8_t c)
             break;
 
         default: // Drop top bit set characters
-            drop = !(line.flags.keep_rt_commands || (unsigned char)c < 0x7F);
+            drop = !(line.flags.keep_rt_commands || (unsigned char)c <= 0x7F);
             break;
     }
 

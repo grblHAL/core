@@ -277,6 +277,21 @@ ISR_CODE void ISR_FUNC(st_go_idle)(void)
         hal.stepper.enable(settings.steppers.idle_lock_time == 255 ? (axes_signals_t){AXES_BITMASK} : settings.steppers.energize, true);
 }
 
+// Set synced I/O outputs
+FLASHMEM static void ioport_out (void *data)
+{
+    output_command_t *cmd = data;
+
+    do {
+        if(cmd->is_digital)
+            ioport_digital_out(cmd->port, cmd->value != 0.0f);
+        else
+            ioport_analog_out(cmd->port, cmd->value);
+    } while((cmd = cmd->next));
+
+    gc_clear_output_commands(data);
+}
+
 bool st_is_stepping (void)
 {
     return stepping && st.exec_block;
@@ -506,14 +521,10 @@ ISR_CODE void ISR_FUNC(stepper_driver_interrupt_handler)(void)
                 if(st.exec_block->overrides.sync)
                     sys.override.control = st.exec_block->overrides;
 
-                // Execute output commands to be synchronized with motion
-                while(st.exec_block->output_commands) {
-                    output_command_t *cmd = st.exec_block->output_commands;
-                    if(cmd->is_digital)
-                        ioport_digital_out(cmd->port, cmd->value != 0.0f);
-                    else
-                        ioport_analog_out(cmd->port, cmd->value);
-                    st.exec_block->output_commands = cmd->next;
+                // Execute output commands to be synchronized with motion in the foreground
+                if(st.exec_block->output_commands) {
+                    task_add_immediate(ioport_out, (void *)st.exec_block->output_commands);
+                    st.exec_block->output_commands = NULL;
                 }
 
                 // Enqueue any message to be printed (by foreground process)
@@ -738,6 +749,7 @@ FLASHMEM void st_reset (void)
     for(idx = 0 ; idx <= idx_max ; idx++) {
         st_block_buffer[idx].next = &st_block_buffer[idx == idx_max ? 0 : idx + 1];
         st_block_buffer[idx].id = idx + 1;
+        st_block_buffer[idx].output_commands = gc_clear_output_commands(st_block_buffer[idx].output_commands);
     }
 
     // Set up segments ringbuffer as circular linked list, add id and clear AMASS level
@@ -942,7 +954,11 @@ void st_prep_buffer (void)
                 st_prep_block->offset_id = pl_block->offset_id;
                 st_prep_block->backlash_motion = pl_block->condition.backlash_motion;
                 st_prep_block->message = pl_block->message;
+#if PLANNER_ADD_MOTION_MODE
+                st_prep_block->motion_mode = pl_block->motion_mode;
+#endif
                 pl_block->message = NULL;
+                pl_block->output_commands = NULL;
 
                 // Initialize segment buffer data for generating the segments.
                 prep.steps_per_mm = st_prep_block->steps_per_mm;
@@ -955,6 +971,7 @@ void st_prep_buffer (void)
 #ifdef KINEMATICS_API
                 prep.rate_multiplier = pl_block->rate_multiplier;
 #endif
+
                 if (sys.step_control.execute_hold || prep.recalculate.decel_override) {
                     // New block loaded mid-hold. Override planner block entry speed to enforce deceleration.
                     prep.current_speed = prep.exit_speed;
@@ -1449,6 +1466,15 @@ float st_get_realtime_rate (void)
             ? prep.current_speed
 #endif
             : 0.0f;
+}
+
+motion_mode_t st_get_motion_mode (void)
+{
+#if PLANNER_ADD_MOTION_MODE
+    return st.exec_block ? st.exec_block->motion_mode : gc_state.modal.motion;
+#else
+    return gc_state.modal.motion;
+#endif
 }
 
 offset_id_t st_get_offset_id (void)

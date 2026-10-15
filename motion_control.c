@@ -57,6 +57,9 @@ void mc_backlash_init (axes_signals_t axes)
                 backlash_comp.values[idx] = (float)steps / settings.axis[idx].steps_per_mm;
                 bit_true(backlash_enabled.mask, bit(idx));
                 BIT_SET(dir_negative.mask, bit(idx), bit_isfalse(settings.homing.dir_mask.mask, bit(idx)));
+            } else {
+                backlash_comp.values[idx] = 0.0f;
+                bit_false(backlash_enabled.mask, bit(idx));
             }
         }
     } while(idx);
@@ -626,8 +629,14 @@ FLASHMEM bool mc_canned_drill (motion_mode_t motion, float *target, plan_line_da
         if(repeats && gc_state.modal.distance_incremental) {
             position[plane.axis_0] += canned->xyz[plane.axis_0];
             position[plane.axis_1] += canned->xyz[plane.axis_1];
+#if PLANNER_ADD_MOTION_MODE
+//??            pl_data->motion_mode = MotionMode_Seek;
+#endif
             if(!mc_line(position, pl_data))
                 return false;
+#if PLANNER_ADD_MOTION_MODE
+//??            pl_data->motion_mode = motion;
+#endif
         }
     }
 

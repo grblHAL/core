@@ -600,7 +600,7 @@ static bool delta_check_travel_limits (float *target, axes_signals_t axes, bool 
 
     if(!is_cartesian)
         memcpy(&pos.values, target, sizeof(coord_data_t));
-    else if(delta_calcInverse((coord_data_t *)target, &pos) || !pos_ok(&pos))
+    else if(!delta_calcInverse((coord_data_t *)target, &pos) || !pos_ok(&pos))
         return false;
 
     if(sys.homed.mask) do {

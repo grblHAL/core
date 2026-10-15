@@ -307,9 +307,10 @@ FLASHMEM static stream_connection_t *add_connection (const io_stream_t *stream)
         last->next = connection;
     }
 
-    connection->is_up = stream->is_connected ?
-                         stream->is_connected :
-                          (stream->state.is_usb && base.stream != stream ? is_not_connected : stream_connected);
+    if(connection)
+        connection->is_up = stream->is_connected ?
+                             stream->is_connected :
+                              (stream->state.is_usb && base.stream != stream ? is_not_connected : stream_connected);
 
     return connection;
 }
@@ -660,6 +661,9 @@ static void stream_mpg_write (void *cmd)
             mpg.stream.report.flags.value = report_get_rt_flags_all().value;
             // no break
         case CMD_STATUS_REPORT:
+            if(!mpg.stream.report.flags.all)
+                mpg.stream.report.flags.extended = settings.status_report.extended;
+            // no break
         case CMD_STATUS_REPORT_LEGACY:
             report_realtime_status(mpg.stream.write, &mpg.stream.report);
             break;
@@ -749,7 +753,7 @@ FLASHMEM bool stream_mpg_register (const io_stream_t *stream, bool rx_only, stre
         mpg.flags.mpg_control = Off;
 
 #if MPG_BUFFER_SIZE
-        mpg.rx_buf = calloc(sizeof(stream_mpg_buffer_t), 1);
+        mpg.rx_buf = calloc(1, sizeof(stream_mpg_buffer_t));
 #endif
         if(write_char)
             mpg.stream.set_enqueue_rt_handler(write_char);

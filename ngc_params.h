@@ -133,7 +133,7 @@ bool ngc_param_is_rw (ngc_param_id_t id);
 bool ngc_param_exists (ngc_param_id_t id);
 bool ngc_named_param_get (char *name, float *value);
 float ngc_named_param_get_by_id (ncg_name_param_id_t id);
-float *ngc_named_param_set (char *name, float value);
+bool ngc_named_param_set (char *name, float value);
 bool ngc_named_param_exists (char *name);
 bool ngc_virtual_ro_param_add (const char *name, ngc_named_param_get_ptr get);
 bool ngc_virtual_rw_param_add (const char *name, ngc_named_param_get_ptr get, ngc_named_param_set_ptr set);

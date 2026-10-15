@@ -78,6 +78,7 @@ Helper functions for saving away and restoring a stream input buffer. _Not refer
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "probe.h"
 #include "vfs.h"
 
 typedef enum {
@@ -187,7 +188,8 @@ typedef union {
                  probe_id       :1, //!< Probe changed.
                  distance_to_go :1, //!< Distance to go.
                  probe_protect  :1, //!< Probe protection state changed.
-                 unassigned     :8, //
+                 unassigned     :7, //
+                 extended       :1, //!< 0x80 request
                  force_wco      :1, //!< Add work coordinates (due to WCO changed during motion).
                  cycle_start    :1, //!< Cycle start signal triggered. __NOTE:__ do __NOT__ add to Report_All enum above!
                  all            :1; //!< Set when CMD_STATUS_REPORT_ALL is requested, may be used by user code.
@@ -198,6 +200,7 @@ typedef struct {
     report_tracking_flags_t flags;
     uint8_t override_counter;       //!< Tracks when to add override data to status reports.
     uint8_t wco_counter;            //!< Tracks when to add work coordinate offset data to status reports.
+    probe_states_t probe_states;    //!< Last polled probe triggered state for all available probes.
 } status_report_tracking_t;
 
 struct io_stream_properties;

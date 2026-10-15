@@ -635,12 +635,10 @@ FLASHMEM static status_code_t build_info (sys_state_t state, char *args)
         char info[sizeof(stored_line_t)];
         settings_read_build_info(info);
         report_build_info(info, false);
-    }
-  #if !DISABLE_BUILD_INFO_WRITE_COMMAND
-    else if (strlen(args) < (sizeof(stored_line_t) - 1))
-        settings_write_build_info(args);
-  #endif
-    else
+    } else
+ #if !DISABLE_BUILD_INFO_WRITE_COMMAND
+    if(!settings_write_build_info(args))
+ #endif
         return Status_InvalidStatement;
 
     return Status_OK;

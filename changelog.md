@@ -1,5 +1,35 @@
 ## grblHAL changelog
 
+<a name="202601015">Build 20261015
+
+Core:
+
+* Fix for motion synchronized output (`M62`, `M63` and `M67`) sometimes hanging/stalling the controller etc. Ref. issue [#1034](https://github.com/grblHAL/core/issues/1034).
+
+* Added _Extended_ option to setting `$10` - _Status report options_. The option will be used to control availability of extra elements/data in the real time report when the report is requested by the `0x80` character.
+
+* Added `IJK/ijk` pin statuses to the `Pn:` element in the real time report.  
+`I/i` is for the primary probe, `J/j` for the toolsetter and `K/k` for the secondary probe.  
+These will added if a full status report is requested with `0x87` or when it is requested with `0x80`, there is a probe _status change_ and the `$10` _Extended_ option is enabled.  
+Upper case letters means the probe is in a triggered state, lower case not triggered.
+> [!NOTE]
+> The full status report only returns the upper case version when the related probe is triggered.
+> The legacy status request with the `?` character does not add these.
+
+* With the help of @petervanderwalt and SI-agent(s) a large set of [unit tests](https://github.com/grblHAL/Unit_tests#readme) for the core has been created and run. Many issues found has been fixed, and a few has been added to the todo list. Most were minor and would only cause problems from bad or unlikely input, or bad plugin code. In general the changes can be regarded as "hardening" of the codebase.
+> [!NOTE]
+> Some of the fixes required a bit of refactoring of the codebase, this may have introduced regressions. Please report any irregular behaviour.
+
+Drivers:
+
+* RP2040: changed `$REBOOT` command implementation.
+
+* SAM3X8E: fixed regression causing the processor to hang. Ref. issue [#37](https://github.com/grblHAL/SAM3X8E/issues/37).
+
+* ST32F4xx: fix for compilation error when motor fault input was enabled. Ref. issue [#308](https://github.com/grblHAL/STM32F4xx/issues/308).
+
+---
+
 <a name="202601008">Build 20261008
 
 Core, for programmers:
@@ -8,7 +38,7 @@ Core, for programmers:
 
 * Added `ngc_virtual_ro_param_add(const char *name, ngc_named_param_get_ptr get)`, add a virtual read-only global parameter whose value is returned by the `get` function, returns `true` if successful. `name` must start with an underscore (`_`) character and be unique. This will allow plugins to add custom global parameters.
  
-* Added `ngc_virtual_rw_param_add(const char *name, ngc_named_param_get_ptr get, , ngc_named_param_get_ptr set)`, add a virtual global parameter whose value is returned by the `get` function and is set by the `set` function , returns `true` if successful. `name` must start with an underscore (`_`) character and be unique. This will allow plugins to add custom global parameters than can be used to control outputs, set internal values etc.
+* Added `ngc_virtual_rw_param_add(const char *name, ngc_named_param_get_ptr get, ngc_named_param_get_ptr set)`, add a virtual global parameter whose value is returned by the `get` function and is set by the `set` function , returns `true` if successful. `name` must start with an underscore (`_`) character and be unique. This will allow plugins to add custom global parameters than can be used to control outputs, set internal values etc.
  
 * Added triggered status for all available probes to the full real-time report (`0x87`) `Pn:` element: `I` - primary probe, `J` - toolsetter, `K` - secondary probe.
 
@@ -22,7 +52,7 @@ Drivers:
 
 * All, updated for removal of `hal.driver_cap.amass` property, improved main IRQ disable/enable code.
 
-* RP2040: add support for the new optional `hal.rtc.get_time` call, ref. discussion [#208](https://github.com/grblHAL/RP2040/discussions/208).
+* RP2040: added support for the new optional `hal.rtc.get_time` call, ref. discussion [#208](https://github.com/grblHAL/RP2040/discussions/208).
 > [!NOTE]
 > Resolution for RP2040 is 1s, RP2350 is 1ms.
 
@@ -30,7 +60,7 @@ Plugins:
 
 * Laser, coolant: now adds virtual named parameters `_laser_coolant_ok` and `_laser_coolant_temp` for accessing input state, mainly as an example.
 
-* Misc, MCP23017: - fix for not handling inversion of output signals dynamically.
+* Misc, MCP23017: fix for not handling inversion of output signals dynamically.
 
 ---
 

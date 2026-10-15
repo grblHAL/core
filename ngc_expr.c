@@ -599,7 +599,7 @@ FLASHMEM status_code_t ngc_read_name (char *line, uint_fast8_t *pos, char *buffe
 
         s++;
 
-        while((c = *s++) && c != '>' && len <= NGC_MAX_PARAM_LENGTH) {
+        while((c = *s++) && c != '>' && len < NGC_MAX_PARAM_LENGTH) {
             *buffer++ = LCAPS(c);
             (*pos)++;
             len++;

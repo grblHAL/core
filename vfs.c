@@ -360,12 +360,18 @@ FLASHMEM vfs_file_t *vfs_open (const char *filename, const char *mode)
 
 FLASHMEM void vfs_close (vfs_file_t *file)
 {
+    vfs_t *fs;
+    bool update;
+
     vfs_errno = 0;
+
+    if((update = file->status.update))
+        fs = (vfs_t *)file->fs;
 
     ((vfs_t *)(file->fs))->fclose(file);
 
-    if(file->status.update && vfs.on_fs_changed)
-        vfs.on_fs_changed((vfs_t *)file->fs);
+    if(update && vfs.on_fs_changed)
+        vfs.on_fs_changed(fs);
 }
 
 FLASHMEM size_t vfs_read (void *buffer, size_t size, size_t count, vfs_file_t *file)
@@ -503,11 +509,7 @@ FLASHMEM int vfs_chdir (const char *path)
     if(ret == 0) {
         size_t cwdlen;
         if((cwdlen = strlen(path)) > cwd.len) {
-            if(cwd.name == _cwd)
-                cwd.name = malloc(cwdlen + 1);
-            else
-                cwd.name = realloc(cwd.name, cwdlen + 1);
-            if(cwd.name)
+            if((cwd.name = realloc(cwd.name == _cwd ? NULL : cwd.name, cwdlen + 1)))
                 cwd.len = cwdlen;
             else {
                 cwd.name = _cwd;
@@ -595,22 +597,35 @@ FLASHMEM void vfs_closedir (vfs_dir_t *dir)
 
 FLASHMEM char *vfs_getcwd (char *buf, size_t len)
 {
-    char *cwds = cwdmount->vfs->fgetcwd ? cwdmount->vfs->fgetcwd(NULL, len) : cwd.name;
-    size_t cwdlen = strlen(cwdmount->path) + strlen(cwds) + 2;
+    char *cwds = cwdmount->vfs->fgetcwd ? cwdmount->vfs->fgetcwd(NULL, len) : cwd.name, *cwd;
+    size_t cwdlen;
 
     vfs_errno = 0;
 
-    if(buf == NULL) {
-        len = cwdlen + 1;
-        buf = (char *)malloc(cwdlen + 1);
+    if((cwd = (char *)malloc(strlen(cwdmount->path) + strlen(cwds) + 3))) {
+        strcat(strcpy(cwd, cwdmount->path), cwds + 1);
+        vfs_fixpath(cwd);
+        cwdlen = strlen(cwd);
+        if(buf) {
+            if(cwdlen < len)
+                strcpy(buf, cwd);
+            else {
+                buf = NULL;
+                vfs_errno = ERANGE;
+            }
+            free(cwd);
+        } else if(len == 0 || cwdlen < len)
+            buf = cwd;
+        else {
+            free(cwd);
+            vfs_errno = ERANGE;
+        }
+    } else {
+        buf = NULL;
+        vfs_errno = ENOMEM;
     }
 
-    if(buf && cwdlen < len)
-        strcat(strcpy(buf, cwdmount->path), cwds + 1);
-
-    vfs_fixpath(buf);
-
-    return cwdlen < len ? buf : NULL;
+    return buf;
 }
 
 FLASHMEM int vfs_chmod (const char *filename, vfs_st_mode_t attr, vfs_st_mode_t mask)
@@ -702,7 +717,8 @@ FLASHMEM bool vfs_mount (const void *device, const char *path, const vfs_t *fs, 
             lmount = lmount->next;
 
         lmount->next = mount;
-    }
+    } else
+        fs = NULL;
 
     if(hal.rtc.get_datetime == NULL)
         hal.rtc.get_datetime = vfs_get_time;
@@ -881,41 +897,38 @@ FLASHMEM const char *vfs_locate_file (const char *filename)
 
     vfs_stat_t st;
 
-    if(*filename == '/') {
-        if(fsmounted.root && vfs_stat(filename, &st) == 0)
-            return filename;
-    } else {
+    if(*filename == '/')
+        return fsmounted.root && vfs_stat(filename, &st) == 0 ? filename : NULL;
 
-        size_t len;
-        if((len = strlen(filename) + 11) > path.len && (path.name = realloc(path.name, len)))
-            path.len = len;
+    size_t len;
+    if((len = strlen(filename) + 11) > path.len && (path.name = realloc(path.name == _name ? NULL : path.name, len)))
+        path.len = len;
 
-        if(path.name) {
+    if(path.name) {
 
-            *path.name = '\0';
+        *path.name = '\0';
 
-            if(fsmounted.root) {
-                strcat(strcpy(path.name, "/"), filename);
-                if(vfs_stat(path.name, &st) != 0)
-                    *path.name = '\0';
-            }
-
-            if(!*path.name && fsmounted.littlefs) {
-                strcat(strcpy(path.name, "/littlefs/"), filename);
-                if(vfs_stat(path.name, &st) != 0)
-                    *path.name = '\0';
-            }
-
-            if(!*path.name && fsmounted.embedded) {
-                strcat(strcpy(path.name, "/embedded/"), filename);
-                if(vfs_stat(path.name, &st) != 0)
-                    *path.name = '\0';
-            }
-        } else {
-            path.name = _name;
-            *path.name = '\0';
-            path.len = sizeof(_name) - 1;
+        if(fsmounted.root) {
+            strcat(strcpy(path.name, "/"), filename);
+            if(vfs_stat(path.name, &st) != 0)
+                *path.name = '\0';
         }
+
+        if(!*path.name && fsmounted.littlefs) {
+            strcat(strcpy(path.name, "/littlefs/"), filename);
+            if(vfs_stat(path.name, &st) != 0)
+                *path.name = '\0';
+        }
+
+        if(!*path.name && fsmounted.embedded) {
+            strcat(strcpy(path.name, "/embedded/"), filename);
+            if(vfs_stat(path.name, &st) != 0)
+                *path.name = '\0';
+        }
+    } else {
+        path.name = _name;
+        *path.name = '\0';
+        path.len = sizeof(_name) - 1;
     }
 
     return *path.name ? (const char *)path.name : NULL;

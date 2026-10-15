@@ -148,7 +148,7 @@ typedef status_code_t (*mc_arc_ptr)(float *target, plan_line_data_t *pl_data, fl
 
 typedef tool_table_entry_t *(*get_tool_ptr)(tool_id_t tool_id);
 typedef tool_table_entry_t *(*get_tool_by_idx_ptr)(uint32_t idx);
-typedef bool (*set_tool_data_ptr)(tool_data_t *tool_data);
+typedef bool (*set_tool_data_ptr)(tool_data_t *tool_data, bool persist);
 typedef bool (*clear_tool_data_ptr)(void);
 typedef status_code_t (*reload_tool_data_ptr)(void);
 

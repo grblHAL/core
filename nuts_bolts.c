@@ -195,7 +195,6 @@ char *trim_float (char *s)
 status_code_t read_uint (const char *line, uint_fast8_t *char_counter, uint32_t *uint_ptr)
 {
     const char *ptr = line + *char_counter;
-    int_fast8_t exp = 0;
     uint_fast8_t ndigit = 0, c;
     uint32_t intval = 0;
     bool isdecimal = false, ok = false;
@@ -203,27 +202,28 @@ status_code_t read_uint (const char *line, uint_fast8_t *char_counter, uint32_t 
     // Grab first character and increment pointer. No spaces assumed in line.
     c = *ptr++;
 
-    if (c == '-')
+    if(c == '-')
         return Status_NegativeValue;
 
     // Skip initial sign character
-    if (c == '+')
+    if(c == '+')
         c = *ptr++;
 
-    // Extract number into fast integer. Track decimal in terms of exponent value.
+    // Extract number into fast integer.
     while(c) {
         c -= '0';
-        if (c <= 9) {
+        if(c <= 9) {
             ok = true;
-            if(!isdecimal && (c != 0 || intval))
-                ndigit++;
-            if (isdecimal && c != 0)
+            if(!isdecimal) {
+                if((c != 0 || intval))
+                    ndigit++;
+                if((ndigit <= 9 || c <= 5) && intval <= 429496729)
+                    intval = (((intval << 2) + intval) << 1) + c; // intval * 10 + c
+                else
+                    return Status_SettingValueOutOfRange;
+            } else if(c != 0)
                 return Status_GcodeCommandValueNotInteger;
 
-            if ((ndigit <= 9 || c <= 4) && intval <= 429496729) {
-                intval = (((intval << 2) + intval) << 1) + c; // intval * 10 + c
-            } else if (!isdecimal)
-                exp++;  // Drop overflow digits
         } else if (c == (uint_fast8_t)('.' - '0') && !isdecimal)
             isdecimal = true;
          else
@@ -232,17 +232,13 @@ status_code_t read_uint (const char *line, uint_fast8_t *char_counter, uint32_t 
         c = *ptr++;
     }
 
-    // Return if no digits have been read.
+    if(ok) {
+        *uint_ptr = intval; // Assign value.
+        *char_counter = ptr - line - 1; // Set char_counter to next statement
+    }
 
-    if (!ok)
-        return Status_BadNumberFormat;
-
-    *uint_ptr = intval; // Assign value.
-    *char_counter = ptr - line - 1; // Set char_counter to next statement
-
-    return Status_OK;
+    return ok ? Status_OK : Status_BadNumberFormat;
 }
-
 // Extracts a floating point value from a string. The following code is based loosely on
 // the avr-libc strtod() function by Michael Stumpf and Dmitry Xmelkov and many freely
 // available conversion method examples, but has been highly optimized for Grbl. For known
@@ -405,7 +401,7 @@ FLASHMEM struct tm *get_datetime (const char *s)
                     break;
 
                 case 2:
-                    if(c == 'T' && value >= 1 && value <= (mdays[dt.tm_mon >= 0 ? dt.tm_mon : 0] + (dt.tm_mon == 1 && dt.tm_year != 100 && (dt.tm_year % 4) == 0 ? 1 : 0)))
+                    if(c == 'T' && value >= 1 && value <= (mdays[dt.tm_mon >= 0 ? dt.tm_mon : 0] + (dt.tm_mon == 1 && (dt.tm_year % 4) == 0 ? 1 : 0)))
                         dt.tm_mday = value;
                     break;
 

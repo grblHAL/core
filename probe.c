@@ -212,6 +212,24 @@ FLASHMEM bool probe_add (probe_id_t probe_id, uint8_t port, pin_irq_mode_t irq_m
     return true;
 }
 
+FLASHMEM probe_states_t probes_get_state (void)
+{
+    uint_fast8_t idx;
+    probe_t *probe;
+    probe_states_t states = {0};
+
+    for(idx = 0; idx < N_PROBE_MAX; idx++) {
+        if(probes[idx].get_input) {
+            states.aquired = On;
+            probe = &probes[idx];
+            if(probe->get_input(probe->input) ^ !!(settings.probe.value & probe->inverted_bit.value))
+                states.flags |= (1 << probe->probe_id);
+        }
+    }
+
+    return states;
+}
+
 FLASHMEM void probe_connected_event (void *data)
 {
     if(hal.probe.connected_toggle) {

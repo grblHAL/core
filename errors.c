@@ -69,7 +69,7 @@ PROGMEM static const status_detail_t status_detail[] = {
     { Status_GcodeValueOutOfRange, "Value out of range." },
     { Status_GcodeToolChangePending, "G-code command not allowed when tool change is pending." },
     { Status_GcodeSpindleNotRunning, "Spindle not running when motion commanded in CSS or spindle sync mode." },
-    { Status_GcodeIllegalPlane, "Plane must be ZX for threading." },
+    { Status_GcodeIllegalPlane, "Plane must be ZX for threading and lathe cycles." },
     { Status_GcodeMaxFeedRateExceeded, "Max. feed rate exceeded." },
     { Status_GcodeRPMOutOfRange, "RPM out of range." },
     { Status_LimitsEngaged, "Only homing is allowed when a limit switch is engaged." },

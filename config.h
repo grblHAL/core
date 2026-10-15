@@ -116,10 +116,9 @@ generate a solution.
 #define SPINDLE_NPWM_PIECES 4 // Number of pieces for spindle RPM linearization, max 4.
 #endif
 
-#include "nuts_bolts.h"
+// --- Kinematics options ---
 
 //#define KINEMATICS_API // Uncomment to add HAL entry points for custom kinematics
-
 
 /*! \def WALL_PLOTTER
 \brief Enable wall plotter kinematics.
@@ -158,7 +157,6 @@ Experimental - verification required. Needs XYZAC axes configured.
 #define RTCP_AC Off
 #endif
 
-
 /*! \def COREXY
 \brief Enable CoreXY kinematics. Use ONLY with CoreXY machines.
 <br>__IMPORTANT:__ If homing is enabled, you must reconfigure the homing cycle \#defines above to
@@ -183,6 +181,10 @@ have the same steps per mm internally.
 <br> To be used when the screw pitch is not equal. The highest numbered axis is claimed for the second motor.
 */
 //#define ASYMMETRIC_AUTO_SQUARE Y_AXIS	// Uncomment to enable
+
+// --- End of kinematics ---
+
+#include "nuts_bolts.h"
 
 /*! \def CHECK_MODE_DELAY
 \brief

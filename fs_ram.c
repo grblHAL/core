@@ -336,6 +336,8 @@ FLASHMEM static void fs_reset (void)
             free((void *)file->data);
         free(file);
     } while((file = next));
+
+    files = NULL;
 }
 
 FLASHMEM static bool fs_getfree (vfs_free_t *free)

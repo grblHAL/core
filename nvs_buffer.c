@@ -324,6 +324,8 @@ FLASHMEM nvs_address_t nvs_alloc (size_t size)
 // Write RAM changes to physical storage
 FLASHMEM void nvs_buffer_sync_physical (void)
 {
+    static uint_fast8_t retries = 0;
+
     if(!settings_dirty.is_dirty)
         return;
 
@@ -342,7 +344,6 @@ FLASHMEM void nvs_buffer_sync_physical (void)
         if(settings_dirty.startup_lines) do {
             idx--;
             if(bit_istrue(settings_dirty.startup_lines, bit(idx))) {
-                bit_false(settings_dirty.startup_lines, bit(idx));
                 offset = NVS_ADDR_STARTUP_BLOCK + idx * (sizeof(stored_line_t) + NVS_CRC_BYTES);
                 if(physical_nvs.memcpy_to_nvs(offset, (uint8_t *)(nvsbuffer.addr + offset), sizeof(stored_line_t) + NVS_CRC_BYTES, false) == NVS_TransferResult_OK)
                     bit_false(settings_dirty.startup_lines, bit(idx));
@@ -376,25 +377,33 @@ FLASHMEM void nvs_buffer_sync_physical (void)
             }
         } while(idx);
 #endif
-        settings_dirty.is_dirty = settings_dirty.coord_data ||
-                                   settings_dirty.global_settings ||
-                                    settings_dirty.driver_settings ||
-                                     settings_dirty.startup_lines ||
+        if((settings_dirty.is_dirty = settings_dirty.coord_data ||
+                                       settings_dirty.global_settings ||
+                                        settings_dirty.driver_settings ||
+                                         settings_dirty.startup_lines ||
 #if N_TOOLS
-                                      settings_dirty.tool_data ||
+                                          settings_dirty.tool_data ||
 #endif
-                                       settings_dirty.build_info;
+                                           settings_dirty.build_info)) {
+            retries++;
 
+            if(++retries == 5) {
+                retries = 0;
+                report_message("Settings write failed!", Message_Warning);
+            }
+        }
     } else if(physical_nvs.memcpy_to_flash) {
-        uint_fast8_t retries = 4;
+        retries = 4;
         do {
             if(physical_nvs.memcpy_to_flash(nvsbuffer.addr))
                 retries = 0;
             else if(--retries == 0)
                 report_message("Settings write failed!", Message_Warning);
         } while(retries);
-        memset(&settings_dirty, 0, sizeof(settings_dirty_t));
     }
+
+    if(retries == 0)
+        memset(&settings_dirty, 0, sizeof(settings_dirty_t));
 }
 
 FLASHMEM nvs_io_t *nvs_buffer_get_physical (void)

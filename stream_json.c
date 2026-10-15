@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2025 Terje Io
+  Copyright (c) 2025-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -167,11 +167,9 @@ bool json_add_string (json_out_t *json, const char *tag, const char *s)
 
             s1 = s;
 
-            while((c = *s++)) {
+            do {
 
-                esc[1] = '\0';
-
-                switch(c) {
+                switch((c = *s++)) {
 
                     case '\"':
                     case '\\':
@@ -203,17 +201,17 @@ bool json_add_string (json_out_t *json, const char *tag, const char *s)
                         s2 = s1;
                         esc[1] = 't';
                         break;
-                        break;
                 }
-            }
 
-            if(s2) {
-                vfs_write(s2, s2 - s1, 1, json->file);
-                s1 = s;
-                s2 = NULL;
-                vfs_write(esc, 2, 1, json->file);
-            } else if(c == '\0' && *s1 != '\0')
-                vfs_puts(s1, json->file);
+                if(s2) {
+                    vfs_write(s2, s - s1 - 1, 1, json->file);
+                    s1 = s;
+                    s2 = NULL;
+                    vfs_write(esc, 2, 1, json->file);
+                } else if(c == '\0' && *s1 != '\0')
+                    vfs_puts(s1, json->file);
+
+            } while(c != '\0');
         }
 
         vfs_write("\"", 1, 1, json->file);

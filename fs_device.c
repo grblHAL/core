@@ -145,10 +145,10 @@ static void fs_close (vfs_file_t *file)
 static size_t fs_read (void *buffer, size_t size, size_t count, vfs_file_t *file)
 {
     uint8_t *pos = (uint8_t *)buffer;
-    size_t rcount = iostream((io_stream_t **)&file->handle)->get_rx_buffer_count();
+    size_t rcount, bytes = iostream((io_stream_t **)&file->handle)->get_rx_buffer_count();
 
-    if((rcount = min(rcount, size * count))) {
-        while(rcount--)
+    if((rcount = bytes = min(bytes, size * count))) {
+        while(bytes--)
             *pos++ = (uint8_t)iostream((io_stream_t **)&file->handle)->read();
     }
 

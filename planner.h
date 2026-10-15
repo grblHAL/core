@@ -122,7 +122,7 @@ typedef struct plan_block {
     spindle_t spindle;              // Block spindle parameters. Copied from pl_line_data.
 
     char *message;                  // Message to be displayed when block is executed.
-    output_command_t *output_commands;
+    volatile output_command_t *output_commands;
     struct plan_block *prev, *next; // Linked list pointers, DO NOT MOVE - these MUST be the last elements in the struct!
 } plan_block_t;
 
@@ -148,9 +148,9 @@ typedef struct {
     gc_override_flags_t overrides;  // Block bitfield variable for overrides
     offset_id_t offset_id;
     line_number_t line_number;      // Desired line number to report when executing.
-//    void *parameters;               // TODO: pointer to extra parameters, for canned cycles and threading?
-    char *message;                  // Message to be displayed when block is executed.
-    output_command_t *output_commands;
+//    void *parameters;             // TODO: pointer to extra parameters, for canned cycles and threading?
+    char *message;         // Message to be displayed when block is executed.
+    volatile output_command_t *output_commands;
 } plan_line_data_t;
 
 

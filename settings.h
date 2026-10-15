@@ -669,7 +669,8 @@ typedef union {
                  run_substate       :1,
                  when_homing        :1,
                  distance_to_go     :1,
-                 unassigned         :2;
+                 extended           :1,
+                 unassigned         :1;
     };
 } reportmask_t;
 
@@ -1170,7 +1171,7 @@ void settings_write_startup_line(uint8_t idx, char *line);
 bool settings_read_startup_line(uint8_t idx, char *line);
 
 // Writes build info user-defined string
-void settings_write_build_info(char *line);
+bool settings_write_build_info(char *line);
 
 // Reads build info user-defined string
 bool settings_read_build_info(char *line);

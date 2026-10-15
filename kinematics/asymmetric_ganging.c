@@ -201,7 +201,7 @@ static void set_machine_positions (axes_signals_t cycle)
 {
     limits_set_machine_positions(cycle, true);
 
-    if(!settings.homing.flags.force_set_origin)
+    if(!settings.homing.flags.force_set_origin && (cycle.bits & PRIMARY_AXIS_BIT))
         sys.position[GANGED_AXIS] = lroundf(sys.home_position[PRIMARY_AXIS] * settings.axis[GANGED_AXIS].steps_per_mm);
 }
 

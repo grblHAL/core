@@ -546,13 +546,14 @@ FLASHMEM spindle_id_t spindle_add_null (void)
 
 // End null (dummy) spindle.
 
-typedef struct {
+typedef struct rpm_override {
     spindle_ptrs_t *spindle;
     uint16_t delay;
     uint32_t start, end;
     volatile float rpm;
     float rpm_delta;
     float rpm_target;
+    struct rpm_override *next;
 } rpm_override_t;
 
 FLASHMEM static void spindle_ramp_task (void *data)
@@ -578,12 +579,35 @@ FLASHMEM static void spindle_ramp_task (void *data)
     ramp->spindle->update_pwm(ramp->spindle, ramp->spindle->get_pwm(ramp->spindle, ramp->rpm));
 }
 
+FLASHMEM static rpm_override_t *_get_ramp (spindle_ptrs_t *spindle)
+{
+    static rpm_override_t rampd = {0};
+
+    if(rampd.spindle == spindle)
+        return &rampd;
+
+    rpm_override_t *ramp = &rampd;
+
+    if(ramp->spindle == NULL)
+        ramp->spindle = spindle;
+    else {
+        while(ramp->next && ramp->next->spindle != spindle && (ramp = ramp->next));
+
+        if(ramp->next == NULL && (ramp->next = calloc(1, sizeof(rpm_override_t))))
+            ramp->next->spindle = spindle;
+
+        ramp = ramp->next;
+    }
+
+    return ramp;
+}
+
 FLASHMEM static uint16_t spindle_get_ramp (spindle_ptrs_t *spindle, float rpm, float target_rpm, uint16_t delay_ms, rpm_override_t *ramp)
 {
-    ramp->spindle = spindle;
-    ramp->rpm = rpm;
+    if(rpm != -1.0f)
+        ramp->rpm = rpm;
     ramp->rpm_target = target_rpm;
-    ramp->rpm_delta = target_rpm - rpm;
+    ramp->rpm_delta = target_rpm - ramp->rpm;
     ramp->delay = DWELL_TIME_STEP;
 
     uint16_t dly = ((uint16_t)(float)delay_ms * fabsf(ramp->rpm_delta / spindle->rpm_max));
@@ -591,23 +615,28 @@ FLASHMEM static uint16_t spindle_get_ramp (spindle_ptrs_t *spindle, float rpm, f
     ramp->rpm_delta /= (float)(dly / ramp->delay) + 1;
 
     if(ramp->start == 0)
-    ramp->start = hal.get_elapsed_ticks();
+        ramp->start = hal.get_elapsed_ticks();
 
     return dly;
 }
 
 FLASHMEM static bool spindle_ramp_override (spindle_ptrs_t *spindle, float rpm, float target_rpm)
 {
-    static rpm_override_t ramp;
+    rpm_override_t *ramp;
 
-    task_delete(spindle_ramp_task, &ramp);
+    if((ramp = _get_ramp(spindle))) {
 
-    if(ramp.delay)
-        rpm = ramp.rpm;
+        task_delete(spindle_ramp_task, ramp);
 
-    return spindle_get_ramp(spindle, rpm, spindle->param->rpm_overridden, settings.spindle.on_delay, &ramp) &&
-            task_add_delayed(spindle_ramp_task, &ramp, ramp.delay);
+        if(ramp->delay)
+            rpm = ramp->rpm;
 
+        if(!(spindle_get_ramp(spindle, rpm, spindle->param->rpm_overridden, settings.spindle.on_delay, ramp) &&
+             task_add_delayed(spindle_ramp_task, ramp, ramp->delay)))
+            ramp = NULL;
+    }
+
+    return !!ramp;
 }
 
 /*! \brief Set spindle speed override.
@@ -676,31 +705,36 @@ FLASHMEM bool spindle_check_state (spindle_ptrs_t *spindle, spindle_state_t stat
 FLASHMEM static void spindle_ramp (spindle_ptrs_t *spindle, spindle_state_t state, float rpm, float target_rpm, uint16_t delay_ms)
 {
     bool ok = true;
+    rpm_override_t *ramp;
 
-    if(delay_ms > DWELL_TIME_STEP) {
-
-        static rpm_override_t ramp;
+    if(delay_ms > DWELL_TIME_STEP && (ramp = _get_ramp(spindle))) {
 
         task_delete(spindle_ramp_task, NULL);
 
-        if(spindle_get_ramp(spindle, rpm, target_rpm, delay_ms, &ramp) > DWELL_TIME_STEP) {
+        if(spindle_get_ramp(spindle, rpm, target_rpm, delay_ms, ramp) > DWELL_TIME_STEP) {
 
-            float delay = (float)ramp.delay / 1000.0f;
+            float delay = (float)ramp->delay / 1000.0f;
 
-            if(ramp.rpm_delta > 0.0f) {
+            if(rpm == -1.0f) {
+                rpm = ramp->rpm;
+            }
+
+            if(ramp->rpm_delta > 0.0f) {
                 if(spindle->param->state.on != state.on || state.ccw != spindle->param->state.ccw) {
                     spindle->param->state.on = state.on;
-                    spindle->set_state(spindle, state, (rpm += ramp.rpm_delta));
+                    spindle->set_state(spindle, state, (rpm += ramp->rpm_delta));
                 }
-                while(ok && (rpm + ramp.rpm_delta) < target_rpm) {
-                    spindle->update_pwm(spindle, spindle->get_pwm(spindle, rpm += ramp.rpm_delta));
+                while(ok && (rpm + ramp->rpm_delta) < target_rpm) {
+                    spindle->update_pwm(spindle, spindle->get_pwm(spindle, rpm += ramp->rpm_delta));
                     ok = delay_sec(delay, sys.suspend ? DelayMode_SysSuspend : DelayMode_Dwell);
                 }
-            } else while(ok && (rpm + ramp.rpm_delta) > target_rpm) {
-                spindle->update_pwm(spindle, spindle->get_pwm(spindle, rpm += ramp.rpm_delta));
+            } else while(ok && (rpm + ramp->rpm_delta) > target_rpm) {
+                spindle->update_pwm(spindle, spindle->get_pwm(spindle, rpm += ramp->rpm_delta));
                 ok = delay_sec(delay, sys.suspend ? DelayMode_SysSuspend : DelayMode_Dwell);
             }
-            ramp.end = hal.get_elapsed_ticks();
+
+            ramp->rpm = target_rpm;
+            ramp->end = hal.get_elapsed_ticks();
         }
     }
 
@@ -727,7 +761,7 @@ FLASHMEM static bool _spindle_set_state (spindle_ptrs_t *spindle, spindle_state_
         if(!state.on) { // Halt or set spindle direction and rpm.
             rpm = 0.0f;
             if(spindle->param->option.ramp_down)
-                spindle_ramp(spindle, spindle->param->state, spindle->param->rpm_overridden, 0.0f, settings.spindle.off_delay);
+                spindle_ramp(spindle, spindle->param->state, -1.0f, 0.0f, settings.spindle.off_delay);
             spindle->set_state(spindle, (spindle_state_t){0}, (spindle->param->rpm_overridden = 0.0f));
         } else {
             // NOTE: Assumes all calls to this function is when grblHAL is not moving or must remain off.
@@ -760,7 +794,7 @@ FLASHMEM static bool _spindle_set_state (spindle_ptrs_t *spindle, spindle_state_
 
 FLASHMEM bool spindle_set_state (spindle_ptrs_t *spindle, spindle_state_t state, float rpm)
 {
-    return _spindle_set_state(spindle, state, rpm, 0);
+    return state_get() == STATE_CHECK_MODE || _spindle_set_state(spindle, state, rpm, 0);
 }
 
 /*! \brief If the spindle supports at speed functionality it will wait

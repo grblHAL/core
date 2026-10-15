@@ -594,13 +594,14 @@ FLASHMEM void modbus_rtu_init (int8_t instance, int8_t dir_aux)
             xbar_t *dir_pin; // TODO: move to top and use for direct access
             io_port_cfg_t d_out;
 
-            ioports_cfg(&d_out, Port_Digital, Port_Output);
+            if(ioports_cfg(&d_out, Port_Digital, Port_Output)->n_ports) {
 
-            dir_port = dir_aux != -1 ? dir_aux : (d_out.n_ports ? d_out.n_ports - 1 : IOPORT_UNASSIGNED);
+                dir_port = dir_aux != -1 ? dir_aux : d_out.n_ports - 1;
 
-            if((dir_pin = d_out.claim(&d_out, &dir_port, NULL, (pin_cap_t){}))) {
-                stream.set_direction = modbus_set_direction;
-                ioport_set_function(dir_pin, Output_RS485_Direction, NULL);
+                if((dir_pin = d_out.claim(&d_out, &dir_port, NULL, (pin_cap_t){}))) {
+                    stream.set_direction = modbus_set_direction;
+                    ioport_set_function(dir_pin, Output_RS485_Direction, NULL);
+                }
             }
 
             hal.driver_cap.modbus_rtu = !!stream.set_direction;

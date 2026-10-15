@@ -86,7 +86,7 @@ bool stream_utf8_enable (const io_stream_t *stream, bool enable)
 */
 
 /*
-<https://gitlab.com/-/snippets/3718423>
+<https://gitlab.com/Explorer09/utf_convert/-/blob/main/utf_convert.c?ref_type=heads>
 
 Copyright 2025 Kang-Che Sung <explorer09 @ gmail.com>
 
@@ -125,7 +125,7 @@ uint16_t utf32_to_utf8 (uint8_t *buffer, uint32_t code_point)
     uint32_t first_byte = code_point, mask;
 
     if(code_point <= 0x7F) {
-        mask = 0b0111111; // We assume ASCII characters appear most frequently.
+        mask = 0b01111111; // We assume ASCII characters appear most frequently.
     } else {
         // Find out how many bytes are needed.
         mask = 0b00111111;

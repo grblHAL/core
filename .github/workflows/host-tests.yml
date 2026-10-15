@@ -1,0 +1,19 @@
+# Add as .github/workflows/host-tests.yml in the core repository.
+# Publish ci-source-selection first; switch BOTH harness refs to a release tag
+# or the same reviewed commit SHA before making this a required check.
+name: Core host tests
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  core:
+    uses: petervanderwalt/Unit_tests/.github/workflows/reusable-tests.yml@ci-source-selection
+    with:
+      harness_repository: petervanderwalt/Unit_tests
+      harness_ref: ci-source-selection
+      suite: core
+      source_repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+      source_ref: ${{ github.event.pull_request.head.sha || github.sha }}

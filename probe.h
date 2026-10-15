@@ -42,6 +42,16 @@ typedef enum {
 } probe_id_t;
 
 typedef union {
+    uint8_t flags;
+    struct {
+        uint8_t probe_triggered      :1,
+                toolsetter_triggered :1,
+                probe2_triggered     :1,
+                aquired              :1;
+    };
+} probe_states_t;
+
+typedef union {
     uint16_t value;
     struct {
         uint16_t triggered     :1, //!< Set to true when probe or toolsetter is triggered.
@@ -70,5 +80,6 @@ typedef union {
 
 void probe_connected_event (void *data);
 bool probe_add (probe_id_t probe_id, uint8_t port, pin_irq_mode_t irq_mode, void *input, get_probe_input_ptr get_input);
+probe_states_t probes_get_state (void);
 
 #endif // _PROBE_H_
