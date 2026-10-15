@@ -1475,8 +1475,10 @@ status_code_t gc_execute_block (char *block)
 
         if(letter == 'O') {
             value = NAN;
-            if((status = read_uint(block, &char_counter, &int_value)) != Status_OK)
+            uint32_t value;
+            if((status = read_uint(block, &char_counter, &value)) != Status_OK)
                 RETURN(status);
+            int_value = (int32_t)value;
         } else if(!read_float(block, &char_counter, &value)) {
             if(user_mcode == UserMCode_NoValueWords)    // Valueless parameters allowed for user defined M-codes.
                 value = NAN;                            // Parameter validation deferred to implementation.
