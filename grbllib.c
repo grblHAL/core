@@ -350,6 +350,17 @@ FLASHMEM int grbl_enter (void)
     rtcp_ac_init();
 #endif
 
+#if PENTA_AXIS_HT_BC
+    extern void rtcp_init (void);
+    rtcp_init();
+#endif
+
+#if PENTA_AXIS_HH_BC
+    extern void rtcp_init (void);
+    rtcp_init();
+#endif
+
+
 #if defined(ASYMMETRIC_GANGING) || defined(ASYMMETRIC_AUTO_SQUARE)
     extern void asymmetric_ganging_init (void);
     asymmetric_ganging_init();
