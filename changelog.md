@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+<a name="202601102">Build 20261102
+
+Core:
+
+* Allow cloned PWM spindle as the default spindle.
+
+Plugins:
+
+* Keypad, macros: fix for regression. Ref. issue [#24](https://github.com/grblHAL/Plugin_keypad/issues/24).
+
+* Spindle, cloned PWM: changed call order of chained event handlers. Ref. issue [#47](https://github.com/grblHAL/Plugins_spindle/issues/47).
+
+---
+
 <a name="202601029">Build 20261029
 
 Core:
