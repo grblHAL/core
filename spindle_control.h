@@ -87,7 +87,7 @@ typedef union {
                  rpm_range_locked  :1, //!< Spindle RPM range (min, max) not inherited from settings.
                  gpio_controlled   :1, //!< On/off and direction is controlled by GPIO.
                  cmd_controlled    :1, //!< Command controlled, e.g. over ModBus.
-                 cloned            :1, //!< Spindle is cloned.
+                 clone             :1, //!< Spindle is clone.
                  torch             :1, //!< Spindle is plasma torch.
                  unassigned        :3;
     };
@@ -229,9 +229,11 @@ typedef union {
 } spindle_settings_flags_t;
 
 #if N_SPINDLE == 1
-#define PWM_SPINDLE_NO_DELAYS
+#define PWM_SPINDLE_OPTIONS "Enable,RPM controls spindle enable signal,Disable laser mode capability,Enable ramping"
+#define PWM_SPINDLE_OPTIONS_MASK 0b001111
 #else
-#define PWM_SPINDLE_NO_DELAYS ",Ignore on/off delays"
+#define PWM_SPINDLE_OPTIONS "Enable,RPM controls spindle enable signal,Disable laser mode capability,Enable ramping,Ignore on/off delays"
+#define PWM_SPINDLE_OPTIONS_MASK 0b111111
 #endif
 
 
@@ -316,10 +318,11 @@ typedef union
 
 /*! \brief Handlers and data for spindle support. */
 struct spindle_ptrs {
+    uint8_t ref_id;                     //!< Spindle model.
     spindle_id_t id;                    //!< Spindle id, assigned on spindle registration.
-    uint8_t ref_id;                     //!< Spindle id, assigned on spindle registration.
-    struct spindle_param *param;        //!< Pointer to current spindle parameters, assigned when spindle is enabled.
+    spindle_num_t spindle_num;          //!< Spindle number, assigned when spindle is enabled.
     spindle_type_t type;                //!< Spindle type.
+    struct spindle_param *param;        //!< Pointer to current spindle parameters, assigned when spindle is enabled.
     spindle_cap_t cap;                  //!< Spindle capabilities.
     spindle_context_ptr_t context;      //!< Optional pointer to spindle specific context.
     uint_fast16_t pwm_off_value;        //!< Value for switching PWM signal off.

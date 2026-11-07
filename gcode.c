@@ -749,6 +749,20 @@ static void onSettingsChanged (settings_t *settings, settings_changed_flags_t ch
     on_settings_changed(settings, changed);
 }
 
+#if N_SPINDLE > 1 && N_SYS_SPINDLE == 1
+
+static on_spindle_selected_ptr on_spindle_selected;
+
+static void onSpindleSelected (spindle_ptrs_t *spindle)
+{
+    if(on_spindle_selected)
+        on_spindle_selected(spindle);
+
+    gc_state.modal.spindle[0].hal = spindle;
+}
+
+#endif
+
 FLASHMEM void gc_init (bool stop)
 {
 #if COMPATIBILITY_LEVEL > 1
@@ -799,12 +813,21 @@ FLASHMEM void gc_init (bool stop)
         grbl.on_settings_changed = onSettingsChanged;
     }
 
+#if N_SPINDLE > 1 && N_SYS_SPINDLE == 1
+
+    if(on_spindle_selected == NULL) {
+        on_spindle_selected = grbl.on_spindle_selected;
+        grbl.on_spindle_selected = onSpindleSelected;
+    }
+
+#endif
+
     // Clear any pending output commands etc...
     gc_at_exit(Status_UserException);
 
     gc_state.modal.override_ctrl = sys.override.control;    // Load default override status
     gc_state.spindle = &gc_state.modal.spindle[0];
-    gc_state.modal.spindle[0].hal = spindle_get(0);
+    gc_state.modal.spindle[0].hal = spindle_get(-1);
 
 //    if(settings.flags.lathe_mode)
 //        gc_state.modal.plane_select = PlaneSelect_ZX;
@@ -1848,7 +1871,7 @@ status_code_t gc_execute_block (char *block)
                                 break;
 
                             case 1: // M1 - program pause
-                                if(hal.signals_cap.stop_disable ? !hal.control.get_state().stop_disable : !sys.flags.optional_stop_disable)
+                                if(hal.signals_cap.stop_enable ? hal.control.get_state().stop_enable : sys.flags.optional_stop_enable)
                                     gc_block.modal.program_flow = ProgramFlow_OptionalStop;
                                 break;
 

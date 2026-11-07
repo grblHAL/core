@@ -453,7 +453,7 @@ typedef union {
                  cycle_start          :1,
                  safety_door_ajar     :1,
                  block_delete         :1,
-                 stop_disable         :1, //! M1
+                 stop_enable          :1, //! M1
                  e_stop               :1,
                  probe_disconnected   :1,
                  motor_fault          :1,

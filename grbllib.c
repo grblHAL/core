@@ -397,8 +397,8 @@ FLASHMEM int grbl_enter (void)
 //
 
     if((driver.spindle = spindle_select(spindle_id))) {
-        spindle_ptrs_t *spindle = spindle_get(0);
-        driver.spindle = spindle->get_pwm == NULL || spindle->update_pwm != NULL || spindle->cap.cloned;
+        spindle_ptrs_t *spindle = spindle_get(-1);
+        driver.spindle = spindle->get_pwm == NULL || spindle->update_pwm != NULL;
     } else
         driver.spindle = spindle_select(spindle_add_null());
 

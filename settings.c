@@ -477,6 +477,7 @@ static char probe_signals[] = "Probe";
 static char probing_options[] = "Allow feed override,Apply soft limits,N/A,Auto select toolsetter,Auto select probe 2,Probe protection";
 static char control_signals[] = "Reset,Feed hold,Cycle start,Safety door,Block delete,Optional stop,EStop,Probe disconnected,Motor fault,Motor warning,Limits override,Single step blocks,Toolsetter overtravel";
 static char spindle_signals[] = "Spindle enable,Spindle direction,PWM";
+static char spindle_options[] = PWM_SPINDLE_OPTIONS;
 static char coolant_signals[] = "Flood,Mist";
 static char door_options[] = "Ignore when idle,Keep coolant state on door open";
 static char ganged_axes[] = "X-Axis,Y-Axis,Z-Axis";
@@ -1834,8 +1835,8 @@ FLASHMEM static uint32_t get_int (setting_id_t id)
         case Setting_SpindleType:
             {
                 spindle_id_t spindle_id;
-                spindle_get_id(settings.spindle.ref_id, &spindle_id);
-                value = (uint32_t)spindle_id;
+                if(spindle_get_id(settings.spindle.ref_id, &spindle_id))
+                    value = (uint32_t)spindle_id;
             }
             break;
 
@@ -1864,8 +1865,8 @@ FLASHMEM static uint32_t get_int (setting_id_t id)
         case Setting_EncoderSpindle:
             {
                 spindle_id_t spindle_id;
-                spindle_get_id(settings.spindle.encoder_spindle, &spindle_id);
-                value = (uint32_t)spindle_id;
+                if(spindle_get_id(settings.spindle.encoder_spindle, &spindle_id))
+                    value = (uint32_t)spindle_id;
             }
             break;
 
@@ -2369,7 +2370,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_InvertProbePin, Group_Probing, "Invert probe inputs", NULL, Format_Bitfield, probe_signals, NULL, NULL, Setting_IsLegacyFn, set_probe_invert, get_int, is_setting_available },
      { Setting_SpindlePWMBehaviour, Group_Spindle, "Deprecated", NULL, Format_Bool, NULL, NULL, NULL, Setting_IsLegacyFn, set_pwm_mode, get_int, is_setting_available },
      { Setting_GangedDirInvertMask, Group_Stepper, "Ganged axes direction invert", NULL, Format_Bitfield, ganged_axes, NULL, NULL, Setting_IsExtendedFn, set_ganged_dir_invert, get_int, is_setting_available },
-     { Setting_SpindlePWMOptions, Group_Spindle, "PWM spindle options", NULL, Format_XBitfield, "Enable,RPM controls spindle enable signal,Disable laser mode capability,Enable ramping" PWM_SPINDLE_NO_DELAYS, NULL, NULL, Setting_IsExtendedFn, set_pwm_options, get_int, is_setting_available },
+     { Setting_SpindlePWMOptions, Group_Spindle, "PWM spindle options", NULL, Format_XBitfield, spindle_options, NULL, NULL, Setting_IsExtendedFn, set_pwm_options, get_int, is_setting_available },
 #if COMPATIBILITY_LEVEL <= 1
      { Setting_StatusReportMask, Group_General, "Status report options", NULL, Format_Bitfield, "Position in machine coordinate,Buffer state,Line numbers,Feed & speed,Pin state,Work coordinate offset,Overrides,Probe coordinates,Buffer sync on WCO change,Parser state,Alarm substatus,Run substatus,Enable when homing,Distance-to-go,Extended", NULL, NULL, Setting_IsExtendedFn, set_report_mask, get_int, NULL },
 #else
@@ -3819,6 +3820,8 @@ FLASHMEM void settings_init (void)
         spindle_state.ccw = spindle_cap.direction;
         spindle_state.pwm = spindle_cap.pwm_invert;
 
+        if(!spindle_cap.laser)
+            setting_remove_elements(Setting_SpindlePWMOptions, PWM_SPINDLE_OPTIONS_MASK ^ 0b0100, true);
         setting_remove_elements(Setting_SpindleInvertMask, spindle_state.mask, true);
     }
 

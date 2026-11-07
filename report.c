@@ -924,7 +924,7 @@ FLASHMEM void report_build_info (char *line, bool extended)
     // Generate compile-time build option list
 
     char *append = &buf[5];
-    spindle_ptrs_t *spindle = spindle_get(0);
+    spindle_ptrs_t *spindle = spindle_get(-1);
 
     strcpy(buf, "[OPT:");
 
@@ -1055,7 +1055,7 @@ FLASHMEM void report_build_info (char *line, bool extended)
             strcat(buf, "RF,");
 #endif
 
-        if(hal.signals_cap.stop_disable)
+        if(hal.signals_cap.stop_enable)
             strcat(buf, "OS,");
 
         if(hal.signals_cap.block_delete)
@@ -1365,7 +1365,7 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
     spindle_ptrs_t *spindle_0;
     spindle_state_t spindle_0_state;
 
-    spindle_0 = spindle_get(0);
+    spindle_0 = spindle_get(-1);
     spindle_0_state = spindle_0->get_state(spindle_0);
 
     // Report realtime feed speed
@@ -1409,7 +1409,7 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
 
         static const system_flags_t sys_switches = {
             .block_delete_enabled = On,
-            .optional_stop_disable = On,
+            .optional_stop_enable = On,
             .single_block = On
         };
 
@@ -1420,8 +1420,8 @@ void report_realtime_status (stream_write_ptr stream_write, status_report_tracki
         ctrl_pin_state.probe_disconnected = !probe_state.connected;
         ctrl_pin_state.cycle_start |= report->flags.cycle_start;
         if(sys.flags.value & sys_switches.value) {
-            if(!hal.signals_cap.stop_disable)
-                ctrl_pin_state.stop_disable = sys.flags.optional_stop_disable;
+            if(!hal.signals_cap.stop_enable)
+                ctrl_pin_state.stop_enable = sys.flags.optional_stop_enable;
             if(!hal.signals_cap.block_delete)
                 ctrl_pin_state.block_delete = sys.flags.block_delete_enabled;
             if(!hal.signals_cap.single_block)

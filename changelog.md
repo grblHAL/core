@@ -1,5 +1,25 @@
 ## grblHAL changelog
 
+<a name="202601107">Build 20261107
+
+Core:
+
+* Refactored spindle handling for better multi spindle handling.
+
+* Fix for incorrect handling of optional stop (M1). Ref. issue [#1050](https://github.com/grblHAL/core/issues/1050).
+
+Drivers:
+
+* All: updated to provide better support for cloned PWM spindle.
+
+Plugins:
+
+* Spindle: improved cloned spindle functionality++
+
+* Some: updated for core changes.
+
+---
+
 <a name="202601102">Build 20261102
 
 Core:

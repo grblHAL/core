@@ -72,7 +72,7 @@ void system_init_switches (void)
 
     sys.flags.block_delete_enabled = signals.block_delete;
     sys.flags.single_block = signals.single_block;
-    sys.flags.optional_stop_disable = signals.stop_disable;
+    sys.flags.optional_stop_enable = signals.stop_enable;
 }
 
 /*! \brief Pin change interrupt handler for pin-out commands, i.e. cycle start, feed hold, reset etc.
@@ -86,7 +86,7 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
     static const control_signals_t onoff_signals = {
        .block_delete = On,
        .single_block = On,
-       .stop_disable = On,
+       .stop_enable = On,
        .deasserted = On
     };
     static const control_signals_t critical_signals = {
@@ -158,10 +158,10 @@ ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
             if(signals.single_block)
                 sys.flags.single_block = !signals.deasserted;
 
-            if(signals.stop_disable)
-                sys.flags.optional_stop_disable = !signals.deasserted;
+            if(signals.stop_enable)
+                sys.flags.optional_stop_enable = !signals.deasserted;
 
-            event_signals.bits |= (signals.bits & (control_signals_t){ .block_delete = On, .single_block = On, .stop_disable = On }.bits);
+            event_signals.bits |= (signals.bits & (control_signals_t){ .block_delete = On, .single_block = On, .stop_enable = On }.bits);
 
             if(event_signals.bits) {
 
@@ -383,14 +383,14 @@ FLASHMEM static status_code_t toggle_block_delete (sys_state_t state, char *args
 
 FLASHMEM static status_code_t toggle_optional_stop (sys_state_t state, char *args)
 {
-    if(!hal.signals_cap.stop_disable) {
-        sys.flags.optional_stop_disable = !sys.flags.optional_stop_disable;
-        grbl.report.feedback_message(sys.flags.optional_stop_disable ? Message_Enabled : Message_Disabled);
+    if(!hal.signals_cap.stop_enable) {
+        sys.flags.optional_stop_enable = !sys.flags.optional_stop_enable;
+        grbl.report.feedback_message(sys.flags.optional_stop_enable ? Message_Enabled : Message_Disabled);
         if(grbl.on_control_signals_changed)
-            grbl.on_control_signals_changed((control_signals_t){ .stop_disable = On });
+            grbl.on_control_signals_changed((control_signals_t){ .stop_enable = On });
     }
 
-    return hal.signals_cap.stop_disable ? Status_InvalidStatement : Status_OK;
+    return hal.signals_cap.stop_enable ? Status_InvalidStatement : Status_OK;
 }
 
 FLASHMEM static status_code_t check_mode (sys_state_t state, char *args)
@@ -930,7 +930,7 @@ FLASHMEM const char *help_switches (const char *cmd)
             break;
 
         case 'O':
-            if(!hal.signals_cap.stop_disable)
+            if(!hal.signals_cap.stop_enable)
                 help = "toggle optional stop switch (M1)";
             break;
 

@@ -928,8 +928,8 @@ ISR_CODE bool ISR_FUNC(protocol_enqueue_realtime_command)(uint8_t c)
             break;
 
         case CMD_OPTIONAL_STOP_TOGGLE:
-            if((drop = (signals.stop_disable = !hal.signals_cap.stop_disable))) // Not available as realtime command if HAL supports physical switch
-                sys.flags.optional_stop_disable = !sys.flags.optional_stop_disable;
+            if((drop = (signals.stop_enable = !hal.signals_cap.stop_enable))) // Not available as realtime command if HAL supports physical switch
+                sys.flags.optional_stop_enable = !sys.flags.optional_stop_enable;
             break;
 
         case CMD_SINGLE_BLOCK_TOGGLE:

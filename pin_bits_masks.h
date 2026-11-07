@@ -226,8 +226,8 @@ static aux_ctrl_t aux_ctrl[] = {
 #if LIMITS_OVERRIDE_ENABLE
     add_aux_input_scan(Input_LimitsOverride, IRQ_Mode_None, SIGNALS_LIMITS_OVERRIDE_BIT)
 #endif
-#if STOP_DISABLE_ENABLE
-    add_aux_input_scan(Input_StopDisable, IRQ_Mode_Change, SIGNALS_STOPDISABLE_BIT)
+#if OPTIONAL_STOP_ENABLE
+    add_aux_input_scan(Input_StopEnable, IRQ_Mode_Change, SIGNALS_STOPENABLE_BIT)
 #endif
 #if BLOCK_DELETE_ENABLE
     add_aux_input_scan(Input_BlockDelete, IRQ_Mode_Change, SIGNALS_BLOCKDELETE_BIT)
@@ -409,7 +409,7 @@ static inline void aux_ctrl_claim_ports (aux_claim_explicit_ptr aux_claim_explic
 
 static inline control_signals_t aux_ctrl_scan_status (control_signals_t signals)
 {
-#if PROBE_DISCONNECT_ENABLE || STOP_DISABLE_ENABLE || BLOCK_DELETE_ENABLE || SINGLE_BLOCK_ENABLE || LIMITS_OVERRIDE_ENABLE
+#if PROBE_DISCONNECT_ENABLE || OPTIONAL_STOP_ENABLE || BLOCK_DELETE_ENABLE || SINGLE_BLOCK_ENABLE || LIMITS_OVERRIDE_ENABLE
 
     uint_fast8_t idx =  sizeof(aux_ctrl) / sizeof(aux_ctrl_t);
 
