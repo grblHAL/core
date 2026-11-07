@@ -1246,10 +1246,11 @@ static status_code_t set_homing_enable (setting_id_t id, uint_fast16_t int_value
 #if N_AXIS > 3
 static status_code_t set_rotary_options (setting_id_t id, uint_fast16_t int_value)
 {
-    if((settings.flags.rotary_fix_enable = int_value != 0))
-        settings.flags.revert_metric_conversion = !!(int_value & 0b10);
-    else
-        settings.flags.revert_metric_conversion = Off;
+    //if((
+    settings.flags.rotary_fix_enable = !!(int_value & 0b01);
+    settings.flags.revert_metric_conversion = !!(int_value & 0b10);
+    //else
+    //    settings.flags.revert_metric_conversion = Off;
 
     return Status_OK;
 }
@@ -2523,7 +2524,7 @@ PROGMEM static const setting_detail_t setting_detail[] = {
      { Setting_StepperEnableDelay, Group_Stepper, "Stepper enable delay", "ms", Format_Int16, "##0", NULL, "500", Setting_IsExtended, &settings.stepper_enable_delay, NULL, NULL },
      { Setting_SubroutineOptions, Group_General, "Subroutine options", NULL, Format_Bitfield, "Prescan for internal M98 subroutines", NULL, NULL, Setting_IsExtendedFn, set_suboptions, get_int, is_setting_available },
 #if N_AXIS > 3
-     { Setting_RotaryOptions, Group_General, "Rotary options", NULL, Format_XBitfield, "Fix feedrate,Revert metric conversion", NULL, NULL, Setting_IsExpandedFn, set_rotary_options, get_int, NULL },
+     { Setting_RotaryOptions, Group_General, "Rotary options", NULL, Format_Bitfield, "Fix feedrate,Revert metric conversion", NULL, NULL, Setting_IsExpandedFn, set_rotary_options, get_int, NULL },
 #endif
      { Setting_MPGAutoReportInterval, Group_MPG, "MPG autoreport interval", "ms", Format_Int16, "###0", "25", "1000", Setting_IsExtendedFn, set_mpg_report_interval, get_int, NULL, { .reboot_required = On, .allow_null = On } },
      { Settings_MPG_BaudRate, Group_MPG, "MPG baud rate", NULL, Format_RadioButtons, "38400,115200,230400,460800,576000,921600", NULL, NULL, Setting_NonCoreFn, mpg_set_baud, get_int, is_setting_available },
