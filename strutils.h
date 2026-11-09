@@ -61,7 +61,7 @@ int32_t strlookup (const char *s1, const char *s2, const char delimiter);
 bool strtotime (char *s, struct tm *time);
 char *strtoisodt (struct tm *dt);
 char *strtointernetdt (struct tm *dt);
-char *strset (string_t *string, size_t len, const char *s);
+char *strset_ (string_t *string, size_t len, const char *s);
 char *btoa (uint64_t bytes);
 #if defined(_WIN32) || defined(__MSP432P401R__) || defined(PART_TM4C123GH6PM)
 size_t strlcpy (char *dst, const char *src, size_t len);

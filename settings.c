@@ -1246,11 +1246,8 @@ static status_code_t set_homing_enable (setting_id_t id, uint_fast16_t int_value
 #if N_AXIS > 3
 static status_code_t set_rotary_options (setting_id_t id, uint_fast16_t int_value)
 {
-    //if((
     settings.flags.rotary_fix_enable = !!(int_value & 0b01);
     settings.flags.revert_metric_conversion = !!(int_value & 0b10);
-    //else
-    //    settings.flags.revert_metric_conversion = Off;
 
     return Status_OK;
 }
@@ -3264,7 +3261,7 @@ FLASHMEM const char *setting_get_description (setting_id_t id)
 
                             const char *v = uitoa((id - setting->id) / (setting->flags.subgroups ? setting->flags.increment : 1) + 1);
 
-                            if(strset(&buf, strlen(description) + strlen(v) + 1, NULL)) {
+                            if(strset_(&buf, strlen(description) + strlen(v) + 1, NULL)) {
                                 if(description != s)
                                     strlcpy(buf.data, description, s - description + 1);
                                 strcat(buf.data, v);

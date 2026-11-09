@@ -382,7 +382,7 @@ FLASHMEM char *btoa (uint64_t bytes)
 }
 
 // string_t argument must be statically allocated or nulled before first call!
-FLASHMEM char *strset (string_t *string, size_t len, const char *s)
+FLASHMEM char *strset_ (string_t *string, size_t len, const char *s)
 {
     if(!string->data && string->base) {
         string->data = string->base->data;

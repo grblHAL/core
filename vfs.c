@@ -230,7 +230,7 @@ FLASHMEM static const char *parse_path (const char *path)
 
     char *fullpath;
 
-    if((fullpath = strset(&abspath, strlen(cwd.name) + strlen(path) + 1, *path == '/' ? "/" : cwd.name))) {
+    if((fullpath = strset_(&abspath, strlen(cwd.name) + strlen(path) + 1, *path == '/' ? "/" : cwd.name))) {
 
         char *newpath;
 
@@ -496,7 +496,7 @@ FLASHMEM int vfs_chdir (const char *path)
     }
 
     if(vfs_errno == 0) {
-        if(strset(&cwd, strlen(path) + 1, path)) {
+        if(strset_(&cwd, strlen(path) + 1, path)) {
             if(cwdmount != mount && cwdmount->vfs->fchdir)
                 cwdmount->vfs->fchdir("/");
             cwdmount = mount;
@@ -909,7 +909,7 @@ FLASHMEM const char *vfs_locate_file (const char *filename)
     if(*filename == '/')
         return fsmounted.root && vfs_stat(filename, &st) == 0 ? filename : NULL;
 
-    if(strset(&path, strlen(filename) + 11, NULL)) {
+    if(strset_(&path, strlen(filename) + 11, NULL)) {
 
         if(fsmounted.root) {
             strcat(strcpy(path.name, "/"), filename);

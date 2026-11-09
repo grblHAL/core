@@ -718,7 +718,7 @@ FLASHMEM status_code_t ngc_flowctrl (uint32_t o_label, line_number_t line_number
                             char _name[50];
                             string_t macrob = { .name = _name, .len = sizeof(_name) - 1 }, macro = { .name = _name, .len = sizeof(_name) - 1, .base = &macrob };
 
-                            if(!strset(&macro, strlen(subname) + 8, subname))
+                            if(!strset_(&macro, strlen(subname) + 8, subname))
                                 status = Status_FlowControlOutOfMemory;
 
                             if(status == Status_OK) {
