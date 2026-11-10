@@ -175,22 +175,44 @@ static void modbus_poll (void *data)
 
         case ModBus_AwaitReply:
             if(rx_timeout && --rx_timeout == 0) {
-                int32_t code;
-                stats.timeouts++;
+                bool received_exception = false;
+                uint16_t received = stream.get_rx_buffer_count();
+                stats.no_rx = received == 0;
+
+                // An exception is five bytes, even when the normal reply is
+                // longer. Decode it for asynchronous requests as well.
+                if(received >= 5) {
+                    uint8_t reply[5];
+                    for(uint_fast8_t idx = 0; idx < sizeof(reply); idx++)
+                        reply[idx] = (uint8_t)stream.read();
+
+                    if(reply[0] == packet->msg.adu[0] && reply[1] == (packet->msg.adu[1] | 0x80)) {
+                        uint16_t crc = modbus_crc16x(reply, sizeof(reply) - 2);
+                        received_exception = true;
+
+                        if(reply[3] == (crc & 0xFF) && reply[4] == (crc >> 8)) {
+                            exception_code = (modbus_exception_t)reply[2];
+                            stats.rx_exceptions++;
+                        } else {
+                            exception_code = ModBus_CRCError;
+                            stats.crc_errors++;
+                        }
+                    }
+                }
+
+                if(!received_exception)
+                    stats.timeouts++;
 
                 if(packet->async) {
                     state = ModBus_Silent;
-                    if(packet->callbacks.on_rx_timeout)
+                    if(received_exception) {
+                        if(packet->callbacks.on_rx_exception)
+                            packet->callbacks.on_rx_exception((uint8_t)exception_code, packet->msg.context);
+                    } else if(packet->callbacks.on_rx_timeout)
                         packet->callbacks.on_rx_timeout(0, packet->msg.context);
                     packet = NULL;
-                } else if(stream.read() == packet->msg.adu[0] && ((code = stream.read()) & 0x80)) {
-                    if(code != SERIAL_NO_DATA)
-                        code = stream.read();
-                    exception_code = code == SERIAL_NO_DATA ? ModBus_UnknownException : (modbus_exception_t)(code & 0xFF);
-                    state = ModBus_Exception;
-                    stats.rx_exceptions++;
                 } else
-                    state = ModBus_TimeoutException;
+                    state = received_exception ? ModBus_Exception : ModBus_TimeoutException;
 
                 spin_lock = false;
                 if(state != ModBus_AwaitReply)
@@ -241,7 +263,7 @@ static void modbus_poll (void *data)
         case ModBus_TimeoutException:
             if(packet->async)
                 state = ModBus_Silent;
-            stats.no_rx = stream.get_rx_buffer_count() == 0;
+            stats.no_rx &= stream.get_rx_buffer_count() == 0;
             silence_until = hal.get_elapsed_ticks() + silence_timeout;
             break;
 
@@ -291,7 +313,7 @@ static bool modbus_send_rtu (modbus_message_t *msg, const modbus_callbacks_t *ca
                     if(packet->callbacks.on_rx_timeout)
                         packet->callbacks.on_rx_timeout(ModBus_Timeout, packet->msg.context);
                     if(!(is_blocking = packet->callbacks.retries > 0))
-                        stats.no_rx = stream.get_rx_buffer_count() == 0;
+                        stats.no_rx &= stream.get_rx_buffer_count() == 0;
                     break;
 
                 case ModBus_Exception:
