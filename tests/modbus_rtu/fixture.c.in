@@ -61,7 +61,7 @@ static void reset_request(void)
     request.msg.adu[1] = 3;
     request.msg.tx_length = 8;
     request.msg.rx_length = 7;
-    request.msg.crc_check = false; // Actual MODVFD RPM request.
+    request.msg.crc_check = false; // Synthetic single-register read with optional normal-response CRC checking.
     request.callbacks.on_rx_packet = got_packet;
     request.callbacks.on_rx_exception = got_exception;
     request.callbacks.on_rx_timeout = got_timeout;
