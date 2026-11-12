@@ -89,6 +89,9 @@ typedef struct {
     uint16_t ftp_port;
     ip_mode_t ip_mode;
     network_services_t services;
+#if SNTP_ENABLE
+    uri_t ntp_server[3];
+#endif
 #if MQTT_ENABLE
     mqtt_settings_t mqtt;
 #endif

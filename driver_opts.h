@@ -606,6 +606,9 @@
 #ifndef MDNS_ENABLE
 #define MDNS_ENABLE         0
 #endif
+#ifndef SNTP_ENABLE
+#define SNTP_ENABLE         0
+#endif
 #ifndef SSDP_ENABLE
 #define SSDP_ENABLE         0
 #endif
@@ -653,6 +656,17 @@
 #define NETWORK_WEBSOCKET_PORT  81
 #else
 #define NETWORK_WEBSOCKET_PORT  80
+#endif
+#endif
+#if SNTP_ENABLE
+#ifndef SNTP_SERVER_ADDR0
+#define SNTP_SERVER_ADDR0       "pool.ntp.org"
+#endif
+#ifndef SNTP_SERVER_ADDR1
+#define SNTP_SERVER_ADDR1       ""
+#endif
+#ifndef SNTP_SERVER_ADDR2
+#define SNTP_SERVER_ADDR2       ""
 #endif
 #endif
 #if NETWORK_IPMODE < 0 || NETWORK_IPMODE > 2

@@ -1,5 +1,29 @@
 ## grblHAL changelog
 
+<a name="202601112">Build 20261112
+
+Core:
+
+* "Hardened" Modbus RTU exception handling. Based on PR [#1055](https://github.com/grblHAL/core/pull/1055), does not wait for timeout like the PR code do.
+
+* Added initial support for SNTP.
+
+Drivers:
+
+* RP2040: fix for servo plugin not working, ref. issue [#211](https://github.com/grblHAL/RP2040/issues/211).
+
+* Simulator: added patches from issue [#28](https://github.com/grblHAL/Simulator/issues/28) and limited minimum step interval.
+
+* STM32F4xx: added initial support for SNTP.
+
+Plugins:
+
+* Misc, M280 servo control: "hardened" code.
+
+* Networking: added initial support for SNTP.
+
+---
+
 <a name="202601107">Build 20261107
 
 Core:

@@ -51,6 +51,8 @@ typedef enum {
 
 typedef struct queue_entry {
     bool async;
+    uint8_t received;
+    modbus_exception_t exception;
     modbus_message_t msg;
     modbus_callbacks_t callbacks;
     struct queue_entry *next;
@@ -70,7 +72,6 @@ PROGMEM static const modbus_silence_timeout_t dflt_timeout =
 static modbus_rtu_stream_t stream;
 static int8_t stream_instance = -1;
 static uint32_t rx_timeout = 0, silence_until = 0, silence_timeout;
-static modbus_exception_t exception_code = ModBus_NoException;
 static modbus_silence_timeout_t silence;
 static queue_entry_t queue[MODBUS_QUEUE_LENGTH];
 static rtu_settings_t modbus;
@@ -112,7 +113,7 @@ static inline queue_entry_t *add_message (queue_entry_t *packet, modbus_message_
 
     if(callbacks && !sys.reset_pending) {
         memcpy(&packet->callbacks, callbacks, sizeof(modbus_callbacks_t));
-        if(callbacks->on_rx_timeout == NULL) // for backwards comaptibility
+        if(callbacks->on_rx_timeout == NULL) // for backwards compatibility
             packet->callbacks.on_rx_timeout = packet->callbacks.on_rx_exception;
         if(!packet->async && packet->callbacks.retries)
             packet->callbacks.on_rx_exception = packet->callbacks.on_rx_timeout = retry_exception;
@@ -128,8 +129,10 @@ static void tx_message (volatile queue_entry_t *msg)
         stream.set_direction(true);
 
     packet = msg;
+    packet->received = 0;
+    packet->exception = ModBus_NoException;
+
     state = ModBus_TX;
-    exception_code = ModBus_NoException;
     rx_timeout = modbus.rx_timeout;
 
     stream.flush_rx_buffer();
@@ -139,6 +142,8 @@ static void tx_message (volatile queue_entry_t *msg)
 // called once every ms
 static void modbus_poll (void *data)
 {
+    static uint8_t reply[5];
+
     spin_lock = true;
 
     switch(state) {
@@ -173,8 +178,71 @@ static void modbus_poll (void *data)
             }
             break;
 
-        case ModBus_AwaitReply:
-            if(rx_timeout && --rx_timeout == 0) {
+        case ModBus_AwaitReply:;
+
+            uint_fast8_t received = stream.get_rx_buffer_count();
+
+            if(received >= packet->msg.rx_length - packet->received || (received == 5 && !packet->received)) {
+
+                if(received == 5 && !packet->received) {
+
+                    for(; packet->received < 5; packet->received++ )
+                        reply[packet->received] = (uint8_t)stream.read();
+
+                    if(reply[0] == packet->msg.adu[0] && reply[1] == (packet->msg.adu[1] | 0x80)) {
+                         packet->msg.rx_length = 5;
+                         packet->exception = (modbus_exception_t)reply[2];
+                   } else if(packet->msg.rx_length != 5)
+                        break;
+                }
+
+                uint8_t *buf = (uint8_t *)((queue_entry_t *)packet)->msg.adu;
+                uint_fast8_t rx_len = packet->msg.rx_length;
+
+                stats.latency = max(stats.latency, modbus.rx_timeout - rx_timeout);
+
+                if(packet->received) {
+                    memcpy(buf, reply, 5);
+                    buf +=5;
+                    rx_len -= 5;
+                }
+
+                if(!packet->exception) {
+
+                    stats.rx_count++;
+
+                    if(rx_len) do {
+                        *buf++ = (uint8_t)stream.read();
+                    } while(--rx_len);
+                }
+
+                if(packet->msg.crc_check) {
+
+                    uint_fast16_t crc = modbus_crc16x(((queue_entry_t *)packet)->msg.adu, packet->msg.rx_length - 2);
+                    if(packet->msg.adu[packet->msg.rx_length - 2] != (crc & 0xFF) || packet->msg.adu[packet->msg.rx_length - 1] != (crc >> 8)) {
+                        stats.crc_errors++;
+                        packet->exception = ModBus_CRCError;
+                    }
+                }
+
+                if(packet->exception) {
+
+                    if(packet->exception != ModBus_CRCError)
+                        stats.rx_exceptions++;
+
+                    if((state = packet->async ? ModBus_Silent : ModBus_Exception) == ModBus_Silent) {
+                        if(packet->callbacks.on_rx_exception)
+                            packet->callbacks.on_rx_exception(packet->exception, packet->msg.context);
+                        packet = NULL;
+                    }
+                } else if((state = packet->async ? ModBus_Silent : ModBus_GotReply) == ModBus_Silent) {
+                    if(packet->callbacks.on_rx_packet)
+                        packet->callbacks.on_rx_packet(&((queue_entry_t *)packet)->msg);
+                    packet = NULL;
+                }
+
+            } else if(rx_timeout && --rx_timeout == 0) {
+
                 int32_t code;
                 stats.timeouts++;
 
@@ -183,66 +251,21 @@ static void modbus_poll (void *data)
                     if(packet->callbacks.on_rx_timeout)
                         packet->callbacks.on_rx_timeout(0, packet->msg.context);
                     packet = NULL;
-                } else if(stream.read() == packet->msg.adu[0] && ((code = stream.read()) & 0x80)) {
+                    stats.no_rx &= !!received;
+                } else if(received && stream.read() == packet->msg.adu[0] && ((code = stream.read()) & 0x80)) {
                     if(code != SERIAL_NO_DATA)
                         code = stream.read();
-                    exception_code = code == SERIAL_NO_DATA ? ModBus_UnknownException : (modbus_exception_t)(code & 0xFF);
+                    packet->exception = code == SERIAL_NO_DATA ? ModBus_UnknownException : (modbus_exception_t)(code & 0xFF);
                     state = ModBus_Exception;
                     stats.rx_exceptions++;
                 } else
                     state = ModBus_TimeoutException;
 
                 spin_lock = false;
-                if(state != ModBus_AwaitReply)
-                    silence_until = hal.get_elapsed_ticks() + silence_timeout;
-                return;
             }
 
-            if(stream.get_rx_buffer_count() >= packet->msg.rx_length) {
-
-                char *buf = (char *)((queue_entry_t *)packet)->msg.adu;
-                uint16_t rx_len = packet->msg.rx_length; // store original length for CRC check
-
-                stats.rx_count++;
-                stats.latency = max(stats.latency, modbus.rx_timeout - rx_timeout);
-
-                do {
-                    *buf++ = stream.read();
-                } while(--packet->msg.rx_length);
-
-                if(packet->msg.crc_check) {
-
-                    uint_fast16_t crc = modbus_crc16x(((queue_entry_t *)packet)->msg.adu, rx_len - 2);
-                    if(packet->msg.adu[rx_len - 2] != (crc & 0xFF) || packet->msg.adu[rx_len - 1] != (crc >> 8)) {
-                        // CRC check error
-                        stats.crc_errors++;
-                        if((state = packet->async ? ModBus_Silent : ModBus_Exception) == ModBus_Silent) {
-                            if(packet->callbacks.on_rx_exception)
-                                packet->callbacks.on_rx_exception((exception_code = ModBus_CRCError), packet->msg.context);
-                            packet = NULL;
-                        }
-                        silence_until = hal.get_elapsed_ticks() + silence_timeout;
-                        break;
-                    }
-                }
-
-                if((state = packet->async ? ModBus_Silent : ModBus_GotReply) == ModBus_Silent) {
-                    if(packet->callbacks.on_rx_packet) {
-                        packet->msg.rx_length = rx_len;
-                        packet->callbacks.on_rx_packet(&((queue_entry_t *)packet)->msg);
-                    }
-                    packet = NULL;
-                }
-
+            if(state != ModBus_AwaitReply)
                 silence_until = hal.get_elapsed_ticks() + silence_timeout;
-            }
-            break;
-
-        case ModBus_TimeoutException:
-            if(packet->async)
-                state = ModBus_Silent;
-            stats.no_rx = stream.get_rx_buffer_count() == 0;
-            silence_until = hal.get_elapsed_ticks() + silence_timeout;
             break;
 
         default:
@@ -256,9 +279,9 @@ static bool modbus_send_rtu (modbus_message_t *msg, const modbus_callbacks_t *ca
 {
     static queue_entry_t sync_msg = {0};
 
-    if(msg->tx_length > MODBUS_MAX_ADU_SIZE || msg->rx_length > MODBUS_MAX_ADU_SIZE) {
+    if(msg->tx_length > MODBUS_MAX_ADU_SIZE || msg->rx_length < 5 || msg->rx_length > MODBUS_MAX_ADU_SIZE) {
         if(callbacks->on_rx_exception)
-            callbacks->on_rx_exception((exception_code = ModBus_IllegalSize), msg->context);
+            callbacks->on_rx_exception(ModBus_IllegalSize, msg->context);
         return false;
     }
 
@@ -291,12 +314,12 @@ static bool modbus_send_rtu (modbus_message_t *msg, const modbus_callbacks_t *ca
                     if(packet->callbacks.on_rx_timeout)
                         packet->callbacks.on_rx_timeout(ModBus_Timeout, packet->msg.context);
                     if(!(is_blocking = packet->callbacks.retries > 0))
-                        stats.no_rx = stream.get_rx_buffer_count() == 0;
+                        stats.no_rx &= stream.get_rx_buffer_count() == 0;
                     break;
 
                 case ModBus_Exception:
                     if(packet->callbacks.on_rx_exception)
-                        packet->callbacks.on_rx_exception((uint8_t)exception_code, packet->msg.context);
+                        packet->callbacks.on_rx_exception((uint8_t)packet->exception, packet->msg.context);
                     is_blocking = packet->callbacks.retries > 0;
                     break;
 
