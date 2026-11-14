@@ -273,7 +273,7 @@ FLASHMEM status_code_t modbus_message (uint8_t server, modbus_function_t functio
     uint_fast8_t idx;
     status_code_t status;
     modbus_message_t cmd = {
-        .context = (void *)((uint32_t)tx_id++),
+        .context = (void *)((uintptr_t)tx_id++),
         .crc_check = true,
         .adu[0] = (uint8_t)server,
         .adu[1] = (uint8_t)function,

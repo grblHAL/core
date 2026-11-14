@@ -1,5 +1,21 @@
 ## grblHAL changelog
 
+<a name="202601114">20261114
+
+Core:
+
+* Minor change to shut up Windows Simulator compiler warning.
+
+Drivers:
+
+* ESP32: "hardened" UART code. Ref. issue [#225](https://github.com/grblHAL/ESP32/issues/225) and PR [#226](https://github.com/grblHAL/ESP32/pull/226) which arrived after a fix was comitted locally.
+
+Plugins:
+
+* Misc, M280 servo control: fixed regression. Ref. RP2040 driver issue [#211](https://github.com/grblHAL/RP2040/issues/211).
+
+---
+
 <a name="202601112">Build 20261112
 
 Core:
