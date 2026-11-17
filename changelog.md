@@ -1,5 +1,13 @@
 ## grblHAL changelog
 
+<a name="202601117">Build 20261117
+
+Core:
+
+* Fix for [#1056](https://github.com/grblHAL/core/issues/1056) - jog hangs with acceleration profiles enabled.
+
+---
+
 <a name="202601114">20261114
 
 Core:
