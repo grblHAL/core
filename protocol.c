@@ -241,7 +241,7 @@ bool protocol_main_loop (void)
                 line.data[line.pos] = '\0'; // Set string termination character.
 
 #if REPORT_ECHO_LINE_RECEIVED
-                report_echo_line_received(line);
+                report_echo_line_received(line.data);
 #endif
 
                 if(*line.data == CMD_PROGRAM_DEMARCATION && line.data[1] == '\0')
