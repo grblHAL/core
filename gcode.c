@@ -3638,7 +3638,6 @@ status_code_t gc_execute_block (char *block)
                             gc_block.words.q = Off; // Remove single-meaning value word.
                         } else if(gc_parser_flags.canned_cycle_change)
                             RETURN(Status_GcodeValueWordMissing);
-                        gc_state.canned.dwell = 0.25f;
                         break;
 
                     default:
