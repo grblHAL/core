@@ -130,12 +130,21 @@
 
 static aux_ctrl_t aux_ctrl[] = {
 // The following pins are bound explicitly to aux input pins.
+#if (CONTROL_ENABLE & (CONTROL_RESET|CONTROL_ESTOP)) == (CONTROL_RESET|CONTROL_ESTOP)
+#ifdef ESTOP_PIN
+  add_aux_input(Input_EStop, ESTOP, IRQ_Mode_RisingFalling, SIGNALS_ESTOP_BIT)
+#endif
 #ifdef RESET_PIN
+  add_aux_input(Input_Reset, RESET, IRQ_Mode_RisingFalling, SIGNALS_RESET_BIT)
+#endif
+#elif defined(RESET_PIN)
   #if (CONTROL_ENABLE & CONTROL_ESTOP)
     add_aux_input(Input_EStop, RESET, IRQ_Mode_RisingFalling, SIGNALS_ESTOP_BIT)
   #elif (CONTROL_ENABLE & CONTROL_RESET)
     add_aux_input(Input_Reset, RESET, IRQ_Mode_RisingFalling, SIGNALS_RESET_BIT)
   #endif
+#elif defined(ESTOP_PIN) && (CONTROL_ENABLE & CONTROL_ESTOP)
+    add_aux_input(Input_EStop, ESTOP, IRQ_Mode_RisingFalling, SIGNALS_ESTOP_BIT)
 #endif
 #if (CONTROL_ENABLE & CONTROL_FEED_HOLD) && defined(FEED_HOLD_PIN)
    add_aux_input(Input_FeedHold, FEED_HOLD, IRQ_Mode_RisingFalling, SIGNALS_FEEDHOLD_BIT)
@@ -739,6 +748,12 @@ static inline void aux_ctrl_claim_out_ports (aux_claim_explicit_out_ptr aux_clai
 #define RESET_BIT 0
 #endif
 
+#ifdef ESTOP_PIN
+#define ESTOP_BIT (1<<ESTOP_PIN)
+#else
+#define ESTOP_BIT 0
+#endif
+
 #ifdef FEED_HOLD_PIN
 #define FEED_HOLD_BIT (1<<FEED_HOLD_PIN)
 #else
@@ -788,8 +803,8 @@ static inline void aux_ctrl_claim_out_ports (aux_claim_explicit_out_ptr aux_clai
 #endif
 
 #ifndef CONTROL_MASK
-#define CONTROL_MASK (RESET_BIT|FEED_HOLD_BIT|CYCLE_START_BIT|PROBE_DISCONNECT_BIT|STOP_DISABLE_BIT|BLOCK_DELETE_BIT|SINGLE_BLOCK_BIT|MOTOR_FAULT_BIT|MOTOR_WARNING_BIT)
-#define CONTROL_MASK_SUM (RESET_BIT+FEED_HOLD_BIT+CYCLE_START_BIT+PROBE_DISCONNECT_BIT+STOP_DISABLE_BIT+BLOCK_DELETE_BIT+SINGLE_BLOCK_BIT+MOTOR_FAULT_BIT+MOTOR_WARNING_BIT)
+#define CONTROL_MASK (RESET_BIT|ESTOP_BIT|FEED_HOLD_BIT|CYCLE_START_BIT|PROBE_DISCONNECT_BIT|STOP_DISABLE_BIT|BLOCK_DELETE_BIT|SINGLE_BLOCK_BIT|MOTOR_FAULT_BIT|MOTOR_WARNING_BIT)
+#define CONTROL_MASK_SUM (RESET_BIT+ESTOP_BIT+FEED_HOLD_BIT+CYCLE_START_BIT+PROBE_DISCONNECT_BIT+STOP_DISABLE_BIT+BLOCK_DELETE_BIT+SINGLE_BLOCK_BIT+MOTOR_FAULT_BIT+MOTOR_WARNING_BIT)
 #endif
 
 #endif // STM32_PLATFORM

@@ -1,5 +1,19 @@
 ## grblHAL changelog
 
+<a name="202601123">Build 20261123
+
+Core:
+
+* Fixes for incorrect parameters passed. Ref. issues [#1036](https://github.com/grblHAL/core/issues/1056) [#1037](https://github.com/grblHAL/core/issues/1057).
+
+* For programmers: now allow simultaneous e-stop and reset input assignments in map files.
+
+Plugins:
+
+* Spindle, stepper: fix for regression. Ref. issue [#49](https://github.com/grblHAL/Plugins_spindle/issues/49).
+
+---
+
 <a name="202601117">Build 20261117
 
 Core:

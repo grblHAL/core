@@ -477,7 +477,7 @@ FLASHMEM static bool homing_cycle (axes_signals_t cycle, axes_signals_t auto_squ
                 }
             }
 
-            task_execute(STATE_HOMING);
+            task_execute(false);
 
         } while(axislock.mask & AXES_BITMASK);
 
