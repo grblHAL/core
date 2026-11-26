@@ -1275,7 +1275,20 @@ void st_prep_buffer (void)
 //                        prep.last_accel = 0.0f;  // reset acceleration variable to 0 for next accel ramp
                     } else
 #endif
-                    time_var = 2.0f * (mm_remaining - prep.mm_complete) / (prep.current_speed + prep.exit_speed);
+                    {
+                        time_var = 2.0f * (mm_remaining - prep.mm_complete) / (prep.current_speed + prep.exit_speed);
+                        // When the deceleration ends on a segment boundary, float round-off can leave a
+                        // residual speed and distance of a few ULPs (e.g. 9.5e-7 mm/min and 1.2e-7 mm),
+                        // whose ratio gives a meaningless segment time of seconds per step: a feed hold
+                        // then stays in Hold:1 for 15-30 s and the next segments crawl after resume
+                        // (dt_remainder). Decelerating to exit_speed at the block acceleration takes at
+                        // most (current_speed - exit_speed) / acceleration: bound the time to that.
+                        if(prep.current_speed >= prep.exit_speed) {
+                            float time_max = (prep.current_speed - prep.exit_speed) / pl_block->acceleration;
+                            if(time_var > time_max)
+                                time_var = time_max;
+                        }
+                    }
 
                     mm_remaining = prep.mm_complete;
                     prep.current_speed = prep.exit_speed;
