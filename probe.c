@@ -33,7 +33,7 @@ typedef struct {
 static probe_state_t probe_state = { .connected = On };
 static probe_t probes[N_PROBE_MAX], *probe = NULL;
 
-static void probe_irq_handler (uint8_t port, bool state)
+ISR_CODE static void ISR_FUNC(probe_irq_handler)(uint8_t port, bool state)
 {
     if(probe_state.is_probing) {
         probe_state.triggered = On;
@@ -143,7 +143,7 @@ FLASHMEM static bool is_triggered (probe_id_t probe_id)
 }
 
 // Returns the probe connected and triggered pin states.
-FLASHMEM static probe_state_t get_state (void)
+ISR_CODE static probe_state_t ISR_FUNC(get_state)(void)
 {
     probe_state_t state = { .value = probe_state.value };
 

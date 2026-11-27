@@ -189,7 +189,7 @@ ISR_CODE static home_signals_t ISR_FUNC(get_homing_status2)(void)
     return home;
 }
 
-FLASHMEM static void stepperEnable (axes_signals_t enable, bool hold)
+ISR_CODE static void ISR_FUNC(stepperEnable)(axes_signals_t enable, bool hold)
 {
     if(stepper_enable)
         stepper_enable(enable, hold);

@@ -42,7 +42,7 @@
 #else
 #define GRBL_VERSION "1.1f"
 #endif
-#define GRBL_BUILD 20261123
+#define GRBL_BUILD 20261127
 
 #define GRBL_URL "https://github.com/grblHAL"
 
@@ -60,6 +60,7 @@
 #ifdef GRBL_ESP32
 #include "esp_attr.h"
 #define ISR_CODE IRAM_ATTR
+#define ISR_FLASH_CONST static const DRAM_ATTR
 #elif !defined(ISR_CODE)
 // #define ISR_CODE __attribute__((long_call, section(".data")))
 // Used to decorate code run in interrupt context.
@@ -70,8 +71,13 @@
 #ifdef RP2040
 #include "pico.h"
 #define ISR_FUNC(fn) __not_in_flash_func(fn)
+#define ISR_FLASH_CONST
 #else
 #define ISR_FUNC(fn) fn
+#endif
+
+#ifndef ISR_FLASH_CONST
+#define ISR_FLASH_CONST static const
 #endif
 
 #ifndef __IMXRT1062__

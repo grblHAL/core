@@ -192,7 +192,7 @@ FLASHMEM stream_suspend_state_t stream_is_rx_suspended (void)
     return stream.rxbuffer ? (stream.rxbuffer->backup ? StreamSuspend_Active : StreamSuspend_Pending) : StreamSuspend_Off;
 }
 
-FLASHMEM bool stream_rx_suspend (stream_rx_buffer_t *rxbuffer, bool suspend)
+ISR_CODE bool ISR_FUNC(stream_rx_suspend)(stream_rx_buffer_t *rxbuffer, bool suspend)
 {
     bool ok = false;
 

@@ -2977,7 +2977,7 @@ FLASHMEM void report_init_fns (void)
         grbl.on_report_handlers_init();
 }
 
-FLASHMEM report_tracking_flags_t report_get_rt_flags_all (void)
+ISR_CODE report_tracking_flags_t ISR_FUNC(report_get_rt_flags_all)(void)
 {
     report_tracking_flags_t report;
 

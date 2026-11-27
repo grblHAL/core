@@ -1737,7 +1737,8 @@ status_code_t gc_execute_block (char *block)
                             gc_block.modal.tool_offset_mode = ToolLengthOffset_EnableDynamic;
                         } else
                             RETURN(Status_GcodeUnsupportedCommand); // [Unsupported G43.x command]
-                        mantissa = 0; // Set to zero to indicate valid non-integer G command.
+                        if(int_value == 43)
+                            mantissa = 0; // Set to zero to indicate valid non-integer G command.
                         break;
 
                     case 54: case 55: case 56: case 57: case 58: case 59:

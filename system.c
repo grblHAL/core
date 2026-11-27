@@ -83,13 +83,13 @@ directly from the incoming data stream.
 */
 ISR_CODE void ISR_FUNC(control_interrupt_handler)(control_signals_t signals)
 {
-    static const control_signals_t onoff_signals = {
+    ISR_FLASH_CONST control_signals_t onoff_signals = {
        .block_delete = On,
        .single_block = On,
        .stop_enable = On,
        .deasserted = On
     };
-    static const control_signals_t critical_signals = {
+    ISR_FLASH_CONST control_signals_t critical_signals = {
        .reset = On,
        .e_stop = On,
        .motor_fault = On

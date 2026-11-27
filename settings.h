@@ -970,6 +970,8 @@ typedef enum {
     Group_Jogging,              //!< 14
     Group_Networking,           //!< 15
     Group_Networking_Wifi,      //!< 16
+    Group_Networking_Wifi_STA = Group_Networking_Wifi, //!< 16
+    Group_Networking_Wifi_AP,   //!< 16
     Group_Bluetooth,            //!< 17
     Group_AuxPorts,             //!< 18
     Group_ModBus,               //!< 19

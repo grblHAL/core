@@ -1,5 +1,24 @@
 ## grblHAL changelog
 
+<a name="202601123">Build 20261127
+
+Core:
+
+* IRAMMED some functions to keep the resident ESP32 guru happy, ref. ESP32 issue [#231](https://github.com/grblHAL/ESP32/issues/231).
+
+Drivers:
+
+* ESP32: refactored I2S code to only buffer a single step at a time. Ref. issue [#227](https://github.com/grblHAL/ESP32/issues/227).  
+IRAMMED some functions to keep the resident ESP32 guru happy, ref. issue [#231](https://github.com/grblHAL/ESP32/issues/231).
+> [!NOTE]
+> Boards using I2S driven I/O for the steppers should set `$29` - _Pulse delay_ to a value > 0 to avoid losing steps, this since a direction changes may occasionally be output at the exact same time as a step pulses. Consult your driver documentation for minimum direction - step setup time. 
+
+Plugins:
+
+* Networking, SD card: IRAMMED some functions to keep the resident ESP32 guru happy, ref. ESP32 issue [#231](https://github.com/grblHAL/ESP32/issues/231).
+
+---
+
 <a name="202601123">Build 20261123
 
 Core:
